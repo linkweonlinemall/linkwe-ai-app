@@ -1,0 +1,19 @@
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth/session";
+import { assertDashboardRole } from "@/lib/auth/assert-role";
+
+export default async function AdminDashboardPage() {
+  const session = await getSession();
+  if (!session) redirect("/login");
+  assertDashboardRole(session, "ADMIN");
+
+  return (
+    <div className="mx-auto max-w-2xl rounded-xl border border-zinc-200 bg-white p-8 dark:border-zinc-800 dark:bg-zinc-900">
+      <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">Admin dashboard</h1>
+      <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+        Internal administration tools will live here. The Admin role is never self-serve; assign it with Prisma or a
+        future admin invite flow.
+      </p>
+    </div>
+  );
+}

@@ -1,0 +1,807 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                     String                 @id @default(cuid())
+  email                  String                 @unique
+  phone                  String?                @unique
+  passwordHash           String?                @map("password_hash")
+  fullName               String                 @map("full_name")
+  role                   UserRole               @default(CUSTOMER)
+  /// Trinidad region key (dropdown), same normalization family as shipping.
+  region                 String?
+  idDocumentUrl          String?                @map("id_document_url")
+  idVerificationStatus IdVerificationStatus @default(UNSUBMITTED) @map("id_verification_status")
+  /// Courier orientation: 0 = not started, 1 = step 1 done, 2 = both steps done (Phase A).
+  courierOnboardingStep Int                  @default(0) @map("courier_onboarding_step")
+  isActive               Boolean                @default(true) @map("is_active")
+  createdAt              DateTime               @default(now()) @map("created_at")
+  updatedAt              DateTime               @updatedAt @map("updated_at")
+  addresses           Address[]
+  aiChatSessions      AIChatSession[]
+  carts               Cart[]
+  mainOrders          MainOrder[]         @relation("BuyerOrders")
+  payouts             PayoutRequest[]     @relation("PayoutBeneficiary")
+  reviews             Review[]
+  shipments           Shipment[]          @relation("CourierShipments")
+  storesOwned         Store[]             @relation("StoreOwner")
+  listingsOwned       Listing[]           @relation("ListingOwner")
+  vendorLedgerEntries VendorLedgerEntry[] @relation("LedgerActor")
+
+  @@index([email])
+  @@index([createdAt])
+  @@map("users")
+}
+
+model Store {
+  id               String      @id @default(cuid())
+  ownerId          String      @unique @map("owner_id")
+  name             String
+  slug             String      @unique
+  categoryId       String      @map("category_id")
+  region           String
+  tagline          String?
+  logoUrl          String?     @map("logo_url")
+  status           StoreStatus @default(DRAFT)
+  onboardingStep   Int       @default(0) @map("onboarding_step")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+  listings         Listing[]
+  orderItems       OrderItem[]
+  payoutRequests   PayoutRequest[]
+  splitOrders      SplitOrder[]
+  owner            User                @relation("StoreOwner", fields: [ownerId], references: [id])
+  ledgerEntries    VendorLedgerEntry[]
+  payoutThreshold  VendorThreshold?
+  warehouses       Warehouse[]
+
+  @@index([slug])
+  @@map("stores")
+}
+
+model VendorThreshold {
+  id                 String   @id @default(cuid())
+  storeId            String   @unique @map("store_id")
+  minimumAmountMinor Int      @map("minimum_amount_minor")
+  currency           String   @db.Char(3)
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  store              Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@map("vendor_thresholds")
+}
+
+model VendorLedgerEntry {
+  id                String                @id @default(cuid())
+  storeId           String                @map("store_id")
+  currency          String                @db.Char(3)
+  entryType         VendorLedgerEntryType @map("entry_type")
+  /// Always store magnitude as positive; direction is defined by entryType (credit vs debit categories in app).
+  amountMinor       Int                   @map("amount_minor")
+  /// Running balance after this row (same currency); optional cache for dashboards.
+  balanceAfterMinor BigInt?               @map("balance_after_minor")
+  mainOrderId       String?               @map("main_order_id")
+  splitOrderId      String?               @map("split_order_id")
+  payoutRequestId   String?               @map("payout_request_id")
+  idempotencyKey    String?               @unique @map("idempotency_key")
+  description       String?
+  metadata          Json?
+  createdByUserId   String?               @map("created_by_user_id")
+  createdAt         DateTime              @default(now()) @map("created_at")
+  createdBy         User?                 @relation("LedgerActor", fields: [createdByUserId], references: [id])
+  mainOrder         MainOrder?            @relation(fields: [mainOrderId], references: [id])
+  payoutRequest     PayoutRequest?        @relation(fields: [payoutRequestId], references: [id])
+  splitOrder        SplitOrder?           @relation(fields: [splitOrderId], references: [id])
+  store             Store                 @relation(fields: [storeId], references: [id])
+
+  @@index([storeId, createdAt])
+  @@index([splitOrderId])
+  @@index([payoutRequestId])
+  @@map("vendor_ledger_entries")
+}
+
+model Address {
+  id         String      @id @default(cuid())
+  userId     String?     @map("user_id")
+  label      String?
+  line1      String
+  line2      String?
+  city       String
+  region     String?
+  postalCode String?     @map("postal_code")
+  country    String      @db.Char(2)
+  latitude   Decimal?    @db.Decimal(10, 7)
+  longitude  Decimal?    @db.Decimal(10, 7)
+  createdAt  DateTime    @default(now()) @map("created_at")
+  user       User?       @relation(fields: [userId], references: [id])
+  mainOrders MainOrder[]
+  warehouses Warehouse[]
+
+  @@index([userId])
+  @@map("addresses")
+}
+
+model Listing {
+  id               String             @id @default(cuid())
+  storeId          String             @map("store_id")
+  ownerId          String             @map("owner_id")
+  type             ListingType        @default(PRODUCT)
+  status           ListingStatus      @default(DRAFT)
+  slug             String             @unique
+  title            String
+  imageUrl         String?            @map("image_url")
+  shortDescription String?            @map("short_description")
+  description      String?
+  priceMinor       Int                @map("price_minor")
+  currency         String             @default("USD") @db.Char(3)
+  publishedAt      DateTime?          @map("published_at")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  cartItems        CartItem[]
+  bookable         ListingBookable?
+  digital          ListingDigital?
+  event            ListingEvent?
+  place            ListingPlace?
+  realEstate       ListingRealEstate?
+  restaurant       ListingRestaurant?
+  service          ListingService?
+  ticket           ListingTicket?
+  vehicle          ListingVehicle?
+  store            Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  owner            User               @relation("ListingOwner", fields: [ownerId], references: [id])
+  orderItems       OrderItem[]
+  splitOrderItems  SplitOrderItem[]
+  product          Product?
+  reviews          Review[]
+
+  @@index([storeId, status])
+  @@index([ownerId])
+  @@index([type, status])
+  @@index([publishedAt])
+  @@map("listings")
+}
+
+/// PRODUCT listings only; subtype drives whether variants / digital / bookable / ticket behavior applies.
+model Product {
+  id        String           @id @default(cuid())
+  listingId String           @unique @map("listing_id")
+  subtype   ProductSubtype   @default(SIMPLE)
+  sku       String?
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+  variants  ProductVariant[]
+  listing   Listing          @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([sku])
+  @@map("products")
+}
+
+model ProductVariant {
+  id                 String               @id @default(cuid())
+  productId          String               @map("product_id")
+  name               String
+  sku                String?              @unique
+  priceMinor         Int?                 @map("price_minor")
+  attributes         Json?
+  createdAt          DateTime             @default(now()) @map("created_at")
+  updatedAt          DateTime             @updatedAt @map("updated_at")
+  cartItems          CartItem[]
+  splitOrderItems    SplitOrderItem[]
+  product            Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouseInventory WarehouseInventory[]
+
+  @@index([productId])
+  @@map("product_variants")
+}
+
+model ListingRealEstate {
+  id           String   @id @default(cuid())
+  listingId    String   @unique @map("listing_id")
+  propertyType String   @map("property_type")
+  bedrooms     Int?
+  bathrooms    Decimal? @db.Decimal(4, 1)
+  areaSqM      Decimal? @map("area_sq_m") @db.Decimal(12, 2)
+  yearBuilt    Int?     @map("year_built")
+  metadata     Json?
+  listing      Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@map("listing_real_estate")
+}
+
+model ListingVehicle {
+  id        String  @id @default(cuid())
+  listingId String  @unique @map("listing_id")
+  vin       String? @unique
+  make      String
+  model     String
+  year      Int
+  mileage   Int?
+  metadata  Json?
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([make, model])
+  @@map("listing_vehicles")
+}
+
+model ListingEvent {
+  id           String    @id @default(cuid())
+  listingId    String    @unique @map("listing_id")
+  startsAt     DateTime  @map("starts_at")
+  endsAt       DateTime? @map("ends_at")
+  venueName    String?   @map("venue_name")
+  venueAddress String?   @map("venue_address")
+  capacity     Int?
+  metadata     Json?
+  listing      Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([startsAt])
+  @@map("listing_events")
+}
+
+model ListingService {
+  id              String  @id @default(cuid())
+  listingId       String  @unique @map("listing_id")
+  durationMinutes Int?    @map("duration_minutes")
+  metadata        Json?
+  listing         Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@map("listing_services")
+}
+
+model ListingRestaurant {
+  id        String  @id @default(cuid())
+  listingId String  @unique @map("listing_id")
+  cuisine   String?
+  hoursJson Json?   @map("hours_json")
+  metadata  Json?
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@map("listing_restaurants")
+}
+
+model ListingPlace {
+  id        String  @id @default(cuid())
+  listingId String  @unique @map("listing_id")
+  placeType String? @map("place_type")
+  metadata  Json?
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@map("listing_places")
+}
+
+/// TICKET listing type (concerts, passes) — distinct from EVENT marketing pages
+model ListingTicket {
+  id            String    @id @default(cuid())
+  listingId     String    @unique @map("listing_id")
+  eventStartsAt DateTime? @map("event_starts_at")
+  venueName     String?   @map("venue_name")
+  section       String?
+  transferable  Boolean   @default(true)
+  metadata      Json?
+  listing       Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@map("listing_tickets")
+}
+
+model ListingDigital {
+  id              String  @id @default(cuid())
+  listingId       String  @unique @map("listing_id")
+  deliveryChannel String? @map("delivery_channel")
+  licenseTerms    String? @map("license_terms")
+  metadata        Json?
+  listing         Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@map("listing_digitals")
+}
+
+model ListingBookable {
+  id           String  @id @default(cuid())
+  listingId    String  @unique @map("listing_id")
+  slotMinutes  Int?    @map("slot_minutes")
+  maxPartySize Int?    @map("max_party_size")
+  timezone     String?
+  metadata     Json?
+  listing      Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@map("listing_bookables")
+}
+
+model Warehouse {
+  id              String               @id @default(cuid())
+  storeId         String?              @map("store_id")
+  name            String
+  code            String               @unique
+  addressId       String?              @map("address_id")
+  isActive        Boolean              @default(true) @map("is_active")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+  shippingBundles ShippingBundle[]
+  inventory       WarehouseInventory[]
+  lines           WarehouseOrderLine[]
+  address         Address?             @relation(fields: [addressId], references: [id])
+  store           Store?               @relation(fields: [storeId], references: [id])
+
+  @@index([storeId])
+  @@map("warehouses")
+}
+
+model WarehouseInventory {
+  id               String         @id @default(cuid())
+  warehouseId      String         @map("warehouse_id")
+  productVariantId String         @map("product_variant_id")
+  quantityOnHand   Int            @default(0) @map("quantity_on_hand")
+  quantityReserved Int            @default(0) @map("quantity_reserved")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+  warehouse        Warehouse      @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@unique([warehouseId, productVariantId])
+  @@index([productVariantId])
+  @@map("warehouse_inventory")
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String     @map("user_id")
+  status    CartStatus @default(ACTIVE)
+  currency  String     @default("USD") @db.Char(3)
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  items     CartItem[]
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@map("carts")
+}
+
+model CartItem {
+  id               String          @id @default(cuid())
+  cartId           String          @map("cart_id")
+  listingId        String          @map("listing_id")
+  productVariantId String?         @map("product_variant_id")
+  quantity         Int
+  createdAt        DateTime        @default(now()) @map("created_at")
+  cart             Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  listing          Listing         @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id])
+
+  @@index([cartId])
+  @@index([productVariantId])
+  @@map("cart_items")
+}
+
+/// Buyer checkout order — **checkout v1** persists `OrderItem` rows; split / warehouse / courier phases use other relations.
+model MainOrder {
+  id             String          @id @default(cuid())
+  buyerId        String          @map("buyer_id")
+  status         MainOrderStatus @default(PENDING_PAYMENT)
+  /// Raw region string used with `trinidad-zoning` / checkout pricing (e.g. address region).
+  region         String
+  /// Resolved `ShippingZone` at checkout time (e.g. METRO, TOBAGO_METRO).
+  shippingZone   String          @map("shipping_zone")
+  subtotalMinor  Int             @map("subtotal_minor")
+  shippingMinor  Int             @map("shipping_minor")
+  totalMinor     Int             @map("total_minor")
+  /// Optional link to saved shipping address (future checkout / ops).
+  shippingAddressId String?      @map("shipping_address_id")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  buyer            User                @relation("BuyerOrders", fields: [buyerId], references: [id])
+  shippingAddress  Address?            @relation(fields: [shippingAddressId], references: [id])
+  items            OrderItem[]
+  splitOrders      SplitOrder[]
+  shippingBundles  ShippingBundle[]
+  documents        OrderDocument[]
+  reviews          Review[]
+  ledgerEntries    VendorLedgerEntry[]
+
+  @@index([buyerId, status])
+  @@index([status, createdAt])
+  @@map("main_orders")
+}
+
+model OrderItem {
+  id            String   @id @default(cuid())
+  mainOrderId   String   @map("main_order_id")
+  listingId     String   @map("listing_id")
+  storeId       String   @map("store_id")
+  titleSnapshot String   @map("title_snapshot")
+  /// Unit price in minor units at time of purchase.
+  priceMinor    Int      @map("price_minor")
+  quantity      Int
+  weightLbs     Float    @map("weight_lbs")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  mainOrder MainOrder @relation(fields: [mainOrderId], references: [id], onDelete: Cascade)
+  listing   Listing   @relation(fields: [listingId], references: [id])
+  store     Store     @relation(fields: [storeId], references: [id])
+
+  @@index([mainOrderId])
+  @@index([listingId])
+  @@index([storeId])
+  @@map("order_items")
+}
+
+/// Groups multiple split orders for a single main order before final outbound shipping.
+model ShippingBundle {
+  id          String               @id @default(cuid())
+  mainOrderId String               @map("main_order_id")
+  warehouseId String               @map("warehouse_id")
+  status      ShippingBundleStatus @default(OPEN)
+  bundledAt   DateTime?            @map("bundled_at")
+  releasedAt  DateTime?            @map("released_at")
+  createdAt   DateTime             @default(now()) @map("created_at")
+  updatedAt   DateTime             @updatedAt @map("updated_at")
+  shipment    Shipment?
+  mainOrder   MainOrder            @relation(fields: [mainOrderId], references: [id], onDelete: Cascade)
+  warehouse   Warehouse            @relation(fields: [warehouseId], references: [id])
+  splitOrders SplitOrder[]
+
+  @@index([mainOrderId, status])
+  @@index([warehouseId])
+  @@map("shipping_bundles")
+}
+
+/// Per-vendor slice — vendor prep → warehouse intake → bundle → ship → receive (future phases).
+model SplitOrder {
+  id                       String               @id @default(cuid())
+  mainOrderId              String               @map("main_order_id")
+  storeId                  String               @map("store_id")
+  status                   SplitOrderStatus     @default(PENDING_PREPARATION)
+  subtotalMinor            Int                  @map("subtotal_minor")
+  vendorNetMinor           Int                  @map("vendor_net_minor")
+  currency                 String               @db.Char(3)
+  vendorInboundMethod      VendorInboundMethod? @map("vendor_inbound_method")
+  pickupRequestedAt        DateTime?            @map("pickup_requested_at")
+  vendorDropoffScheduledAt DateTime?            @map("vendor_dropoff_scheduled_at")
+  vendorDropoffCompletedAt DateTime?            @map("vendor_dropoff_completed_at")
+  customerMarkedReceivedAt DateTime?            @map("customer_marked_received_at")
+  shippingBundleId         String?              @map("shipping_bundle_id")
+  createdAt                DateTime             @default(now()) @map("created_at")
+  updatedAt                DateTime             @updatedAt @map("updated_at")
+  documents                OrderDocument[]
+  items                    SplitOrderItem[]
+  shipments                Shipment[]
+  mainOrder                MainOrder            @relation(fields: [mainOrderId], references: [id], onDelete: Cascade)
+  shippingBundle           ShippingBundle?      @relation(fields: [shippingBundleId], references: [id])
+  store                    Store                @relation(fields: [storeId], references: [id])
+  ledgerEntries            VendorLedgerEntry[]
+  warehouseLines           WarehouseOrderLine[]
+
+  @@index([mainOrderId])
+  @@index([storeId, status])
+  @@index([shippingBundleId])
+  @@map("split_orders")
+}
+
+/// Line items on a **SplitOrder** (warehouse / fulfillment). Distinct from checkout `OrderItem` on `MainOrder`.
+model SplitOrderItem {
+  id               String              @id @default(cuid())
+  splitOrderId     String              @map("split_order_id")
+  listingId        String              @map("listing_id")
+  productVariantId String?             @map("product_variant_id")
+  quantity         Int
+  unitPriceMinor   Int                 @map("unit_price_minor")
+  lineTotalMinor   Int                 @map("line_total_minor")
+  currency         String              @db.Char(3)
+  titleSnapshot    String              @map("title_snapshot")
+  metadataSnapshot Json?               @map("metadata_snapshot")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  listing          Listing             @relation(fields: [listingId], references: [id])
+  productVariant   ProductVariant?     @relation(fields: [productVariantId], references: [id])
+  splitOrder       SplitOrder          @relation(fields: [splitOrderId], references: [id], onDelete: Cascade)
+  warehouseLine    WarehouseOrderLine?
+
+  @@index([splitOrderId])
+  @@index([listingId])
+  @@map("split_order_items")
+}
+
+model WarehouseOrderLine {
+  id               String              @id @default(cuid())
+  splitOrderId     String              @map("split_order_id")
+  orderItemId      String              @unique @map("order_item_id")
+  warehouseId      String              @map("warehouse_id")
+  status           WarehouseLineStatus @default(OUTSIDE)
+  quantityExpected Int                 @map("quantity_expected")
+  quantityChecked  Int                 @default(0) @map("quantity_checked")
+  checkedAt        DateTime?           @map("checked_at")
+  notes            String?
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+  orderItem        SplitOrderItem      @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  splitOrder       SplitOrder          @relation(fields: [splitOrderId], references: [id], onDelete: Cascade)
+  warehouse        Warehouse           @relation(fields: [warehouseId], references: [id])
+
+  @@index([warehouseId, status])
+  @@index([splitOrderId])
+  @@map("warehouse_order_lines")
+}
+
+/// Courier / outbound shipment (bundle or single split).
+model Shipment {
+  id                  String          @id @default(cuid())
+  splitOrderId        String?         @map("split_order_id")
+  shippingBundleId    String?         @unique @map("shipping_bundle_id")
+  courierId           String?         @map("courier_id")
+  status              ShipmentStatus  @default(PENDING)
+  trackingNumber      String?         @map("tracking_number")
+  carrier             String?
+  proofUrl            String?         @map("proof_url")
+  estimatedDeliveryAt DateTime?       @map("estimated_delivery_at")
+  deliveredAt         DateTime?       @map("delivered_at")
+  createdAt           DateTime        @default(now()) @map("created_at")
+  updatedAt           DateTime        @updatedAt @map("updated_at")
+  courier             User?           @relation("CourierShipments", fields: [courierId], references: [id])
+  shippingBundle      ShippingBundle? @relation(fields: [shippingBundleId], references: [id])
+  splitOrder          SplitOrder?     @relation(fields: [splitOrderId], references: [id], onDelete: Cascade)
+
+  @@index([splitOrderId])
+  @@index([courierId, status])
+  @@index([status, createdAt])
+  @@map("shipments")
+}
+
+model OrderDocument {
+  id                String            @id @default(cuid())
+  mainOrderId       String?           @map("main_order_id")
+  splitOrderId      String?           @map("split_order_id")
+  documentType      OrderDocumentType @map("document_type")
+  /// S3 key, GCS path, or CDN URL
+  storageKey        String?           @map("storage_key")
+  publicUrl         String?           @map("public_url")
+  /// Provider document id (Stripe invoice, PDF engine job, etc.)
+  externalReference String?           @map("external_reference")
+  mimeType          String?           @map("mime_type")
+  generatedAt       DateTime          @default(now()) @map("generated_at")
+  metadata          Json?
+  mainOrder         MainOrder?        @relation(fields: [mainOrderId], references: [id], onDelete: Cascade)
+  splitOrder        SplitOrder?       @relation(fields: [splitOrderId], references: [id], onDelete: Cascade)
+
+  @@index([mainOrderId])
+  @@index([splitOrderId])
+  @@index([documentType, generatedAt])
+  @@map("order_documents")
+}
+
+model PayoutRequest {
+  id            String              @id @default(cuid())
+  storeId       String              @map("store_id")
+  beneficiaryId String              @map("beneficiary_id")
+  amountMinor   Int                 @map("amount_minor")
+  currency      String              @db.Char(3)
+  status        PayoutStatus        @default(PENDING)
+  externalRef   String?             @unique @map("external_ref")
+  requestedAt   DateTime            @default(now()) @map("requested_at")
+  processedAt   DateTime?           @map("processed_at")
+  failureReason String?             @map("failure_reason")
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+  beneficiary   User                @relation("PayoutBeneficiary", fields: [beneficiaryId], references: [id])
+  store         Store               @relation(fields: [storeId], references: [id])
+  ledgerEntries VendorLedgerEntry[]
+
+  @@index([storeId, status])
+  @@index([status, requestedAt])
+  @@map("payout_requests")
+}
+
+model Review {
+  id                 String     @id @default(cuid())
+  userId             String     @map("user_id")
+  listingId          String     @map("listing_id")
+  mainOrderId        String?    @map("main_order_id")
+  rating             Int
+  title              String?
+  body               String?
+  isVerifiedPurchase Boolean    @default(false) @map("is_verified_purchase")
+  createdAt          DateTime   @default(now()) @map("created_at")
+  updatedAt          DateTime   @updatedAt @map("updated_at")
+  listing            Listing    @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  mainOrder          MainOrder? @relation(fields: [mainOrderId], references: [id])
+  user               User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@index([listingId])
+  @@map("reviews")
+}
+
+model AIChatSession {
+  id        String            @id @default(cuid())
+  userId    String            @map("user_id")
+  type      AIChatSessionType
+  title     String?
+  metadata  Json?
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  AIMessage[]
+
+  @@index([userId, type])
+  @@index([updatedAt])
+  @@map("ai_chat_sessions")
+}
+
+model AIMessage {
+  id              String        @id @default(cuid())
+  sessionId       String        @map("session_id")
+  role            AIMessageRole
+  content         String
+  tokenPrompt     Int?          @map("token_prompt")
+  tokenCompletion Int?          @map("token_completion")
+  model           String?
+  toolCalls       Json?         @map("tool_calls")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  session         AIChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@map("ai_messages")
+}
+
+enum UserRole {
+  CUSTOMER
+  VENDOR
+  COURIER
+  ADMIN
+}
+
+enum IdVerificationStatus {
+  UNSUBMITTED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum StoreStatus {
+  DRAFT             @map("draft")
+  PENDING_APPROVAL  @map("pending_approval")
+  ACTIVE            @map("active")
+}
+
+/// Top-level marketplace category (what the listing represents)
+enum ListingType {
+  PRODUCT
+  REAL_ESTATE
+  VEHICLE
+  EVENT
+  SERVICE
+  RESTAURANT
+  PLACE
+  TICKET
+  DIGITAL
+  BOOKABLE
+}
+
+enum ListingStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  SUSPENDED
+}
+
+enum CartStatus {
+  ACTIVE
+  ABANDONED
+  CONVERTED
+}
+
+/// Main order lifecycle (payment + fulfillment TBD).
+enum MainOrderStatus {
+  DRAFT
+  PENDING_PAYMENT
+  PAID
+  AWAITING_VENDOR_FULFILLMENT
+  PARTIALLY_IN_HOUSE
+  READY_TO_BUNDLE
+  AWAITING_SHIPPING
+  SHIPPED
+  CUSTOMER_RECEIVED
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+enum PayoutStatus {
+  PENDING
+  APPROVED
+  PROCESSING
+  PAID
+  FAILED
+  CANCELLED
+}
+
+/// Per-vendor slice — vendor prep → warehouse intake → bundle → ship → receive → complete
+enum SplitOrderStatus {
+  PENDING_PREPARATION
+  PICKUP_REQUESTED
+  COMING_TO_WAREHOUSE
+  PARTIALLY_CHECKED
+  IN_HOUSE
+  READY_FOR_BUNDLE
+  BUNDLED
+  SHIPPED
+  CUSTOMER_RECEIVED
+  COMPLETED
+  CANCELLED
+}
+
+/// Physical line state in warehouse (outside vs checked-in).
+enum WarehouseLineStatus {
+  OUTSIDE
+  CHECKED
+}
+
+enum ShipmentStatus {
+  PENDING
+  READY_FOR_PICKUP
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  FAILED
+  RETURNED
+  CANCELLED
+}
+
+/// How vendor gets goods into the warehouse for this split
+enum VendorInboundMethod {
+  PICKUP_REQUESTED
+  VENDOR_DROPOFF
+}
+
+/// PRODUCT listing only — how sellable units are modeled
+enum ProductSubtype {
+  SIMPLE
+  VARIABLE
+  DIGITAL
+  BOOKABLE
+  TICKET
+}
+
+enum ShippingBundleStatus {
+  OPEN
+  BUNDLING
+  BUNDLED
+  RELEASED_FOR_SHIPPING
+  SHIPPED
+  CANCELLED
+}
+
+enum VendorLedgerEntryType {
+  CREDIT_ORDER_SETTLEMENT
+  DEBIT_PAYOUT
+  DEBIT_REFUND
+  DEBIT_PLATFORM_FEE
+  CREDIT_ADJUSTMENT
+  DEBIT_ADJUSTMENT
+  CREDIT_REVERSAL
+}
+
+enum OrderDocumentType {
+  INVOICE
+  RECEIPT
+  PACKING_SLIP
+  TAX_SUMMARY
+  CREDIT_NOTE
+  OTHER
+}
+
+enum AIChatSessionType {
+  CUSTOMER_SHOPPING
+  VENDOR_LISTING
+  SUPPORT
+  ADMIN
+}
+
+enum AIMessageRole {
+  SYSTEM
+  USER
+  ASSISTANT
+  TOOL
+}
