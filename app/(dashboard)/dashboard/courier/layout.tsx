@@ -1,5 +1,6 @@
 import { unstable_noStore as noStore } from "next/cache";
 import { redirect } from "next/navigation";
+import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { CourierRouteGuard } from "./courier-route-guard";
@@ -22,7 +23,7 @@ export default async function CourierDashboardLayout({ children }: { children: R
   }
 
   if (user.role !== "COURIER") {
-    redirect("/");
+    redirect(getRoleDashboardPath(user.role));
   }
 
   return <CourierRouteGuard courierOnboardingStep={user.courierOnboardingStep}>{children}</CourierRouteGuard>;

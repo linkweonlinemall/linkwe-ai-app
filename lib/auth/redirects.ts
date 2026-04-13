@@ -5,6 +5,10 @@ export function getRoleDashboardPath(role?: string | null) {
     return "/dashboard"; // fallback
   }
 
+  if (role === "CUSTOMER") {
+    return "/";
+  }
+
   return `/dashboard/${role.toLowerCase()}`;
 }
 

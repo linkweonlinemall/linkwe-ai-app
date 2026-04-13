@@ -29,7 +29,7 @@ export function BusinessStep3Form({
       <h1 className="mt-2 text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Store identity</h1>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Public name, URL slug, category, and tagline.</p>
 
-      <form className="mt-8 flex flex-col gap-4" action={formAction} encType="multipart/form-data">
+      <form className="mt-8 flex flex-col gap-4" action={formAction}>
         <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
           Store name
           <input

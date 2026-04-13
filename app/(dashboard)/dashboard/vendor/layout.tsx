@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import { resolveAuthLandingPath } from "@/lib/auth/landing";
+import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getNextBusinessOnboardingStep } from "@/lib/onboarding/business-progress";
 import { getStoreByOwnerId } from "@/lib/store/get-vendor-store";
 
@@ -10,7 +10,7 @@ export default async function VendorDashboardLayout({ children }: { children: Re
     redirect("/login");
   }
   if (user.role !== "VENDOR") {
-    redirect(await resolveAuthLandingPath(user));
+    redirect(getRoleDashboardPath(user.role));
   }
 
   const store = await getStoreByOwnerId(user.id);
