@@ -19,6 +19,8 @@ export default async function PublicStorePage({ params }: Props) {
       id: true,
       name: true,
       slug: true,
+      tagline: true,
+      logoUrl: true,
       owner: {
         select: {
           fullName: true,
@@ -53,8 +55,17 @@ export default async function PublicStorePage({ params }: Props) {
     <div className="min-h-full bg-zinc-50 px-6 py-16 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50">
       <article className="mx-auto max-w-2xl rounded-2xl border border-zinc-200 bg-white p-10 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">LinkWe store</p>
+        {store.logoUrl ? (
+          <img
+            alt={`${store.name} logo`}
+            className="mb-4 h-20 w-20 rounded-xl border border-zinc-200 object-contain dark:border-zinc-700"
+            src={store.logoUrl}
+          />
+        ) : null}
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">{store.name}</h1>
-        <p className="mt-4 text-base leading-7 text-zinc-500 dark:text-zinc-400">Store details coming soon.</p>
+        {store.tagline ? (
+          <p className="mt-4 text-base leading-7 text-zinc-500 dark:text-zinc-400">{store.tagline}</p>
+        ) : null}
         <div className="mt-8 border-t border-zinc-200 pt-6 dark:border-zinc-700">
           <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Owner</p>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{store.owner.fullName}</p>

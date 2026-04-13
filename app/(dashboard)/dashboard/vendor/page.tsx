@@ -63,7 +63,7 @@ export default async function VendorDashboardPage() {
             <dd className="text-zinc-800 dark:text-zinc-200">{store.tagline?.trim() || "—"}</dd>
           </div>
         </dl>
-        <div className="mt-6">
+        <div className="mt-6 flex flex-wrap gap-3">
           <Link
             className="inline-flex h-10 items-center justify-center rounded-lg border border-zinc-300 px-4 text-sm font-medium text-zinc-900 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-50 dark:hover:bg-zinc-800"
             href={publicUrl}
@@ -71,6 +71,12 @@ export default async function VendorDashboardPage() {
             target="_blank"
           >
             View public store
+          </Link>
+          <Link
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-zinc-300 px-4 text-sm font-medium text-zinc-900 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-50 dark:hover:bg-zinc-800"
+            href="/dashboard/vendor/store/edit"
+          >
+            Edit store
           </Link>
         </div>
       </section>
