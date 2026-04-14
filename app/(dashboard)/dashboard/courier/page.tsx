@@ -11,8 +11,7 @@ export default async function CourierDashboardPage() {
     <div className="mx-auto max-w-2xl rounded-xl border border-zinc-200 bg-white p-8 dark:border-zinc-800 dark:bg-zinc-900">
       <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">Courier dashboard</h1>
       <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
-        Delivery assignments will live here. Courier access is typically granted by operations; register as a customer
-        first, then an admin can add the Courier role in the database.
+        You are all set. Delivery assignments will appear here when you are assigned a job.
       </p>
     </div>
   );

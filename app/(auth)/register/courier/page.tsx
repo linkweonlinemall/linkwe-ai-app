@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { resolveAuthLandingPath } from "@/lib/auth/landing";
@@ -9,5 +10,12 @@ export default async function RegisterCourierPage() {
     redirect(await resolveAuthLandingPath(user));
   }
 
-  return <RegisterForm signupKind="COURIER" />;
+  return (
+    <>
+      <div className="mb-6 flex justify-center">
+        <Image alt="LinkWe" className="object-contain" height={60} src="/linkwe-logo.png" width={180} />
+      </div>
+      <RegisterForm signupKind="COURIER" />
+    </>
+  );
 }

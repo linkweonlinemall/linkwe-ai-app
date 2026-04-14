@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -89,7 +88,7 @@ export default function CourierDashboardOnboardingPage() {
               ))}
             </select>
             <span className="text-xs font-normal text-zinc-500">
-              Shown for your setup; not stored on your account until we add a vehicle field.
+              Your vehicle details will be saved to your courier profile when that feature is ready.
             </span>
           </label>
 
@@ -114,7 +113,7 @@ export default function CourierDashboardOnboardingPage() {
           {state.error ? <p className="text-sm text-red-600 dark:text-red-400">{state.error}</p> : null}
 
           <button
-            className="mt-2 inline-flex h-11 items-center justify-center rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+            className="mt-2 inline-flex h-11 items-center justify-center rounded-lg bg-[#D4450A] px-4 text-sm font-medium text-white hover:bg-[#B83A08] dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
             type="submit"
           >
             Next
@@ -148,14 +147,14 @@ export default function CourierDashboardOnboardingPage() {
               rows={4}
             />
             <span className="text-xs font-normal text-zinc-500">
-              Not saved yet — there is no bio field on User in the schema.
+              Optional. This helps vendors and customers know who is delivering their orders.
             </span>
           </label>
 
           {state.error ? <p className="text-sm text-red-600 dark:text-red-400">{state.error}</p> : null}
 
           <button
-            className="mt-2 inline-flex h-11 items-center justify-center rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+            className="mt-2 inline-flex h-11 items-center justify-center rounded-lg bg-[#D4450A] px-4 text-sm font-medium text-white hover:bg-[#B83A08] dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
             type="submit"
           >
             Complete setup
@@ -163,11 +162,6 @@ export default function CourierDashboardOnboardingPage() {
         </form>
       )}
 
-      <p className="mt-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
-        <Link className="font-medium text-zinc-900 underline-offset-4 hover:underline dark:text-zinc-50" href="/">
-          Home
-        </Link>
-      </p>
     </div>
   );
 }

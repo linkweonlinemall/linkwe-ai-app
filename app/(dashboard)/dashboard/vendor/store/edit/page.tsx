@@ -198,7 +198,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
 
         <div className="flex flex-wrap gap-3 pt-2">
           <button
-            className="inline-flex h-11 items-center justify-center rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+            className="inline-flex h-11 items-center justify-center rounded-lg bg-[#D4450A] px-4 text-sm font-medium text-white hover:bg-[#B83A08] dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
             type="submit"
           >
             Save changes

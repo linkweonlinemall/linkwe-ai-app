@@ -40,7 +40,7 @@ export default async function VendorDashboardPage() {
 
       <div className="mt-6">
         <Link
-          className="inline-flex h-10 items-center justify-center rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+          className="inline-flex h-10 items-center justify-center rounded-lg bg-[#D4450A] px-4 text-sm font-medium text-white hover:bg-[#B83A08] dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
           href="/dashboard/vendor/listings/new"
         >
           Create listing
@@ -60,7 +60,7 @@ export default async function VendorDashboardPage() {
           </div>
           <div>
             <dt className="text-zinc-500">Tagline</dt>
-            <dd className="text-zinc-800 dark:text-zinc-200">{store.tagline?.trim() || "—"}</dd>
+            <dd className="line-clamp-2 text-zinc-800 dark:text-zinc-200">{store.tagline?.trim() || "—"}</dd>
           </div>
         </dl>
         <div className="mt-6 flex flex-wrap gap-3">

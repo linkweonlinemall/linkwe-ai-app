@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { resolveAuthLandingPath } from "@/lib/auth/landing";
@@ -14,6 +15,13 @@ export default async function LoginPage({
   }
 
   const { callbackUrl } = await searchParams;
-  return <LoginForm callbackUrl={callbackUrl} />;
+  return (
+    <>
+      <div className="mb-6 flex justify-center">
+        <Image alt="LinkWe" className="object-contain" height={60} src="/linkwe-logo.png" width={180} />
+      </div>
+      <LoginForm callbackUrl={callbackUrl} />
+    </>
+  );
 }
 
