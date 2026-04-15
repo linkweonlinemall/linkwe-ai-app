@@ -1,8 +1,15 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ListingMainImage } from "@/components/listing-main-image";
 import { formatMinorAsUsd } from "@/lib/listing/price";
 import { prisma } from "@/lib/prisma";
+
+type TimeSlot = { from: string; to: string };
+type DaySchedule = { closed: boolean; allDay: boolean; slots: TimeSlot[] };
+type WeekSchedule = Record<string, DaySchedule>;
+
+const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -21,6 +28,16 @@ export default async function PublicStorePage({ params }: Props) {
       slug: true,
       tagline: true,
       logoUrl: true,
+      description: true,
+      coverPhotoUrl: true,
+      images: {
+        select: { id: true, url: true, position: true },
+        orderBy: { position: "asc" },
+      },
+      openingHours: true,
+      tags: true,
+      amenities: true,
+      policies: true,
       owner: {
         select: {
           fullName: true,
@@ -32,6 +49,11 @@ export default async function PublicStorePage({ params }: Props) {
   if (!store) {
     notFound();
   }
+
+  const openingHours =
+    store.openingHours != null && typeof store.openingHours === "object"
+      ? (store.openingHours as WeekSchedule)
+      : null;
 
   const listings = await prisma.listing.findMany({
     where: {
@@ -54,6 +76,16 @@ export default async function PublicStorePage({ params }: Props) {
   return (
     <div className="min-h-full bg-zinc-50 px-6 py-16 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50">
       <article className="mx-auto max-w-2xl rounded-2xl border border-zinc-200 bg-white p-10 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        {store.coverPhotoUrl ? (
+          <div className="w-full overflow-hidden rounded-xl" style={{ maxHeight: "280px" }}>
+            <img
+              alt=""
+              className="w-full object-cover"
+              src={store.coverPhotoUrl}
+              style={{ maxHeight: "280px" }}
+            />
+          </div>
+        ) : null}
         <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">LinkWe store</p>
         {store.logoUrl ? (
           <img
@@ -65,6 +97,88 @@ export default async function PublicStorePage({ params }: Props) {
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">{store.name}</h1>
         {store.tagline ? (
           <p className="mt-4 text-base leading-7 text-zinc-500 dark:text-zinc-400">{store.tagline}</p>
+        ) : null}
+        {store.description ? (
+          <p className="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-400">{store.description}</p>
+        ) : null}
+        {store.images && store.images.length > 0 ? (
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {store.images.map((img) => (
+              <div key={img.id} className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700">
+                <img alt="" className="h-40 w-full object-cover" src={img.url} />
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {openingHours ? (
+          <section className="mt-8 border-t border-zinc-200 pt-6 dark:border-zinc-700">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Opening hours</h2>
+            <dl className="mt-4 space-y-3">
+              {DAYS.map((day) => {
+                const sched = openingHours[day];
+                if (!sched) return null;
+                let right: ReactNode;
+                if (sched.closed) {
+                  right = "Closed";
+                } else if (sched.allDay) {
+                  right = "24 hours";
+                } else if (sched.slots.length > 0) {
+                  right = (
+                    <ul className="space-y-1 text-right">
+                      {sched.slots.map((s, idx) => (
+                        <li key={idx} className="text-sm text-zinc-600 dark:text-zinc-400">
+                          {s.from} – {s.to}
+                        </li>
+                      ))}
+                    </ul>
+                  );
+                } else {
+                  right = <span className="text-sm text-zinc-500">—</span>;
+                }
+                return (
+                  <div key={day} className="flex flex-row items-start justify-between gap-4 text-sm">
+                    <dt className="font-medium capitalize text-zinc-800 dark:text-zinc-200">{day}</dt>
+                    <dd className="min-w-0 text-right text-zinc-600 dark:text-zinc-400">{right}</dd>
+                  </div>
+                );
+              })}
+            </dl>
+          </section>
+        ) : null}
+        {store.tags.length > 0 ? (
+          <div className="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700">
+            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Tags</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {store.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-600 dark:border-zinc-700 dark:text-zinc-400"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
+        {store.amenities.length > 0 ? (
+          <div className="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700">
+            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Amenities</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {store.amenities.map((a) => (
+                <span key={a} className="text-sm text-zinc-600 dark:text-zinc-400">
+                  ✓ {a}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
+        {store.policies ? (
+          <div className="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700">
+            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Store policies</p>
+            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+              {store.policies}
+            </p>
+          </div>
         ) : null}
         <div className="mt-8 border-t border-zinc-200 pt-6 dark:border-zinc-700">
           <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Owner</p>

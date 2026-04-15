@@ -33,10 +33,22 @@ model User {
   storesOwned         Store[]             @relation("StoreOwner")
   listingsOwned       Listing[]           @relation("ListingOwner")
   vendorLedgerEntries VendorLedgerEntry[] @relation("LedgerActor")
+  bankDetails         VendorBankDetails?
 
   @@index([email])
   @@index([createdAt])
   @@map("users")
+}
+
+model VendorBankDetails {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  bankName      String
+  accountName   String
+  accountNumber String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Store {
@@ -48,6 +60,12 @@ model Store {
   region           String
   tagline          String?
   logoUrl          String?     @map("logo_url")
+  description      String?
+  coverPhotoUrl    String?
+  openingHours     Json?
+  tags             String[]    @default([])
+  amenities        String[]    @default([])
+  policies         String?
   status           StoreStatus @default(DRAFT)
   onboardingStep   Int       @default(0) @map("onboarding_step")
   createdAt        DateTime    @default(now()) @map("created_at")
@@ -60,9 +78,19 @@ model Store {
   ledgerEntries    VendorLedgerEntry[]
   payoutThreshold  VendorThreshold?
   warehouses       Warehouse[]
+  images           StoreImage[]
 
   @@index([slug])
   @@map("stores")
+}
+
+model StoreImage {
+  id        String   @id @default(cuid())
+  storeId   String
+  url       String
+  position  Int
+  createdAt DateTime @default(now())
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
 }
 
 model VendorThreshold {
