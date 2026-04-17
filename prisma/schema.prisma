@@ -68,9 +68,22 @@ model Store {
   policies         String?
   status           StoreStatus @default(DRAFT)
   onboardingStep   Int       @default(0) @map("onboarding_step")
+  latitude         Float?
+  longitude        Float?
+  address          String?
   createdAt        DateTime    @default(now()) @map("created_at")
   updatedAt        DateTime    @updatedAt @map("updated_at")
   listings         Listing[]
+  products         Product[]
+  realEstateListings RealEstate[]
+  vehicles         Vehicle[]
+  events           Event[]
+  places           Place[]
+  foodOutlets      FoodOutlet[]
+  accommodations   Accommodation[]
+  services         Service[]
+  requestingStoreRelations StoreContentRelationship[] @relation("RequestingStore")
+  targetStoreRelations     StoreContentRelationship[] @relation("TargetStore")
   orderItems       OrderItem[]
   payoutRequests   PayoutRequest[]
   splitOrders      SplitOrder[]
@@ -185,7 +198,7 @@ model Listing {
   owner            User               @relation("ListingOwner", fields: [ownerId], references: [id])
   orderItems       OrderItem[]
   splitOrderItems  SplitOrderItem[]
-  product          Product?
+  listingProduct   ListingProduct?
   reviews          Review[]
 
   @@index([storeId, status])
@@ -196,21 +209,21 @@ model Listing {
 }
 
 /// PRODUCT listings only; subtype drives whether variants / digital / bookable / ticket behavior applies.
-model Product {
-  id        String           @id @default(cuid())
-  listingId String           @unique @map("listing_id")
-  subtype   ProductSubtype   @default(SIMPLE)
+model ListingProduct {
+  id        String                   @id @default(cuid())
+  listingId String                   @unique @map("listing_id")
+  subtype   ProductSubtype           @default(SIMPLE)
   sku       String?
-  createdAt DateTime         @default(now()) @map("created_at")
-  updatedAt DateTime         @updatedAt @map("updated_at")
-  variants  ProductVariant[]
-  listing   Listing          @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  createdAt DateTime                 @default(now()) @map("created_at")
+  updatedAt DateTime                 @updatedAt @map("updated_at")
+  variants  ListingProductVariant[]
+  listing   Listing                  @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
   @@index([sku])
   @@map("products")
 }
 
-model ProductVariant {
+model ListingProductVariant {
   id                 String               @id @default(cuid())
   productId          String               @map("product_id")
   name               String
@@ -221,7 +234,7 @@ model ProductVariant {
   updatedAt          DateTime             @updatedAt @map("updated_at")
   cartItems          CartItem[]
   splitOrderItems    SplitOrderItem[]
-  product            Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  listingProduct     ListingProduct       @relation(fields: [productId], references: [id], onDelete: Cascade)
   warehouseInventory WarehouseInventory[]
 
   @@index([productId])
@@ -366,7 +379,7 @@ model WarehouseInventory {
   quantityOnHand   Int            @default(0) @map("quantity_on_hand")
   quantityReserved Int            @default(0) @map("quantity_reserved")
   updatedAt        DateTime       @updatedAt @map("updated_at")
-  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+  productVariant   ListingProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
   warehouse        Warehouse      @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
 
   @@unique([warehouseId, productVariantId])
@@ -397,7 +410,7 @@ model CartItem {
   createdAt        DateTime        @default(now()) @map("created_at")
   cart             Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
   listing          Listing         @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id])
+  productVariant   ListingProductVariant? @relation(fields: [productVariantId], references: [id])
 
   @@index([cartId])
   @@index([productVariantId])
@@ -523,7 +536,7 @@ model SplitOrderItem {
   metadataSnapshot Json?               @map("metadata_snapshot")
   createdAt        DateTime            @default(now()) @map("created_at")
   listing          Listing             @relation(fields: [listingId], references: [id])
-  productVariant   ProductVariant?     @relation(fields: [productVariantId], references: [id])
+  productVariant   ListingProductVariant?     @relation(fields: [productVariantId], references: [id])
   splitOrder       SplitOrder          @relation(fields: [splitOrderId], references: [id], onDelete: Cascade)
   warehouseLine    WarehouseOrderLine?
 
@@ -832,4 +845,737 @@ enum AIMessageRole {
   USER
   ASSISTANT
   TOOL
+}
+
+enum ProductCondition {
+  NEW
+  USED
+  REFURBISHED
+}
+
+enum WeightUnit {
+  KG
+  LB
+}
+
+enum LicenceType {
+  PERSONAL
+  COMMERCIAL
+  EXTENDED
+}
+
+enum BookingType {
+  SINGLE_SESSION
+  MULTI_SESSION
+  RECURRING
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum CancelledBy {
+  CUSTOMER
+  VENDOR
+  SYSTEM
+}
+
+enum RealEstateType {
+  LAND
+  HOUSE
+  APARTMENT
+  COMMERCIAL
+}
+
+enum RealEstateListingType {
+  FOR_SALE
+  FOR_RENT
+}
+
+enum TitleType {
+  FREEHOLD
+  LEASEHOLD
+  STATE_LEASE
+}
+
+enum TenureType {
+  MONTHLY
+  YEARLY
+}
+
+enum LotSizeUnit {
+  SQFT
+  ACRES
+}
+
+enum VehicleListingType {
+  FOR_SALE
+  FOR_RENT
+  FOR_HIRE
+}
+
+enum Transmission {
+  AUTOMATIC
+  MANUAL
+}
+
+enum FuelType {
+  PETROL
+  DIESEL
+  ELECTRIC
+  HYBRID
+}
+
+enum VehiclePriceUnit {
+  FIXED
+  PER_DAY
+  PER_HOUR
+}
+
+enum VehicleCondition {
+  NEW
+  USED
+  CERTIFIED_USED
+}
+
+enum BodyType {
+  SEDAN
+  SUV
+  TRUCK
+  VAN
+  COUPE
+  HATCHBACK
+  PICKUP
+}
+
+enum DriveType {
+  FWD
+  RWD
+  AWD
+  FOUR_WD
+}
+
+enum FoodOutletType {
+  RESTAURANT
+  TAKEAWAY
+  FOOD_TRUCK
+  BAKERY
+  CATERING
+}
+
+enum PriceRange {
+  BUDGET
+  MODERATE
+  UPSCALE
+}
+
+enum AccommodationType {
+  HOTEL
+  GUESTHOUSE
+  VILLA
+  APARTMENT
+  HOSTEL
+}
+
+enum CancellationPolicy {
+  FLEXIBLE
+  MODERATE
+  STRICT
+}
+
+enum ServicePriceType {
+  FIXED
+  HOURLY
+  QUOTED
+}
+
+enum RelationshipStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Product {
+  id                    String            @id @default(cuid())
+  storeId               String
+  store                 Store             @relation(fields: [storeId], references: [id])
+
+  name                  String
+  slug                  String            @unique
+  description           String?
+  price                 Float
+  compareAtPrice        Float?
+  sku                   String?
+  stock                 Int?
+  condition             ProductCondition?
+  brand                 String?
+  category              String?
+  tags                  String[]
+  images                String[]
+
+  weight                Float?
+  weightUnit            WeightUnit?
+  length                Float?
+  width                 Float?
+  height                Float?
+  allowPickup           Boolean           @default(false)
+  allowDelivery         Boolean           @default(false)
+  returnPolicy          String?
+
+  isDigital             Boolean           @default(false)
+  digitalFileUrl        String?
+  fileType              String?
+  fileSizeKb            Int?
+  downloadLimit         Int?
+  downloadExpiryDays    Int?
+  previewUrl            String?
+  licenceType           LicenceType?
+
+  isBookable            Boolean           @default(false)
+  bookingType           BookingType?
+  sessionDuration       Int?
+  advanceBookingDays    Int?
+  cancellationHours     Int?
+  maxGroupSize          Int?
+  requiresApproval      Boolean           @default(false)
+
+  latitude              Float?
+  longitude             Float?
+  address               String?
+
+  isPublished           Boolean           @default(false)
+  isFeatured            Boolean           @default(false)
+  viewCount             Int               @default(0)
+  metaTitle             String?
+  metaDescription       String?
+
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  variants              ProductVariant[]
+  availabilitySchedule  ProductAvailabilitySchedule[]
+  availabilityOverrides ProductAvailabilityOverride[]
+  bookingSlots          ProductBookingSlot[]
+  bookings              ProductBooking[]
+  digitalDownloads      DigitalDownload[]
+
+  @@index([storeId])
+  @@index([isPublished])
+}
+
+model ProductVariant {
+  id          String    @id @default(cuid())
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id])
+  name        String
+  sku         String?
+  price       Float?
+  stock       Int?
+  images      String[]
+  attributes  Json
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([productId])
+}
+
+model ProductAvailabilitySchedule {
+  id                  String    @id @default(cuid())
+  productId           String
+  product             Product   @relation(fields: [productId], references: [id])
+  dayOfWeek           Int
+  startTime           String
+  endTime             String
+  slotDurationMins    Int
+  slotBufferMins      Int       @default(0)
+  maxBookingsPerSlot  Int       @default(1)
+  isActive            Boolean   @default(true)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([productId])
+}
+
+model ProductAvailabilityOverride {
+  id                String    @id @default(cuid())
+  productId         String
+  product           Product   @relation(fields: [productId], references: [id])
+  date              DateTime
+  isBlocked         Boolean   @default(false)
+  customStartTime   String?
+  customEndTime     String?
+  reason            String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([productId, date])
+}
+
+model ProductBookingSlot {
+  id               String           @id @default(cuid())
+  productId        String
+  product          Product          @relation(fields: [productId], references: [id])
+  date             DateTime
+  startTime        String
+  endTime          String
+  maxBookings      Int
+  currentBookings  Int              @default(0)
+  isAvailable      Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  bookings         ProductBooking[]
+
+  @@unique([productId, date, startTime])
+  @@index([productId])
+  @@index([date])
+}
+
+model ProductBooking {
+  id                 String              @id @default(cuid())
+  productId          String
+  product            Product             @relation(fields: [productId], references: [id])
+  slotId             String
+  slot               ProductBookingSlot  @relation(fields: [slotId], references: [id])
+  customerId         String
+  bookingDate        DateTime
+  startTime          String
+  endTime            String
+  guestCount         Int                 @default(1)
+  totalPrice         Float
+  status             BookingStatus       @default(PENDING)
+  cancellationReason String?
+  cancelledBy        CancelledBy?
+  cancelledAt        DateTime?
+  vendorNotes        String?
+  customerNotes      String?
+  reminderSentAt     DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  @@index([productId])
+  @@index([customerId])
+  @@index([slotId])
+  @@index([status])
+}
+
+model DigitalDownload {
+  id                String    @id @default(cuid())
+  productId         String
+  product           Product   @relation(fields: [productId], references: [id])
+  orderId           String
+  customerId        String
+  downloadCount     Int       @default(0)
+  firstDownloadAt   DateTime?
+  lastDownloadAt    DateTime?
+  expiresAt         DateTime?
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([productId])
+  @@index([customerId])
+  @@index([orderId])
+}
+
+model RealEstate {
+  id                String                  @id @default(cuid())
+  storeId           String
+  store             Store                   @relation(fields: [storeId], references: [id])
+  title             String
+  slug              String                  @unique
+  description       String?
+  type              RealEstateType
+  listingType       RealEstateListingType
+
+  price             Float
+  bedrooms          Int?
+  bathrooms         Int?
+  sizeSqFt          Float?
+  lotSize           Float?
+  lotSizeUnit       LotSizeUnit?
+  yearBuilt         Int?
+  floorLevel        Int?
+  totalFloors       Int?
+  furnished         Boolean?
+  parkingSpaces     Int?
+  isNewDevelopment  Boolean                 @default(false)
+
+  titleType         TitleType?
+  propertyTax       Float?
+
+  tenure            TenureType?
+  depositRequired   Float?
+  availableFrom     DateTime?
+
+  amenities         String[]
+  nearbyAmenities   String[]
+  images            String[]
+
+  latitude          Float
+  longitude         Float
+  address           String
+  region            String
+
+  isPublished       Boolean                 @default(false)
+  isFeatured        Boolean                 @default(false)
+  viewCount         Int                     @default(0)
+  metaTitle         String?
+  metaDescription   String?
+
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  @@index([storeId])
+  @@index([isPublished])
+  @@index([type, listingType])
+  @@index([region])
+}
+
+model Vehicle {
+  id                  String              @id @default(cuid())
+  storeId             String
+  store               Store               @relation(fields: [storeId], references: [id])
+  title               String
+  slug                String              @unique
+  description         String?
+  listingType         VehicleListingType
+  condition           VehicleCondition?
+
+  make                String
+  model               String
+  year                Int
+  registrationYear    Int?
+  colour              String?
+  interiorColour      String?
+  mileage             Int?
+  engineSize          String?
+  transmission        Transmission
+  fuelType            FuelType
+  bodyType            BodyType?
+  driveType           DriveType?
+  doors               Int?
+  seatingCapacity     Int?
+  features            String[]
+
+  price               Float
+  priceUnit           VehiclePriceUnit
+
+  depositRequired     Float?
+  minimumRentalDays   Int?
+  insuranceIncluded   Boolean             @default(false)
+  availableFrom       DateTime?
+  driverIncluded      Boolean             @default(false)
+  inspectionExpiry    DateTime?
+
+  images              String[]
+
+  latitude            Float?
+  longitude           Float?
+  address             String?
+  region              String
+
+  isPublished         Boolean             @default(false)
+  isFeatured          Boolean             @default(false)
+  viewCount           Int                 @default(0)
+  metaTitle           String?
+  metaDescription     String?
+
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@index([storeId])
+  @@index([isPublished])
+  @@index([listingType])
+  @@index([region])
+}
+
+model Event {
+  id                    String            @id @default(cuid())
+  storeId               String
+  store                 Store             @relation(fields: [storeId], references: [id])
+  title                 String
+  slug                  String            @unique
+  description           String?
+  category              String?
+  tags                  String[]
+  organiserName         String?
+
+  startDate             DateTime
+  endDate               DateTime?
+  isOnline              Boolean           @default(false)
+
+  venueName             String?
+  address               String?
+  latitude              Float?
+  longitude             Float?
+  region                String?
+  capacity              Int?
+  dressCode             String?
+
+  ticketPrice           Float?
+  ticketUrl             String?
+  refundPolicy          String?
+
+  registrationRequired  Boolean           @default(false)
+  registrationDeadline  DateTime?
+
+  ageRestriction        String?
+  isPublished           Boolean           @default(false)
+  isFeatured            Boolean           @default(false)
+  viewCount             Int               @default(0)
+  metaTitle             String?
+  metaDescription       String?
+
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  ticketTypes           EventTicketType[]
+
+  @@index([storeId])
+  @@index([isPublished])
+  @@index([startDate])
+  @@index([region])
+}
+
+model EventTicketType {
+  id            String    @id @default(cuid())
+  eventId       String
+  event         Event     @relation(fields: [eventId], references: [id])
+  name          String
+  price         Float
+  quantity      Int
+  quantitySold  Int       @default(0)
+  description   String?
+  saleEnds      DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([eventId])
+}
+
+model Place {
+  id              String    @id @default(cuid())
+  storeId         String
+  store           Store     @relation(fields: [storeId], references: [id])
+  name            String
+  slug            String    @unique
+  description     String?
+  category        String?
+  tags            String[]
+
+  openingHours    Json?
+  entryFee        Float?
+  priceNotes      String?
+  amenities       String[]
+  accessibility   Boolean   @default(false)
+  ageRestriction  String?
+
+  images          String[]
+  latitude        Float
+  longitude       Float
+  address         String
+  region          String
+
+  website         String?
+  phone           String?
+  socialLinks     Json?
+  rating          Float?
+
+  isPublished     Boolean   @default(false)
+  isFeatured      Boolean   @default(false)
+  viewCount       Int       @default(0)
+  metaTitle       String?
+  metaDescription String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([storeId])
+  @@index([isPublished])
+  @@index([region])
+}
+
+model FoodOutlet {
+  id                  String          @id @default(cuid())
+  storeId             String
+  store               Store           @relation(fields: [storeId], references: [id])
+  name                String
+  slug                String          @unique
+  description         String?
+  cuisineType         String[]
+  outletType          FoodOutletType
+  priceRange          PriceRange
+  tags                String[]
+
+  openingHours        Json?
+
+  hasDelivery         Boolean         @default(false)
+  deliveryRadius      Float?
+  deliveryFee         Float?
+  minimumOrder        Float?
+  averageWaitTime     Int?
+
+  hasPickup           Boolean         @default(false)
+
+  hasDineIn           Boolean         @default(false)
+  acceptsReservations Boolean         @default(false)
+  reservationUrl      String?
+
+  menuUrl             String?
+  allergenInfo        String?
+  isHalal             Boolean         @default(false)
+
+  images              String[]
+  latitude            Float
+  longitude           Float
+  address             String
+  region              String
+  phone               String?
+  socialLinks         Json?
+  rating              Float?
+
+  isPublished         Boolean         @default(false)
+  isFeatured          Boolean         @default(false)
+  viewCount           Int             @default(0)
+  metaTitle           String?
+  metaDescription     String?
+
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  @@index([storeId])
+  @@index([isPublished])
+  @@index([outletType])
+  @@index([region])
+}
+
+model Accommodation {
+  id                  String                @id @default(cuid())
+  storeId             String
+  store               Store                 @relation(fields: [storeId], references: [id])
+  name                String
+  slug                String                @unique
+  description         String?
+  type                AccommodationType
+  tags                String[]
+
+  pricePerNight       Float
+  weeklyRate          Float?
+  monthlyRate         Float?
+  cleaningFee         Float?
+  securityDeposit     Float?
+
+  bedrooms            Int?
+  bathrooms           Int?
+  maxGuests           Int
+  minimumStay         Int?
+  amenities           String[]
+
+  checkInTime         String?
+  checkOutTime        String?
+  availableFrom       DateTime?
+
+  cancellationPolicy  CancellationPolicy?
+  instantBook         Boolean               @default(false)
+  breakfastIncluded   Boolean               @default(false)
+  petsAllowed         Boolean               @default(false)
+  smokingAllowed      Boolean               @default(false)
+  childrenAllowed     Boolean               @default(true)
+  poolAccess          Boolean               @default(false)
+  parkingAvailable    Boolean               @default(false)
+
+  images              String[]
+  latitude            Float
+  longitude           Float
+  address             String
+  region              String
+  website             String?
+  phone               String?
+  socialLinks         Json?
+  rating              Float?
+
+  isPublished         Boolean               @default(false)
+  isFeatured          Boolean               @default(false)
+  viewCount           Int                   @default(0)
+  metaTitle           String?
+  metaDescription     String?
+
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  @@index([storeId])
+  @@index([isPublished])
+  @@index([type])
+  @@index([region])
+}
+
+model Service {
+  id                      String            @id @default(cuid())
+  storeId                 String
+  store                   Store             @relation(fields: [storeId], references: [id])
+  title                   String
+  slug                    String            @unique
+  description             String?
+  category                String?
+  tags                    String[]
+
+  priceType               ServicePriceType
+  price                   Float?
+  duration                Int?
+
+  isBookable              Boolean           @default(false)
+  availableDays           String[]
+  availableHours          String?
+  responseTime            String?
+
+  onlineSessionAvailable  Boolean           @default(false)
+  travelFee               Float?
+  serviceArea             String[]
+
+  experience              Int?
+  qualifications          String[]
+  languages               String[]
+  portfolio               String[]
+
+  latitude                Float?
+  longitude               Float?
+  address                 String?
+  region                  String?
+
+  rating                  Float?
+  isPublished             Boolean           @default(false)
+  isFeatured              Boolean           @default(false)
+  viewCount               Int               @default(0)
+  metaTitle               String?
+  metaDescription         String?
+
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+
+  @@index([storeId])
+  @@index([isPublished])
+  @@index([region])
+}
+
+model StoreContentRelationship {
+  id                  String              @id @default(cuid())
+  requestingStoreId   String
+  requestingStore     Store               @relation("RequestingStore", fields: [requestingStoreId], references: [id])
+  targetStoreId       String
+  targetStore         Store               @relation("TargetStore", fields: [targetStoreId], references: [id])
+  contentType         String
+  contentId           String
+  status              RelationshipStatus  @default(PENDING)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@unique([requestingStoreId, targetStoreId, contentType, contentId])
+  @@index([requestingStoreId])
+  @@index([targetStoreId])
+  @@index([status])
 }

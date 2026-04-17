@@ -1,8 +1,8 @@
-import { randomUUID } from "node:crypto";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
+import { unlink } from "node:fs/promises";
 import path from "node:path";
+import { uploadFile } from "@/lib/uploads/upload";
 
-/** Public URL path prefix; files live under `public/uploads/listings/`. */
+/** Legacy public URL prefix for locally stored listing images (historical uploads). */
 export const LISTING_UPLOAD_PUBLIC_PREFIX = "/uploads/listings";
 
 const MIME_TO_EXT = new Map([
@@ -22,7 +22,7 @@ function listingUploadDir(): string {
   return path.join(process.cwd(), "public", "uploads", "listings");
 }
 
-/** Resolve a safe absolute path for a managed upload (only filenames under our folder). */
+/** Resolve a safe absolute path for a managed local upload (only filenames under our folder). */
 function absolutePathForManagedPublicPath(publicPath: string): string {
   if (!isManagedLocalListingImage(publicPath)) {
     throw new Error("Not a managed local listing image path");
@@ -34,7 +34,7 @@ function absolutePathForManagedPublicPath(publicPath: string): string {
   return path.join(listingUploadDir(), relativeName);
 }
 
-/** Save an uploaded image for local dev; returns a path suitable for `Listing.imageUrl` (served from `/public`). */
+/** Upload a listing image to Cloudinary; returns a public URL suitable for `Listing.imageUrl`. */
 export async function saveLocalListingImageUpload(
   file: File,
 ): Promise<{ ok: true; publicPath: string } | { ok: false; error: string }> {
@@ -49,13 +49,12 @@ export async function saveLocalListingImageUpload(
     return { ok: false, error: "Use a JPEG, PNG, WebP, or GIF." };
   }
 
-  const dir = listingUploadDir();
-  await mkdir(dir, { recursive: true });
-  const name = `${randomUUID()}${ext}`;
-  const abs = path.join(dir, name);
-  const buf = Buffer.from(await file.arrayBuffer());
-  await writeFile(abs, buf);
-  return { ok: true, publicPath: `${LISTING_UPLOAD_PUBLIC_PREFIX}/${name}` };
+  try {
+    const url = await uploadFile(file, "products");
+    return { ok: true, publicPath: url };
+  } catch {
+    return { ok: false, error: "Could not upload image. Try again." };
+  }
 }
 
 export async function deleteManagedLocalListingImage(publicPath: string | null | undefined): Promise<void> {

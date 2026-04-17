@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import type { ListingStatus, Prisma, StoreStatus } from "@prisma/client";
@@ -117,12 +118,19 @@ export default function VendorDashboardTabs({
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-4">
         <div className="lg:col-span-1">
           <nav className="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <Link
+              href="/dashboard/vendor/products"
+              className="flex w-full items-center gap-3 rounded-t-2xl border-b border-zinc-100 px-4 py-3 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-[#D4450A] dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-[#D4450A]"
+            >
+              <span aria-hidden>🛍️</span>
+              <span>Products</span>
+            </Link>
             {TABS.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex w-full items-center gap-3 px-4 py-3 text-sm font-medium transition-colors first:rounded-t-2xl last:rounded-b-2xl ${
+                className={`flex w-full items-center gap-3 px-4 py-3 text-sm font-medium transition-colors first:rounded-t-none last:rounded-b-2xl ${
                   activeTab === tab.id
                     ? "border-l-2 border-[#D4450A] bg-zinc-50 text-[#D4450A] dark:bg-zinc-800"
                     : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
