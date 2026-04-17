@@ -29,7 +29,7 @@ export function EditListingForm({ listingId, title, slug, imageUrl, shortDescrip
         </Link>
       </p>
 
-      <form className="mt-8 flex flex-col gap-4" action={formAction} encType="multipart/form-data">
+      <form className="mt-8 flex flex-col gap-4" action={formAction}>
         <input name="listingId" type="hidden" value={listingId} />
 
         <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">

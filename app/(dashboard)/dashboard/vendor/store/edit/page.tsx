@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { unstable_noStore as noStore } from "next/cache";
 import { redirect } from "next/navigation";
-import { addStoreImage, removeStoreImage, updateStore } from "@/app/actions/store";
+import { updateStore } from "@/app/actions/store";
+import GalleryUploadWrapper from "./gallery-upload-wrapper";
 import { getSession } from "@/lib/auth/session";
 import { TRINIDAD_ONBOARDING_REGION_OPTIONS } from "@/lib/onboarding/tt-region-options";
 import { prisma } from "@/lib/prisma";
@@ -67,6 +69,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 type Props = { searchParams: Promise<{ error?: string; success?: string }> };
 
 export default async function VendorStoreEditPage({ searchParams }: Props) {
+  noStore();
   const session = await getSession();
   if (!session || session.role !== "VENDOR") {
     redirect("/");
@@ -110,7 +113,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
   const hours: WeekSchedule = (store.openingHours as WeekSchedule | null) ?? DEFAULT_HOURS;
 
   return (
-    <div className="mx-auto max-w-2xl rounded-xl border border-zinc-200 bg-white p-8 dark:border-zinc-800 dark:bg-zinc-900">
+    <div className="mx-auto max-w-6xl rounded-xl border border-zinc-200 bg-white p-10 dark:border-zinc-800 dark:bg-zinc-900">
       <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Store</p>
       <h1 className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-50">Edit store</h1>
       <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
@@ -153,9 +156,14 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
         </p>
       ) : null}
 
-      <form action={updateStore} className="mt-8 flex flex-col gap-4" id="vendor-store-edit-form">
+      <form
+        action={updateStore}
+        className="mt-8 flex flex-col gap-6"
+        id="vendor-store-edit-form"
+      >
         <input name="storeId" type="hidden" value={store.id} />
         <input name="hasHours" type="hidden" value="1" />
+
         <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
           Store name
           <input
@@ -205,93 +213,97 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
           <span className="text-xs font-normal text-zinc-500">Max 1000 characters.</span>
         </label>
 
-        <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-          Operating region
-          <select
-            required
-            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-            defaultValue={store.region}
-            name="region"
-          >
-            <option value="">Select…</option>
-            {TRINIDAD_ONBOARDING_REGION_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="border-t border-zinc-100 dark:border-zinc-800 pt-6 mt-2">
+          <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
+            Operating region
+            <select
+              required
+              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+              defaultValue={store.region}
+              name="region"
+            >
+              <option value="">Select…</option>
+              {TRINIDAD_ONBOARDING_REGION_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-          Category
-          <select
-            required
-            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-            defaultValue={store.categoryId}
-            name="categoryId"
-          >
-            <option value="">Select…</option>
-            {!CATEGORY_OPTIONS.some((c) => c.id === store.categoryId) ? (
-              <option value={store.categoryId}>Current ({store.categoryId})</option>
+          <label className="mt-4 flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
+            Category
+            <select
+              required
+              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+              defaultValue={store.categoryId}
+              name="categoryId"
+            >
+              <option value="">Select…</option>
+              {!CATEGORY_OPTIONS.some((c) => c.id === store.categoryId) ? (
+                <option value={store.categoryId}>Current ({store.categoryId})</option>
+              ) : null}
+              {CATEGORY_OPTIONS.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="border-t border-zinc-100 dark:border-zinc-800 pt-6 mt-2">
+          <div className="flex items-start gap-4">
+            <div className="min-w-0 flex-1">
+              <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                Upload new logo
+                <input
+                  accept="image/*"
+                  className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50 dark:file:bg-zinc-700 dark:file:text-zinc-100"
+                  name="logo"
+                  type="file"
+                />
+                <span className="text-xs font-normal text-zinc-500">
+                  Leave empty to keep your current logo. JPEG, PNG, or WebP. Max 8MB.
+                </span>
+              </label>
+            </div>
+            {store.logoUrl ? (
+              <img
+                alt=""
+                className="h-24 w-24 shrink-0 rounded-lg border border-zinc-200 object-contain dark:border-zinc-700"
+                src={store.logoUrl}
+              />
             ) : null}
-            {CATEGORY_OPTIONS.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-          Upload new logo
-          <input
-            accept="image/*"
-            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50 dark:file:bg-zinc-700 dark:file:text-zinc-100"
-            name="logo"
-            type="file"
-          />
-          <span className="text-xs font-normal text-zinc-500">
-            Leave empty to keep your current logo. JPEG, PNG, or WebP. Max 8MB.
-          </span>
-        </label>
-
-        {store.logoUrl ? (
-          <div className="flex flex-col gap-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Current logo</p>
-            <img
-              alt=""
-              className="h-24 w-24 rounded-lg border border-zinc-200 object-contain dark:border-zinc-700"
-              src={store.logoUrl}
-            />
           </div>
-        ) : null}
 
-        <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-          Cover photo
-          <input
-            accept="image/*"
-            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50 dark:file:bg-zinc-700 dark:file:text-zinc-100"
-            name="coverPhoto"
-            type="file"
-          />
-          <span className="text-xs font-normal text-zinc-500">
-            This image appears as a banner at the top of your store page. Recommended size: 1200 × 400px. Leave empty to keep the current cover photo.
-          </span>
-        </label>
-
-        {store.coverPhotoUrl ? (
-          <div className="flex flex-col gap-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Current cover photo</p>
-            <img
-              alt=""
-              className="w-full rounded-lg border border-zinc-200 object-cover dark:border-zinc-700"
-              src={store.coverPhotoUrl}
-              style={{ maxHeight: "160px" }}
-            />
+          <div className="mt-4 flex items-start gap-4">
+            <div className="min-w-0 flex-1">
+              <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                Cover photo
+                <input
+                  accept="image/*"
+                  className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50 dark:file:bg-zinc-700 dark:file:text-zinc-100"
+                  name="coverPhoto"
+                  type="file"
+                />
+                <span className="text-xs font-normal text-zinc-500">
+                  This image appears as a banner at the top of your store page. Recommended size: 1200 × 400px. Leave empty to keep the current cover photo.
+                </span>
+              </label>
+            </div>
+            {store.coverPhotoUrl ? (
+              <img
+                alt=""
+                className="w-full max-w-[220px] shrink-0 rounded-lg border border-zinc-200 object-cover dark:border-zinc-700"
+                src={store.coverPhotoUrl}
+                style={{ maxHeight: "160px" }}
+              />
+            ) : null}
           </div>
-        ) : null}
+        </div>
 
-        <div className="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700">
+        <div className="border-t border-zinc-100 dark:border-zinc-800 pt-6 mt-2">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Opening hours</h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             Set your opening hours for each day. Add multiple slots for split hours like a lunch break.
@@ -305,7 +317,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
               return (
                 <div
                   key={day}
-                  className="flex flex-wrap items-start gap-3 border-b border-zinc-100 py-3 last:border-b-0 dark:border-zinc-800"
+                  className="flex flex-wrap items-start gap-2 border-b border-zinc-100 py-2 last:border-b-0 dark:border-zinc-800"
                 >
                   <span className="w-28 shrink-0 pt-2 text-sm font-medium capitalize text-zinc-900 dark:text-zinc-50">
                     {day}
@@ -351,13 +363,13 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
           </div>
         </div>
 
-        <div className="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700">
+        <div className="border-t border-zinc-100 dark:border-zinc-800 pt-6 mt-2">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Search tags</h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             Add keywords that describe your store. Separate tags with commas. Example: handmade, local, organic
           </p>
           <input
-            className="mt-3 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+            className="mt-3 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
             defaultValue={store.tags.join(", ")}
             name="tags"
             placeholder="handmade, local, organic"
@@ -365,7 +377,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
           />
         </div>
 
-        <div className="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700">
+        <div className="border-t border-zinc-100 dark:border-zinc-800 pt-6 mt-2">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Amenities</h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Select the features available at your store.</p>
           <div className="mt-4 grid grid-cols-2 gap-3">
@@ -387,7 +399,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
           </div>
         </div>
 
-        <div className="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700">
+        <div className="border-t border-zinc-100 dark:border-zinc-800 pt-6 mt-2">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Store policies</h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             Return policy, shipping terms, payment rules, or anything customers should know before buying.
@@ -404,57 +416,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
         </div>
       </form>
 
-      <div>
-        <section className="mt-8 border-t border-zinc-200 pt-6 dark:border-zinc-700">
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Store gallery</h2>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Add up to 10 photos of your store.</p>
-
-        {store.images.length > 0 ? (
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            {store.images.map((image) => (
-              <div key={image.id} className="flex flex-col gap-2">
-                <img
-                  alt=""
-                  className="aspect-square w-full rounded-lg border border-zinc-200 object-cover dark:border-zinc-700"
-                  src={image.url}
-                />
-                <form action={removeStoreImage} className="flex flex-col">
-                  <input name="imageId" type="hidden" value={image.id} />
-                  <button
-                    className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                    type="submit"
-                  >
-                    Remove
-                  </button>
-                </form>
-              </div>
-            ))}
-          </div>
-        ) : null}
-
-        {store.images.length < 10 ? (
-          <form action={addStoreImage} className="mt-6 flex max-w-md flex-col gap-3">
-            <input
-              accept="image/*"
-              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50 dark:file:bg-zinc-700 dark:file:text-zinc-100"
-              multiple
-              name="galleryImage"
-              type="file"
-            />
-            <button
-              className="inline-flex h-11 w-fit items-center justify-center rounded-lg bg-[#D4450A] px-4 text-sm font-medium text-white hover:bg-[#B83A08]"
-              type="submit"
-            >
-              Add photo
-            </button>
-          </form>
-        ) : (
-          <p className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
-            Gallery full — remove a photo to add a new one.
-          </p>
-        )}
-        </section>
-      </div>
+      <GalleryUploadWrapper images={store.images} slotsAvailable={10 - store.images.length} />
 
       <div className="mt-8 flex flex-wrap gap-3 pt-2">
         <button

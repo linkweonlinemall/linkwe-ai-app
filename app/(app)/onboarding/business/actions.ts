@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getStoreByOwnerId } from "@/lib/store/get-vendor-store";
@@ -32,14 +33,36 @@ export async function saveBusinessOnboardingStep1(
   if (fullName.length > 120) return { error: "Full name is too long." };
   if (!region) return { error: "Select your region." };
 
-  await prisma.user.update({
-    where: { id: user!.id },
-    data: {
-      fullName,
-      region,
-      phone: phoneRaw.length > 0 ? phoneRaw : null,
-    },
-  });
+  const phone = phoneRaw.length > 0 ? phoneRaw : null;
+  if (phone) {
+    const phoneTaken = await prisma.user.findFirst({
+      where: { phone, NOT: { id: user!.id } },
+      select: { id: true },
+    });
+    if (phoneTaken) {
+      return { error: "That phone number is already in use." };
+    }
+  }
+
+  try {
+    await prisma.user.update({
+      where: { id: user!.id },
+      data: {
+        fullName,
+        region,
+        phone,
+      },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const target = error.meta?.target;
+      const targets = Array.isArray(target) ? target.map(String) : target != null ? [String(target)] : [];
+      if (targets.some((t) => t.toLowerCase().includes("phone"))) {
+        return { error: "That phone number is already in use." };
+      }
+    }
+    throw error;
+  }
 
   redirect("/onboarding/business/step-2");
 }

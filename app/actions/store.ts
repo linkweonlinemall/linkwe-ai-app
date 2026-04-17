@@ -89,7 +89,7 @@ export async function updateStore(formData: FormData): Promise<void> {
   let newCoverPhotoUrl: string | undefined;
   const coverPhotoEntry = formData.get("coverPhoto");
   if (coverPhotoEntry instanceof File && coverPhotoEntry.size > 0) {
-    const savedCover = await saveKycDocumentUpload(coverPhotoEntry);
+    const savedCover = await saveGalleryUpload(coverPhotoEntry);
     if (!savedCover.ok) {
       editRedirect("error=upload_failed");
     }
@@ -179,13 +179,13 @@ export async function updateStore(formData: FormData): Promise<void> {
   revalidatePath(`/store/${oldSlug}`);
   revalidatePath(`/store/${slug}`);
 
-  editRedirect("success=1");
+  redirect("/dashboard/vendor?success=store_saved");
 }
 
 export async function addStoreImage(formData: FormData): Promise<void> {
   const session = await getSession();
   if (!session || session.role !== "VENDOR") {
-    redirect("/");
+    redirect("/dashboard/vendor");
   }
 
   const store = await prisma.store.findFirst({
@@ -196,13 +196,16 @@ export async function addStoreImage(formData: FormData): Promise<void> {
     redirect("/dashboard/vendor");
   }
 
-  const files = (formData.getAll("galleryImage") as File[]).filter(
-    (f) => f instanceof File && f.size > 0,
-  );
+  const galleryFiles = [
+    ...(formData.getAll("galleryImages") as File[]),
+    ...(formData.getAll("galleryImage") as File[]),
+  ].filter((f): f is File => f instanceof File && f.size > 0);
 
-  if (files.length === 0) {
-    redirect("/dashboard/vendor/store/edit?error=no_file");
+  if (galleryFiles.length === 0) {
+    redirect("/dashboard/vendor");
   }
+
+  const files = galleryFiles;
 
   const imageCount = await prisma.storeImage.count({
     where: { storeId: store.id },
@@ -210,7 +213,7 @@ export async function addStoreImage(formData: FormData): Promise<void> {
 
   const slotsAvailable = 10 - imageCount;
   if (slotsAvailable <= 0) {
-    redirect("/dashboard/vendor/store/edit?error=gallery_full");
+    redirect("/dashboard/vendor");
   }
 
   const filesToUpload = files.slice(0, slotsAvailable);
@@ -223,29 +226,33 @@ export async function addStoreImage(formData: FormData): Promise<void> {
 
   let nextPosition = (lastImage?.position ?? 0) + 1;
 
-  for (const file of filesToUpload) {
-    const saved = await saveGalleryUpload(file);
-    if (!saved.ok) {
-      console.error("Gallery upload failed:", saved.error);
-      continue;
+  try {
+    for (const file of filesToUpload) {
+      const saved = await saveGalleryUpload(file);
+      if (!saved.ok) {
+        console.error("Gallery upload failed:", saved.error);
+        continue;
+      }
+      await prisma.storeImage.create({
+        data: {
+          storeId: store.id,
+          url: saved.publicPath,
+          position: nextPosition,
+        },
+      });
+      nextPosition += 1;
     }
-    await prisma.storeImage.create({
-      data: {
-        storeId: store.id,
-        url: saved.publicPath,
-        position: nextPosition,
-      },
-    });
-    nextPosition += 1;
+  } catch {
+    redirect("/dashboard/vendor");
   }
 
-  redirect("/dashboard/vendor/store/edit?success=gallery_updated");
+  redirect("/dashboard/vendor");
 }
 
 export async function removeStoreImage(formData: FormData): Promise<void> {
   const session = await getSession();
   if (!session || session.role !== "VENDOR") {
-    redirect("/");
+    redirect("/dashboard/vendor");
   }
 
   const store = await prisma.store.findFirst({
@@ -258,7 +265,7 @@ export async function removeStoreImage(formData: FormData): Promise<void> {
 
   const imageId = String(formData.get("imageId") ?? "").trim();
   if (!imageId) {
-    editRedirect("error=unauthorized");
+    redirect("/dashboard/vendor");
   }
 
   const image = await prisma.storeImage.findUnique({
@@ -277,5 +284,68 @@ export async function removeStoreImage(formData: FormData): Promise<void> {
   revalidatePath(`/store/${store.slug}`);
   revalidatePath("/dashboard/vendor");
 
-  editRedirect("success=gallery_updated");
+  redirect("/dashboard/vendor");
+}
+
+export async function addStoreImageClient(formData: FormData): Promise<{ ok: boolean; error?: string }> {
+  const session = await getSession();
+  if (!session || session.role !== "VENDOR") return { ok: false, error: "unauthorized" };
+
+  const store = await prisma.store.findFirst({
+    where: { ownerId: session.userId },
+    select: { id: true, slug: true },
+  });
+  if (!store) return { ok: false, error: "no_store" };
+
+  const storeId = store.id;
+  const slotsAvailable = 10 - (await prisma.storeImage.count({ where: { storeId } }));
+  if (slotsAvailable <= 0) return { ok: false, error: "gallery_full" };
+
+  const galleryFiles = [
+    ...(formData.getAll("galleryImages") as File[]),
+    ...(formData.getAll("galleryImage") as File[]),
+  ].filter((f): f is File => f instanceof File && f.size > 0);
+
+  if (galleryFiles.length === 0) return { ok: false, error: "no_file" };
+
+  const filesToUpload = galleryFiles.slice(0, slotsAvailable);
+  const lastImage = await prisma.storeImage.findFirst({
+    where: { storeId },
+    orderBy: { position: "desc" },
+    select: { position: true },
+  });
+
+  let nextPosition = (lastImage?.position ?? 0) + 1;
+
+  for (const file of filesToUpload) {
+    const saved = await saveGalleryUpload(file);
+    if (saved.ok) {
+      await prisma.storeImage.create({
+        data: { storeId, url: saved.publicPath, position: nextPosition },
+      });
+      nextPosition += 1;
+    }
+  }
+
+  return { ok: true };
+}
+
+export async function removeStoreImageClient(formData: FormData): Promise<{ ok: boolean; error?: string }> {
+  const session = await getSession();
+  if (!session || session.role !== "VENDOR") return { ok: false, error: "unauthorized" };
+
+  const store = await prisma.store.findFirst({
+    where: { ownerId: session.userId },
+    select: { id: true },
+  });
+  if (!store) return { ok: false, error: "no_store" };
+
+  const imageId = String(formData.get("imageId") ?? "").trim();
+  if (!imageId) return { ok: false, error: "no_image_id" };
+
+  const image = await prisma.storeImage.findUnique({ where: { id: imageId } });
+  if (!image || image.storeId !== store.id) return { ok: false, error: "unauthorized" };
+
+  await prisma.storeImage.delete({ where: { id: imageId } });
+  return { ok: true };
 }
