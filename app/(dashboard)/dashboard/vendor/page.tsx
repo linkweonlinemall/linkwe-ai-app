@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 const DASHBOARD_MESSAGES: Record<string, string> = {
   bank_fields_required: "All bank detail fields are required.",
   bank_saved: "Bank details saved successfully.",
+  store_saved: "Store saved successfully.",
 };
 
 type Props = { searchParams: Promise<{ error?: string; success?: string }> };
@@ -40,6 +41,10 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
       tags: true,
       amenities: true,
       policies: true,
+      socialLinks: true,
+      latitude: true,
+      longitude: true,
+      address: true,
       images: { select: { id: true } },
     },
   });
@@ -82,6 +87,8 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
     { label: "Tags", done: store.tags.length > 0 },
     { label: "Amenities", done: store.amenities.length > 0 },
     { label: "Store policies", done: !!store.policies },
+    { label: "Store location", done: !!store.latitude },
+    { label: "Social links", done: !!store.socialLinks },
     { label: "Payout details", done: !!bankDetails },
   ];
 

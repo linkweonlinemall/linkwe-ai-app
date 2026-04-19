@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getSession } from "@/lib/auth/session";
 import { saveKycDocumentUpload } from "@/lib/onboarding/save-kyc-upload";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { saveGalleryUpload } from "@/lib/uploads/save-gallery-upload";
 import { validateStoreSlug } from "@/lib/store/slug";
@@ -150,6 +150,19 @@ export async function updateStore(formData: FormData): Promise<void> {
 
   const policies = String(formData.get("policies") ?? "").trim() || null;
 
+  const locationAddress = String(formData.get("locationAddress") ?? "").trim() || null;
+  const locationLat = formData.get("locationLat") ? parseFloat(String(formData.get("locationLat"))) : null;
+  const locationLng = formData.get("locationLng") ? parseFloat(String(formData.get("locationLng"))) : null;
+  const safeLat = locationLat !== null && Number.isFinite(locationLat) ? locationLat : null;
+  const safeLng = locationLng !== null && Number.isFinite(locationLng) ? locationLng : null;
+
+  const socialLinks: Record<string, string> = {};
+  const socialPlatforms = ["instagram", "facebook", "tiktok", "youtube", "x", "linkedin", "whatsapp", "website"];
+  for (const platform of socialPlatforms) {
+    const val = String(formData.get(`social_${platform}`) ?? "").trim();
+    if (val) socialLinks[platform] = val;
+  }
+
   const updateData: Prisma.StoreUpdateInput = {
     name,
     slug,
@@ -161,6 +174,10 @@ export async function updateStore(formData: FormData): Promise<void> {
     tags,
     amenities,
     policies,
+    address: locationAddress,
+    latitude: safeLat,
+    longitude: safeLng,
+    socialLinks: Object.keys(socialLinks).length > 0 ? socialLinks : Prisma.DbNull,
   };
   if (newCoverPhotoUrl !== undefined) {
     updateData.coverPhotoUrl = newCoverPhotoUrl;

@@ -36,6 +36,7 @@ export default async function EditVendorProductPage({ params }: Props) {
     name: row.name,
     slug: row.slug,
     description: row.description,
+    shortDescription: row.shortDescription,
     category: row.category,
     brand: row.brand,
     tagsDisplay: row.tags.join(", "),
@@ -57,6 +58,11 @@ export default async function EditVendorProductPage({ params }: Props) {
     latitude: row.latitude,
     longitude: row.longitude,
     isPublished: row.isPublished,
+    isFeatured: row.isFeatured,
+    metaTitle: row.metaTitle,
+    metaDescription: row.metaDescription,
+    deliveryFee: row.deliveryFee,
+    deliveryRegions: row.deliveryRegions,
   };
 
   return (

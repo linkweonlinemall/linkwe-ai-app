@@ -4,12 +4,47 @@ import { useActionState, useState } from "react";
 import type { ProductCondition, WeightUnit } from "@prisma/client";
 import type { ProductFieldErrors } from "@/app/actions/product";
 import { updateProduct } from "@/app/actions/product";
+import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
+
+const PRODUCT_CATEGORY_OPTIONS = [
+  { value: "clothing_apparel", label: "Clothing & Apparel" },
+  { value: "shoes_footwear", label: "Shoes & Footwear" },
+  { value: "bags_accessories", label: "Bags & Accessories" },
+  { value: "jewellery_watches", label: "Jewellery & Watches" },
+  { value: "health_beauty", label: "Health & Beauty" },
+  { value: "food_beverages", label: "Food & Beverages" },
+  { value: "groceries", label: "Groceries" },
+  { value: "home_furniture", label: "Home & Furniture" },
+  { value: "kitchen_dining", label: "Kitchen & Dining" },
+  { value: "garden_outdoor", label: "Garden & Outdoor" },
+  { value: "electronics", label: "Electronics" },
+  { value: "phones_tablets", label: "Phones & Tablets" },
+  { value: "computers_laptops", label: "Computers & Laptops" },
+  { value: "cameras_photography", label: "Cameras & Photography" },
+  { value: "gaming", label: "Gaming" },
+  { value: "sports_fitness", label: "Sports & Fitness" },
+  { value: "toys_games", label: "Toys & Games" },
+  { value: "baby_kids", label: "Baby & Kids" },
+  { value: "books_stationery", label: "Books & Stationery" },
+  { value: "art_crafts", label: "Art & Crafts" },
+  { value: "music_instruments", label: "Music & Instruments" },
+  { value: "automotive_parts", label: "Automotive Parts" },
+  { value: "tools_hardware", label: "Tools & Hardware" },
+  { value: "pet_supplies", label: "Pet Supplies" },
+  { value: "office_supplies", label: "Office Supplies" },
+  { value: "medical_wellness", label: "Medical & Wellness" },
+  { value: "religious_cultural", label: "Religious & Cultural" },
+  { value: "local_handmade", label: "Local & Handmade" },
+  { value: "carnival_costumes", label: "Carnival & Costumes" },
+  { value: "other", label: "Other" },
+] as const;
 
 export type VendorProductEditPayload = {
   id: string;
   name: string;
   slug: string;
   description: string | null;
+  shortDescription: string | null;
   category: string | null;
   brand: string | null;
   tagsDisplay: string;
@@ -31,6 +66,11 @@ export type VendorProductEditPayload = {
   latitude: number | null;
   longitude: number | null;
   isPublished: boolean;
+  isFeatured: boolean;
+  metaTitle: string | null;
+  metaDescription: string | null;
+  deliveryFee: number | null;
+  deliveryRegions: string[];
 };
 
 export function ProductEditForm({ product }: { product: VendorProductEditPayload }) {
@@ -123,8 +163,30 @@ export function ProductEditForm({ product }: { product: VendorProductEditPayload
           />
         </label>
         <label className="block">
+          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Short description</span>
+          <input
+            name="shortDescription"
+            maxLength={160}
+            defaultValue={product.shortDescription ?? ""}
+            placeholder="One line that appears on product cards and search results"
+            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+          />
+          <p className="mt-1 text-xs text-zinc-500">Max 160 characters.</p>
+        </label>
+        <label className="block">
           <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Category</span>
-          <input name="category" defaultValue={product.category ?? ""} className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50" />
+          <select
+            name="category"
+            defaultValue={product.category ?? ""}
+            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+          >
+            <option value="">Select a category</option>
+            {PRODUCT_CATEGORY_OPTIONS.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="block">
           <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Brand</span>
@@ -156,10 +218,23 @@ export function ProductEditForm({ product }: { product: VendorProductEditPayload
           </select>
           {fieldError("condition") ? <p className="mt-1 text-sm text-red-600">{fieldError("condition")}</p> : null}
         </label>
+        <label className="flex cursor-pointer items-center gap-3">
+          <input
+            type="checkbox"
+            name="isFeatured"
+            defaultChecked={product.isFeatured}
+            className="rounded border-zinc-300"
+          />
+          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Feature this product</span>
+        </label>
+        <p className="-mt-2 text-xs text-zinc-500">
+          Featured products may appear in highlighted sections on your store.
+        </p>
       </section>
 
       <section className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Pricing</h2>
+        <input type="hidden" name="currency" value="TTD" />
         <label className="block">
           <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Price (TTD)</span>
           <input
@@ -298,6 +373,78 @@ export function ProductEditForm({ product }: { product: VendorProductEditPayload
               <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Height (cm)</span>
               <input type="number" name="height" step={0.01} defaultValue={product.height ?? ""} className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50" />
             </label>
+            <label className="block">
+              <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Delivery fee (TTD)</span>
+              <input
+                type="number"
+                name="deliveryFee"
+                min={0}
+                step={0.01}
+                defaultValue={product.deliveryFee ?? ""}
+                placeholder="0.00"
+                className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+              />
+              <p className="mt-1 text-xs text-zinc-500">
+                Charge added to the customer at checkout for delivery of this product.
+              </p>
+            </label>
+
+            <div className="block">
+              <span className="mb-2 block text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                Delivery regions
+              </span>
+              <p className="mb-3 text-xs text-zinc-500">
+                Select which areas in Trinidad and Tobago you deliver to.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: "port_of_spain", label: "Port of Spain" },
+                  { value: "san_fernando", label: "San Fernando" },
+                  { value: "arima", label: "Arima" },
+                  { value: "chaguanas", label: "Chaguanas" },
+                  { value: "tunapuna", label: "Tunapuna" },
+                  { value: "sangre_grande", label: "Sangre Grande" },
+                  { value: "siparia", label: "Siparia" },
+                  { value: "point_fortin", label: "Point Fortin" },
+                  { value: "diego_martin", label: "Diego Martin" },
+                  { value: "maraval", label: "Maraval" },
+                  { value: "carenage", label: "Carenage" },
+                  { value: "laventille", label: "Laventille" },
+                  { value: "morvant", label: "Morvant" },
+                  { value: "barataria", label: "Barataria" },
+                  { value: "st_augustine", label: "St. Augustine" },
+                  { value: "curepe", label: "Curepe" },
+                  { value: "st_joseph", label: "St. Joseph" },
+                  { value: "arouca", label: "Arouca" },
+                  { value: "tacarigua", label: "Tacarigua" },
+                  { value: "d_abadie", label: "D'Abadie" },
+                  { value: "couva", label: "Couva" },
+                  { value: "tabaquite", label: "Tabaquite" },
+                  { value: "princes_town", label: "Princes Town" },
+                  { value: "rio_claro", label: "Rio Claro" },
+                  { value: "mayaro", label: "Mayaro" },
+                  { value: "fyzabad", label: "Fyzabad" },
+                  { value: "penal", label: "Penal" },
+                  { value: "debe", label: "Debe" },
+                  { value: "tobago", label: "Tobago (all areas)" },
+                  { value: "nationwide", label: "Nationwide" },
+                ].map((region) => (
+                  <label
+                    key={region.value}
+                    className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300"
+                  >
+                    <input
+                      type="checkbox"
+                      name="deliveryRegions"
+                      value={region.value}
+                      defaultChecked={product.deliveryRegions.includes(region.value)}
+                      className="rounded border-zinc-300"
+                    />
+                    {region.label}
+                  </label>
+                ))}
+              </div>
+            </div>
           </div>
         )}
         <label className="flex items-center gap-2">
@@ -318,20 +465,45 @@ export function ProductEditForm({ product }: { product: VendorProductEditPayload
 
       <section className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Location</h2>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          Search for your address then drag the pin to fine-tune the exact pickup or origin location.
+        </p>
+        <StoreLocationPicker
+          initialAddress={product.address ?? ""}
+          initialLat={product.latitude ?? null}
+          initialLng={product.longitude ?? null}
+        />
+      </section>
+
+      <section className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">SEO</h2>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          Optional. Controls how this product appears in Google search results.
+        </p>
         <label className="block">
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Origin or pickup address</span>
-          <input name="address" defaultValue={product.address ?? ""} className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50" />
+          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Meta title</span>
+          <input
+            name="metaTitle"
+            maxLength={60}
+            defaultValue={product.metaTitle ?? ""}
+            placeholder="Leave blank to use product name"
+            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+          />
+          <p className="mt-1 text-xs text-zinc-500">Max 60 characters.</p>
+        </label>
+        <label className="block">
+          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Meta description</span>
+          <textarea
+            name="metaDescription"
+            maxLength={160}
+            rows={3}
+            defaultValue={product.metaDescription ?? ""}
+            placeholder="Leave blank to use short description"
+            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+          />
           <p className="mt-1 text-xs text-zinc-500">
-            Shown on the map so customers know where this product is coming from
+            Max 160 characters. Shown in Google search results.
           </p>
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Latitude</span>
-          <input type="number" name="latitude" step={0.000001} defaultValue={product.latitude ?? ""} className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50" />
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Longitude</span>
-          <input type="number" name="longitude" step={0.000001} defaultValue={product.longitude ?? ""} className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50" />
         </label>
       </section>
 

@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Sora } from "next/font/google";
+
+import CartProvider from "@/components/cart/CartProvider";
+
 import "./globals.css";
 
 const sora = Sora({
@@ -20,7 +23,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${sora.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <CartProvider>{children}</CartProvider>
+      </body>
     </html>
   );
 }

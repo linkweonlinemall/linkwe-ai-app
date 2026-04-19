@@ -45,6 +45,10 @@ export type VendorDashboardStore = {
   tags: string[];
   amenities: string[];
   policies: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  address: string | null;
+  socialLinks: Prisma.JsonValue | null;
   images: { id: string }[];
 };
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { unstable_noStore as noStore } from "next/cache";
 import { redirect } from "next/navigation";
 import { updateStore } from "@/app/actions/store";
+import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
 import GalleryUploadWrapper from "./gallery-upload-wrapper";
 import { getSession } from "@/lib/auth/session";
 import { TRINIDAD_ONBOARDING_REGION_OPTIONS } from "@/lib/onboarding/tt-region-options";
@@ -91,6 +92,10 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
       tags: true,
       amenities: true,
       policies: true,
+      latitude: true,
+      longitude: true,
+      address: true,
+      socialLinks: true,
       images: {
         select: { id: true, url: true, position: true },
         orderBy: { position: "asc" },
@@ -111,6 +116,8 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
   const publicStorePath = `/store/${store.slug}`;
 
   const hours: WeekSchedule = (store.openingHours as WeekSchedule | null) ?? DEFAULT_HOURS;
+
+  const parsedSocialLinks = (store.socialLinks as Record<string, string> | null) ?? {};
 
   return (
     <div className="mx-auto max-w-6xl rounded-xl border border-zinc-200 bg-white p-10 dark:border-zinc-800 dark:bg-zinc-900">
@@ -413,6 +420,149 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
             rows={5}
           ></textarea>
           <span className="mt-1 text-xs text-zinc-500">Max 2000 characters.</span>
+        </div>
+
+        <div className="border-t border-zinc-100 dark:border-zinc-800 pt-6 mt-2">
+          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Store location</h2>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            Search for your address then drag the pin to fine-tune your exact location.
+          </p>
+          <div className="mt-4">
+            <StoreLocationPicker
+              initialAddress={store.address ?? ""}
+              initialLat={store.latitude ?? null}
+              initialLng={store.longitude ?? null}
+            />
+          </div>
+        </div>
+
+        <div className="border-t border-zinc-100 dark:border-zinc-800 pt-6 mt-2">
+          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Social media</h2>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            Add your social media handles so customers can find and follow you.
+          </p>
+          <div className="mt-4 flex flex-col gap-4">
+            <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
+              Instagram
+              <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-950">
+                <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900">
+                  instagram.com/
+                </span>
+                <input
+                  className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none dark:bg-zinc-950 dark:text-zinc-50"
+                  defaultValue={parsedSocialLinks.instagram ?? ""}
+                  name="social_instagram"
+                  placeholder="yourhandle"
+                  type="text"
+                />
+              </div>
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
+              Facebook
+              <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-950">
+                <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900">
+                  facebook.com/
+                </span>
+                <input
+                  className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none dark:bg-zinc-950 dark:text-zinc-50"
+                  defaultValue={parsedSocialLinks.facebook ?? ""}
+                  name="social_facebook"
+                  placeholder="yourpage"
+                  type="text"
+                />
+              </div>
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
+              TikTok
+              <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-950">
+                <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900">
+                  tiktok.com/@
+                </span>
+                <input
+                  className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none dark:bg-zinc-950 dark:text-zinc-50"
+                  defaultValue={parsedSocialLinks.tiktok ?? ""}
+                  name="social_tiktok"
+                  placeholder="yourhandle"
+                  type="text"
+                />
+              </div>
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
+              YouTube
+              <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-950">
+                <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900">
+                  youtube.com/@
+                </span>
+                <input
+                  className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none dark:bg-zinc-950 dark:text-zinc-50"
+                  defaultValue={parsedSocialLinks.youtube ?? ""}
+                  name="social_youtube"
+                  placeholder="yourchannel"
+                  type="text"
+                />
+              </div>
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
+              X
+              <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-950">
+                <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900">
+                  x.com/
+                </span>
+                <input
+                  className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none dark:bg-zinc-950 dark:text-zinc-50"
+                  defaultValue={parsedSocialLinks.x ?? ""}
+                  name="social_x"
+                  placeholder="yourhandle"
+                  type="text"
+                />
+              </div>
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
+              LinkedIn
+              <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-950">
+                <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900">
+                  linkedin.com/in/
+                </span>
+                <input
+                  className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none dark:bg-zinc-950 dark:text-zinc-50"
+                  defaultValue={parsedSocialLinks.linkedin ?? ""}
+                  name="social_linkedin"
+                  placeholder="yourprofile"
+                  type="text"
+                />
+              </div>
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
+              WhatsApp
+              <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-950">
+                <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900">
+                  +1 (868)
+                </span>
+                <input
+                  className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none dark:bg-zinc-950 dark:text-zinc-50"
+                  defaultValue={parsedSocialLinks.whatsapp ?? ""}
+                  name="social_whatsapp"
+                  placeholder="7001234 — business number"
+                  type="text"
+                />
+              </div>
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
+              Website
+              <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-950">
+                <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900">
+                  https://
+                </span>
+                <input
+                  className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none dark:bg-zinc-950 dark:text-zinc-50"
+                  defaultValue={parsedSocialLinks.website ?? ""}
+                  name="social_website"
+                  placeholder="yourwebsite.com"
+                  type="text"
+                />
+              </div>
+            </label>
+          </div>
         </div>
       </form>
 

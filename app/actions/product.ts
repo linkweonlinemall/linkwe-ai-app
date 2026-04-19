@@ -45,7 +45,7 @@ function parseTags(raw: string): string[] {
 function optionalFloat(raw: string): number | null {
   const t = raw.trim();
   if (!t) return null;
-  const n = Number(t);
+  const n = parseFloat(t);
   return Number.isFinite(n) ? n : null;
 }
 
@@ -113,10 +113,20 @@ export async function createProduct(
   const widthRaw = String(formData.get("width") ?? "");
   const heightRaw = String(formData.get("height") ?? "");
   const returnPolicy = String(formData.get("returnPolicy") ?? "").trim() || null;
-  const address = String(formData.get("address") ?? "").trim() || null;
-  const latRaw = String(formData.get("latitude") ?? "");
-  const lngRaw = String(formData.get("longitude") ?? "");
+  const address = String(formData.get("locationAddress") ?? "").trim() || null;
+  const latRaw = String(formData.get("locationLat") ?? "");
+  const lngRaw = String(formData.get("locationLng") ?? "");
   const intent = String(formData.get("intent") ?? "").trim();
+
+  const shortDescription = String(formData.get("shortDescription") ?? "").trim() || null;
+  const isFeatured = formData.get("isFeatured") === "on";
+  const metaTitle = String(formData.get("metaTitle") ?? "").trim() || null;
+  const metaDescription = String(formData.get("metaDescription") ?? "").trim() || null;
+  const deliveryFeeRaw = String(formData.get("deliveryFee") ?? "");
+  const deliveryFee = allowDelivery ? optionalFloat(deliveryFeeRaw) : null;
+  const deliveryRegions = allowDelivery
+    ? formData.getAll("deliveryRegions").map(String).filter(Boolean)
+    : [];
 
   const fieldErr = validatePhysicalProductFields({ name, slugRaw, priceRaw, conditionRaw });
   if (fieldErr) return { ok: false, errors: fieldErr };
@@ -184,6 +194,12 @@ export async function createProduct(
     longitude,
     address,
     isPublished,
+    shortDescription,
+    isFeatured,
+    metaTitle,
+    metaDescription,
+    deliveryFee,
+    deliveryRegions,
     isDigital: false,
     isBookable: false,
   };
@@ -248,10 +264,20 @@ export async function updateProduct(
   const widthRaw = String(formData.get("width") ?? "");
   const heightRaw = String(formData.get("height") ?? "");
   const returnPolicy = String(formData.get("returnPolicy") ?? "").trim() || null;
-  const address = String(formData.get("address") ?? "").trim() || null;
-  const latRaw = String(formData.get("latitude") ?? "");
-  const lngRaw = String(formData.get("longitude") ?? "");
+  const address = String(formData.get("locationAddress") ?? "").trim() || null;
+  const latRaw = String(formData.get("locationLat") ?? "");
+  const lngRaw = String(formData.get("locationLng") ?? "");
   const intent = String(formData.get("intent") ?? "").trim();
+
+  const shortDescription = String(formData.get("shortDescription") ?? "").trim() || null;
+  const isFeatured = formData.get("isFeatured") === "on";
+  const metaTitle = String(formData.get("metaTitle") ?? "").trim() || null;
+  const metaDescription = String(formData.get("metaDescription") ?? "").trim() || null;
+  const deliveryFeeRaw = String(formData.get("deliveryFee") ?? "");
+  const deliveryFee = allowDelivery ? optionalFloat(deliveryFeeRaw) : null;
+  const deliveryRegions = allowDelivery
+    ? formData.getAll("deliveryRegions").map(String).filter(Boolean)
+    : [];
 
   const existingImagesJson = String(formData.get("existingImages") ?? "[]");
   let existingUrls: string[] = [];
@@ -342,6 +368,12 @@ export async function updateProduct(
         longitude,
         address,
         isPublished,
+        shortDescription,
+        isFeatured,
+        metaTitle,
+        metaDescription,
+        deliveryFee,
+        deliveryRegions,
         isDigital: false,
         isBookable: false,
       },
