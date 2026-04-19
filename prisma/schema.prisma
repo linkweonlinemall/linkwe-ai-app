@@ -34,6 +34,7 @@ model User {
   listingsOwned       Listing[]           @relation("ListingOwner")
   vendorLedgerEntries VendorLedgerEntry[] @relation("LedgerActor")
   bankDetails         VendorBankDetails?
+  productCartItems    ProductCartItem[]
 
   @@index([email])
   @@index([createdAt])
@@ -71,6 +72,7 @@ model Store {
   latitude         Float?
   longitude        Float?
   address          String?
+  socialLinks      Json?       @map("social_links")
   createdAt        DateTime    @default(now()) @map("created_at")
   updatedAt        DateTime    @updatedAt @map("updated_at")
   listings         Listing[]
@@ -123,12 +125,15 @@ model VendorLedgerEntry {
   storeId           String                @map("store_id")
   currency          String                @db.Char(3)
   entryType         VendorLedgerEntryType @map("entry_type")
+  /// Phase D operations categorization (optional; legacy rows use `entryType` only).
+  ledgerEntryType   LedgerEntryType?      @map("ledger_entry_type")
   /// Always store magnitude as positive; direction is defined by entryType (credit vs debit categories in app).
   amountMinor       Int                   @map("amount_minor")
   /// Running balance after this row (same currency); optional cache for dashboards.
   balanceAfterMinor BigInt?               @map("balance_after_minor")
   mainOrderId       String?               @map("main_order_id")
   splitOrderId      String?               @map("split_order_id")
+  splitOrderRef     String?               @map("split_order_ref")
   payoutRequestId   String?               @map("payout_request_id")
   idempotencyKey    String?               @unique @map("idempotency_key")
   description       String?
@@ -451,7 +456,8 @@ model MainOrder {
 model OrderItem {
   id            String   @id @default(cuid())
   mainOrderId   String   @map("main_order_id")
-  listingId     String   @map("listing_id")
+  listingId     String?  @map("listing_id")
+  productId     String?  @map("product_id")
   storeId       String   @map("store_id")
   titleSnapshot String   @map("title_snapshot")
   /// Unit price in minor units at time of purchase.
@@ -461,7 +467,8 @@ model OrderItem {
   createdAt     DateTime @default(now()) @map("created_at")
 
   mainOrder MainOrder @relation(fields: [mainOrderId], references: [id], onDelete: Cascade)
-  listing   Listing   @relation(fields: [listingId], references: [id])
+  listing   Listing?  @relation(fields: [listingId], references: [id])
+  product   Product?  @relation(fields: [productId], references: [id])
   store     Store     @relation(fields: [storeId], references: [id])
 
   @@index([mainOrderId])
@@ -495,11 +502,15 @@ model SplitOrder {
   id                       String               @id @default(cuid())
   mainOrderId              String               @map("main_order_id")
   storeId                  String               @map("store_id")
-  status                   SplitOrderStatus     @default(PENDING_PREPARATION)
+  status                   SplitOrderStatus     @default(AWAITING_VENDOR_ACTION)
   subtotalMinor            Int                  @map("subtotal_minor")
   vendorNetMinor           Int                  @map("vendor_net_minor")
   currency                 String               @db.Char(3)
   vendorInboundMethod      VendorInboundMethod? @map("vendor_inbound_method")
+  vendorActionAt           DateTime?            @map("vendor_action_at")
+  warehouseReceivedAt      DateTime?            @map("warehouse_received_at")
+  pickupRegion             String?              @map("pickup_region")
+  pickupAddress            String?              @map("pickup_address")
   pickupRequestedAt        DateTime?            @map("pickup_requested_at")
   vendorDropoffScheduledAt DateTime?            @map("vendor_dropoff_scheduled_at")
   vendorDropoffCompletedAt DateTime?            @map("vendor_dropoff_completed_at")
@@ -509,7 +520,8 @@ model SplitOrder {
   updatedAt                DateTime             @updatedAt @map("updated_at")
   documents                OrderDocument[]
   items                    SplitOrderItem[]
-  shipments                Shipment[]
+  shipments                Shipment[]           @relation("OutboundShipment")
+  inboundShipment          Shipment?            @relation("InboundShipment")
   mainOrder                MainOrder            @relation(fields: [mainOrderId], references: [id], onDelete: Cascade)
   shippingBundle           ShippingBundle?      @relation(fields: [shippingBundleId], references: [id])
   store                    Store                @relation(fields: [storeId], references: [id])
@@ -568,21 +580,29 @@ model WarehouseOrderLine {
 
 /// Courier / outbound shipment (bundle or single split).
 model Shipment {
-  id                  String          @id @default(cuid())
-  splitOrderId        String?         @map("split_order_id")
-  shippingBundleId    String?         @unique @map("shipping_bundle_id")
-  courierId           String?         @map("courier_id")
-  status              ShipmentStatus  @default(PENDING)
-  trackingNumber      String?         @map("tracking_number")
-  carrier             String?
-  proofUrl            String?         @map("proof_url")
-  estimatedDeliveryAt DateTime?       @map("estimated_delivery_at")
-  deliveredAt         DateTime?       @map("delivered_at")
-  createdAt           DateTime        @default(now()) @map("created_at")
-  updatedAt           DateTime        @updatedAt @map("updated_at")
-  courier             User?           @relation("CourierShipments", fields: [courierId], references: [id])
-  shippingBundle      ShippingBundle? @relation(fields: [shippingBundleId], references: [id])
-  splitOrder          SplitOrder?     @relation(fields: [splitOrderId], references: [id], onDelete: Cascade)
+  id                       String          @id @default(cuid())
+  splitOrderId             String?         @map("split_order_id")
+  shippingBundleId         String?         @unique @map("shipping_bundle_id")
+  inboundForSplitOrderId   String?         @unique @map("inbound_for_split_order_id")
+  courierId                String?         @map("courier_id")
+  status                   ShipmentStatus  @default(PENDING)
+  /// Operational lifecycle (pickup / warehouse / customer); optional alongside legacy `status`.
+  shipmentStatus           ShipmentStatus? @map("shipment_status")
+  type                     ShipmentType    @default(OUTBOUND_DELIVERY)
+  region                   String?
+  claimedAt                DateTime?       @map("claimed_at")
+  pickedUpAt               DateTime?       @map("picked_up_at")
+  trackingNumber           String?         @map("tracking_number")
+  carrier                  String?
+  proofUrl                 String?         @map("proof_url")
+  estimatedDeliveryAt      DateTime?       @map("estimated_delivery_at")
+  deliveredAt              DateTime?       @map("delivered_at")
+  createdAt                DateTime        @default(now()) @map("created_at")
+  updatedAt                DateTime        @updatedAt @map("updated_at")
+  courier                  User?           @relation("CourierShipments", fields: [courierId], references: [id])
+  shippingBundle           ShippingBundle? @relation(fields: [shippingBundleId], references: [id])
+  splitOrder               SplitOrder?     @relation("OutboundShipment", fields: [splitOrderId], references: [id], onDelete: Cascade)
+  inboundForSplitOrder     SplitOrder?     @relation("InboundShipment", fields: [inboundForSplitOrderId], references: [id])
 
   @@index([splitOrderId])
   @@index([courierId, status])
@@ -738,12 +758,11 @@ enum MainOrderStatus {
   DRAFT
   PENDING_PAYMENT
   PAID
-  AWAITING_VENDOR_FULFILLMENT
+  PROCESSING
   PARTIALLY_IN_HOUSE
-  READY_TO_BUNDLE
-  AWAITING_SHIPPING
+  READY_TO_SHIP
   SHIPPED
-  CUSTOMER_RECEIVED
+  DELIVERED
   COMPLETED
   CANCELLED
   REFUNDED
@@ -758,18 +777,18 @@ enum PayoutStatus {
   CANCELLED
 }
 
-/// Per-vendor slice — vendor prep → warehouse intake → bundle → ship → receive → complete
+/// Per-vendor slice — Phase D operations lifecycle.
 enum SplitOrderStatus {
-  PENDING_PREPARATION
-  PICKUP_REQUESTED
-  COMING_TO_WAREHOUSE
-  PARTIALLY_CHECKED
-  IN_HOUSE
-  READY_FOR_BUNDLE
-  BUNDLED
-  SHIPPED
-  CUSTOMER_RECEIVED
-  COMPLETED
+  AWAITING_VENDOR_ACTION
+  VENDOR_PREPARING
+  AWAITING_COURIER_PICKUP
+  COURIER_ASSIGNED
+  COURIER_PICKED_UP
+  VENDOR_DROPPED_OFF
+  AT_WAREHOUSE
+  BUNDLED_FOR_DISPATCH
+  DISPATCHED
+  DELIVERED
   CANCELLED
 }
 
@@ -788,6 +807,24 @@ enum ShipmentStatus {
   FAILED
   RETURNED
   CANCELLED
+  AWAITING_COURIER_CLAIM
+  COURIER_ASSIGNED
+  COURIER_PICKED_UP
+  DELIVERED_TO_WAREHOUSE
+  DELIVERED_TO_CUSTOMER
+}
+
+enum ShipmentType {
+  INBOUND_COURIER_PICKUP
+  OUTBOUND_DELIVERY
+}
+
+enum LedgerEntryType {
+  ORDER_REVENUE
+  COURIER_PICKUP_FEE
+  PLATFORM_COMMISSION
+  PAYOUT
+  ADJUSTMENT
 }
 
 /// How vendor gets goods into the warehouse for this split
@@ -1007,6 +1044,9 @@ model Product {
   name                  String
   slug                  String            @unique
   description           String?
+  shortDescription      String?
+  deliveryFee           Float?
+  deliveryRegions       String[]          @default([])
   price                 Float
   compareAtPrice        Float?
   sku                   String?
@@ -1062,9 +1102,26 @@ model Product {
   bookingSlots          ProductBookingSlot[]
   bookings              ProductBooking[]
   digitalDownloads      DigitalDownload[]
+  cartItems             ProductCartItem[]
+  orderItems            OrderItem[]
 
   @@index([storeId])
   @@index([isPublished])
+}
+
+model ProductCartItem {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  productId String   @map("product_id")
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@map("product_cart_items")
 }
 
 model ProductVariant {
