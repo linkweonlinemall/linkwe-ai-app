@@ -1,5 +1,6 @@
 "use server";
 
+import type { AccountType } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -13,6 +14,9 @@ export async function saveVendorBankDetails(formData: FormData): Promise<void> {
   const bankName = String(formData.get("bankName") ?? "").trim();
   const accountName = String(formData.get("accountName") ?? "").trim();
   const accountNumber = String(formData.get("accountNumber") ?? "").trim();
+  const accountTypeRaw = String(formData.get("accountType") ?? "").trim();
+  const accountType: AccountType | null =
+    accountTypeRaw === "CHEQUING" || accountTypeRaw === "SAVINGS" ? accountTypeRaw : null;
 
   if (!bankName || !accountName || !accountNumber) {
     redirect("/dashboard/vendor?error=bank_fields_required");
@@ -20,8 +24,8 @@ export async function saveVendorBankDetails(formData: FormData): Promise<void> {
 
   await prisma.vendorBankDetails.upsert({
     where: { userId: session.userId },
-    update: { bankName, accountName, accountNumber },
-    create: { userId: session.userId, bankName, accountName, accountNumber },
+    update: { bankName, accountName, accountNumber, accountType },
+    create: { userId: session.userId, bankName, accountName, accountNumber, accountType },
   });
 
   redirect("/dashboard/vendor?success=bank_saved");

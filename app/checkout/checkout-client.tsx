@@ -10,33 +10,8 @@ import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
 import { TRINIDAD_ONBOARDING_REGION_OPTIONS } from "@/lib/onboarding/tt-region-options";
 import { useCartStore } from "@/lib/cart/cart-store";
 import { getFinalShippingRateForRegion } from "@/lib/shipping/tt-markup";
-import { normalizeRegion } from "@/lib/shipping/trinidad-zoning";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
-
-function detectRegionFromAddress(address: string): string | null {
-  if (!address) return null;
-  const normalized = normalizeRegion(address);
-
-  for (const option of TRINIDAD_ONBOARDING_REGION_OPTIONS) {
-    const optionNormalized = normalizeRegion(option.value);
-    if (normalized.includes(optionNormalized)) {
-      return option.value;
-    }
-  }
-
-  const parts = address.split(",").map((p) => p.trim());
-  for (const part of parts) {
-    const partNormalized = normalizeRegion(part);
-    for (const option of TRINIDAD_ONBOARDING_REGION_OPTIONS) {
-      if (normalizeRegion(option.value) === partNormalized) {
-        return option.value;
-      }
-    }
-  }
-
-  return null;
-}
 
 export type CheckoutClientItem = {
   id: string;
@@ -120,8 +95,6 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
 
   const [step, setStep] = useState<"details" | "payment">("details");
   const [deliveryRegion, setDeliveryRegion] = useState("");
-  const [regionDetectionFailed, setRegionDetectionFailed] = useState(false);
-  const [addressValue, setAddressValue] = useState("");
   const [useDelivery, setUseDelivery] = useState(() => {
     const anyD = items.some((i) => i.product.allowDelivery);
     const anyP = items.some((i) => i.product.allowPickup);
@@ -139,27 +112,6 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
     if (anyDelivery && !anyPickup) setUseDelivery(true);
     if (!anyDelivery && anyPickup) setUseDelivery(false);
   }, [anyDelivery, anyPickup]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const addressInput = document.querySelector(
-        'input[name="locationAddress"]',
-      ) as HTMLInputElement | null;
-      if (!addressInput) return;
-      const address = addressInput.value;
-      if (address && address !== addressValue) {
-        setAddressValue(address);
-        const detected = detectRegionFromAddress(address);
-        if (detected) {
-          setDeliveryRegion(detected);
-          setRegionDetectionFailed(false);
-        } else {
-          setRegionDetectionFailed(true);
-        }
-      }
-    }, 500);
-    return () => clearInterval(interval);
-  }, [addressValue]);
 
   const shippingEstimate =
     useDelivery && deliveryRegion
@@ -228,59 +180,42 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
               ) : null}
 
               {useDelivery ? (
-                <>
-                  <div className="mt-4">
-                    <StoreLocationPicker
-                      initialAddress=""
-                      initialLat={null}
-                      initialLng={null}
-                      onRegionDetected={(region) => {
-                        if (region) {
-                          setDeliveryRegion(region);
-                          setRegionDetectionFailed(false);
-                        } else {
-                          setRegionDetectionFailed(true);
-                        }
-                      }}
-                    />
-                  </div>
+                <div className="mt-4 flex flex-col gap-3">
+                  <label className="text-sm font-medium text-zinc-800">Select your delivery region</label>
+                  <select
+                    value={deliveryRegion}
+                    onChange={(e) => setDeliveryRegion(e.target.value)}
+                    className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none ring-zinc-300 focus:ring-2"
+                  >
+                    <option value="">Choose your region...</option>
+                    {TRINIDAD_ONBOARDING_REGION_OPTIONS.map((r) => (
+                      <option key={r.value} value={r.value}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </select>
 
                   {deliveryRegion ? (
-                    <p className="mt-2 flex items-center gap-1 text-sm text-zinc-600">
-                      <span className="text-emerald-500">✓</span>
-                      Delivering to:{" "}
-                      <span className="font-medium capitalize">{deliveryRegion.replace(/_/g, " ")}</span>
-                    </p>
-                  ) : (
-                    <p className="mt-2 text-xs text-zinc-400">
-                      Region will be detected automatically from your address. If not detected, make sure your
-                      address includes your city or area.
-                    </p>
-                  )}
-
-                  {regionDetectionFailed && !deliveryRegion ? (
-                    <div className="mt-3">
-                      <p className="mb-2 text-sm text-amber-600">
-                        ⚠ We could not detect your region automatically. Please select it below.
-                      </p>
-                      <select
-                        value={deliveryRegion}
-                        onChange={(e) => {
-                          setDeliveryRegion(e.target.value);
-                          setRegionDetectionFailed(false);
-                        }}
-                        className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none ring-zinc-400 focus:ring-2"
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setDeliveryRegion("")}
+                        className="flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900"
                       >
-                        <option value="">Select your region</option>
-                        {TRINIDAD_ONBOARDING_REGION_OPTIONS.map((r) => (
-                          <option key={r.value} value={r.value}>
-                            {r.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                        ← Change region
+                      </button>
+
+                      <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
+                        <span className="text-sm text-emerald-500">✓</span>
+                        <span className="text-sm font-medium capitalize text-emerald-700">
+                          {deliveryRegion.replace(/_/g, " ")}
+                        </span>
+                      </div>
+
+                      <StoreLocationPicker initialAddress="" initialLat={null} initialLng={null} />
+                    </>
                   ) : null}
-                </>
+                </div>
               ) : null}
             </div>
 
@@ -293,11 +228,10 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
                 const address = addressInput?.value ?? "";
 
                 if (useDelivery && !deliveryRegion) {
-                  setError(
-                    "Could not detect your region. Please include your city or area in the address.",
-                  );
+                  setError("Please select your delivery region.");
                   return;
                 }
+
                 setLoading(true);
                 setError(null);
                 const result = await createPaymentIntent(address, deliveryRegion, useDelivery);

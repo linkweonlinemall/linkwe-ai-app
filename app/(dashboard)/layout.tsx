@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { UserRole } from "@prisma/client";
 import { getSession } from "@/lib/auth/session";
@@ -16,6 +17,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const session = await getSession();
   if (!session) {
     redirect("/login");
+  }
+
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") ?? "";
+  if (pathname.startsWith("/dashboard/admin")) {
+    return <>{children}</>;
   }
 
   return (

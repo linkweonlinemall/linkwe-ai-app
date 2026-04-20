@@ -42,15 +42,17 @@ function formatDate(date: Date | string): string {
 
 function getStatusBadgeClass(status: MainOrderStatus): string {
   switch (status) {
-    case "PAID":
-    case "AWAITING_VENDOR_FULFILLMENT":
-    case "READY_TO_BUNDLE":
+    case "DRAFT":
+    case "PENDING_PAYMENT":
       return "bg-amber-50 text-amber-700 border border-amber-200";
-    case "AWAITING_SHIPPING":
+    case "PAID":
+    case "PROCESSING":
+      return "bg-amber-50 text-amber-700 border border-amber-200";
     case "PARTIALLY_IN_HOUSE":
+    case "READY_TO_SHIP":
     case "SHIPPED":
       return "bg-blue-50 text-blue-700 border border-blue-200";
-    case "CUSTOMER_RECEIVED":
+    case "DELIVERED":
     case "COMPLETED":
       return "bg-emerald-50 text-emerald-700 border border-emerald-200";
     case "CANCELLED":
@@ -128,13 +130,14 @@ export default function OrdersClient({ orders }: Props) {
             className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 outline-none ring-zinc-300 focus:ring-2"
           >
             <option value="all">All statuses</option>
+            <option value="DRAFT">Draft</option>
+            <option value="PENDING_PAYMENT">Pending Payment</option>
             <option value="PAID">Order Placed</option>
-            <option value="AWAITING_VENDOR_FULFILLMENT">Vendor Preparing</option>
-            <option value="READY_TO_BUNDLE">Ready for Collection</option>
-            <option value="AWAITING_SHIPPING">Collected</option>
+            <option value="PROCESSING">Processing</option>
             <option value="PARTIALLY_IN_HOUSE">At Warehouse</option>
+            <option value="READY_TO_SHIP">Ready to Ship</option>
             <option value="SHIPPED">Out for Delivery</option>
-            <option value="CUSTOMER_RECEIVED">Delivered</option>
+            <option value="DELIVERED">Delivered</option>
             <option value="COMPLETED">Completed</option>
             <option value="CANCELLED">Cancelled</option>
             <option value="REFUNDED">Refunded</option>

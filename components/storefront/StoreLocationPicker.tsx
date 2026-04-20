@@ -73,6 +73,7 @@ function LocationPickerShared({
   inputRef,
   mapboxToken,
   fromAutocomplete,
+  onRegionDetected,
 }: {
   address: string;
   setAddress: (v: string) => void;
@@ -83,15 +84,48 @@ function LocationPickerShared({
   inputRef: RefObject<HTMLInputElement | null>;
   mapboxToken: string;
   fromAutocomplete: RefObject<boolean>;
+  onRegionDetected?: (region: string | null) => void;
 }) {
   const [mapKey, setMapKey] = useState(0);
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [geoSupported, setGeoSupported] = useState(false);
+  const [addressDetectionNote, setAddressDetectionNote] = useState<string | null>(null);
+  const [addressValue, setAddressValue] = useState("");
+  const onRegionDetectedRef = useRef(onRegionDetected);
+  onRegionDetectedRef.current = onRegionDetected;
 
   useEffect(() => {
     setGeoSupported(typeof navigator !== "undefined" && !!navigator.geolocation);
   }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const addressInput = document.querySelector(
+        'input[name="locationAddress"]',
+      ) as HTMLInputElement | null;
+      if (!addressInput) return;
+      const polledAddress = addressInput.value;
+      if (polledAddress && polledAddress !== addressValue) {
+        setAddressValue(polledAddress);
+        const detected = detectRegionFromAddress(polledAddress);
+        if (detected) {
+          onRegionDetectedRef.current?.(detected);
+          setAddressDetectionNote(null);
+        } else {
+          const lowerAddress = polledAddress.toLowerCase();
+          if (lowerAddress.includes("trinidad") || lowerAddress.includes("tobago")) {
+            setAddressDetectionNote(
+              "We found your location in Trinidad & Tobago but could not identify your specific area. Please select your region below.",
+            );
+          } else {
+            setAddressDetectionNote(null);
+          }
+        }
+      }
+    }, 500);
+    return () => clearInterval(interval);
+  }, [addressValue]);
 
   useEffect(() => {
     if (!fromAutocomplete.current) return;
@@ -112,8 +146,29 @@ function LocationPickerShared({
     setGeoLoading(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        fromAutocomplete.current = true;
         setLat(position.coords.latitude);
         setLng(position.coords.longitude);
+        if (window.google) {
+          const geocoder = new window.google.maps.Geocoder();
+          geocoder.geocode(
+            { location: { lat: position.coords.latitude, lng: position.coords.longitude } },
+            (results, status) => {
+              if (status === "OK" && results && results.length > 0) {
+                const best =
+                  results.find(
+                    (r) =>
+                      r.types.includes("street_address") ||
+                      r.types.includes("premise") ||
+                      r.types.includes("route"),
+                  ) ??
+                  results.find((r) => !r.formatted_address.includes("+")) ??
+                  results[0];
+                setAddress(best.formatted_address);
+              }
+            },
+          );
+        }
         setGeoLoading(false);
       },
       () => {
@@ -217,6 +272,10 @@ function LocationPickerShared({
           </Map>
         </div>
       ) : null}
+
+      {addressDetectionNote ? (
+        <p className="mt-2 text-xs text-amber-600">{addressDetectionNote}</p>
+      ) : null}
     </>
   );
 }
@@ -241,6 +300,7 @@ function StoreLocationPickerManual(props: Props) {
       lat={lat}
       lng={lng}
       mapboxToken={mapboxToken}
+      onRegionDetected={props.onRegionDetected}
       setAddress={setAddress}
       setLat={setLat}
       setLng={setLng}
@@ -321,6 +381,7 @@ function StoreLocationPickerWithGoogle({ googleMapsApiKey, ...props }: Props & {
       lat={lat}
       lng={lng}
       mapboxToken={mapboxToken}
+      onRegionDetected={props.onRegionDetected}
       setAddress={setAddress}
       setLat={setLat}
       setLng={setLng}

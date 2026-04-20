@@ -30,28 +30,22 @@ export const ORDER_STATUS_MAP: Record<MainOrderStatus, OrderStatusInfo> = {
     step: 0,
     color: "blue",
   },
-  AWAITING_VENDOR_FULFILLMENT: {
+  PROCESSING: {
     label: "Vendor Preparing",
     description: "The vendor is packing your order.",
     step: 1,
     color: "amber",
   },
-  READY_TO_BUNDLE: {
-    label: "Processing",
-    description: "Your order is being prepared for dispatch.",
-    step: 2,
-    color: "blue",
-  },
-  AWAITING_SHIPPING: {
-    label: "Out for Delivery",
-    description: "Your order is on its way to you.",
-    step: 5,
-    color: "blue",
-  },
   PARTIALLY_IN_HOUSE: {
     label: "Arrived at Warehouse",
     description: "Your order has arrived at the LinkWe warehouse.",
     step: 4,
+    color: "blue",
+  },
+  READY_TO_SHIP: {
+    label: "Ready to Ship",
+    description: "Your order is being prepared for dispatch.",
+    step: 3,
     color: "blue",
   },
   SHIPPED: {
@@ -60,7 +54,7 @@ export const ORDER_STATUS_MAP: Record<MainOrderStatus, OrderStatusInfo> = {
     step: 5,
     color: "scarlet",
   },
-  CUSTOMER_RECEIVED: {
+  DELIVERED: {
     label: "Delivered",
     description: "Your order has been delivered.",
     step: 6,

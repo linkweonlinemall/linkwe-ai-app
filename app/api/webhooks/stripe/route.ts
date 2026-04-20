@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 
+import { createSplitOrdersFromMainOrder } from "@/lib/fulfillment/split-orders";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe/stripe";
 
@@ -35,6 +36,7 @@ export async function POST(request: NextRequest) {
         where: { id: orderId, status: "PENDING_PAYMENT" },
         data: { status: "PAID" },
       });
+      await createSplitOrdersFromMainOrder(orderId);
     }
   }
 

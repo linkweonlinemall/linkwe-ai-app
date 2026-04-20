@@ -9,7 +9,7 @@ import BookingsTab from "./tabs/bookings-tab";
 import FinanceTab from "./tabs/finance-tab";
 import ListingsTab from "./tabs/listings-tab";
 import MessagesTab from "./tabs/messages-tab";
-import OrdersTab from "./tabs/orders-tab";
+import OrdersTab, { type VendorSplitOrder } from "./tabs/orders-tab";
 import ReviewsTab from "./tabs/reviews-tab";
 import SettingsTab from "./tabs/settings-tab";
 import StoreTab from "./tabs/store-tab";
@@ -65,6 +65,7 @@ export type VendorBankDetailsPayload = {
   bankName: string | null;
   accountName: string | null;
   accountNumber: string | null;
+  accountType: string | null;
 } | null;
 
 type CompletenessItem = { label: string; done: boolean; detail?: string };
@@ -72,6 +73,7 @@ type CompletenessItem = { label: string; done: boolean; detail?: string };
 export type VendorDashboardTabsProps = {
   store: VendorDashboardStore;
   listings: VendorDashboardListing[];
+  splitOrders: VendorSplitOrder[];
   bankDetails: VendorBankDetailsPayload;
   completenessItems: CompletenessItem[];
   completedCount: number;
@@ -84,6 +86,7 @@ export type VendorDashboardTabsProps = {
 export default function VendorDashboardTabs({
   store,
   listings,
+  splitOrders,
   bankDetails,
   completenessItems,
   completedCount,
@@ -157,8 +160,8 @@ export default function VendorDashboardTabs({
               totalCount={totalCount}
             />
           )}
+          {activeTab === "orders" && <OrdersTab splitOrders={splitOrders} />}
           {activeTab === "listings" && <ListingsTab listings={listings} />}
-          {activeTab === "orders" && <OrdersTab />}
           {activeTab === "finance" && <FinanceTab bankDetails={bankDetails} />}
           {activeTab === "bookings" && <BookingsTab />}
           {activeTab === "messages" && <MessagesTab />}

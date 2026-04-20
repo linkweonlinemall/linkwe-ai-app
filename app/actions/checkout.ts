@@ -7,6 +7,7 @@ import { getCheckoutTotal } from "@/lib/checkout/pricing";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { getShippingZone } from "@/lib/shipping/trinidad-zoning";
+import { createSplitOrdersFromMainOrder } from "@/lib/fulfillment/split-orders";
 import { stripe } from "@/lib/stripe/stripe";
 
 export type CheckoutItem = {
@@ -116,6 +117,13 @@ export async function createPaymentIntent(
         },
       },
     });
+
+    const orderCount = await prisma.mainOrder.count();
+    const refNumber = `LW-${String(orderCount).padStart(4, "0")}`;
+    await prisma.mainOrder.update({
+      where: { id: order.id },
+      data: { referenceNumber: refNumber },
+    });
   } catch (e) {
     console.error(e);
     return { ok: false, error: "Could not create order. Please try again." };
@@ -158,6 +166,8 @@ export async function confirmOrderPaid(orderId: string): Promise<void> {
     where: { id: orderId, buyerId: session.userId },
     data: { status: "PAID" },
   });
+
+  await createSplitOrdersFromMainOrder(orderId);
 
   await prisma.productCartItem.deleteMany({
     where: { userId: session.userId },

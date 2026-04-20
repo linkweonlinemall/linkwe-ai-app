@@ -61,8 +61,6 @@ export default async function EditVendorProductPage({ params }: Props) {
     isFeatured: row.isFeatured,
     metaTitle: row.metaTitle,
     metaDescription: row.metaDescription,
-    deliveryFee: row.deliveryFee,
-    deliveryRegions: row.deliveryRegions,
   };
 
   return (

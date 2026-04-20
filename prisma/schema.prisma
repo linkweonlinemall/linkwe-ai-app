@@ -33,8 +33,12 @@ model User {
   storesOwned         Store[]             @relation("StoreOwner")
   listingsOwned       Listing[]           @relation("ListingOwner")
   vendorLedgerEntries VendorLedgerEntry[] @relation("LedgerActor")
-  bankDetails         VendorBankDetails?
-  productCartItems    ProductCartItem[]
+  bankDetails           VendorBankDetails?
+  courierBankDetails    CourierBankDetails?    @relation("CourierBankDetails")
+  courierLedger         CourierLedgerEntry[]   @relation("CourierLedger")
+  courierPayoutRequests CourierPayoutRequest[] @relation("CourierPayouts")
+  courierLocation       CourierLocation?       @relation("CourierLocation")
+  productCartItems      ProductCartItem[]
 
   @@index([email])
   @@index([createdAt])
@@ -42,14 +46,75 @@ model User {
 }
 
 model VendorBankDetails {
-  id            String   @id @default(cuid())
-  userId        String   @unique
+  id            String        @id @default(cuid())
+  userId        String        @unique
   bankName      String
   accountName   String
   accountNumber String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountType   AccountType?  @map("account_type")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CourierBankDetails {
+  id            String      @id @default(cuid())
+  courierId     String      @unique @map("courier_id")
+  bankName      String      @map("bank_name")
+  accountName   String      @map("account_name")
+  accountNumber String      @map("account_number")
+  accountType   AccountType @map("account_type")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+  courier       User        @relation("CourierBankDetails", fields: [courierId], references: [id])
+
+  @@map("courier_bank_details")
+}
+
+model CourierLedgerEntry {
+  id          String           @id @default(cuid())
+  courierId   String           @map("courier_id")
+  amountMinor Int              @map("amount_minor")
+  currency    String           @default("TTD")
+  entryType   CourierEntryType @map("entry_type")
+  shipmentId  String?          @map("shipment_id")
+  description String
+  createdAt   DateTime         @default(now()) @map("created_at")
+  courier     User             @relation("CourierLedger", fields: [courierId], references: [id])
+
+  @@index([courierId])
+  @@map("courier_ledger_entries")
+}
+
+model CourierPayoutRequest {
+  id          String       @id @default(cuid())
+  courierId   String       @map("courier_id")
+  amountMinor Int          @map("amount_minor")
+  currency    String       @default("TTD")
+  status      PayoutStatus @map("status")
+  requestedAt DateTime   @default(now()) @map("requested_at")
+  approvedAt  DateTime?  @map("approved_at")
+  approvedBy  String?    @map("approved_by")
+  notes       String?
+  courier     User       @relation("CourierPayouts", fields: [courierId], references: [id])
+
+  @@index([status])
+  @@map("courier_payout_requests")
+}
+
+model CourierLocation {
+  id        String   @id @default(cuid())
+  courierId String   @unique @map("courier_id")
+  latitude  Float
+  longitude Float
+  heading   Float?
+  accuracy  Float?
+  isActive  Boolean  @default(false) @map("is_active")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  courier   User     @relation("CourierLocation", fields: [courierId], references: [id])
+
+  @@index([isActive])
+  @@map("courier_locations")
 }
 
 model Store {
@@ -434,6 +499,7 @@ model MainOrder {
   subtotalMinor  Int             @map("subtotal_minor")
   shippingMinor  Int             @map("shipping_minor")
   totalMinor     Int             @map("total_minor")
+  referenceNumber String?        @unique @map("reference_number")
   /// Optional link to saved shipping address (future checkout / ops).
   shippingAddressId String?      @map("shipping_address_id")
   createdAt      DateTime        @default(now()) @map("created_at")
@@ -450,6 +516,7 @@ model MainOrder {
 
   @@index([buyerId, status])
   @@index([status, createdAt])
+  @@index([createdAt])
   @@map("main_orders")
 }
 
@@ -501,6 +568,7 @@ model ShippingBundle {
 model SplitOrder {
   id                       String               @id @default(cuid())
   mainOrderId              String               @map("main_order_id")
+  referenceNumber          String?              @unique @map("reference_number")
   storeId                  String               @map("store_id")
   status                   SplitOrderStatus     @default(AWAITING_VENDOR_ACTION)
   subtotalMinor            Int                  @map("subtotal_minor")
@@ -529,6 +597,7 @@ model SplitOrder {
   warehouseLines           WarehouseOrderLine[]
 
   @@index([mainOrderId])
+  @@index([status])
   @@index([storeId, status])
   @@index([shippingBundleId])
   @@map("split_orders")
@@ -1034,6 +1103,17 @@ enum RelationshipStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum AccountType {
+  CHEQUING
+  SAVINGS
+}
+
+enum CourierEntryType {
+  PICKUP_EARNING
+  PAYOUT
+  ADJUSTMENT
 }
 
 model Product {

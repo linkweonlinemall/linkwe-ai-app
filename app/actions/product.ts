@@ -122,11 +122,6 @@ export async function createProduct(
   const isFeatured = formData.get("isFeatured") === "on";
   const metaTitle = String(formData.get("metaTitle") ?? "").trim() || null;
   const metaDescription = String(formData.get("metaDescription") ?? "").trim() || null;
-  const deliveryFeeRaw = String(formData.get("deliveryFee") ?? "");
-  const deliveryFee = allowDelivery ? optionalFloat(deliveryFeeRaw) : null;
-  const deliveryRegions = allowDelivery
-    ? formData.getAll("deliveryRegions").map(String).filter(Boolean)
-    : [];
 
   const fieldErr = validatePhysicalProductFields({ name, slugRaw, priceRaw, conditionRaw });
   if (fieldErr) return { ok: false, errors: fieldErr };
@@ -198,8 +193,6 @@ export async function createProduct(
     isFeatured,
     metaTitle,
     metaDescription,
-    deliveryFee,
-    deliveryRegions,
     isDigital: false,
     isBookable: false,
   };
@@ -273,11 +266,6 @@ export async function updateProduct(
   const isFeatured = formData.get("isFeatured") === "on";
   const metaTitle = String(formData.get("metaTitle") ?? "").trim() || null;
   const metaDescription = String(formData.get("metaDescription") ?? "").trim() || null;
-  const deliveryFeeRaw = String(formData.get("deliveryFee") ?? "");
-  const deliveryFee = allowDelivery ? optionalFloat(deliveryFeeRaw) : null;
-  const deliveryRegions = allowDelivery
-    ? formData.getAll("deliveryRegions").map(String).filter(Boolean)
-    : [];
 
   const existingImagesJson = String(formData.get("existingImages") ?? "[]");
   let existingUrls: string[] = [];
@@ -372,8 +360,6 @@ export async function updateProduct(
         isFeatured,
         metaTitle,
         metaDescription,
-        deliveryFee,
-        deliveryRegions,
         isDigital: false,
         isBookable: false,
       },

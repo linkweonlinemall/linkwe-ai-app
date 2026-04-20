@@ -13,6 +13,7 @@ export type ServiceSchedule = "STANDARD" | "DEEP_SOUTH_EAST" | "DEEP_SOUTH_WEST"
 
 export const REGIONS_TRINIDAD_METRO: readonly string[] = [
   "arima",
+  "arouca",
   "barataria",
   "curepe",
   "chaguanas",
@@ -60,7 +61,6 @@ export const REGIONS_TRINIDAD_METRO: readonly string[] = [
 ];
 
 export const REGIONS_TRINIDAD_EXTENDED: readonly string[] = [
-  "arouca",
   "biche",
   "brasso",
   "brickfield",

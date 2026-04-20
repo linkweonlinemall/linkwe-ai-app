@@ -16,6 +16,7 @@ type BankDetails = {
   bankName: string | null;
   accountName: string | null;
   accountNumber: string | null;
+  accountType: string | null;
 } | null;
 
 type Props = {
@@ -72,6 +73,18 @@ export default function FinanceTab({ bankDetails }: Props) {
             placeholder="Account number"
             type="text"
           />
+        </label>
+        <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
+          Account type
+          <select
+            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+            defaultValue={bankDetails?.accountType ?? ""}
+            name="accountType"
+          >
+            <option value="">Select account type</option>
+            <option value="CHEQUING">Chequing</option>
+            <option value="SAVINGS">Savings</option>
+          </select>
         </label>
         <button
           className="inline-flex h-11 w-fit items-center justify-center rounded-lg bg-[#D4450A] px-4 text-sm font-medium text-white hover:bg-[#B83A08]"

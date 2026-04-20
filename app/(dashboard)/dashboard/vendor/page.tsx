@@ -52,7 +52,7 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
 
   const bankDetails = await prisma.vendorBankDetails.findUnique({
     where: { userId: session.userId },
-    select: { bankName: true, accountName: true, accountNumber: true },
+    select: { bankName: true, accountName: true, accountNumber: true, accountType: true },
   });
 
   const listings = await prisma.listing.findMany({
@@ -65,6 +65,30 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
       imageUrl: true,
       status: true,
       createdAt: true,
+    },
+  });
+
+  const splitOrders = await prisma.splitOrder.findMany({
+    where: { storeId: store.id },
+    orderBy: { createdAt: "desc" },
+    include: {
+      items: {
+        select: {
+          id: true,
+          titleSnapshot: true,
+          quantity: true,
+          unitPriceMinor: true,
+          lineTotalMinor: true,
+        },
+      },
+      mainOrder: {
+        select: {
+          region: true,
+          buyer: {
+            select: { fullName: true },
+          },
+        },
+      },
     },
   });
 
@@ -101,6 +125,7 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
       <VendorDashboardTabs
         store={store}
         listings={listings}
+        splitOrders={splitOrders}
         bankDetails={bankDetails}
         completenessItems={completenessItems}
         completedCount={completedCount}

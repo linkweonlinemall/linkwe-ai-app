@@ -4,6 +4,9 @@ import { SESSION_COOKIE_NAME } from "@/lib/auth/constants";
 import { verifySessionToken } from "@/lib/auth/token";
 
 export async function middleware(request: NextRequest) {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", request.nextUrl.pathname);
+
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (!token) {
     const login = new URL("/login", request.url);
@@ -18,7 +21,11 @@ export async function middleware(request: NextRequest) {
     return res;
   }
 
-  return NextResponse.next();
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 }
 
 export const config = {

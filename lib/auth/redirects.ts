@@ -9,6 +9,10 @@ export function getRoleDashboardPath(role?: string | null) {
     return "/";
   }
 
+  if (role === "ADMIN") {
+    return "/dashboard/admin";
+  }
+
   return `/dashboard/${role.toLowerCase()}`;
 }
 

@@ -33,6 +33,25 @@ export default async function VendorProductsPage() {
   return (
     <div className="min-h-screen bg-[#f5f5f5] px-4 py-8 sm:px-6">
       <div className="mx-auto max-w-6xl">
+        <Link
+          href="/dashboard/vendor"
+          className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-500 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+          Back to dashboard
+        </Link>
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Products</h1>
           <Link

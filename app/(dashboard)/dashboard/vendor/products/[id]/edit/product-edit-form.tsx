@@ -69,8 +69,6 @@ export type VendorProductEditPayload = {
   isFeatured: boolean;
   metaTitle: string | null;
   metaDescription: string | null;
-  deliveryFee: number | null;
-  deliveryRegions: string[];
 };
 
 export function ProductEditForm({ product }: { product: VendorProductEditPayload }) {
@@ -373,78 +371,6 @@ export function ProductEditForm({ product }: { product: VendorProductEditPayload
               <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Height (cm)</span>
               <input type="number" name="height" step={0.01} defaultValue={product.height ?? ""} className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50" />
             </label>
-            <label className="block">
-              <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Delivery fee (TTD)</span>
-              <input
-                type="number"
-                name="deliveryFee"
-                min={0}
-                step={0.01}
-                defaultValue={product.deliveryFee ?? ""}
-                placeholder="0.00"
-                className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-              />
-              <p className="mt-1 text-xs text-zinc-500">
-                Charge added to the customer at checkout for delivery of this product.
-              </p>
-            </label>
-
-            <div className="block">
-              <span className="mb-2 block text-sm font-medium text-zinc-800 dark:text-zinc-200">
-                Delivery regions
-              </span>
-              <p className="mb-3 text-xs text-zinc-500">
-                Select which areas in Trinidad and Tobago you deliver to.
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { value: "port_of_spain", label: "Port of Spain" },
-                  { value: "san_fernando", label: "San Fernando" },
-                  { value: "arima", label: "Arima" },
-                  { value: "chaguanas", label: "Chaguanas" },
-                  { value: "tunapuna", label: "Tunapuna" },
-                  { value: "sangre_grande", label: "Sangre Grande" },
-                  { value: "siparia", label: "Siparia" },
-                  { value: "point_fortin", label: "Point Fortin" },
-                  { value: "diego_martin", label: "Diego Martin" },
-                  { value: "maraval", label: "Maraval" },
-                  { value: "carenage", label: "Carenage" },
-                  { value: "laventille", label: "Laventille" },
-                  { value: "morvant", label: "Morvant" },
-                  { value: "barataria", label: "Barataria" },
-                  { value: "st_augustine", label: "St. Augustine" },
-                  { value: "curepe", label: "Curepe" },
-                  { value: "st_joseph", label: "St. Joseph" },
-                  { value: "arouca", label: "Arouca" },
-                  { value: "tacarigua", label: "Tacarigua" },
-                  { value: "d_abadie", label: "D'Abadie" },
-                  { value: "couva", label: "Couva" },
-                  { value: "tabaquite", label: "Tabaquite" },
-                  { value: "princes_town", label: "Princes Town" },
-                  { value: "rio_claro", label: "Rio Claro" },
-                  { value: "mayaro", label: "Mayaro" },
-                  { value: "fyzabad", label: "Fyzabad" },
-                  { value: "penal", label: "Penal" },
-                  { value: "debe", label: "Debe" },
-                  { value: "tobago", label: "Tobago (all areas)" },
-                  { value: "nationwide", label: "Nationwide" },
-                ].map((region) => (
-                  <label
-                    key={region.value}
-                    className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300"
-                  >
-                    <input
-                      type="checkbox"
-                      name="deliveryRegions"
-                      value={region.value}
-                      defaultChecked={product.deliveryRegions.includes(region.value)}
-                      className="rounded border-zinc-300"
-                    />
-                    {region.label}
-                  </label>
-                ))}
-              </div>
-            </div>
           </div>
         )}
         <label className="flex items-center gap-2">
