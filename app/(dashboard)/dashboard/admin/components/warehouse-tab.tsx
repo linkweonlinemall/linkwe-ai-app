@@ -2,10 +2,10 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 
-import {
-  getWarehouseIncomingQueue,
-  getWarehouseReceivedToday,
-} from "@/app/actions/admin-warehouse";
+import { deleteAllWarehouseQueue } from "@/app/actions/admin-delete";
+
+import UndoDeleteToast from "./undo-delete-toast";
+import { getWarehouseIncomingQueue, getWarehouseReceivedToday } from "@/app/actions/admin-warehouse";
 import { markItemsReceivedAtWarehouse } from "@/app/actions/warehouse";
 
 type SplitOrderRow = Awaited<ReturnType<typeof getWarehouseIncomingQueue>>[number];
@@ -28,6 +28,7 @@ export default function WarehouseTab() {
   >([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -67,6 +68,7 @@ export default function WarehouseTab() {
       COURIER_PICKED_UP: "En Route",
       VENDOR_DROPPED_OFF: "Dropped Off",
       AT_WAREHOUSE: "At Warehouse",
+      PACKAGED: "Packaged",
     };
     return map[status] ?? status;
   }
@@ -175,6 +177,38 @@ export default function WarehouseTab() {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="mb-5">
+        <h2 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+          Warehouse
+        </h2>
+      </div>
+
+      <div className="mb-5 grid grid-cols-3 gap-4">
+        <div
+          className="rounded-xl bg-white p-4 text-center"
+          style={{ border: "1px solid var(--card-border)" }}
+        >
+          <p className="text-lg font-bold text-zinc-900">{totalIncomingCount}</p>
+          <p className="text-xs text-zinc-400">Incoming</p>
+        </div>
+        <div
+          className="rounded-xl bg-white p-4 text-center"
+          style={{ border: "1px solid var(--card-border)" }}
+        >
+          <p className="text-lg font-bold text-emerald-600">{totalReceivedTodayCount}</p>
+          <p className="text-xs text-zinc-400">Received</p>
+        </div>
+        <div
+          className="rounded-xl bg-white p-4 text-center"
+          style={{ border: "1px solid var(--card-border)" }}
+        >
+          <p className="text-lg font-bold" style={{ color: "#D4450A" }}>
+            {formatTTD(totalQueueValue)}
+          </p>
+          <p className="text-xs text-zinc-400">Queue value</p>
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-center gap-3">
         <input
           type="text"
@@ -232,24 +266,13 @@ export default function WarehouseTab() {
           Mark received ({selectedRows.size})
         </button>
 
-        <div className="ml-auto flex items-center gap-4 rounded-xl border border-zinc-200 bg-white px-4 py-2 shadow-sm">
-          <div className="text-center">
-            <p className="text-lg font-bold text-zinc-900">{totalIncomingCount}</p>
-            <p className="text-xs text-zinc-400">Incoming</p>
-          </div>
-          <div className="h-8 w-px bg-zinc-200" />
-          <div className="text-center">
-            <p className="text-lg font-bold text-emerald-600">{totalReceivedTodayCount}</p>
-            <p className="text-xs text-zinc-400">Received</p>
-          </div>
-          <div className="h-8 w-px bg-zinc-200" />
-          <div className="text-center">
-            <p className="text-lg font-bold" style={{ color: "#D4450A" }}>
-              {formatTTD(totalQueueValue)}
-            </p>
-            <p className="text-xs text-zinc-400">Queue value</p>
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={() => setPendingDelete(true)}
+          className="ml-auto rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50"
+        >
+          Clear queue
+        </button>
       </div>
 
       <div className="flex items-center gap-4 text-xs text-zinc-500">
@@ -290,11 +313,18 @@ export default function WarehouseTab() {
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-xl bg-white" style={{ border: "1px solid var(--card-border)" }}>
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-zinc-200 bg-zinc-50">
-                <th className="w-9 py-3 pl-4">
+              <tr
+                className="text-xs font-semibold uppercase tracking-wide"
+                style={{
+                  color: "var(--text-muted)",
+                  backgroundColor: "#F7F7F6",
+                  borderBottom: "1px solid var(--card-border-subtle)",
+                }}
+              >
+                <th className="w-9 py-3 pl-5">
                   <input
                     type="checkbox"
                     checked={allSelected}
@@ -305,34 +335,16 @@ export default function WarehouseTab() {
                     className="rounded"
                   />
                 </th>
-                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                  Ref
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                  Vendor
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                  Method
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                  Items
-                </th>
-                <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                  Subtotal
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                  Customer
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                  Courier
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                  Wait
-                </th>
+                <th className="px-5 py-3 text-left">Ref</th>
+                <th className="px-5 py-3 text-left">Vendor</th>
+                <th className="px-5 py-3 text-left">Method</th>
+                <th className="px-5 py-3 text-left">Items</th>
+                <th className="px-5 py-3 text-right">Subtotal</th>
+                <th className="px-5 py-3 text-left">Customer</th>
+                <th className="px-5 py-3 text-left">Courier</th>
+                <th className="px-5 py-3 text-left">Age</th>
                 {selectedStatus === "INCOMING" ? (
-                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Action
-                  </th>
+                  <th className="px-5 py-3 text-left">Action</th>
                 ) : null}
               </tr>
             </thead>
@@ -824,6 +836,18 @@ export default function WarehouseTab() {
             </div>
           </div>
         </div>
+      ) : null}
+
+      {pendingDelete ? (
+        <UndoDeleteToast
+          message={`Clear warehouse queue (${rows.length} items)`}
+          onConfirm={async () => {
+            await deleteAllWarehouseQueue();
+            setPendingDelete(false);
+            setRefreshKey((k) => k + 1);
+          }}
+          onCancel={() => setPendingDelete(false)}
+        />
       ) : null}
     </div>
   );

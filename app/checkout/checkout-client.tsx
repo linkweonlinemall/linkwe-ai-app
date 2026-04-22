@@ -7,6 +7,8 @@ import { useEffect, useMemo, useState } from "react";
 
 import { confirmOrderPaid, createPaymentIntent } from "@/app/actions/checkout";
 import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
+import Button from "@/components/ui/Button";
+import Select from "@/components/ui/Select";
 import { TRINIDAD_ONBOARDING_REGION_OPTIONS } from "@/lib/onboarding/tt-region-options";
 import { useCartStore } from "@/lib/cart/cart-store";
 import { getFinalShippingRateForRegion } from "@/lib/shipping/tt-markup";
@@ -71,17 +73,22 @@ function PaymentForm({ orderId, onBack }: { orderId: string; onBack: () => void 
 
   return (
     <div className="space-y-4">
-      <button type="button" onClick={onBack} className="text-sm text-zinc-500 hover:text-zinc-900">
+      <Button
+        className="!px-0 !py-0 text-sm text-zinc-500 hover:bg-transparent hover:text-zinc-900"
+        type="button"
+        variant="ghost"
+        onClick={onBack}
+      >
         ← Back to delivery details
-      </button>
+      </Button>
       <PaymentElement />
       {payError ? <p className="text-sm text-red-600">{payError}</p> : null}
       <button
         type="button"
         onClick={() => void handlePay()}
         disabled={paying || !stripe}
-        className="h-12 w-full rounded-xl text-sm font-medium text-white disabled:opacity-60"
-        style={{ backgroundColor: "#D4450A" }}
+        className="mt-4 w-full rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+        style={{ backgroundColor: "var(--scarlet)" }}
       >
         {paying ? "Processing payment..." : "Pay now"}
       </button>
@@ -107,6 +114,7 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
   const [orderId, setOrderId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [regionDetectionFailed, setRegionDetectionFailed] = useState(false);
 
   useEffect(() => {
     if (anyDelivery && !anyPickup) setUseDelivery(true);
@@ -132,176 +140,223 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
   const displayTotal = subtotal + shippingEstimate;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
-      <div className="lg:col-span-2">
-        {step === "details" ? (
-          <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <div id="checkout-delivery-form">
-              <h2 className="text-lg font-semibold text-zinc-900">Delivery details</h2>
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="flex flex-col gap-5 lg:col-span-2">
+            {step === "details" ? (
+              <div
+                className="rounded-xl bg-white p-5 sm:p-6"
+                style={{ border: "1px solid var(--card-border)" }}
+              >
+                <div id="checkout-delivery-form">
+                  <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                    Delivery details
+                  </h2>
 
-              {anyDelivery && anyPickup ? (
-                <div className="mt-4 space-y-3">
-                  <label className="flex cursor-pointer items-center gap-2">
-                    <input
-                      type="radio"
-                      name="fulfillment"
-                      checked={useDelivery}
-                      onChange={() => setUseDelivery(true)}
-                      className="border-zinc-300"
-                    />
-                    <span className="text-sm font-medium text-zinc-800">Deliver to my address</span>
-                  </label>
-                  <label className="flex cursor-pointer items-center gap-2">
-                    <input
-                      type="radio"
-                      name="fulfillment"
-                      checked={!useDelivery}
-                      onChange={() => setUseDelivery(false)}
-                      className="border-zinc-300"
-                    />
-                    <span className="text-sm font-medium text-zinc-800">Local pickup</span>
-                  </label>
-                </div>
-              ) : null}
+                  {anyDelivery && anyPickup ? (
+                    <div className="mt-4 space-y-3">
+                      <label className="flex cursor-pointer items-center gap-2">
+                        <input
+                          type="radio"
+                          name="fulfillment"
+                          checked={useDelivery}
+                          onChange={() => setUseDelivery(true)}
+                          className="border-zinc-300"
+                        />
+                        <span className="text-sm font-medium text-zinc-800">Deliver to my address</span>
+                      </label>
+                      <label className="flex cursor-pointer items-center gap-2">
+                        <input
+                          type="radio"
+                          name="fulfillment"
+                          checked={!useDelivery}
+                          onChange={() => setUseDelivery(false)}
+                          className="border-zinc-300"
+                        />
+                        <span className="text-sm font-medium text-zinc-800">Local pickup</span>
+                      </label>
+                    </div>
+                  ) : null}
 
-              {anyDelivery && !anyPickup ? (
-                <p className="mt-4 text-sm text-zinc-600">Delivery to your address</p>
-              ) : null}
+                  {anyDelivery && !anyPickup ? (
+                    <p className="mt-4 text-sm text-zinc-600">Delivery to your address</p>
+                  ) : null}
 
-              {!anyDelivery && anyPickup ? (
-                <p className="mt-4 text-sm text-zinc-600">Local pickup at the vendor location</p>
-              ) : null}
+                  {!anyDelivery && anyPickup ? (
+                    <p className="mt-4 text-sm text-zinc-600">Local pickup at the vendor location</p>
+                  ) : null}
 
-              {!anyDelivery && !anyPickup ? (
-                <p className="mt-4 text-sm text-amber-700">
-                  These products have no delivery or pickup options set. Contact the vendor or try another
-                  cart.
-                </p>
-              ) : null}
+                  {!anyDelivery && !anyPickup ? (
+                    <p className="mt-4 text-sm text-amber-700">
+                      These products have no delivery or pickup options set. Contact the vendor or try
+                      another cart.
+                    </p>
+                  ) : null}
 
-              {useDelivery ? (
-                <div className="mt-4 flex flex-col gap-3">
-                  <label className="text-sm font-medium text-zinc-800">Select your delivery region</label>
-                  <select
-                    value={deliveryRegion}
-                    onChange={(e) => setDeliveryRegion(e.target.value)}
-                    className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none ring-zinc-300 focus:ring-2"
-                  >
-                    <option value="">Choose your region...</option>
-                    {TRINIDAD_ONBOARDING_REGION_OPTIONS.map((r) => (
-                      <option key={r.value} value={r.value}>
-                        {r.label}
-                      </option>
-                    ))}
-                  </select>
-
-                  {deliveryRegion ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setDeliveryRegion("")}
-                        className="flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900"
+                  {useDelivery ? (
+                    <div className="mt-4 flex flex-col gap-3">
+                      {regionDetectionFailed ? (
+                        <p className="text-sm text-amber-700">
+                          We couldn&apos;t detect your region from the map pin. Please choose your delivery
+                          region below.
+                        </p>
+                      ) : null}
+                      <Select
+                        className={`rounded-xl border bg-white px-4 py-3 text-sm ${
+                          regionDetectionFailed ? "border-amber-400" : "border-zinc-200"
+                        }`}
+                        label="Select your delivery region"
+                        value={deliveryRegion}
+                        onChange={(e) => {
+                          setDeliveryRegion(e.target.value);
+                          setRegionDetectionFailed(false);
+                        }}
                       >
-                        ← Change region
-                      </button>
+                        <option value="">Choose your region...</option>
+                        {TRINIDAD_ONBOARDING_REGION_OPTIONS.map((r) => (
+                          <option key={r.value} value={r.value}>
+                            {r.label}
+                          </option>
+                        ))}
+                      </Select>
 
-                      <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
-                        <span className="text-sm text-emerald-500">✓</span>
-                        <span className="text-sm font-medium capitalize text-emerald-700">
-                          {deliveryRegion.replace(/_/g, " ")}
-                        </span>
-                      </div>
+                      {deliveryRegion ? (
+                        <>
+                          <Button
+                            className="!px-0 !py-0 text-sm text-zinc-500 hover:bg-transparent hover:text-zinc-900"
+                            type="button"
+                            variant="ghost"
+                            onClick={() => setDeliveryRegion("")}
+                          >
+                            ← Change region
+                          </Button>
 
-                      <StoreLocationPicker initialAddress="" initialLat={null} initialLng={null} />
-                    </>
+                          <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
+                            <span className="text-sm text-emerald-500">✓</span>
+                            <span className="text-sm font-medium capitalize text-emerald-700">
+                              {deliveryRegion.replace(/_/g, " ")}
+                            </span>
+                          </div>
+
+                          <StoreLocationPicker
+                            initialAddress=""
+                            initialLat={null}
+                            initialLng={null}
+                            onRegionDetected={(detected) => {
+                              if (detected) {
+                                setDeliveryRegion(detected);
+                                setRegionDetectionFailed(false);
+                              } else {
+                                setRegionDetectionFailed(true);
+                              }
+                            }}
+                          />
+                        </>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
-              ) : null}
-            </div>
 
-            <button
-              type="button"
-              onClick={async () => {
-                const addressInput = document.querySelector(
-                  'input[name="locationAddress"]',
-                ) as HTMLInputElement | null;
-                const address = addressInput?.value ?? "";
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const addressInput = document.querySelector(
+                      'input[name="locationAddress"]',
+                    ) as HTMLInputElement | null;
+                    const address = addressInput?.value ?? "";
 
-                if (useDelivery && !deliveryRegion) {
-                  setError("Please select your delivery region.");
-                  return;
-                }
+                    if (useDelivery && !deliveryRegion) {
+                      setError("Please select your delivery region.");
+                      return;
+                    }
 
-                setLoading(true);
-                setError(null);
-                const result = await createPaymentIntent(address, deliveryRegion, useDelivery);
-                if (result.ok) {
-                  setClientSecret(result.clientSecret);
-                  setOrderId(result.orderId);
-                  setStep("payment");
-                } else {
-                  setError(result.error);
-                }
-                setLoading(false);
-              }}
-              disabled={loading || (!anyDelivery && !anyPickup)}
-              className="mt-4 flex h-12 w-full items-center justify-center rounded-xl text-sm font-medium text-white disabled:opacity-60"
-              style={{ backgroundColor: "#D4450A" }}
+                    setLoading(true);
+                    setError(null);
+                    const result = await createPaymentIntent(address, deliveryRegion, useDelivery);
+                    if (result.ok) {
+                      setClientSecret(result.clientSecret);
+                      setOrderId(result.orderId);
+                      setStep("payment");
+                    } else {
+                      setError(result.error);
+                    }
+                    setLoading(false);
+                  }}
+                  disabled={loading || (!anyDelivery && !anyPickup)}
+                  className="mt-4 flex w-full items-center justify-center rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                  style={{ backgroundColor: "var(--scarlet)" }}
+                >
+                  {loading ? "Preparing payment..." : "Continue to payment"}
+                </button>
+                {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
+              </div>
+            ) : null}
+
+            {step === "payment" && clientSecret && orderId ? (
+              <div
+                className="rounded-xl bg-white p-5 sm:p-6"
+                style={{ border: "1px solid var(--card-border)" }}
+              >
+                <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                  Payment
+                </h2>
+                <Elements stripe={stripePromise} options={{ clientSecret }}>
+                  <PaymentForm orderId={orderId} onBack={() => setStep("details")} />
+                </Elements>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="lg:col-span-1">
+            <div
+              className="rounded-xl bg-white p-5 lg:sticky lg:top-24"
+              style={{ border: "1px solid var(--card-border)" }}
             >
-              {loading ? "Preparing payment..." : "Continue to payment"}
-            </button>
-            {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
-          </div>
-        ) : null}
-
-        {step === "payment" && clientSecret && orderId ? (
-          <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <Elements stripe={stripePromise} options={{ clientSecret }}>
-              <PaymentForm orderId={orderId} onBack={() => setStep("details")} />
-            </Elements>
-          </div>
-        ) : null}
-      </div>
-
-      <div className="lg:col-span-1">
-        <div className="sticky top-24 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-zinc-900">Order summary</h2>
-          <ul className="mt-4 space-y-3">
-            {items.map((item) => {
-              const line = item.product.price * item.quantity;
-              return (
-                <li key={item.id} className="text-sm">
-                  <p className="font-medium text-zinc-900">{item.product.name}</p>
-                  <p className="text-zinc-600">
-                    {item.quantity} × TTD {item.product.price.toFixed(2)}
-                  </p>
-                  <p className="font-medium text-zinc-900">TTD {line.toFixed(2)}</p>
-                </li>
-              );
-            })}
-          </ul>
-          <hr className="my-4 border-zinc-100" />
-          <div className="flex justify-between text-sm text-zinc-600">
-            <span>Subtotal</span>
-            <span>TTD {subtotal.toFixed(2)}</span>
-          </div>
-          <div className="mt-2 flex justify-between text-sm">
-            <span className="text-zinc-500">{useDelivery ? "Delivery" : "Pickup"}</span>
-            <span className="font-medium text-zinc-900">
-              {useDelivery
-                ? deliveryRegion
-                  ? `TTD ${shippingEstimate.toFixed(2)}`
-                  : "Enter address to calculate"
-                : "Free"}
-            </span>
-          </div>
-          <hr className="my-4 border-zinc-100" />
-          <div className="flex justify-between text-sm font-bold">
-            <span>Total</span>
-            <span>TTD {displayTotal.toFixed(2)}</span>
+              <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                Order Summary
+              </h2>
+              <ul>
+                {items.map((item) => {
+                  const line = item.product.price * item.quantity;
+                  return (
+                    <li
+                      key={item.id}
+                      className="flex justify-between py-1.5 text-xs"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      <span>
+                        {item.product.name} × {item.quantity}
+                      </span>
+                      <span style={{ color: "var(--text-secondary)" }}>TTD {line.toFixed(2)}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="my-3 border-t" style={{ borderColor: "var(--card-border-subtle)" }} />
+              <div className="flex justify-between py-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+                <span>Subtotal</span>
+                <span>TTD {subtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between py-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+                <span>{useDelivery ? "Delivery" : "Pickup"}</span>
+                <span>
+                  {useDelivery
+                    ? deliveryRegion
+                      ? `TTD ${shippingEstimate.toFixed(2)}`
+                      : "Enter address to calculate"
+                    : "Free"}
+                </span>
+              </div>
+              <div className="my-3 border-t" style={{ borderColor: "var(--card-border-subtle)" }} />
+              <div className="flex justify-between">
+                <span className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
+                  Total
+                </span>
+                <span className="text-base font-bold" style={{ color: "var(--scarlet)" }}>
+                  TTD {displayTotal.toFixed(2)}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
   );
 }

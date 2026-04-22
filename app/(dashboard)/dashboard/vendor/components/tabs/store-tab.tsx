@@ -24,17 +24,17 @@ export default function StoreTab({
 }: Props) {
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-4">
           {store.logoUrl ? (
-            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-zinc-200 dark:border-zinc-700">
+            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-zinc-200">
               <img alt="" className="h-full w-full object-cover" src={store.logoUrl} />
             </div>
           ) : (
-            <div className="h-16 w-16 shrink-0 rounded-full bg-zinc-100 dark:bg-zinc-800" />
+            <div className="h-16 w-16 shrink-0 rounded-full bg-zinc-100" />
           )}
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-lg font-semibold text-zinc-900 dark:text-zinc-50">{store.name}</h2>
+            <h2 className="truncate text-lg font-semibold text-zinc-900">{store.name}</h2>
             {store.tagline ? (
               <p className="mt-0.5 truncate text-sm text-zinc-500">{store.tagline}</p>
             ) : null}
@@ -49,7 +49,7 @@ export default function StoreTab({
                 href={`/store/${store.slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                className="inline-flex items-center rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
               >
                 View public store
               </Link>
@@ -58,15 +58,15 @@ export default function StoreTab({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Store profile</h2>
+          <h2 className="text-lg font-semibold text-zinc-900">Store profile</h2>
           <span className="text-sm font-medium text-zinc-500">
             {completedCount}/{totalCount} complete
           </span>
         </div>
 
-        <div className="mb-5 h-2 w-full rounded-full bg-zinc-100 dark:bg-zinc-800">
+        <div className="mb-5 h-2 w-full rounded-full bg-zinc-100">
           <div
             className="h-2 rounded-full bg-[#D4450A] transition-all"
             style={{ width: `${completionPercent}%` }}
@@ -77,10 +77,10 @@ export default function StoreTab({
           {completenessItems.map((item) => (
             <li key={item.label} className="flex items-center justify-between text-sm">
               <span className="flex items-center gap-2">
-                <span className={item.done ? "text-emerald-500" : "text-zinc-300 dark:text-zinc-600"}>
+                <span className={item.done ? "text-emerald-500" : "text-zinc-300"}>
                   {item.done ? "✓" : "○"}
                 </span>
-                <span className={item.done ? "text-zinc-700 dark:text-zinc-300" : "text-zinc-400"}>
+                <span className={item.done ? "text-zinc-700" : "text-zinc-400"}>
                   {item.label}
                 </span>
               </span>

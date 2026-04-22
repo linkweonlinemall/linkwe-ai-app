@@ -93,6 +93,24 @@ export async function createPaymentIntent(
   const storeIds = [...new Set(cartItems.map((i) => i.product.storeId))];
   const primaryStoreId = storeIds[0];
 
+  const recentPending = await prisma.mainOrder.findFirst({
+    where: {
+      buyerId: session.userId,
+      status: "PENDING_PAYMENT",
+      createdAt: { gte: new Date(Date.now() - 30 * 60 * 1000) },
+    },
+    select: { id: true },
+  });
+
+  if (recentPending) {
+    await prisma.orderItem.deleteMany({
+      where: { mainOrderId: recentPending.id },
+    });
+    await prisma.mainOrder.delete({
+      where: { id: recentPending.id },
+    });
+  }
+
   let order;
   try {
     order = await prisma.mainOrder.create({

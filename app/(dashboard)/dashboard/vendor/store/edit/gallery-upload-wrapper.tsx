@@ -19,9 +19,9 @@ export default function GalleryUploadWrapper({ images, slotsAvailable }: Props) 
 
   if (!mounted) {
     return (
-      <div className="border-t border-zinc-100 dark:border-zinc-800 pt-6 mt-2">
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Store gallery</h2>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{images.length}/10 photos.</p>
+      <div className="border-t border-zinc-100 pt-6 mt-2">
+        <h2 className="text-sm font-semibold text-zinc-900">Store gallery</h2>
+        <p className="mt-1 text-sm text-zinc-600">{images.length}/10 photos.</p>
       </div>
     );
   }

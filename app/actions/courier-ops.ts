@@ -128,19 +128,19 @@ export async function markPickedUp(formData: FormData): Promise<void> {
 
 export async function markDeliveredToWarehouse(formData: FormData): Promise<void> {
   const session = await getSession();
-  if (!session || session.role !== "COURIER") redirect("/");
+  if (!session || session.role !== "ADMIN") redirect("/");
 
   const shipmentId = String(formData.get("shipmentId") ?? "").trim();
-  if (!shipmentId) redirect("/dashboard/courier");
+  if (!shipmentId) redirect("/dashboard/admin");
 
   const shipment = await prisma.shipment.findFirst({
     where: {
       id: shipmentId,
-      courierId: session.userId,
       shipmentStatus: "COURIER_PICKED_UP",
     },
     select: {
       id: true,
+      courierId: true,
       region: true,
       inboundForSplitOrder: {
         select: {
@@ -153,7 +153,7 @@ export async function markDeliveredToWarehouse(formData: FormData): Promise<void
     },
   });
 
-  if (!shipment) redirect("/dashboard/courier");
+  if (!shipment?.courierId) redirect("/dashboard/admin");
 
   await prisma.$transaction(async (tx) => {
     await tx.shipment.update({
@@ -193,7 +193,7 @@ export async function markDeliveredToWarehouse(formData: FormData): Promise<void
   if (earningMinor > 0) {
     await prisma.courierLedgerEntry.create({
       data: {
-        courierId: session.userId,
+        courierId: shipment.courierId,
         amountMinor: earningMinor,
         currency: "TTD",
         entryType: "PICKUP_EARNING",
@@ -204,5 +204,6 @@ export async function markDeliveredToWarehouse(formData: FormData): Promise<void
   }
 
   revalidatePath("/dashboard/courier");
-  redirect("/dashboard/courier");
+  revalidatePath("/dashboard/admin");
+  redirect("/dashboard/admin");
 }

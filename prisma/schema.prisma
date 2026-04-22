@@ -500,6 +500,7 @@ model MainOrder {
   shippingMinor  Int             @map("shipping_minor")
   totalMinor     Int             @map("total_minor")
   referenceNumber String?        @unique @map("reference_number")
+  receivedAt     DateTime?       @map("received_at")
   /// Optional link to saved shipping address (future checkout / ops).
   shippingAddressId String?      @map("shipping_address_id")
   createdAt      DateTime        @default(now()) @map("created_at")
@@ -577,6 +578,7 @@ model SplitOrder {
   vendorInboundMethod      VendorInboundMethod? @map("vendor_inbound_method")
   vendorActionAt           DateTime?            @map("vendor_action_at")
   warehouseReceivedAt      DateTime?            @map("warehouse_received_at")
+  packagedAt               DateTime?            @map("packaged_at")
   pickupRegion             String?              @map("pickup_region")
   pickupAddress            String?              @map("pickup_address")
   pickupRequestedAt        DateTime?            @map("pickup_requested_at")
@@ -830,7 +832,9 @@ enum MainOrderStatus {
   PROCESSING
   PARTIALLY_IN_HOUSE
   READY_TO_SHIP
+  PACKING_COMPLETE
   SHIPPED
+  CUSTOMER_RECEIVED
   DELIVERED
   COMPLETED
   CANCELLED
@@ -855,6 +859,7 @@ enum SplitOrderStatus {
   COURIER_PICKED_UP
   VENDOR_DROPPED_OFF
   AT_WAREHOUSE
+  PACKAGED
   BUNDLED_FOR_DISPATCH
   DISPATCHED
   DELIVERED

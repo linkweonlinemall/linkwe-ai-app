@@ -35,8 +35,8 @@ export default async function PublicListingPage({ params }: Props) {
   }
 
   return (
-    <div className="min-h-full bg-zinc-50 px-6 py-16 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50">
-      <article className="mx-auto max-w-2xl rounded-2xl border border-zinc-200 bg-white p-10 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+    <div className="min-h-full bg-zinc-50 px-6 py-16 text-zinc-900">
+      <article className="mx-auto max-w-2xl rounded-2xl border border-zinc-200 bg-white p-10 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
           <Link className="hover:underline" href={`/store/${listing.store.slug}`}>
             {listing.store.name}
@@ -51,11 +51,11 @@ export default async function PublicListingPage({ params }: Props) {
             imageUrl={listing.imageUrl}
           />
         </div>
-        <p className="mt-6 text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
+        <p className="mt-6 text-2xl font-semibold text-zinc-900">
           {formatMinorAsUsd(listing.priceMinor)}
         </p>
         {listing.shortDescription ? (
-          <p className="mt-6 text-base leading-7 text-zinc-600 dark:text-zinc-300">{listing.shortDescription}</p>
+          <p className="mt-6 text-base leading-7 text-zinc-600">{listing.shortDescription}</p>
         ) : null}
       </article>
     </div>

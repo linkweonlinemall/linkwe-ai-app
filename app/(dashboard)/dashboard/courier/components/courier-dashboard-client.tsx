@@ -1,13 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import {
-  claimPickup,
-  markDeliveredToWarehouse,
-  markPickedUp,
-} from "@/app/actions/courier-ops";
+import { setCourierInactive, updateCourierLocation } from "@/app/actions/courier-location";
+import { claimPickup, markPickedUp } from "@/app/actions/courier-ops";
+import CourierEarnings from "./courier-earnings";
 import { getCourierPickupFee } from "@/lib/fulfillment/courier-pickup-rates";
 import { getShippingZone } from "@/lib/shipping/trinidad-zoning";
 
@@ -58,7 +56,7 @@ type Props = {
   completedPickups: CompletedShipment[];
 };
 
-type TabId = "available" | "active" | "completed";
+type TabId = "available" | "active" | "completed" | "earnings";
 
 function itemsSummaryLine(items: ShipmentItem[]): string {
   const n = items.reduce((sum, i) => sum + i.quantity, 0);
@@ -105,97 +103,149 @@ export default function CourierDashboardClient({
 }: Props) {
   const [tab, setTab] = useState<TabId>("available");
 
+  useEffect(() => {
+    if (myActivePickups.length === 0) return;
+    if (typeof navigator === "undefined") return;
+    if (!navigator.geolocation) return;
+
+    const watchId = navigator.geolocation.watchPosition(
+      async (position) => {
+        const h = position.coords.heading;
+        const acc = position.coords.accuracy;
+        await updateCourierLocation(
+          position.coords.latitude,
+          position.coords.longitude,
+          h != null && !Number.isNaN(h) ? h : null,
+          acc != null && !Number.isNaN(acc) ? acc : null,
+        );
+      },
+      (error) => {
+        console.warn("Location tracking error:", error.message);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 10000,
+        timeout: 15000,
+      },
+    );
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+      void setCourierInactive();
+    };
+  }, [myActivePickups.length]);
+
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
-      <div className="mb-6 rounded-2xl bg-white p-5 shadow-sm">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-zinc-900">Courier Dashboard</h1>
-            <p className="mt-1 text-sm text-zinc-600">{courierName}</p>
-          </div>
-          {courierRegion ? (
-            <div className="flex flex-col items-end gap-1">
-              <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium capitalize text-zinc-600">
-                {courierRegion.replace(/_/g, " ")}
-              </span>
-              {courierZone ? (
-                <span className="text-xs text-zinc-400">{courierZone.replace(/_/g, " ")} zone</span>
+    <>
+      <div className="border-b border-zinc-200 bg-white">
+        <div className="mx-auto max-w-4xl px-4">
+          <div className="flex flex-wrap gap-x-1">
+            <button
+              type="button"
+              onClick={() => setTab("available")}
+              className={`inline-block px-4 py-3 text-sm font-medium ${
+                tab === "available"
+                  ? "border-b-2 border-[#D4450A] font-medium text-[#D4450A]"
+                  : "text-zinc-500 hover:text-zinc-800"
+              }`}
+            >
+              Available Pickups
+              {availablePickups.length > 0 ? (
+                <span className="ml-1.5 text-xs font-normal tabular-nums text-zinc-400">
+                  ({availablePickups.length})
+                </span>
               ) : null}
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("active")}
+              className={`inline-block px-4 py-3 text-sm font-medium ${
+                tab === "active"
+                  ? "border-b-2 border-[#D4450A] font-medium text-[#D4450A]"
+                  : "text-zinc-500 hover:text-zinc-800"
+              }`}
+            >
+              My Active Pickups
+              {myActivePickups.length > 0 ? (
+                <span className="ml-1.5 text-xs font-normal tabular-nums text-zinc-400">
+                  ({myActivePickups.length})
+                </span>
+              ) : null}
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("completed")}
+              className={`inline-block px-4 py-3 text-sm font-medium ${
+                tab === "completed"
+                  ? "border-b-2 border-[#D4450A] font-medium text-[#D4450A]"
+                  : "text-zinc-500 hover:text-zinc-800"
+              }`}
+            >
+              Completed
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("earnings")}
+              className={`inline-block px-4 py-3 text-sm font-medium ${
+                tab === "earnings"
+                  ? "border-b-2 border-[#D4450A] font-medium text-[#D4450A]"
+                  : "text-zinc-500 hover:text-zinc-800"
+              }`}
+            >
+              Earnings
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-4xl px-4 py-6">
+        <div className="mb-6 rounded-2xl bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h1 className="text-xl font-semibold text-zinc-900">Courier Dashboard</h1>
+              <p className="mt-1 text-sm text-zinc-600">{courierName}</p>
             </div>
-          ) : (
-            <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
-              No region set
-            </span>
-          )}
+            {courierRegion ? (
+              <div className="flex flex-col items-end gap-1">
+                <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium capitalize text-zinc-600">
+                  {courierRegion.replace(/_/g, " ")}
+                </span>
+                {courierZone ? (
+                  <span className="text-xs text-zinc-400">{courierZone.replace(/_/g, " ")} zone</span>
+                ) : null}
+              </div>
+            ) : (
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+                No region set
+              </span>
+            )}
+          </div>
+
+          <div className="mt-4 grid grid-cols-3 gap-4">
+            <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-3 text-center">
+              <p className="text-xl font-bold text-zinc-900">{availablePickups.length}</p>
+              <p className="mt-0.5 text-xs text-zinc-500">Available</p>
+            </div>
+            <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-3 text-center">
+              <p className="text-xl font-bold text-zinc-900">{myActivePickups.length}</p>
+              <p className="mt-0.5 text-xs text-zinc-500">Active</p>
+            </div>
+            <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-3 text-center">
+              <p className="text-xl font-bold text-zinc-900">{completedPickups.length}</p>
+              <p className="mt-0.5 text-xs text-zinc-500">Completed</p>
+            </div>
+          </div>
+          <div className="mt-2 flex justify-end">
+            <Link
+              href="/dashboard/courier/bank"
+              className="text-xs text-zinc-500 transition-colors hover:text-zinc-900"
+            >
+              Bank details →
+            </Link>
+          </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-4">
-          <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-3 text-center">
-            <p className="text-xl font-bold text-zinc-900">{availablePickups.length}</p>
-            <p className="mt-0.5 text-xs text-zinc-500">Available</p>
-          </div>
-          <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-3 text-center">
-            <p className="text-xl font-bold text-zinc-900">{myActivePickups.length}</p>
-            <p className="mt-0.5 text-xs text-zinc-500">Active</p>
-          </div>
-          <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-3 text-center">
-            <p className="text-xl font-bold text-zinc-900">{completedPickups.length}</p>
-            <p className="mt-0.5 text-xs text-zinc-500">Completed</p>
-          </div>
-        </div>
-        <div className="mt-2 flex justify-end">
-          <Link
-            href="/dashboard/courier/bank"
-            className="text-xs text-zinc-500 transition-colors hover:text-zinc-900"
-          >
-            Bank details →
-          </Link>
-        </div>
-      </div>
-
-      <div className="mb-6 flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => setTab("available")}
-          className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-            tab === "available"
-              ? "bg-[#D4450A] text-white"
-              : "bg-white text-zinc-700 shadow-sm ring-1 ring-zinc-200 hover:bg-zinc-50"
-          }`}
-        >
-          Available Pickups
-          {availablePickups.length > 0 ? (
-            <span className="ml-2 rounded-full bg-white/20 px-2 py-0.5 text-xs">{availablePickups.length}</span>
-          ) : null}
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab("active")}
-          className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-            tab === "active"
-              ? "bg-[#D4450A] text-white"
-              : "bg-white text-zinc-700 shadow-sm ring-1 ring-zinc-200 hover:bg-zinc-50"
-          }`}
-        >
-          My Active Pickups
-          {myActivePickups.length > 0 ? (
-            <span className="ml-2 rounded-full bg-white/20 px-2 py-0.5 text-xs">{myActivePickups.length}</span>
-          ) : null}
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab("completed")}
-          className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-            tab === "completed"
-              ? "bg-[#D4450A] text-white"
-              : "bg-white text-zinc-700 shadow-sm ring-1 ring-zinc-200 hover:bg-zinc-50"
-          }`}
-        >
-          Completed
-        </button>
-      </div>
-
-      {tab === "available" ? (
+        {tab === "available" ? (
         <div className="flex flex-col gap-4">
           {availablePickups.length === 0 ? (
             <p className="rounded-2xl border border-zinc-200 bg-white p-6 text-sm text-zinc-600 shadow-sm">
@@ -312,16 +362,12 @@ export default function CourierDashboardClient({
                         </form>
                       ) : null}
                       {status === "COURIER_PICKED_UP" ? (
-                        <form action={markDeliveredToWarehouse}>
-                          <input type="hidden" name="shipmentId" value={shipment.id} />
-                          <button
-                            type="submit"
-                            className="w-full rounded-xl py-2.5 text-sm font-medium text-white transition-colors hover:opacity-90"
-                            style={{ backgroundColor: "#D4450A" }}
-                          >
-                            Mark as Delivered to Warehouse
-                          </button>
-                        </form>
+                        <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+                          <p className="text-xs font-medium text-blue-700">
+                            Items collected — proceed to the LinkWe warehouse. Warehouse staff will confirm
+                            receipt on arrival.
+                          </p>
+                        </div>
                       ) : null}
                     </div>
                   </div>
@@ -331,6 +377,8 @@ export default function CourierDashboardClient({
           )}
         </div>
       ) : null}
+
+      {tab === "earnings" ? <CourierEarnings /> : null}
 
       {tab === "completed" ? (
         <div className="flex flex-col gap-3">
@@ -392,6 +440,7 @@ export default function CourierDashboardClient({
           )}
         </div>
       ) : null}
-    </div>
+      </div>
+    </>
   );
 }

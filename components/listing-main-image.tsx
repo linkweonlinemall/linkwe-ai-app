@@ -13,7 +13,7 @@ export function ListingMainImage({ alt, imageUrl, aspectClass = "aspect-video", 
   const url = imageUrl?.trim() ?? "";
   if (url) {
     return (
-      <div className={`overflow-hidden bg-zinc-100 dark:bg-zinc-800 ${aspectClass} ${className}`}>
+      <div className={`overflow-hidden bg-zinc-100 ${aspectClass} ${className}`}>
         {/* Arbitrary vendor URLs; plain img keeps local dev simple (no remotePatterns). */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img alt={alt} className="size-full object-cover" loading="lazy" src={url} />
@@ -23,7 +23,7 @@ export function ListingMainImage({ alt, imageUrl, aspectClass = "aspect-video", 
 
   return (
     <div
-      className={`flex items-center justify-center border border-dashed border-zinc-300 bg-zinc-100 text-center text-sm text-zinc-500 dark:border-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-400 ${aspectClass} ${className}`}
+      className={`flex items-center justify-center border border-dashed border-zinc-300 bg-zinc-100 text-center text-sm text-zinc-500 ${aspectClass} ${className}`}
     >
       No image yet
     </div>

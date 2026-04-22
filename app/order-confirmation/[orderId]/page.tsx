@@ -22,7 +22,18 @@ export default async function OrderConfirmationPage({ params }: Props) {
     where: { id: orderId, buyerId: session.userId },
     select: {
       id: true,
+      referenceNumber: true,
+      subtotalMinor: true,
+      shippingMinor: true,
       totalMinor: true,
+      items: {
+        select: {
+          id: true,
+          titleSnapshot: true,
+          priceMinor: true,
+          quantity: true,
+        },
+      },
     },
   });
 
@@ -30,65 +41,96 @@ export default async function OrderConfirmationPage({ params }: Props) {
     redirect("/");
   }
 
-  const totalTtd = order.totalMinor / 100;
-
   return (
-    <div className="min-h-screen bg-[#f5f5f5]">
+    <div className="min-h-screen bg-[#F5F5F5]">
       <PublicNav />
-      <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <div className="flex justify-center">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="64"
-            height="64"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="text-emerald-500"
-            aria-hidden
+      <div className="mx-auto max-w-2xl px-4 py-16 text-center">
+        <div className="mb-8 flex flex-col items-center">
+          <div
+            className="mb-5 flex h-16 w-16 items-center justify-center rounded-full"
+            style={{ backgroundColor: "var(--success-bg)" }}
           >
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-            <polyline points="22 4 12 14.01 9 11.01" />
-          </svg>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#15803D" strokeWidth="2.5">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+
+          <h1 className="mb-2 text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+            Order Placed!
+          </h1>
+
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            Thank you for shopping on LinkWe
+          </p>
+
+          {order.referenceNumber ? (
+            <p className="mt-2 text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>
+              Order #{order.referenceNumber}
+            </p>
+          ) : null}
         </div>
-        <h1 className="mt-6 text-2xl font-bold text-zinc-900">Order confirmed!</h1>
-        <p className="mt-2 text-xs text-zinc-500">Order ID: {order.id}</p>
-        <p className="mt-4 text-sm text-zinc-600">
-          Thank you for your purchase. The vendor will be in touch shortly.
-        </p>
-        <p className="mt-6 text-lg font-semibold text-zinc-900">
-          Total paid: TTD {totalTtd.toFixed(2)}
-        </p>
-        <div className="mt-10 flex flex-col flex-wrap items-stretch justify-center gap-3 sm:flex-row">
-          <a
-            href={`/api/invoice/${order.id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50"
-          >
-            Download Invoice
-          </a>
+
+        <div
+          className="mb-6 rounded-xl bg-white p-5 text-left"
+          style={{ border: "1px solid var(--card-border)" }}
+        >
+          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            Order Summary
+          </h2>
+
+          {order.items.map((item, idx) => (
+            <div
+              key={item.id}
+              className="flex justify-between py-2 text-sm"
+              style={
+                idx < order.items.length - 1
+                  ? { borderBottom: "1px solid var(--card-border-subtle)" }
+                  : undefined
+              }
+            >
+              <span className="min-w-0 pr-3" style={{ color: "var(--text-secondary)" }}>
+                {item.titleSnapshot}
+                <span className="text-zinc-400"> ×{item.quantity}</span>
+              </span>
+              <span className="shrink-0 font-medium tabular-nums" style={{ color: "var(--text-primary)" }}>
+                TTD {((item.priceMinor * item.quantity) / 100).toFixed(2)}
+              </span>
+            </div>
+          ))}
+
+          <div className="mt-4 space-y-2 text-sm">
+            <div className="flex justify-between" style={{ color: "var(--text-secondary)" }}>
+              <span>Subtotal</span>
+              <span className="tabular-nums">TTD {(order.subtotalMinor / 100).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between" style={{ color: "var(--text-secondary)" }}>
+              <span>Delivery</span>
+              <span className="tabular-nums">TTD {(order.shippingMinor / 100).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between pt-2 font-bold" style={{ color: "var(--scarlet)" }}>
+              <span>Total</span>
+              <span className="tabular-nums">TTD {(order.totalMinor / 100).toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-center gap-3">
           <Link
             href={`/orders/${order.id}`}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#D4450A] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#B83A08]"
+            className="rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ backgroundColor: "var(--scarlet)" }}
           >
             View Order
           </Link>
           <Link
             href="/"
-            className="inline-flex h-11 items-center justify-center rounded-xl px-6 text-sm font-medium text-white"
-            style={{ backgroundColor: "#D4450A" }}
+            className="rounded-xl border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-zinc-50"
+            style={{
+              color: "var(--text-secondary)",
+              borderColor: "var(--card-border)",
+            }}
           >
-            Continue shopping
-          </Link>
-          <Link
-            href="/orders"
-            className="inline-flex h-11 items-center justify-center rounded-xl border-2 border-zinc-300 px-6 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
-          >
-            View all orders
+            Continue Shopping
           </Link>
         </div>
       </div>

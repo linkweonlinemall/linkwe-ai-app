@@ -1,9 +1,17 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { toggleProductPublished } from "@/app/actions/product";
+
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/prisma";
 import { getStoreByOwnerId } from "@/lib/store/get-vendor-store";
+
+function formatCategoryLabel(value: string | null): string | null {
+  if (!value) return null;
+  return value
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
 
 export default async function VendorProductsPage() {
   const user = await getCurrentUser();
@@ -23,157 +31,152 @@ export default async function VendorProductsPage() {
       id: true,
       name: true,
       price: true,
-      condition: true,
       stock: true,
       images: true,
       isPublished: true,
+      category: true,
     },
   });
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5] px-4 py-8 sm:px-6">
-      <div className="mx-auto max-w-6xl">
-        <Link
-          href="/dashboard/vendor"
-          className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-500 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
+    <div className="max-w-5xl mx-auto px-6 py-6">
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+            Products
+          </h1>
+          <p className="mt-0.5 text-sm" style={{ color: "var(--text-muted)" }}>
+            Manage your store products
+          </p>
+        </div>
+        <a
+          href="/dashboard/vendor/products/new"
+          className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          style={{ backgroundColor: "var(--scarlet)" }}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-          Back to dashboard
-        </Link>
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Products</h1>
-          <Link
-            href="/dashboard/vendor/products/new"
-            className="inline-flex h-11 items-center justify-center rounded-lg bg-[#D4450A] px-4 text-sm font-medium text-white hover:bg-[#B83A08] dark:bg-[#D4450A] dark:hover:bg-[#B83A08]"
-          >
-            Add product
-          </Link>
+          + Add Product
+        </a>
+      </div>
+
+      <div className="overflow-hidden rounded-xl bg-white" style={{ border: "1px solid var(--card-border)" }}>
+        <div
+          className="grid grid-cols-12 gap-4 px-5 py-3 text-xs font-semibold uppercase tracking-wide"
+          style={{
+            color: "var(--text-muted)",
+            backgroundColor: "#F7F7F6",
+            borderBottom: "1px solid var(--card-border-subtle)",
+          }}
+        >
+          <div className="col-span-5">Product</div>
+          <div className="col-span-2">Price</div>
+          <div className="col-span-2">Stock</div>
+          <div className="col-span-2">Status</div>
+          <div className="col-span-1" />
         </div>
 
+        {products.map((product) => {
+          const status = product.isPublished ? "PUBLISHED" : "DRAFT";
+          const stockNum = product.stock;
+          const inStockDisplay =
+            stockNum === null || stockNum === undefined
+              ? "Unlimited"
+              : `${stockNum} in stock`;
+          const stockPositive =
+            stockNum === null || stockNum === undefined ? true : stockNum > 0;
+          const categoryLabel = formatCategoryLabel(product.category);
+
+          return (
+            <div
+              key={product.id}
+              className="grid grid-cols-12 items-center gap-4 px-5 py-4 transition-colors hover:bg-zinc-50/60"
+              style={{ borderBottom: "1px solid var(--card-border-subtle)" }}
+            >
+              <div className="col-span-5 flex items-center gap-3">
+                <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-zinc-100">
+                  {product.images?.[0] ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- remote Cloudinary URLs
+                    <img src={product.images[0]} alt={product.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <div
+                      className="flex h-full w-full items-center justify-center text-xs font-bold"
+                      style={{ color: "var(--text-disabled)" }}
+                    >
+                      {product.name.charAt(0)}
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+                    {product.name}
+                  </p>
+                  {categoryLabel ? (
+                    <p className="mt-0.5 text-xs" style={{ color: "var(--text-faint)" }}>
+                      {categoryLabel}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="col-span-2">
+                <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                  TTD {product.price.toFixed(2)}
+                </span>
+              </div>
+
+              <div className="col-span-2">
+                <span
+                  className="text-sm"
+                  style={{
+                    color: stockPositive ? "var(--text-secondary)" : "#DC2626",
+                  }}
+                >
+                  {inStockDisplay}
+                </span>
+              </div>
+
+              <div className="col-span-2">
+                <span
+                  className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                  style={{
+                    backgroundColor: status === "PUBLISHED" ? "#DCFCE7" : "#F4F4F5",
+                    color: status === "PUBLISHED" ? "#15803D" : "var(--text-muted)",
+                  }}
+                >
+                  {status === "PUBLISHED" ? "Published" : "Draft"}
+                </span>
+              </div>
+
+              <div className="col-span-1 flex justify-end">
+                <Link
+                  href={`/dashboard/vendor/products/${product.id}/edit`}
+                  className="text-xs font-medium hover:underline"
+                  style={{ color: "var(--blue)" }}
+                >
+                  Edit
+                </Link>
+              </div>
+            </div>
+          );
+        })}
+
         {products.length === 0 ? (
-          <div className="rounded-2xl border border-zinc-200 bg-white p-10 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <p className="text-zinc-600 dark:text-zinc-400">You don&apos;t have any products yet.</p>
+          <div className="py-16 text-center">
+            <p className="mb-3 text-3xl">📦</p>
+            <p className="mb-1 text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+              No products yet
+            </p>
+            <p className="mb-4 text-xs" style={{ color: "var(--text-muted)" }}>
+              Add your first product to start selling
+            </p>
             <Link
               href="/dashboard/vendor/products/new"
-              className="mt-6 inline-flex h-11 items-center justify-center rounded-lg bg-[#D4450A] px-4 text-sm font-medium text-white hover:bg-[#B83A08]"
+              className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              style={{ backgroundColor: "var(--scarlet)" }}
             >
-              Create your first product
+              + Add Product
             </Link>
           </div>
-        ) : (
-          <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800">
-              <thead className="bg-zinc-50 dark:bg-zinc-950">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Product
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Price
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Condition
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Stock
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                {products.map((p) => (
-                  <tr key={p.id}>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
-                          {p.images[0] ? (
-                            // eslint-disable-next-line @next/next/no-img-element -- remote Cloudinary URLs
-                            <img src={p.images[0]} alt="" className="h-full w-full object-cover" />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-xs text-zinc-400">—</div>
-                          )}
-                        </div>
-                        <span className="font-semibold text-zinc-900 dark:text-zinc-50">{p.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300">
-                      ${p.price.toFixed(2)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          p.condition === "NEW"
-                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
-                            : p.condition === "USED"
-                              ? "bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
-                              : "bg-sky-100 text-sky-900 dark:bg-sky-950/40 dark:text-sky-100"
-                        }`}
-                      >
-                        {p.condition === "NEW"
-                          ? "New"
-                          : p.condition === "USED"
-                            ? "Used"
-                            : p.condition === "REFURBISHED"
-                              ? "Refurbished"
-                              : "—"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300">
-                      {p.stock === null || p.stock === undefined ? "Unlimited" : p.stock}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          p.isPublished
-                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
-                            : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
-                        }`}
-                      >
-                        {p.isPublished ? "Published" : "Draft"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex flex-wrap items-center justify-end gap-2">
-                        <Link
-                          href={`/dashboard/vendor/products/${p.id}/edit`}
-                          className="inline-flex rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                        >
-                          Edit
-                        </Link>
-                        <form action={toggleProductPublished} className="inline">
-                          <input type="hidden" name="productId" value={p.id} />
-                          <button
-                            type="submit"
-                            className="inline-flex rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                          >
-                            {p.isPublished ? "Unpublish" : "Publish"}
-                          </button>
-                        </form>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

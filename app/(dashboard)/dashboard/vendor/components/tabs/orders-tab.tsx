@@ -91,19 +91,34 @@ export default function OrdersTab({ splitOrders }: Props) {
     const badge = getStatusBadge(order.status);
     return (
       <div key={order.id} className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-zinc-900">
               Order #LW-{order.mainOrderId.slice(-8).toUpperCase()}
             </p>
             <p className="mt-0.5 text-xs text-zinc-400">{formatDate(order.createdAt)}</p>
           </div>
-          <span className={`rounded-full px-3 py-1 text-xs font-medium ${badge.className}`}>{badge.label}</span>
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <span className={`rounded-full px-3 py-1 text-xs font-medium ${badge.className}`}>{badge.label}</span>
+            <a
+              href={`/api/vendor-invoice/${order.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Invoice
+            </a>
+          </div>
         </div>
 
         <div className="mt-3 grid grid-cols-2 gap-4">
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">Items</p>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">Items</p>
             <div className="flex flex-col gap-1">
               {order.items.map((item) => (
                 <div key={item.id} className="flex justify-between text-xs">
@@ -114,7 +129,7 @@ export default function OrdersTab({ splitOrders }: Props) {
             </div>
           </div>
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">Details</p>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">Details</p>
             <div className="flex flex-col gap-1">
               <div className="flex justify-between text-xs">
                 <span className="text-zinc-500">Customer region</span>
@@ -136,6 +151,15 @@ export default function OrdersTab({ splitOrders }: Props) {
               ) : null}
             </div>
           </div>
+        </div>
+
+        <div className="mt-3">
+          <a
+            href={`/dashboard/vendor/orders/${order.id}`}
+            className="text-sm text-zinc-600 transition-colors hover:text-zinc-900"
+          >
+            View order →
+          </a>
         </div>
 
         {order.status === "AWAITING_VENDOR_ACTION" ? (
@@ -161,7 +185,7 @@ export default function OrdersTab({ splitOrders }: Props) {
     <div className="flex flex-col gap-6">
       {actionRequired.length > 0 ? (
         <div>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-red-500">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-red-600">
             Action Required ({actionRequired.length})
           </p>
           <div className="flex flex-col gap-4">{actionRequired.map(renderOrderCard)}</div>
@@ -170,7 +194,7 @@ export default function OrdersTab({ splitOrders }: Props) {
 
       {inProgress.length > 0 ? (
         <div>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
             In Progress ({inProgress.length})
           </p>
           <div className="flex flex-col gap-4">{inProgress.map(renderOrderCard)}</div>
@@ -179,7 +203,7 @@ export default function OrdersTab({ splitOrders }: Props) {
 
       {completed.length > 0 ? (
         <div>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
             Completed ({completed.length})
           </p>
           <div className="flex flex-col gap-4">{completed.map(renderOrderCard)}</div>

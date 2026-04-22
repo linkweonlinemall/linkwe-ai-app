@@ -54,9 +54,9 @@ export default function GalleryUpload({ images: initialImages, slotsAvailable: i
   }
 
   return (
-    <div className="border-t border-zinc-100 dark:border-zinc-800 pt-6 mt-2">
-      <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Store gallery</h2>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+    <div className="border-t border-zinc-100 pt-6 mt-2">
+      <h2 className="text-sm font-semibold text-zinc-900">Store gallery</h2>
+      <p className="mt-1 text-sm text-zinc-600">
         {images.length}/10 photos.
         {images.length < 10 ? ` You can add up to ${slotsAvailable} more.` : " Gallery full — remove a photo to add another."}
       </p>
@@ -67,11 +67,11 @@ export default function GalleryUpload({ images: initialImages, slotsAvailable: i
             <div key={image.id} className="flex flex-col gap-2">
               <img
                 alt=""
-                className="aspect-square w-full rounded-lg border border-zinc-200 object-cover dark:border-zinc-700"
+                className="aspect-square w-full rounded-lg border border-zinc-200 object-cover"
                 src={image.url}
               />
               <button
-                className="w-full rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-300 disabled:opacity-50"
+                className="w-full rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100 disabled:opacity-50"
                 disabled={isPending}
                 onClick={() => handleRemove(image.id)}
                 type="button"
@@ -84,12 +84,12 @@ export default function GalleryUpload({ images: initialImages, slotsAvailable: i
       ) : null}
 
       {images.length < 10 ? (
-        <label className="mt-4 flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
+        <label className="mt-4 flex flex-col gap-1 text-sm font-medium text-zinc-800">
           Add photos
           <input
             ref={fileInputRef}
             accept="image/*"
-            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50 dark:file:bg-zinc-700 dark:file:text-zinc-100"
+            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-900"
             disabled={isPending}
             multiple
             name="galleryImages"

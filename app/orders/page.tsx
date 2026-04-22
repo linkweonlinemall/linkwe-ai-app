@@ -16,6 +16,7 @@ export default async function OrdersPage() {
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
+      referenceNumber: true,
       createdAt: true,
       status: true,
       region: true,
@@ -40,47 +41,33 @@ export default async function OrdersPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5]">
+    <div className="min-h-screen bg-[#F5F5F5]">
       <PublicNav />
-      <div className="mx-auto max-w-4xl px-4 py-8">
+      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-zinc-900">My Orders</h1>
-          <Link
-            href="/"
-            className="text-sm text-zinc-500 transition-colors hover:text-zinc-900"
-          >
+          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+            My Orders
+          </h1>
+          <Link href="/" className="text-sm hover:underline" style={{ color: "var(--blue)" }}>
             Continue shopping
           </Link>
         </div>
 
         {orders.length === 0 ? (
-          <div className="rounded-2xl border border-zinc-200 bg-white p-12 text-center shadow-sm">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="48"
-              height="48"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="mx-auto mb-4 text-zinc-300"
-            >
-              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <path d="M16 10a4 4 0 0 1-8 0" />
-            </svg>
-            <p className="text-lg font-semibold text-zinc-900">No orders yet</p>
-            <p className="mt-2 text-sm text-zinc-500">
-              Your completed purchases will appear here.
+          <div className="py-16 text-center">
+            <p className="mb-4 text-4xl">📦</p>
+            <h2 className="mb-2 text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
+              No orders yet
+            </h2>
+            <p className="mb-6 text-sm" style={{ color: "var(--text-muted)" }}>
+              Your orders will appear here once you make a purchase
             </p>
             <Link
               href="/"
-              className="mt-6 inline-flex rounded-xl px-4 py-2 text-sm font-medium text-white transition-colors hover:opacity-90"
-              style={{ backgroundColor: "#D4450A" }}
+              className="inline-flex rounded-xl px-5 py-2.5 text-sm font-semibold text-white"
+              style={{ backgroundColor: "var(--scarlet)" }}
             >
-              Browse stores
+              Start shopping →
             </Link>
           </div>
         ) : (

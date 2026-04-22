@@ -2,16 +2,29 @@ import type { MainOrderStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
-const TERMINAL_STATUSES: MainOrderStatus[] = ["CANCELLED", "REFUNDED"];
+const TERMINAL_STATUSES: MainOrderStatus[] = [
+  "CANCELLED",
+  "REFUNDED",
+  "CUSTOMER_RECEIVED",
+  "COMPLETED",
+];
 
 const AT_WAREHOUSE_OR_BEYOND: string[] = [
   "AT_WAREHOUSE",
+  "PACKAGED",
   "BUNDLED_FOR_DISPATCH",
   "DISPATCHED",
   "DELIVERED",
 ];
 
 const DISPATCHED_OR_BEYOND: string[] = ["DISPATCHED", "DELIVERED"];
+
+const PACKAGED_OR_BEYOND: string[] = [
+  "PACKAGED",
+  "BUNDLED_FOR_DISPATCH",
+  "DISPATCHED",
+  "DELIVERED",
+];
 
 export async function recalculateMainOrderStatus(mainOrderId: string): Promise<void> {
   const mainOrder = await prisma.mainOrder.findUnique({
@@ -38,12 +51,15 @@ export async function recalculateMainOrderStatus(mainOrderId: string): Promise<v
   const allDispatchedOrBeyond = statuses.every((s) => DISPATCHED_OR_BEYOND.includes(s));
   const allAtWarehouseOrBeyond = statuses.every((s) => AT_WAREHOUSE_OR_BEYOND.includes(s));
   const someAtWarehouseOrBeyond = statuses.some((s) => AT_WAREHOUSE_OR_BEYOND.includes(s));
+  const allPackagedOrBeyond = statuses.every((s) => PACKAGED_OR_BEYOND.includes(s));
   const allAwaitingVendorAction = statuses.every((s) => s === "AWAITING_VENDOR_ACTION");
 
   if (allDelivered) {
     newStatus = "DELIVERED";
   } else if (allDispatchedOrBeyond) {
     newStatus = "SHIPPED";
+  } else if (allPackagedOrBeyond) {
+    newStatus = "PACKING_COMPLETE";
   } else if (allAtWarehouseOrBeyond) {
     newStatus = "READY_TO_SHIP";
   } else if (someAtWarehouseOrBeyond) {

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { saveCourierBankDetails } from "@/app/actions/courier-bank";
@@ -28,18 +27,23 @@ export default async function CourierBankPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5]">
-      <div className="mx-auto max-w-xl px-4 py-8">
-        <Link
+    <div className="min-h-screen bg-[#F5F5F5]">
+      <div className="max-w-lg mx-auto px-4 py-6">
+        <a
           href="/dashboard/courier"
-          className="mb-6 inline-flex items-center gap-1 text-sm text-zinc-500 transition-colors hover:text-zinc-900"
+          className="mb-4 inline-flex items-center gap-1 text-xs hover:underline"
+          style={{ color: "var(--blue)" }}
         >
           ← Back to dashboard
-        </Link>
-        <h1 className="text-2xl font-semibold text-zinc-900">Bank Details</h1>
-        <p className="mt-1 text-sm text-zinc-600">Your earnings will be paid to this account.</p>
+        </a>
+        <h1 className="mb-1 text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+          Bank Details
+        </h1>
+        <p className="mb-6 text-sm" style={{ color: "var(--text-muted)" }}>
+          Your payout details for courier earnings
+        </p>
 
-        <div className="mt-8 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <div className="rounded-xl bg-white p-6" style={{ border: "1px solid var(--card-border)" }}>
           <form action={saveCourierBankDetails} className="flex flex-col gap-4">
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-zinc-700">Bank name</span>
@@ -63,7 +67,7 @@ export default async function CourierBankPage() {
                 name="accountName"
                 type="text"
                 defaultValue={bankDetails?.accountName ?? ""}
-                className="w-full border-b border-zinc-300 bg-transparent pb-2 text-sm text-zinc-900 outline-none focus:border-[#D4450A] placeholder:text-zinc-400"
+                className="w-full border-b border-zinc-300 bg-transparent pb-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-[#D4450A]"
                 required
               />
             </label>
@@ -73,7 +77,7 @@ export default async function CourierBankPage() {
                 name="accountNumber"
                 type="text"
                 defaultValue={bankDetails?.accountNumber ?? ""}
-                className="w-full border-b border-zinc-300 bg-transparent pb-2 text-sm text-zinc-900 outline-none focus:border-[#D4450A] placeholder:text-zinc-400"
+                className="w-full border-b border-zinc-300 bg-transparent pb-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-[#D4450A]"
                 required
               />
             </label>
@@ -92,8 +96,8 @@ export default async function CourierBankPage() {
             </label>
             <button
               type="submit"
-              className="mt-2 inline-flex h-11 w-full items-center justify-center rounded-xl text-sm font-medium text-white transition-opacity hover:opacity-90"
-              style={{ backgroundColor: "#D4450A" }}
+              className="mt-2 w-full rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              style={{ backgroundColor: "var(--scarlet)" }}
             >
               Save bank details
             </button>

@@ -2,9 +2,13 @@
 
 import { useActionState, useState } from "react";
 import type { ProductCondition, WeightUnit } from "@prisma/client";
+
 import type { ProductFieldErrors } from "@/app/actions/product";
 import { updateProduct } from "@/app/actions/product";
 import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
+import Input from "@/components/ui/Input";
+import Select from "@/components/ui/Select";
+import Textarea from "@/components/ui/Textarea";
 
 const PRODUCT_CATEGORY_OPTIONS = [
   { value: "clothing_apparel", label: "Clothing & Apparel" },
@@ -116,355 +120,342 @@ export function ProductEditForm({ product }: { product: VendorProductEditPayload
   const canAddMore = remainingImages.length + previews.length < 10;
 
   return (
-    <form action={formAction} className="mx-auto max-w-2xl space-y-10">
-      <input type="hidden" name="productId" value={product.id} />
-      <input type="hidden" name="existingImages" value={JSON.stringify(remainingImages)} />
-
-      {topError ? (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200" role="alert">
-          {topError}
-        </p>
-      ) : null}
-
-      <section className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Basic info</h2>
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Name</span>
-          <input
-            required
-            name="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-          />
-          {fieldError("name") ? <p className="mt-1 text-sm text-red-600">{fieldError("name")}</p> : null}
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Slug</span>
-          <input
-            required
-            name="slug"
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-          />
-          <p className="mt-1 text-xs text-zinc-500">linkwe.com/products/{slug || "your-slug"}</p>
-          {fieldError("slug") ? <p className="mt-1 text-sm text-red-600">{fieldError("slug")}</p> : null}
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Description</span>
-          <textarea
-            name="description"
-            rows={4}
-            defaultValue={product.description ?? ""}
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-          />
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Short description</span>
-          <input
-            name="shortDescription"
-            maxLength={160}
-            defaultValue={product.shortDescription ?? ""}
-            placeholder="One line that appears on product cards and search results"
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-          />
-          <p className="mt-1 text-xs text-zinc-500">Max 160 characters.</p>
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Category</span>
-          <select
-            name="category"
-            defaultValue={product.category ?? ""}
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+    <>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <a
+            href="/dashboard/vendor/products"
+            className="mb-1 inline-flex items-center gap-1 text-xs hover:underline"
+            style={{ color: "var(--blue)" }}
           >
-            <option value="">Select a category</option>
-            {PRODUCT_CATEGORY_OPTIONS.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Brand</span>
-          <input name="brand" defaultValue={product.brand ?? ""} className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50" />
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Tags</span>
-          <input
-            name="tags"
-            defaultValue={product.tagsDisplay}
-            placeholder="sneakers, red, nike — comma separated"
-            className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-          />
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Condition</span>
-          <select
-            required
-            name="condition"
-            defaultValue={product.condition ?? ""}
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-          >
-            <option value="" disabled>
-              Select condition
-            </option>
-            <option value="NEW">New</option>
-            <option value="USED">Used</option>
-            <option value="REFURBISHED">Refurbished</option>
-          </select>
-          {fieldError("condition") ? <p className="mt-1 text-sm text-red-600">{fieldError("condition")}</p> : null}
-        </label>
-        <label className="flex cursor-pointer items-center gap-3">
-          <input
-            type="checkbox"
-            name="isFeatured"
-            defaultChecked={product.isFeatured}
-            className="rounded border-zinc-300"
-          />
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Feature this product</span>
-        </label>
-        <p className="-mt-2 text-xs text-zinc-500">
-          Featured products may appear in highlighted sections on your store.
-        </p>
-      </section>
-
-      <section className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Pricing</h2>
-        <input type="hidden" name="currency" value="TTD" />
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Price (TTD)</span>
-          <input
-            required
-            type="number"
-            name="price"
-            min={0}
-            step={0.01}
-            defaultValue={product.price}
-            className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-          />
-          {fieldError("price") ? <p className="mt-1 text-sm text-red-600">{fieldError("price")}</p> : null}
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Original price (TTD)</span>
-          <input
-            type="number"
-            name="compareAtPrice"
-            min={0}
-            step={0.01}
-            defaultValue={product.compareAtPrice ?? ""}
-            className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-          />
-          <p className="mt-1 text-xs text-zinc-500">Show a crossed-out original price when this product is on sale</p>
-        </label>
-      </section>
-
-      <section className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Stock</h2>
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">SKU</span>
-          <input name="sku" defaultValue={product.sku ?? ""} className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50" />
-          <p className="mt-1 text-xs text-zinc-500">Your internal reference code</p>
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Stock quantity</span>
-          <input
-            type="number"
-            name="stock"
-            min={0}
-            step={1}
-            defaultValue={product.stock ?? ""}
-            className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-          />
-          <p className="mt-1 text-xs text-zinc-500">Leave blank for unlimited stock</p>
-        </label>
-      </section>
-
-      <section className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Images</h2>
-        <div className="flex flex-wrap gap-2">
-          {remainingImages.map((url) => (
-            <div key={url} className="relative h-16 w-16">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={url} alt="" className="h-full w-full rounded-lg object-cover" />
-              <button
-                type="button"
-                onClick={() => removeExisting(url)}
-                className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-zinc-900 text-xs text-white hover:bg-red-600"
-                aria-label="Remove image"
-              >
-                ×
-              </button>
-            </div>
-          ))}
-          {previews.map((p) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={p.url} src={p.url} alt={p.name} className="h-16 w-16 rounded-lg object-cover ring-2 ring-[#E8820C]" />
-          ))}
+            ← Back to products
+          </a>
+          <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+            Edit Product
+          </h1>
         </div>
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Add images</span>
-          <input
-            type="file"
-            name="newImages"
-            accept="image/jpeg,image/png,image/webp"
-            multiple
-            disabled={!canAddMore}
-            onChange={onNewFilesChange}
-            className="mt-1 w-full text-sm text-zinc-900 file:mr-4 file:rounded-lg file:border-0 file:bg-zinc-200 file:px-4 file:py-2 dark:text-zinc-50 dark:file:bg-zinc-700"
-          />
-          <p className="mt-1 text-xs text-zinc-500">
-            Up to 10 images total ({remainingImages.length + previews.length}/10).
-          </p>
-          {fieldError("images") ? <p className="mt-1 text-sm text-red-600">{fieldError("images")}</p> : null}
-        </label>
-      </section>
-
-      <section className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Shipping</h2>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={allowDelivery}
-            onChange={(e) => setAllowDelivery(e.target.checked)}
-            className="rounded border-zinc-300"
-          />
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Offer delivery for this product</span>
-        </label>
-        <input type="hidden" name="allowDelivery" value={allowDelivery ? "true" : "false"} />
-        {!allowDelivery ? (
-          <p className="text-xs text-zinc-500">Toggle on to enter weight and dimensions.</p>
-        ) : (
-          <div className="space-y-4 border-l-2 border-[#E8820C] pl-4">
-            <label className="block">
-              <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Weight</span>
-              <input
-                type="number"
-                name="weight"
-                step={0.01}
-                defaultValue={product.weight ?? ""}
-                className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-              />
-            </label>
-            <label className="block">
-              <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Weight unit</span>
-              <select
-                name="weightUnit"
-                defaultValue={product.weightUnit ?? ""}
-                className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-              >
-                <option value="">Select</option>
-                <option value="KG">KG</option>
-                <option value="LB">LB</option>
-              </select>
-            </label>
-            <label className="block">
-              <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Length (cm)</span>
-              <input type="number" name="length" step={0.01} defaultValue={product.length ?? ""} className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50" />
-            </label>
-            <label className="block">
-              <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Width (cm)</span>
-              <input type="number" name="width" step={0.01} defaultValue={product.width ?? ""} className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50" />
-            </label>
-            <label className="block">
-              <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Height (cm)</span>
-              <input type="number" name="height" step={0.01} defaultValue={product.height ?? ""} className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50" />
-            </label>
-          </div>
-        )}
-        <label className="flex items-center gap-2">
-          <input type="checkbox" name="allowPickup" defaultChecked={product.allowPickup} className="rounded border-zinc-300" />
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Allow local pickup</span>
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Return policy</span>
-          <textarea
-            name="returnPolicy"
-            rows={3}
-            defaultValue={product.returnPolicy ?? ""}
-            placeholder="e.g. Returns accepted within 14 days in original condition"
-            className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-          />
-        </label>
-      </section>
-
-      <section className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Location</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Search for your address then drag the pin to fine-tune the exact pickup or origin location.
-        </p>
-        <StoreLocationPicker
-          initialAddress={product.address ?? ""}
-          initialLat={product.latitude ?? null}
-          initialLng={product.longitude ?? null}
-        />
-      </section>
-
-      <section className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">SEO</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Optional. Controls how this product appears in Google search results.
-        </p>
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Meta title</span>
-          <input
-            name="metaTitle"
-            maxLength={60}
-            defaultValue={product.metaTitle ?? ""}
-            placeholder="Leave blank to use product name"
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-          />
-          <p className="mt-1 text-xs text-zinc-500">Max 60 characters.</p>
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Meta description</span>
-          <textarea
-            name="metaDescription"
-            maxLength={160}
-            rows={3}
-            defaultValue={product.metaDescription ?? ""}
-            placeholder="Leave blank to use short description"
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-          />
-          <p className="mt-1 text-xs text-zinc-500">
-            Max 160 characters. Shown in Google search results.
-          </p>
-        </label>
-      </section>
-
-      <div className="flex flex-wrap gap-3">
         <button
           type="submit"
+          form="product-form"
           name="intent"
           value="save"
           disabled={pending}
-          className="inline-flex h-11 min-w-[160px] items-center justify-center rounded-lg border-2 border-[#D4450A] bg-white px-4 text-sm font-medium text-[#D4450A] hover:bg-[#fff5f0] disabled:opacity-60 dark:bg-zinc-900"
+          className="rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+          style={{ backgroundColor: "var(--scarlet)" }}
         >
-          Save changes
+          Save Changes
         </button>
-        {product.isPublished ? (
-          <button
-            type="submit"
-            name="intent"
-            value="unpublish"
-            disabled={pending}
-            className="inline-flex h-11 min-w-[180px] items-center justify-center rounded-lg bg-[#D4450A] px-4 text-sm font-medium text-white hover:bg-[#B83A08] disabled:opacity-60"
-          >
-            Save and unpublish
-          </button>
-        ) : (
-          <button
-            type="submit"
-            name="intent"
-            value="publish"
-            disabled={pending}
-            className="inline-flex h-11 min-w-[180px] items-center justify-center rounded-lg bg-[#D4450A] px-4 text-sm font-medium text-white hover:bg-[#B83A08] disabled:opacity-60"
-          >
-            Save and publish
-          </button>
-        )}
       </div>
-    </form>
+
+      <form id="product-form" action={formAction} className="flex flex-col gap-5">
+        <input type="hidden" name="productId" value={product.id} />
+        <input type="hidden" name="existingImages" value={JSON.stringify(remainingImages)} />
+
+        {topError ? (
+          <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+            {topError}
+          </p>
+        ) : null}
+
+        <div
+          className="rounded-xl bg-white p-5 sm:p-6"
+          style={{ border: "1px solid var(--card-border)" }}
+        >
+          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            Product Details
+          </h2>
+          <div className="space-y-4">
+            <Input
+              required
+              error={fieldError("name")}
+              label="Name"
+              name="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <Input
+              required
+              error={fieldError("slug")}
+              helperText={`linkwe.com/products/${slug || "your-slug"}`}
+              label="Slug"
+              name="slug"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+            />
+            <Textarea defaultValue={product.description ?? ""} label="Description" name="description" rows={4} />
+            <Input
+              defaultValue={product.shortDescription ?? ""}
+              helperText="Max 160 characters."
+              label="Short description"
+              maxLength={160}
+              name="shortDescription"
+              placeholder="One line that appears on product cards and search results"
+            />
+            <Select className="text-base" defaultValue={product.category ?? ""} label="Category" name="category">
+              <option value="">Select a category</option>
+              {PRODUCT_CATEGORY_OPTIONS.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </Select>
+            <Input defaultValue={product.brand ?? ""} label="Brand" name="brand" />
+            <Input
+              defaultValue={product.tagsDisplay}
+              label="Tags"
+              name="tags"
+              placeholder="sneakers, red, nike — comma separated"
+            />
+            <Select
+              required
+              defaultValue={product.condition ?? ""}
+              error={fieldError("condition")}
+              label="Condition"
+              name="condition"
+            >
+              <option value="" disabled>
+                Select condition
+              </option>
+              <option value="NEW">New</option>
+              <option value="USED">Used</option>
+              <option value="REFURBISHED">Refurbished</option>
+            </Select>
+            <label className="flex cursor-pointer items-center gap-3">
+              <input
+                type="checkbox"
+                name="isFeatured"
+                defaultChecked={product.isFeatured}
+                className="rounded border-zinc-300"
+              />
+              <span className="text-sm font-medium text-zinc-800">Feature this product</span>
+            </label>
+            <p className="-mt-2 text-xs text-zinc-500">
+              Featured products may appear in highlighted sections on your store.
+            </p>
+          </div>
+        </div>
+
+        <div
+          className="rounded-xl bg-white p-5 sm:p-6"
+          style={{ border: "1px solid var(--card-border)" }}
+        >
+          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            Pricing &amp; Inventory
+          </h2>
+          <div className="space-y-4">
+            <input type="hidden" name="currency" value="TTD" />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input
+                required
+                defaultValue={product.price}
+                error={fieldError("price")}
+                label="Price (TTD)"
+                min={0}
+                name="price"
+                step={0.01}
+                type="number"
+              />
+              <Input
+                defaultValue={product.stock ?? ""}
+                helperText="Leave blank for unlimited stock"
+                label="Stock quantity"
+                min={0}
+                name="stock"
+                step={1}
+                type="number"
+              />
+            </div>
+            <Input
+              defaultValue={product.compareAtPrice ?? ""}
+              helperText="Show a crossed-out original price when this product is on sale"
+              label="Original price (TTD)"
+              min={0}
+              name="compareAtPrice"
+              step={0.01}
+              type="number"
+            />
+            <Input
+              defaultValue={product.sku ?? ""}
+              helperText="Your internal reference code"
+              label="SKU"
+              name="sku"
+            />
+          </div>
+        </div>
+
+        <div
+          className="rounded-xl bg-white p-5 sm:p-6"
+          style={{ border: "1px solid var(--card-border)" }}
+        >
+          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            Images
+          </h2>
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {remainingImages.map((url) => (
+                <div key={url} className="relative h-16 w-16">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="" className="h-full w-full rounded-lg object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeExisting(url)}
+                    className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-zinc-900 text-xs text-white hover:bg-red-600"
+                    aria-label="Remove image"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              {previews.map((p) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={p.url} src={p.url} alt={p.name} className="h-16 w-16 rounded-lg object-cover ring-2 ring-[#E8820C]" />
+              ))}
+            </div>
+            <Input
+              accept="image/jpeg,image/png,image/webp"
+              className="text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-zinc-200 file:px-4 file:py-2"
+              disabled={!canAddMore}
+              error={fieldError("images")}
+              helperText={`Up to 10 images total (${remainingImages.length + previews.length}/10).`}
+              label="Add images"
+              multiple
+              name="newImages"
+              type="file"
+              onChange={onNewFilesChange}
+            />
+          </div>
+        </div>
+
+        <div
+          className="rounded-xl bg-white p-5 sm:p-6"
+          style={{ border: "1px solid var(--card-border)" }}
+        >
+          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            Shipping
+          </h2>
+          <div className="space-y-4">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={allowDelivery}
+                onChange={(e) => setAllowDelivery(e.target.checked)}
+                className="rounded border-zinc-300"
+              />
+              <span className="text-sm font-medium text-zinc-800">Offer delivery for this product</span>
+            </label>
+            <input type="hidden" name="allowDelivery" value={allowDelivery ? "true" : "false"} />
+            {!allowDelivery ? (
+              <p className="text-xs text-zinc-500">Toggle on to enter weight and dimensions.</p>
+            ) : (
+              <div className="space-y-4 border-l-2 border-[#E8820C] pl-4">
+                <Input defaultValue={product.weight ?? ""} label="Weight" name="weight" step={0.01} type="number" />
+                <Select className="text-base" defaultValue={product.weightUnit ?? ""} label="Weight unit" name="weightUnit">
+                  <option value="">Select</option>
+                  <option value="KG">KG</option>
+                  <option value="LB">LB</option>
+                </Select>
+                <Input defaultValue={product.length ?? ""} label="Length (cm)" name="length" step={0.01} type="number" />
+                <Input defaultValue={product.width ?? ""} label="Width (cm)" name="width" step={0.01} type="number" />
+                <Input defaultValue={product.height ?? ""} label="Height (cm)" name="height" step={0.01} type="number" />
+              </div>
+            )}
+            <label className="flex items-center gap-2">
+              <input type="checkbox" name="allowPickup" defaultChecked={product.allowPickup} className="rounded border-zinc-300" />
+              <span className="text-sm font-medium text-zinc-800">Allow local pickup</span>
+            </label>
+            <Textarea
+              defaultValue={product.returnPolicy ?? ""}
+              label="Return policy"
+              name="returnPolicy"
+              placeholder="e.g. Returns accepted within 14 days in original condition"
+              rows={3}
+            />
+          </div>
+        </div>
+
+        <div
+          className="rounded-xl bg-white p-5 sm:p-6"
+          style={{ border: "1px solid var(--card-border)" }}
+        >
+          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            Location
+          </h2>
+          <div className="space-y-4">
+            <p className="text-sm text-zinc-600">
+              Search for your address then drag the pin to fine-tune the exact pickup or origin location.
+            </p>
+            <StoreLocationPicker
+              initialAddress={product.address ?? ""}
+              initialLat={product.latitude ?? null}
+              initialLng={product.longitude ?? null}
+            />
+          </div>
+        </div>
+
+        <div
+          className="rounded-xl bg-white p-5 sm:p-6"
+          style={{ border: "1px solid var(--card-border)" }}
+        >
+          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            SEO
+          </h2>
+          <div className="space-y-4">
+            <p className="text-sm text-zinc-600">
+              Optional. Controls how this product appears in Google search results.
+            </p>
+            <Input
+              defaultValue={product.metaTitle ?? ""}
+              helperText="Max 60 characters."
+              label="Meta title"
+              maxLength={60}
+              name="metaTitle"
+              placeholder="Leave blank to use product name"
+            />
+            <Textarea
+              defaultValue={product.metaDescription ?? ""}
+              helperText="Max 160 characters. Shown in Google search results."
+              label="Meta description"
+              maxLength={160}
+              name="metaDescription"
+              placeholder="Leave blank to use short description"
+              rows={3}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="submit"
+            name="intent"
+            value="save"
+            disabled={pending}
+            className="inline-flex h-11 min-w-[160px] items-center justify-center rounded-lg border-2 border-[#D4450A] bg-white px-4 text-sm font-medium text-[#D4450A] hover:bg-[#fff5f0] disabled:opacity-60"
+          >
+            Save changes
+          </button>
+          {product.isPublished ? (
+            <button
+              type="submit"
+              name="intent"
+              value="unpublish"
+              disabled={pending}
+              className="inline-flex h-11 min-w-[180px] items-center justify-center rounded-lg bg-[#D4450A] px-4 text-sm font-medium text-white hover:bg-[#B83A08] disabled:opacity-60"
+            >
+              Save and unpublish
+            </button>
+          ) : (
+            <button
+              type="submit"
+              name="intent"
+              value="publish"
+              disabled={pending}
+              className="inline-flex h-11 min-w-[180px] items-center justify-center rounded-lg bg-[#D4450A] px-4 text-sm font-medium text-white hover:bg-[#B83A08] disabled:opacity-60"
+            >
+              Save and publish
+            </button>
+          )}
+        </div>
+      </form>
+    </>
   );
 }

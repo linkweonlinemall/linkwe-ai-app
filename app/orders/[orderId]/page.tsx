@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 import { notFound, redirect } from "next/navigation";
 
+import MarkReceivedButton from "@/app/orders/components/mark-received-button";
 import PublicNav from "@/components/layout/PublicNav";
 import { getSession } from "@/lib/auth/session";
 import {
@@ -10,27 +11,27 @@ import {
 } from "@/lib/orders/order-status";
 import { generateOrderQRCodeDataURL, getOrderUrl } from "@/lib/orders/qr-code";
 import { prisma } from "@/lib/prisma";
-import type { MainOrderStatus } from "@prisma/client";
-
 type Props = { params: Promise<{ orderId: string }> };
 
-function badgeClasses(status: MainOrderStatus): string {
-  const { color } = getStatusInfo(status);
-  switch (color) {
-    case "blue":
-      return "bg-blue-100 text-blue-800";
-    case "emerald":
-      return "bg-emerald-100 text-emerald-800";
-    case "red":
-      return "bg-red-100 text-red-800";
-    case "amber":
-      return "bg-amber-100 text-amber-900";
-    case "scarlet":
-      return "bg-[#fff5f0] text-[#D4450A]";
-    case "zinc":
-    default:
-      return "bg-zinc-100 text-zinc-800";
-  }
+function getOrderStatusBadge(status: string) {
+  const map: Record<string, { label: string; bg: string; color: string }> = {
+    PAID: { label: "Order Placed", bg: "#DBEAFE", color: "#1D4ED8" },
+    PROCESSING: { label: "Processing", bg: "#FEF3C7", color: "#92400E" },
+    SHIPPED: { label: "Out for Delivery", bg: "#EFF8FC", color: "#1A7FB5" },
+    DELIVERED: { label: "Delivered", bg: "#DCFCE7", color: "#15803D" },
+    COMPLETED: { label: "Completed", bg: "#DCFCE7", color: "#15803D" },
+    CUSTOMER_RECEIVED: { label: "Received", bg: "#BBF7D0", color: "#065F46" },
+    CANCELLED: { label: "Cancelled", bg: "#FEE2E2", color: "#991B1B" },
+  };
+  const s = map[status] ?? { label: status.replace(/_/g, " "), bg: "#F4F4F5", color: "#52525B" };
+  return (
+    <span
+      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+      style={{ backgroundColor: s.bg, color: s.color }}
+    >
+      {s.label}
+    </span>
+  );
 }
 
 function formatOrderDate(d: Date): string {
@@ -46,13 +47,13 @@ function getSplitOrderStatusLabel(status: string): { label: string; className: s
     case "AWAITING_VENDOR_ACTION":
       return { label: "Action Required", className: "bg-red-50 text-red-700 border border-red-200" };
     case "VENDOR_PREPARING":
-      return { label: "Vendor Preparing", className: "bg-amber-50 text-amber-700 border border-amber-200" };
+      return { label: "Preparing", className: "bg-amber-50 text-amber-700 border border-amber-200" };
     case "AWAITING_COURIER_PICKUP":
       return { label: "Awaiting Courier", className: "bg-blue-50 text-blue-700 border border-blue-200" };
     case "COURIER_ASSIGNED":
       return { label: "Courier Assigned", className: "bg-blue-50 text-blue-700 border border-blue-200" };
     case "COURIER_PICKED_UP":
-      return { label: "Courier En Route", className: "bg-blue-50 text-blue-700 border border-blue-200" };
+      return { label: "En Route To Warehouse", className: "bg-blue-50 text-blue-700 border border-blue-200" };
     case "VENDOR_DROPPED_OFF":
       return { label: "Dropped Off", className: "bg-blue-50 text-blue-700 border border-blue-200" };
     case "AT_WAREHOUSE":
@@ -81,7 +82,16 @@ export default async function OrderDetailPage({ params }: Props) {
 
   const order = await prisma.mainOrder.findUnique({
     where: { id: orderId },
-    include: {
+    select: {
+      id: true,
+      buyerId: true,
+      referenceNumber: true,
+      status: true,
+      createdAt: true,
+      region: true,
+      subtotalMinor: true,
+      shippingMinor: true,
+      totalMinor: true,
       buyer: { select: { fullName: true, email: true } },
       items: {
         include: {
@@ -131,54 +141,67 @@ export default async function OrderDetailPage({ params }: Props) {
   const qrCodeDataUrl = await generateOrderQRCodeDataURL(order.id);
   const orderUrl = getOrderUrl(order.id);
 
-  const invoiceRef = `LW-${order.id.slice(-8).toUpperCase()}`;
   const currentStep = getProgressStep(order.status);
   const statusInfo = getStatusInfo(order.status);
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5]">
+    <div className="min-h-screen bg-[#F5F5F5]">
       <PublicNav />
-      <div className="mx-auto max-w-4xl px-4 py-8">
-        {/* Header */}
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+        <a
+          href="/orders"
+          className="mb-4 inline-flex items-center gap-1 text-xs hover:underline"
+          style={{ color: "var(--blue)" }}
+        >
+          ← Back to orders
+        </a>
+
+        <div className="mb-6 flex items-center justify-between">
           <div>
-            <p className="text-2xl font-bold text-zinc-900">Order #{invoiceRef}</p>
-            <p className="mt-1 text-sm text-zinc-500">{formatOrderDate(order.createdAt)}</p>
-            <span
-              className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${badgeClasses(order.status)}`}
-            >
-              {statusInfo.label}
-            </span>
+            <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+              Order #{order.referenceNumber ?? order.id.slice(-8).toUpperCase()}
+            </h1>
+            <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
+              Placed {formatOrderDate(order.createdAt)}
+            </p>
           </div>
-          <a
-            href={`/api/invoice/${order.id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            {getOrderStatusBadge(order.status)}
+            <a
+              href={`/api/invoice/${order.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50"
             >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-            Download Invoice
-          </a>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Download Invoice
+            </a>
+          </div>
         </div>
 
         {/* Progress */}
-        <section className="mb-8 rounded-2xl bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-zinc-900">Order Progress</h2>
+        <section
+          className="mb-5 rounded-xl bg-white p-5 sm:p-6"
+          style={{ border: "1px solid var(--card-border)" }}
+        >
+          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            Order Progress
+          </h2>
 
           {order.status === "CANCELLED" ? (
             <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">
@@ -194,7 +217,9 @@ export default async function OrderDetailPage({ params }: Props) {
                 {ORDER_PROGRESS_STEPS.map((label, idx) => {
                   const lastIdx = ORDER_PROGRESS_STEPS.length - 1;
                   const delivered =
-                    order.status === "COMPLETED" || order.status === "DELIVERED";
+                    order.status === "COMPLETED" ||
+                    order.status === "DELIVERED" ||
+                    order.status === "CUSTOMER_RECEIVED";
                   const completed = idx < currentStep || (delivered && idx === lastIdx);
                   const current = !completed && idx === currentStep;
 
@@ -280,11 +305,43 @@ export default async function OrderDetailPage({ params }: Props) {
           <p className="mt-4 text-sm text-zinc-500">{statusInfo.description}</p>
         </section>
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        {order.status === "SHIPPED" && isBuyer ? (
+          <div className="mb-5 rounded-xl border-2 border-emerald-200 bg-emerald-50 p-5 sm:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-bold text-emerald-900">Has your order arrived?</p>
+                <p className="mt-1 text-xs text-emerald-700">
+                  If you have received all your items, please confirm below.
+                </p>
+              </div>
+              <MarkReceivedButton orderId={order.id} />
+            </div>
+          </div>
+        ) : null}
+
+        {order.status === "CUSTOMER_RECEIVED" && isBuyer ? (
+          <div className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
+            <div className="flex items-center gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <p className="text-sm font-medium text-emerald-800">
+                You confirmed receipt of this order. Thank you for shopping with LinkWe.
+              </p>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="grid gap-5 lg:grid-cols-3">
           {/* Items */}
-          <div className="lg:col-span-2">
-            <section className="rounded-2xl bg-white p-5 shadow-sm">
-              <h2 className="mb-4 text-base font-semibold text-zinc-900">Items</h2>
+          <div className="mb-5 lg:col-span-2 lg:mb-0">
+            <section
+              className="rounded-xl bg-white p-5 sm:p-6"
+              style={{ border: "1px solid var(--card-border)" }}
+            >
+              <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                Items
+              </h2>
 
               {order.splitOrders && order.splitOrders.length > 0 ? (
                 <div className="flex flex-col gap-6">
@@ -397,9 +454,14 @@ export default async function OrderDetailPage({ params }: Props) {
           </div>
 
           {/* Sidebar */}
-          <div className="flex flex-col gap-6 lg:col-span-1">
-            <section className="rounded-2xl bg-white p-5 shadow-sm">
-              <h2 className="text-sm font-semibold text-zinc-900">Order summary</h2>
+          <div className="flex flex-col gap-5 lg:col-span-1">
+            <section
+              className="rounded-xl bg-white p-5 sm:p-6"
+              style={{ border: "1px solid var(--card-border)" }}
+            >
+              <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                Order summary
+              </h2>
               <div className="mt-4 space-y-2 text-sm">
                 <div className="flex justify-between text-zinc-600">
                   <span>Subtotal</span>
@@ -409,21 +471,34 @@ export default async function OrderDetailPage({ params }: Props) {
                   <span>Shipping</span>
                   <span>TTD {(order.shippingMinor / 100).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between border-t border-zinc-100 pt-2 text-base font-bold text-[#D4450A]">
+                <div
+                  className="flex justify-between border-t border-zinc-100 pt-2 text-base font-bold"
+                  style={{ color: "var(--scarlet)" }}
+                >
                   <span>Total</span>
                   <span>TTD {(order.totalMinor / 100).toFixed(2)}</span>
                 </div>
               </div>
             </section>
 
-            <section className="rounded-2xl bg-white p-5 shadow-sm">
-              <h2 className="text-sm font-semibold text-zinc-900">Delivery info</h2>
-              <p className="mt-3 text-sm font-medium text-zinc-900">{order.buyer.fullName}</p>
+            <section
+              className="rounded-xl bg-white p-5 sm:p-6"
+              style={{ border: "1px solid var(--card-border)" }}
+            >
+              <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                Delivery info
+              </h2>
+              <p className="text-sm font-medium text-zinc-900">{order.buyer.fullName}</p>
               <p className="mt-1 text-sm text-zinc-600">{order.buyer.email}</p>
             </section>
 
-            <section className="rounded-2xl bg-white p-5 shadow-sm">
-              <h2 className="text-sm font-semibold text-zinc-900">Track order</h2>
+            <section
+              className="rounded-xl bg-white p-5 sm:p-6"
+              style={{ border: "1px solid var(--card-border)" }}
+            >
+              <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                Track order
+              </h2>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={qrCodeDataUrl}

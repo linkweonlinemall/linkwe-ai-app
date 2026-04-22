@@ -31,9 +31,18 @@ export async function getCart() {
   return items;
 }
 
-export async function addToCart(productId: string): Promise<{ ok: boolean; error?: string }> {
+export async function addToCart(
+  productId: string,
+  addQuantity: number = 1,
+): Promise<{ ok: boolean; error?: string }> {
   const session = await getSession();
   if (!session) return { ok: false, error: "not_logged_in" };
+
+  if (!Number.isFinite(addQuantity) || addQuantity < 1) {
+    return { ok: false, error: "invalid_quantity" };
+  }
+
+  const addQty = Math.floor(addQuantity);
 
   const product = await prisma.product.findUnique({
     where: { id: productId },
@@ -49,16 +58,21 @@ export async function addToCart(productId: string): Promise<{ ok: boolean; error
   });
 
   if (existing) {
-    if (product.stock !== null && existing.quantity >= product.stock) {
+    const newQty = existing.quantity + addQty;
+    if (product.stock !== null && newQty > product.stock) {
       return { ok: false, error: "out_of_stock" };
     }
     await prisma.productCartItem.update({
       where: { userId_productId: { userId: session.userId, productId } },
-      data: { quantity: { increment: 1 } },
+      data: { quantity: newQty },
     });
   } else {
+    if (product.stock !== null && product.stock < 1) {
+      return { ok: false, error: "out_of_stock" };
+    }
+    const createQty = product.stock !== null ? Math.min(addQty, product.stock) : addQty;
     await prisma.productCartItem.create({
-      data: { userId: session.userId, productId, quantity: 1 },
+      data: { userId: session.userId, productId, quantity: createQty },
     });
   }
 

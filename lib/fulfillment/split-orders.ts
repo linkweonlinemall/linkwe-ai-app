@@ -2,10 +2,17 @@ import type { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
-async function generateSplitOrderRef(tx: Prisma.TransactionClient): Promise<string> {
+async function generateSplitOrderRef(
+  tx: Prisma.TransactionClient,
+  mainOrderRef: string | null,
+): Promise<string> {
   const count = await tx.splitOrder.count();
   const next = count + 1;
-  return `SP-${String(next).padStart(4, "0")}`;
+  const spRef = `SP-${String(next).padStart(4, "0")}`;
+  if (mainOrderRef) {
+    return `${spRef}-${mainOrderRef}`;
+  }
+  return spRef;
 }
 
 async function resolveListingIdForOrderItem(
@@ -130,6 +137,11 @@ export async function createSplitOrdersFromMainOrder(mainOrderId: string): Promi
     });
     if (existingSplitOrders > 0) return;
 
+    const mainOrderRow = await tx.mainOrder.findUnique({
+      where: { id: mainOrderId },
+      select: { referenceNumber: true },
+    });
+
     for (const [storeId, items] of itemsByStore.entries()) {
       const subtotalMinor = items.reduce((sum, item) => sum + item.priceMinor * item.quantity, 0);
 
@@ -155,7 +167,7 @@ export async function createSplitOrdersFromMainOrder(mainOrderId: string): Promi
       await tx.splitOrder.create({
         data: {
           mainOrderId,
-          referenceNumber: await generateSplitOrderRef(tx),
+          referenceNumber: await generateSplitOrderRef(tx, mainOrderRow?.referenceNumber ?? null),
           storeId,
           status: "AWAITING_VENDOR_ACTION",
           subtotalMinor,

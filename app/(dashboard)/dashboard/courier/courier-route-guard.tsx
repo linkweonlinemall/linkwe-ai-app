@@ -42,7 +42,7 @@ export function CourierRouteGuard({
   }
 
   return (
-    <div className="flex min-h-[40vh] items-center justify-center p-6 text-sm text-zinc-500 dark:text-zinc-400">
+    <div className="flex min-h-[40vh] items-center justify-center p-6 text-sm text-zinc-500">
       Redirecting to onboarding…
     </div>
   );

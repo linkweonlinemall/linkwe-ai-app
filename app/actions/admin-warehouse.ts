@@ -100,3 +100,44 @@ export async function getWarehouseReceivedToday() {
     take: 20,
   });
 }
+
+export async function getOrdersReadyForAssembly() {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") redirect("/");
+
+  return prisma.mainOrder.findMany({
+    where: {
+      status: { in: ["READY_TO_SHIP", "PACKING_COMPLETE", "PROCESSING"] },
+      AND: [
+        { splitOrders: { some: {} } },
+        {
+          splitOrders: {
+            every: {
+              status: {
+                in: ["AT_WAREHOUSE", "PACKAGED", "BUNDLED_FOR_DISPATCH", "DISPATCHED"],
+              },
+            },
+          },
+        },
+      ],
+    },
+    select: {
+      id: true,
+      referenceNumber: true,
+      status: true,
+      region: true,
+      buyer: { select: { fullName: true } },
+      splitOrders: {
+        select: {
+          id: true,
+          referenceNumber: true,
+          status: true,
+          subtotalMinor: true,
+          packagedAt: true,
+          store: { select: { name: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+}

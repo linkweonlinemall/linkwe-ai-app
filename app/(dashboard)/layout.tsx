@@ -1,17 +1,16 @@
 import Link from "next/link";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { UserRole } from "@prisma/client";
 import { getSession } from "@/lib/auth/session";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { logoutAction } from "@/app/(auth)/auth-actions";
 
-const NAV_ROLES: { role: UserRole; label: string }[] = [
-  { role: "CUSTOMER", label: "Customer" },
-  { role: "VENDOR", label: "Vendor" },
-  { role: "COURIER", label: "Courier" },
-  { role: "ADMIN", label: "Admin" },
-];
+const ROLE_LABEL: Record<UserRole, string> = {
+  CUSTOMER: "CUSTOMER",
+  VENDOR: "VENDOR",
+  COURIER: "COURIER",
+  ADMIN: "ADMIN",
+};
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
@@ -19,42 +18,27 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect("/login");
   }
 
-  const headersList = await headers();
-  const pathname = headersList.get("x-pathname") ?? "";
-  if (pathname.startsWith("/dashboard/admin")) {
-    return <>{children}</>;
-  }
+  const roleLabel = ROLE_LABEL[session.role] ?? session.role;
 
   return (
-    <div className="flex min-h-full flex-1 flex-col bg-zinc-50 dark:bg-zinc-950">
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-zinc-800 bg-[#1C1C1A] px-6 py-4">
-        <div className="flex flex-wrap items-center gap-6">
-          <Link
-            className="text-lg font-semibold tracking-tight text-white"
-            href={getRoleDashboardPath(session.role)}
-          >
+    <div className="flex min-h-screen flex-col bg-[#F5F5F5]">
+      <header className="flex h-14 shrink-0 items-center justify-between bg-[#1C1C1A] px-4 md:px-6">
+        <div className="flex min-w-0 flex-wrap items-center">
+          <Link className="text-lg font-bold text-white" href={getRoleDashboardPath(session.role)}>
             LinkWe
           </Link>
-          <nav className="flex flex-wrap gap-4 text-sm">
-            {NAV_ROLES.filter(({ role }) => session.role === role).map(({ role, label }) => (
-              <Link
-                key={role}
-                className="font-medium text-[#D4450A] underline-offset-4 hover:underline"
-                href={`/dashboard/${role.toLowerCase()}`}
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
+          <span className="text-lg leading-none" style={{ color: "#D4450A" }}>
+            ·
+          </span>
+          <span className="ml-2 text-xs font-semibold uppercase tracking-wide text-[#D4450A]">{roleLabel}</span>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right text-sm">
-            <div className="font-medium text-zinc-300">{session.fullName}</div>
-            <div className="text-[#D4450A] capitalize">{session.role.toLowerCase()}</div>
-          </div>
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <span className="max-w-[10rem] truncate text-sm text-zinc-300 sm:max-w-[14rem] md:max-w-xs">
+            {session.fullName}
+          </span>
           <form action={logoutAction}>
             <button
-              className="rounded-lg border border-zinc-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-zinc-800"
+              className="px-3 py-1.5 text-sm text-zinc-400 transition-colors hover:text-white"
               type="submit"
             >
               Sign out
@@ -62,7 +46,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </form>
         </div>
       </header>
-      <main className="flex-1 p-6">{children}</main>
+      <main className="min-h-0 flex-1">{children}</main>
     </div>
   );
 }

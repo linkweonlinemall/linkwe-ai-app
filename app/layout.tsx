@@ -22,7 +22,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${sora.variable} h-full antialiased`}>
+    <html lang="en" className={`${sora.variable} ${sora.className} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <CartProvider>{children}</CartProvider>
       </body>

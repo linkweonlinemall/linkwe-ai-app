@@ -145,7 +145,7 @@ export default async function PublicProductPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-[#f5f5f5]">
-      <div className="mx-auto max-w-7xl px-4 py-6">
+      <div className="mx-auto max-w-6xl px-4 py-6">
         <nav className="mb-6 flex items-center gap-2 text-sm text-zinc-500">
           <Link href="/" className="hover:text-zinc-900 dark:hover:text-zinc-50">
             ← LinkWe

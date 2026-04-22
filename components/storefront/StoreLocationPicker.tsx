@@ -180,12 +180,12 @@ function LocationPickerShared({
 
   return (
     <>
-      <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
+      <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800">
         Address
         <input
           ref={inputRef}
           autoComplete="off"
-          className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+          className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2"
           onChange={(e) => setAddress(e.target.value)}
           placeholder="Search or type your address"
           type="text"
@@ -214,7 +214,7 @@ function LocationPickerShared({
       <input name="locationLng" type="hidden" value={lng !== null ? String(lng) : ""} />
 
       {showMap ? (
-        <div className="mt-4 overflow-hidden rounded-xl border border-zinc-200 shadow-sm dark:border-zinc-800">
+        <div className="mt-4 overflow-hidden rounded-xl border border-zinc-200 shadow-sm">
           <Map
             key={mapKey}
             initialViewState={{
@@ -253,7 +253,12 @@ function LocationPickerShared({
                           ) ??
                           results.find((r) => !r.formatted_address.includes("+")) ??
                           results[0];
-                        setAddress(best.formatted_address);
+                        const geocodedAddress = best.formatted_address;
+                        setAddress(geocodedAddress);
+                        if (onRegionDetectedRef.current) {
+                          const detected = detectRegionFromAddress(geocodedAddress);
+                          onRegionDetectedRef.current(detected);
+                        }
                       }
                     },
                   );

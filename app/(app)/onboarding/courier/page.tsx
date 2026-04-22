@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
+
+import { advanceCourierOnboardingAction, completeCourierOnboardingAction } from "../actions";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { resolveAuthLandingPath } from "@/lib/auth/landing";
 import { getNextCourierOnboardingStep } from "@/lib/onboarding/courier-progress";
-import { advanceCourierOnboardingAction, completeCourierOnboardingAction } from "../actions";
 
 export default async function CourierOnboardingPage({
   searchParams,
@@ -32,51 +33,61 @@ export default async function CourierOnboardingPage({
   const activeStep = next;
 
   return (
-    <div className="w-full max-w-lg rounded-xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Courier onboarding</p>
-      <h1 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">LinkWe delivery network</h1>
-      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-        Step {activeStep} of 2 · You have the Courier role. Finish this short orientation before accessing courier tools.
-      </p>
+    <div className="min-h-screen bg-[#F5F5F5]">
+      <div className="mx-auto max-w-2xl px-4 py-10">
+        <div
+          className="rounded-xl bg-white p-6 sm:p-8"
+          style={{ border: "1px solid var(--card-border)" }}
+        >
+          <h1 className="mb-1 text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+            Courier Setup
+          </h1>
+          <p className="mb-6 text-sm" style={{ color: "var(--text-muted)" }}>
+            Set up your courier profile to start accepting jobs
+          </p>
 
-      {activeStep === 1 ? (
-        <div className="mt-8 flex flex-col gap-4">
-          <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm leading-6 text-zinc-700 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300">
-            <p className="font-medium text-zinc-900 dark:text-zinc-50">What to expect</p>
-            <ul className="mt-3 list-disc space-y-2 pl-5">
-              <li>Assignments will appear when retailers release shipments for pickup.</li>
-              <li>Proof-of-delivery and GPS checkpoints will be required for payouts.</li>
-              <li>Background checks and insurance attestations will plug in here later.</li>
-            </ul>
-          </div>
-          <form action={advanceCourierOnboardingAction}>
-            <button
-              className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
-              type="submit"
-            >
-              Continue
-            </button>
-          </form>
+          {activeStep === 1 ? (
+            <div className="flex flex-col gap-4">
+              <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm leading-6 text-zinc-700">
+                <p className="font-medium text-zinc-900">What to expect</p>
+                <ul className="mt-3 list-disc space-y-2 pl-5">
+                  <li>Assignments will appear when retailers release shipments for pickup.</li>
+                  <li>Proof-of-delivery and GPS checkpoints will be required for payouts.</li>
+                  <li>Background checks and insurance attestations will plug in here later.</li>
+                </ul>
+              </div>
+              <form action={advanceCourierOnboardingAction}>
+                <button
+                  className="inline-flex h-11 w-full items-center justify-center rounded-lg px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                  type="submit"
+                  style={{ backgroundColor: "var(--scarlet)" }}
+                >
+                  Continue
+                </button>
+              </form>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm leading-6 text-zinc-700">
+                <p className="font-medium text-zinc-900">Almost there</p>
+                <p className="mt-2">
+                  Operational playbooks and compliance tasks will surface in this step. For now, acknowledge that you
+                  understand LinkWe courier policies will apply once deliveries go live.
+                </p>
+              </div>
+              <form action={completeCourierOnboardingAction}>
+                <button
+                  className="inline-flex h-11 w-full items-center justify-center rounded-lg px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                  type="submit"
+                  style={{ backgroundColor: "var(--scarlet)" }}
+                >
+                  Finish courier onboarding
+                </button>
+              </form>
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="mt-8 flex flex-col gap-4">
-          <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm leading-6 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
-            <p className="font-medium text-zinc-900 dark:text-zinc-50">Almost there</p>
-            <p className="mt-2">
-              Operational playbooks and compliance tasks will surface in this step. For now, acknowledge that you
-              understand LinkWe courier policies will apply once deliveries go live.
-            </p>
-          </div>
-          <form action={completeCourierOnboardingAction}>
-            <button
-              className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
-              type="submit"
-            >
-              Finish courier onboarding
-            </button>
-          </form>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

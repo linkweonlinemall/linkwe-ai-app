@@ -46,6 +46,26 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
       longitude: true,
       address: true,
       images: { select: { id: true } },
+      ledgerEntries: {
+        select: {
+          id: true,
+          amountMinor: true,
+          entryType: true,
+          ledgerEntryType: true,
+          description: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+      },
+      payoutRequests: {
+        select: {
+          id: true,
+          amountMinor: true,
+          status: true,
+          requestedAt: true,
+        },
+        orderBy: { requestedAt: "desc" },
+      },
     },
   });
   if (!store) redirect("/onboarding/business/step-3");
@@ -121,12 +141,14 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
   const completionPercent = Math.round((completedCount / totalCount) * 100);
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5]">
+    <div className="flex min-h-screen flex-col md:flex-row">
       <VendorDashboardTabs
         store={store}
         listings={listings}
         splitOrders={splitOrders}
         bankDetails={bankDetails}
+        ledgerEntries={store.ledgerEntries}
+        payoutRequests={store.payoutRequests}
         completenessItems={completenessItems}
         completedCount={completedCount}
         totalCount={totalCount}

@@ -8,7 +8,7 @@ export type OrderStatusInfo = {
 };
 
 /**
- * `step` is the index into `ORDER_PROGRESS_STEPS` (0–6) for the progress bar,
+ * `step` is the index into `ORDER_PROGRESS_STEPS` (0–4) for the progress bar,
  * or -1 for terminal negative states.
  */
 export const ORDER_STATUS_MAP: Record<MainOrderStatus, OrderStatusInfo> = {
@@ -27,43 +27,55 @@ export const ORDER_STATUS_MAP: Record<MainOrderStatus, OrderStatusInfo> = {
   PAID: {
     label: "Order Placed",
     description: "Payment confirmed. Vendor has been notified.",
-    step: 0,
+    step: 1,
     color: "blue",
   },
   PROCESSING: {
-    label: "Vendor Preparing",
+    label: "Preparing",
     description: "The vendor is packing your order.",
-    step: 1,
+    step: 2,
     color: "amber",
   },
   PARTIALLY_IN_HOUSE: {
     label: "Arrived at Warehouse",
     description: "Your order has arrived at the LinkWe warehouse.",
-    step: 4,
+    step: 3,
     color: "blue",
   },
   READY_TO_SHIP: {
-    label: "Ready to Ship",
-    description: "Your order is being prepared for dispatch.",
-    step: 3,
+    label: "Ready to Package",
+    description: "All items have arrived at the LinkWe warehouse and are being prepared for dispatch.",
+    step: 2,
     color: "blue",
+  },
+  PACKING_COMPLETE: {
+    label: "Packing Complete",
+    description: "All vendor packages are packed and ready to dispatch.",
+    step: 2,
+    color: "emerald",
   },
   SHIPPED: {
     label: "Out for Delivery",
     description: "Your order is on its way to you.",
-    step: 5,
+    step: 3,
     color: "scarlet",
+  },
+  CUSTOMER_RECEIVED: {
+    label: "Delivered",
+    description: "Your order has been delivered. Please confirm receipt below.",
+    step: 4,
+    color: "emerald",
   },
   DELIVERED: {
     label: "Delivered",
     description: "Your order has been delivered.",
-    step: 6,
+    step: 4,
     color: "emerald",
   },
   COMPLETED: {
     label: "Completed",
     description: "Order complete. Thank you for shopping with LinkWe.",
-    step: 6,
+    step: 4,
     color: "emerald",
   },
   CANCELLED: {
@@ -82,12 +94,10 @@ export const ORDER_STATUS_MAP: Record<MainOrderStatus, OrderStatusInfo> = {
 
 export const ORDER_PROGRESS_STEPS = [
   "Order Placed",
-  "Vendor Preparing",
-  "Ready for Collection",
-  "Collected",
+  "Preparing",
   "At Warehouse",
   "Out for Delivery",
-  "Delivered",
+  "Received",
 ];
 
 export function getStatusInfo(status: MainOrderStatus): OrderStatusInfo {

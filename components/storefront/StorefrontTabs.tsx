@@ -3,7 +3,87 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import AddToCartButton from "@/components/product/AddToCartButton";
 import { StorefrontMapAndProducts, type StorefrontProductRow } from "@/components/storefront/StorefrontMapAndProducts";
+
+const PLACEHOLDER_COLORS = ["#E8820C", "#1A7FB5", "#D4450A", "#15803D", "#7C3AED"] as const;
+
+type StoreTabProduct = StorefrontProductRow & { stock: number | null };
+
+function StoreTabProductCard({ product }: { product: StoreTabProduct }) {
+  const [hovered, setHovered] = useState(false);
+  const img = product.images[0];
+  const bgColor = PLACEHOLDER_COLORS[product.name.length % PLACEHOLDER_COLORS.length];
+
+  return (
+    <li className="h-full">
+      <div
+        className="group relative flex flex-col overflow-hidden rounded-2xl bg-white transition-all duration-300"
+        style={{
+          border: "1px solid var(--card-border)",
+          boxShadow: hovered
+            ? "0 8px 30px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)"
+            : "0 1px 3px rgba(0,0,0,0.04)",
+          transform: hovered ? "translateY(-2px)" : "translateY(0)",
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        <div className="relative">
+          <Link href={`/products/${product.slug}`} className="block">
+            <div className="relative overflow-hidden" style={{ aspectRatio: "4/3" }}>
+              {img ? (
+                <img
+                  alt=""
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                  src={img}
+                />
+              ) : (
+                <div
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{ backgroundColor: `${bgColor}12` }}
+                >
+                  <div
+                    className="flex h-12 w-12 items-center justify-center rounded-xl text-lg font-bold text-white"
+                    style={{ backgroundColor: `${bgColor}30` }}
+                  >
+                    {product.name.charAt(0)}
+                  </div>
+                </div>
+              )}
+            </div>
+          </Link>
+          <div
+            className={`absolute inset-0 flex items-end justify-center px-3 pb-3 transition-opacity duration-200 ${
+              hovered ? "pointer-events-auto" : "pointer-events-none"
+            }`}
+            style={{ opacity: hovered ? 1 : 0 }}
+          >
+            <div
+              className="w-full max-w-[220px]"
+              style={{
+                transform: hovered ? "translateY(0)" : "translateY(8px)",
+                transition: "transform 0.2s",
+              }}
+            >
+              <AddToCartButton productId={product.id} stock={product.stock} />
+            </div>
+          </div>
+        </div>
+        <Link href={`/products/${product.slug}`} className="flex flex-col gap-1 p-3.5 pt-3">
+          <p className="line-clamp-2 text-sm font-semibold leading-snug" style={{ color: "var(--text-primary)" }}>
+            {product.name}
+          </p>
+          <div className="mt-0.5 flex items-baseline justify-between">
+            <p className="text-lg font-bold" style={{ color: "var(--scarlet)" }}>
+              TTD {product.price.toFixed(2)}
+            </p>
+          </div>
+        </Link>
+      </div>
+    </li>
+  );
+}
 
 type TimeSlot = { from: string; to: string };
 type DaySchedule = { closed: boolean; allDay: boolean; slots: TimeSlot[] };
@@ -33,7 +113,7 @@ type TabId = "about" | "store" | "bookings" | "reviews";
 
 type Props = {
   store: StorefrontTabsStore;
-  products: StorefrontProductRow[];
+  products: StoreTabProduct[];
   openingHours: WeekSchedule | null;
   socialLinks: Record<string, string>;
   hasSocialLinks: boolean;
@@ -80,37 +160,8 @@ export default function StorefrontTabs({
 
   return (
     <>
-      <div className="relative flex flex-col gap-4 border-b border-zinc-200 bg-white pb-4 dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-6 flex-1 min-w-0">
-          <div className="-mt-12 h-24 w-24 shrink-0 overflow-hidden rounded-full border-4 border-white bg-zinc-200 shadow-md dark:border-zinc-900">
-            {store.logoUrl ? (
-              <img alt="" className="h-full w-full object-cover" src={store.logoUrl} />
-            ) : (
-              <div className="h-full w-full bg-zinc-300 dark:bg-zinc-700" />
-            )}
-          </div>
-
-          <div className="flex-1 pb-2 pt-2">
-            <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{store.name}</h1>
-            {store.tagline ? (
-              <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">{store.tagline}</p>
-            ) : null}
-            <div className="mt-2 flex flex-wrap gap-2">
-              {store.categoryId ? (
-                <span className="rounded-full bg-zinc-100 px-3 py-0.5 text-xs font-medium capitalize text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                  {store.categoryId.replace(/_/g, " ")}
-                </span>
-              ) : null}
-              {store.region ? (
-                <span className="rounded-full bg-zinc-100 px-3 py-0.5 text-xs font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                  {store.region.replace(/\b\w/g, (c) => c.toUpperCase())}
-                </span>
-              ) : null}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 pb-2 shrink-0">
+      <div className="mx-auto px-4 pt-1 sm:px-6" style={{ maxWidth: 1024, margin: "0 auto" }}>
+        <div className="flex shrink-0 items-center justify-end gap-2 pb-2">
           <Link
             href="/dashboard/vendor/store/edit"
             style={{ backgroundColor: "#D4450A" }}
@@ -315,28 +366,70 @@ export default function StorefrontTabs({
         </div>
       </div>
 
-      <div className="flex gap-1 border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-        {["About", "Store", "Bookings", "Reviews"].map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setActiveTab(tab.toLowerCase() as TabId)}
-            className={`px-5 py-3 text-sm font-medium transition-colors ${
-              activeTab === tab.toLowerCase()
-                ? "border-b-2 border-[#D4450A] text-[#D4450A]"
-                : "text-zinc-500 hover:text-zinc-900"
-            }`}
+      <div
+        className="sticky top-14 z-40 mt-5 sm:top-16"
+        style={{
+          backgroundColor: "rgba(245,245,245,0.85)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+        }}
+      >
+        <div className="mx-auto px-4 sm:px-6" style={{ maxWidth: 1024, margin: "0 auto" }}>
+          <div
+            className="hide-scrollbar flex gap-0 overflow-x-auto"
+            style={{
+              borderBottom: "1px solid var(--card-border)",
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
+            }}
           >
-            {tab}
-          </button>
-        ))}
+            {(["About", "Store", "Bookings", "Reviews"] as const).map((label) => {
+              const id = label.toLowerCase() as TabId;
+              const isActive = activeTab === id;
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => setActiveTab(id)}
+                  className="relative whitespace-nowrap px-4 py-3 text-sm font-medium transition-colors duration-150 sm:px-5"
+                  style={{
+                    color: isActive ? "var(--scarlet)" : "var(--text-muted)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  {label}
+                  {label === "Store" && products.length > 0 ? (
+                    <span
+                      className="ml-1.5 rounded-full px-1.5 py-0.5 text-[11px]"
+                      style={{
+                        backgroundColor: isActive ? "var(--scarlet-light)" : "#F7F7F6",
+                        color: isActive ? "var(--scarlet)" : "var(--text-faint)",
+                      }}
+                    >
+                      {products.length}
+                    </span>
+                  ) : null}
+                  {isActive ? (
+                    <div
+                      className="absolute bottom-0 left-4 right-4 h-0.5 rounded-full sm:left-5 sm:right-5"
+                      style={{ backgroundColor: "var(--scarlet)" }}
+                    />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
+      <main className="mx-auto px-4 py-6 sm:px-6 sm:py-8" style={{ maxWidth: 1024, margin: "0 auto" }}>
       {activeTab === "about" ? (
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="flex flex-col gap-6 lg:col-span-2">
             {store.images && store.images.length > 0 ? (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
                 <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-zinc-400">Gallery</p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {store.images.map((img) => (
@@ -349,16 +442,16 @@ export default function StorefrontTabs({
             ) : null}
 
             {store.description ? (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">About</p>
-                <p className="text-sm leading-7 text-zinc-600 dark:text-zinc-400">{store.description}</p>
+                <p className="text-sm leading-7 text-zinc-600">{store.description}</p>
               </div>
             ) : null}
 
             {store.policies ? (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">Store policies</p>
-                <p className="whitespace-pre-wrap text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+                <p className="whitespace-pre-wrap text-sm leading-6 text-zinc-600">
                   {store.policies}
                 </p>
               </div>
@@ -374,15 +467,15 @@ export default function StorefrontTabs({
 
           <div className="flex flex-col gap-6">
             {openingHours ? (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
                 <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-zinc-400">Opening hours</p>
                 <ul className="space-y-2">
                   {DAYS.map((day) => {
                     const d = openingHours[day];
                     return (
                       <li key={day} className="flex items-start justify-between text-sm">
-                        <span className="w-24 font-medium capitalize text-zinc-700 dark:text-zinc-300">{day}</span>
-                        <span className="text-right text-zinc-500 dark:text-zinc-400">
+                        <span className="w-24 font-medium capitalize text-zinc-700">{day}</span>
+                        <span className="text-right text-zinc-500">
                           {!d || d.closed ? (
                             <span className="text-zinc-400">Closed</span>
                           ) : d.allDay ? (
@@ -407,13 +500,13 @@ export default function StorefrontTabs({
             ) : null}
 
             {store.tags && store.tags.length > 0 ? (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">Tags</p>
                 <div className="flex flex-wrap gap-2">
                   {store.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-500 dark:border-zinc-700"
+                      className="rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-500"
                     >
                       {tag}
                     </span>
@@ -423,11 +516,11 @@ export default function StorefrontTabs({
             ) : null}
 
             {store.amenities && store.amenities.length > 0 ? (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">Amenities</p>
                 <div className="flex flex-col gap-2">
                   {store.amenities.map((a) => (
-                    <span key={a} className="text-sm text-zinc-600 dark:text-zinc-400">
+                    <span key={a} className="text-sm text-zinc-600">
                       ✓ {a}
                     </span>
                   ))}
@@ -435,14 +528,14 @@ export default function StorefrontTabs({
               </div>
             ) : null}
 
-            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
               <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">Owner</p>
-              <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{store.owner.fullName}</p>
+              <p className="text-sm font-medium text-zinc-900">{store.owner.fullName}</p>
               <p className="mt-1 text-xs text-zinc-500">Message this vendor directly through LinkWe.</p>
             </div>
 
             {hasSocialLinks ? (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
                 <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-zinc-400">Follow us</p>
                 <div className="flex flex-wrap gap-3">
                   {socialLinks.instagram ? (
@@ -615,7 +708,7 @@ export default function StorefrontTabs({
       {activeTab === "store" ? (
         <div className="mt-6 flex flex-col gap-6 lg:flex-row">
           <aside className="lg:w-56 shrink-0">
-            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
               <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-zinc-400">Filter</p>
               <div className="flex flex-wrap gap-2">
                 {categories.map((c) => (
@@ -640,7 +733,7 @@ export default function StorefrontTabs({
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search products…"
-                  className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-900 outline-none ring-[#D4450A]/30 placeholder:text-zinc-400 focus:border-[#D4450A] focus:ring-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                  className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-900 outline-none ring-[#D4450A]/30 placeholder:text-zinc-400 focus:border-[#D4450A] focus:ring-2"
                 />
               </label>
             </div>
@@ -648,47 +741,17 @@ export default function StorefrontTabs({
 
           <div className="flex-1 min-w-0">
             {products.length === 0 ? (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm text-center dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm text-center">
                 <p className="text-sm font-medium text-zinc-500">Products coming soon</p>
                 <p className="mt-1 text-xs text-zinc-400">This store has not listed any products yet.</p>
               </div>
             ) : filteredProducts.length === 0 ? (
-              <p className="py-12 text-center text-sm text-zinc-500 dark:text-zinc-400">No products found</p>
+              <p className="py-12 text-center text-sm text-zinc-500">No products found</p>
             ) : (
               <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-                {filteredProducts.map((product) => {
-                  const img = product.images[0];
-                  return (
-                    <li key={product.id}>
-                      <Link
-                        href={`/products/${product.slug}`}
-                        className="group flex h-full flex-col overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 transition hover:border-zinc-300 hover:bg-white dark:border-zinc-700 dark:bg-zinc-800/50 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
-                      >
-                        <div className="aspect-square w-full overflow-hidden bg-zinc-200 dark:bg-zinc-700">
-                          {img ? (
-                            <img
-                              alt=""
-                              className="h-full w-full object-cover transition group-hover:opacity-95"
-                              src={img}
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-xs text-zinc-400">
-                              No image
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex flex-1 flex-col p-3">
-                          <p className="line-clamp-2 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-                            {product.name}
-                          </p>
-                          <p className="mt-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-                            TTD {product.price.toFixed(2)}
-                          </p>
-                        </div>
-                      </Link>
-                    </li>
-                  );
-                })}
+                {filteredProducts.map((product) => (
+                  <StoreTabProductCard key={product.id} product={product} />
+                ))}
               </ul>
             )}
           </div>
@@ -706,6 +769,7 @@ export default function StorefrontTabs({
           <p className="text-sm font-medium text-zinc-500">Reviews coming soon</p>
         </div>
       ) : null}
+      </main>
     </>
   );
 }

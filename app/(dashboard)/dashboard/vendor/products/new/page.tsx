@@ -21,13 +21,13 @@ export default async function NewVendorProductPage() {
         <div className="mb-8 flex items-center gap-4">
           <Link
             href="/dashboard/vendor/products"
-            className="text-sm font-medium text-zinc-600 hover:text-[#D4450A] dark:text-zinc-400"
+            className="text-sm font-medium text-zinc-600 hover:text-[#D4450A]"
           >
             ← Products
           </Link>
         </div>
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Add product</h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Physical products only.</p>
+        <h1 className="text-2xl font-bold text-zinc-900">Add product</h1>
+        <p className="mt-1 text-sm text-zinc-600">Physical products only.</p>
         <div className="mt-8">
           <ProductForm />
         </div>

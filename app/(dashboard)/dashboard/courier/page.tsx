@@ -107,7 +107,7 @@ export default async function CourierDashboardPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5]">
+    <div className="min-h-screen bg-[#F5F5F5]">
       <CourierDashboardClient
         courierName={courier?.fullName ?? "Courier"}
         courierRegion={courierRegion}

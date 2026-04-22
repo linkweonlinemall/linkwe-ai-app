@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 
 import { getAdminOverviewMetrics } from "@/app/actions/admin-metrics";
+import Card from "@/components/ui/Card";
+import StatCard from "@/components/ui/StatCard";
 
 type Metrics = Awaited<ReturnType<typeof getAdminOverviewMetrics>>;
 
@@ -25,11 +27,11 @@ function relativeTime(date: Date | string): string {
 
 function SkeletonCard() {
   return (
-    <div className="animate-pulse rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+    <Card className="animate-pulse rounded-2xl" padding="md">
       <div className="mb-3 h-3 w-20 rounded bg-zinc-200" />
       <div className="mb-2 h-8 w-24 rounded bg-zinc-200" />
       <div className="h-3 w-32 rounded bg-zinc-100" />
-    </div>
+    </Card>
   );
 }
 
@@ -71,7 +73,7 @@ export default function OverviewTab() {
             <div className="h-4 w-64 animate-pulse rounded bg-zinc-100" />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
             <SkeletonCard key={i} />
           ))}
@@ -145,8 +147,12 @@ export default function OverviewTab() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900">Command Center</h1>
-          <p className="mt-0.5 text-sm text-zinc-500">{formattedDate}</p>
+          <h2 className="mb-1 text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+            Command Center
+          </h2>
+          <p className="mb-6 text-sm" style={{ color: "var(--text-muted)" }}>
+            {formattedDate}
+          </p>
         </div>
         <div className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2 shadow-sm">
           <span className="relative flex h-2 w-2">
@@ -160,49 +166,116 @@ export default function OverviewTab() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           {
             label: "Orders Today",
             value: metrics.ordersToday,
             sublabel: "New orders placed",
-            accent: "#D4450A",
+            icon: (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+                <path d="M3 6h18" />
+                <path d="M16 10a4 4 0 0 1-8 0" />
+              </svg>
+            ),
           },
           {
             label: "Revenue Today",
             value: formatTTD(metrics.revenueTodayMinor),
             sublabel: "Gross revenue",
-            accent: "#1B8C5A",
+            icon: (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <line x1="12" y1="1" x2="12" y2="23" />
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+              </svg>
+            ),
           },
           {
             label: "Active Couriers",
             value: metrics.activeCouriers,
             sublabel: "Currently on jobs",
-            accent: "#1A7FB5",
+            icon: (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <rect x="1" y="3" width="15" height="13" />
+                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                <circle cx="5.5" cy="18.5" r="2.5" />
+                <circle cx="18.5" cy="18.5" r="2.5" />
+              </svg>
+            ),
           },
           {
             label: "Pending Payouts",
             value: metrics.pendingPayouts,
             sublabel: "Awaiting approval",
-            accent: "#E8820C",
+            icon: (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <rect x="2" y="5" width="20" height="14" rx="2" />
+                <line x1="2" y1="10" x2="22" y2="10" />
+              </svg>
+            ),
           },
         ].map((card) => (
-          <div key={card.label} className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
-            <div className="h-1 w-full" style={{ backgroundColor: card.accent }} />
-            <div className="p-5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">{card.label}</p>
-              <p className="mt-2 text-3xl font-bold" style={{ color: card.accent }}>
-                {card.value}
-              </p>
-              <p className="mt-1 text-xs text-zinc-500">{card.sublabel}</p>
-            </div>
-          </div>
+          <StatCard
+            key={card.label}
+            className="overflow-hidden rounded-2xl"
+            icon={card.icon}
+            label={card.label}
+            sublabel={card.sublabel}
+            value={card.value}
+          />
         ))}
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+      <Card className="rounded-xl" padding="md" style={{ border: "1px solid var(--card-border)" }}>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-zinc-900">Operational Pipeline</h2>
+          <h2 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            Operational Pipeline
+          </h2>
           <span className="text-xs text-zinc-400">{pipelineTotal} active orders</span>
         </div>
 
@@ -251,10 +324,10 @@ export default function OverviewTab() {
             </div>
           </>
         )}
-      </div>
+      </Card>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+        <Card className="rounded-2xl" padding="md">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-zinc-900">Alerts</h2>
             {alertList.length > 0 ? (
@@ -304,10 +377,15 @@ export default function OverviewTab() {
               ))}
             </div>
           )}
-        </div>
+        </Card>
 
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm lg:col-span-2">
-          <h2 className="mb-4 text-sm font-semibold text-zinc-900">Recent Orders</h2>
+        <div
+          className="rounded-xl bg-white p-5 lg:col-span-2"
+          style={{ border: "1px solid var(--card-border)" }}
+        >
+          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            Recent Orders
+          </h2>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-100">
@@ -368,7 +446,7 @@ export default function OverviewTab() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <Card className="rounded-2xl" padding="lg">
           <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-zinc-400">Quick Actions</p>
           <div className="grid grid-cols-2 gap-3">
             {[
@@ -404,7 +482,7 @@ export default function OverviewTab() {
               </button>
             ))}
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );

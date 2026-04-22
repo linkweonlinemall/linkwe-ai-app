@@ -6,7 +6,13 @@ import { Fragment, useEffect, useState } from "react";
 import { logoutAction } from "@/app/(auth)/auth-actions";
 
 import OverviewTab from "./overview-tab";
+import OrdersTab from "./orders-tab";
+import CouriersTab from "./couriers-tab";
+import VendorsTab from "./vendors-tab";
 import WarehouseTab from "./warehouse-tab";
+import MapTab from "./map-tab";
+import CustomersTab from "./customers-tab";
+import SettingsTab from "./settings-tab";
 
 const TAB_IDS = [
   "overview",
@@ -173,8 +179,11 @@ export default function AdminDashboard({ adminName }: Props) {
         </div>
       </header>
 
-      <nav className="w-full border-b border-zinc-200 bg-white shadow-sm">
-        <div className="mx-auto flex max-w-7xl items-center gap-1 overflow-x-auto px-6">
+      <nav
+        className="flex w-full overflow-x-auto border-b bg-white px-2"
+        style={{ borderColor: "var(--card-border)" }}
+      >
+        <div className="mx-auto flex max-w-7xl items-center gap-1">
           {TAB_CONFIG.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -182,11 +191,11 @@ export default function AdminDashboard({ adminName }: Props) {
                 <button
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`inline-flex shrink-0 items-center gap-2 border-b-2 px-4 py-4 text-sm font-medium transition-all duration-150 ${
-                    isActive
-                      ? "border-[#D4450A] bg-transparent text-[#D4450A]"
-                      : "rounded-t-lg border-transparent text-zinc-500 hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-700"
-                  }`}
+                  className="flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-150 relative"
+                  style={{
+                    color: isActive ? "var(--scarlet)" : "var(--text-muted)",
+                    borderBottom: isActive ? "2px solid var(--scarlet)" : "2px solid transparent",
+                  }}
                 >
                   {tab.icon}
                   {tab.label}
@@ -206,10 +215,23 @@ export default function AdminDashboard({ adminName }: Props) {
         </div>
       </nav>
 
-      <div className="mx-auto max-w-7xl bg-[#f5f5f5] p-6">
+      <div className="p-6" style={{ backgroundColor: "var(--surface)" }}>
         {activeTab === "overview" && <OverviewTab />}
+        {activeTab === "orders" && <OrdersTab />}
         {activeTab === "warehouse" && <WarehouseTab />}
-        {activeTab !== "overview" && activeTab !== "warehouse" && (
+        {activeTab === "couriers" && <CouriersTab />}
+        {activeTab === "vendors" && <VendorsTab />}
+        {activeTab === "map" && <MapTab />}
+        {activeTab === "customers" && <CustomersTab />}
+        {activeTab === "settings" && <SettingsTab />}
+        {activeTab !== "overview" &&
+          activeTab !== "orders" &&
+          activeTab !== "warehouse" &&
+          activeTab !== "couriers" &&
+          activeTab !== "vendors" &&
+          activeTab !== "map" &&
+          activeTab !== "customers" &&
+          activeTab !== "settings" && (
           <div className="rounded-2xl border border-zinc-200 bg-white p-16 text-center shadow-sm">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 text-zinc-400 [&_svg]:text-zinc-400">
               {placeholderIcon}

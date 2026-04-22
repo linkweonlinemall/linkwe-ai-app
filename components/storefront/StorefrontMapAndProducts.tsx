@@ -54,7 +54,7 @@ function StoreMapBox({
   return (
     <div className="h-[280px] w-full overflow-hidden">
       {!MapComponent || !Marker ? (
-        <div className="h-full w-full bg-zinc-100 dark:bg-zinc-800" aria-hidden />
+        <div className="h-full w-full bg-zinc-100" aria-hidden />
       ) : (
         <MapComponent
           mapboxAccessToken={mapboxAccessToken}
@@ -112,7 +112,7 @@ export function StorefrontMapAndProducts({ latitude, longitude, address, region,
   return (
     <div className="mt-6 flex flex-col gap-6">
       {showMap ? (
-        <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-zinc-100 p-4">
             <div className="flex items-center gap-2">
               <svg
@@ -125,13 +125,13 @@ export function StorefrontMapAndProducts({ latitude, longitude, address, region,
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="shrink-0 text-zinc-900 dark:text-zinc-50"
+                className="shrink-0 text-zinc-900"
                 aria-hidden
               >
                 <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
                 <circle cx="12" cy="10" r="3" />
               </svg>
-              <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Find us</span>
+              <span className="text-sm font-semibold text-zinc-900">Find us</span>
             </div>
             <a
               href={`https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`}
@@ -162,11 +162,11 @@ export function StorefrontMapAndProducts({ latitude, longitude, address, region,
           />
           <div className="p-4">
             {address?.trim() ? (
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">{address.trim()}</p>
+              <p className="text-sm text-zinc-600">{address.trim()}</p>
             ) : region?.trim() ? (
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Region</p>
-                <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">{region.trim()}</p>
+                <p className="mt-0.5 text-sm text-zinc-600">{region.trim()}</p>
               </div>
             ) : null}
           </div>
@@ -174,7 +174,7 @@ export function StorefrontMapAndProducts({ latitude, longitude, address, region,
       ) : null}
 
       {products.length > 0 ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
           <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-zinc-400">Products</p>
 
           <div className="flex flex-col gap-4">
@@ -185,7 +185,7 @@ export function StorefrontMapAndProducts({ latitude, longitude, address, region,
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by name"
-                className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-900 outline-none ring-[#D4450A]/30 placeholder:text-zinc-400 focus:border-[#D4450A] focus:ring-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-900 outline-none ring-[#D4450A]/30 placeholder:text-zinc-400 focus:border-[#D4450A] focus:ring-2"
               />
             </label>
 
@@ -198,7 +198,7 @@ export function StorefrontMapAndProducts({ latitude, longitude, address, region,
                   className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                     category === c
                       ? "bg-[#D4450A] text-white"
-                      : "border border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                      : "border border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300"
                   }`}
                 >
                   {c}
@@ -207,7 +207,7 @@ export function StorefrontMapAndProducts({ latitude, longitude, address, region,
             </div>
 
             {filteredProducts.length === 0 ? (
-              <p className="py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">No products found</p>
+              <p className="py-8 text-center text-sm text-zinc-500">No products found</p>
             ) : (
               <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                 {filteredProducts.map((product) => {
@@ -216,9 +216,9 @@ export function StorefrontMapAndProducts({ latitude, longitude, address, region,
                     <li key={product.id}>
                       <Link
                         href={`/products/${product.slug}`}
-                        className="group flex h-full flex-col overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 transition hover:border-zinc-300 hover:bg-white dark:border-zinc-700 dark:bg-zinc-800/50 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
+                        className="group flex h-full flex-col overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 transition hover:border-zinc-300 hover:bg-white"
                       >
-                        <div className="aspect-square w-full overflow-hidden bg-zinc-200 dark:bg-zinc-700">
+                        <div className="aspect-square w-full overflow-hidden bg-zinc-200">
                           {img ? (
                             <img
                               alt=""
@@ -232,10 +232,10 @@ export function StorefrontMapAndProducts({ latitude, longitude, address, region,
                           )}
                         </div>
                         <div className="flex flex-1 flex-col p-3">
-                          <p className="line-clamp-2 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                          <p className="line-clamp-2 text-sm font-semibold text-zinc-900">
                             {product.name}
                           </p>
-                          <p className="mt-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                          <p className="mt-1 text-sm font-medium text-zinc-800">
                             TTD {product.price.toFixed(2)}
                           </p>
                         </div>

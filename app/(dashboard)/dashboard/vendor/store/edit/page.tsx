@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { unstable_noStore as noStore } from "next/cache";
 import { redirect } from "next/navigation";
+
 import { updateStore } from "@/app/actions/store";
 import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
+import Input from "@/components/ui/Input";
+import Select from "@/components/ui/Select";
+import Textarea from "@/components/ui/Textarea";
 import GalleryUploadWrapper from "./gallery-upload-wrapper";
 import { getSession } from "@/lib/auth/session";
 import { TRINIDAD_ONBOARDING_REGION_OPTIONS } from "@/lib/onboarding/tt-region-options";
@@ -120,25 +124,25 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
   const parsedSocialLinks = (store.socialLinks as Record<string, string> | null) ?? {};
 
   return (
-    <div className="mx-auto max-w-6xl rounded-xl border border-zinc-200 bg-white p-10 dark:border-zinc-800 dark:bg-zinc-900">
-      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Store</p>
-      <h1 className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-50">Edit store</h1>
-      <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
-        Update how your shop appears on LinkWe. Changes apply to your public store page.
-      </p>
-
-      <p className="mt-4 text-sm">
-        <Link
-          className="font-medium text-zinc-900 underline-offset-4 hover:underline dark:text-zinc-50"
-          href="/dashboard/vendor"
-        >
-          ← Back to vendor dashboard
-        </Link>
-      </p>
+    <div className="max-w-3xl mx-auto px-6 py-6">
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <a
+            href="/dashboard/vendor"
+            className="mb-1 inline-flex items-center gap-1 text-xs hover:underline"
+            style={{ color: "var(--blue)" }}
+          >
+            ← Back to dashboard
+          </a>
+          <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+            Edit Store
+          </h1>
+        </div>
+      </div>
 
       {showStoreSuccess ? (
         <p
-          className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-100"
+          className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
           role="status"
         >
           Store saved successfully.
@@ -147,7 +151,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
 
       {showGallerySuccess ? (
         <p
-          className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-100"
+          className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
           role="status"
         >
           Store gallery updated.
@@ -155,97 +159,87 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
       ) : null}
 
       {errorMessage ? (
-        <p
-          className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200"
-          role="alert"
-        >
+        <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
           {errorMessage}
         </p>
       ) : null}
 
-      <form
-        action={updateStore}
-        className="mt-8 flex flex-col gap-6"
-        id="vendor-store-edit-form"
-      >
+      <form action={updateStore} className="flex flex-col" id="vendor-store-edit-form">
         <input name="storeId" type="hidden" value={store.id} />
         <input name="hasHours" type="hidden" value="1" />
 
-        <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-          Store name
-          <input
-            required
-            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-            defaultValue={store.name}
-            name="name"
-            type="text"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-          Store slug
-          <input
-            required
-            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 font-mono text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-            defaultValue={store.slug}
-            name="slug"
-            type="text"
-          />
-          <span className="text-xs font-normal text-zinc-500">
-            Your public store: linkwe.tt/store/{store.slug}
-          </span>
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-          Tagline
-          <input
-            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-            defaultValue={store.tagline ?? ""}
-            name="tagline"
-            placeholder="Short line under your store name"
-            type="text"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-          About your store
-          <textarea
-            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-            defaultValue={store.description ?? ""}
-            maxLength={1000}
-            name="description"
-            placeholder="Tell customers what your store is about."
-            rows={4}
-          ></textarea>
-          <span className="text-xs font-normal text-zinc-500">Max 1000 characters.</span>
-        </label>
-
-        <div className="border-t border-zinc-100 dark:border-zinc-800 pt-6 mt-2">
-          <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-            Operating region
-            <select
+        <div
+          className="mb-5 rounded-xl bg-white p-5 sm:p-6"
+          style={{ border: "1px solid var(--card-border)" }}
+        >
+          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            Store Identity
+          </h2>
+          <div className="flex flex-col gap-4">
+            <Input
               required
-              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-              defaultValue={store.region}
-              name="region"
-            >
+              className="text-base"
+              defaultValue={store.name}
+              label="Store name"
+              name="name"
+              type="text"
+            />
+            <Input
+              required
+              className="font-mono text-base"
+              defaultValue={store.slug}
+              helperText={`Your public store: linkwe.tt/store/${store.slug}`}
+              label="Store slug"
+              name="slug"
+              type="text"
+            />
+            <Input
+              className="text-base"
+              defaultValue={store.tagline ?? ""}
+              label="Tagline"
+              name="tagline"
+              placeholder="Short line under your store name"
+              type="text"
+            />
+            <div className="flex items-start gap-4">
+              <div className="min-w-0 flex-1">
+                <Input
+                  accept="image/*"
+                  className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-900"
+                  helperText="Leave empty to keep your current logo. JPEG, PNG, or WebP. Max 8MB."
+                  label="Upload new logo"
+                  name="logo"
+                  type="file"
+                />
+              </div>
+              {store.logoUrl ? (
+                <img
+                  alt=""
+                  className="h-24 w-24 shrink-0 rounded-lg border border-zinc-200 object-contain"
+                  src={store.logoUrl}
+                />
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        <div
+          className="mb-5 rounded-xl bg-white p-5 sm:p-6"
+          style={{ border: "1px solid var(--card-border)" }}
+        >
+          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            Details
+          </h2>
+          <div className="flex flex-col gap-4">
+            <Select required className="text-base" defaultValue={store.region} label="Operating region" name="region">
               <option value="">Select…</option>
               {TRINIDAD_ONBOARDING_REGION_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
               ))}
-            </select>
-          </label>
-
-          <label className="mt-4 flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-            Category
-            <select
-              required
-              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-              defaultValue={store.categoryId}
-              name="categoryId"
-            >
+            </Select>
+            <Select required className="text-base" defaultValue={store.categoryId} label="Category" name="categoryId">
               <option value="">Select…</option>
               {!CATEGORY_OPTIONS.some((c) => c.id === store.categoryId) ? (
                 <option value={store.categoryId}>Current ({store.categoryId})</option>
@@ -255,54 +249,42 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
                   {c.label}
                 </option>
               ))}
-            </select>
-          </label>
+            </Select>
+            <Textarea
+              className="min-h-[120px] text-base"
+              defaultValue={store.description ?? ""}
+              helperText="Max 1000 characters."
+              label="About your store"
+              maxLength={1000}
+              name="description"
+              placeholder="Tell customers what your store is about."
+              rows={4}
+            />
+          </div>
         </div>
 
-        <div className="border-t border-zinc-100 dark:border-zinc-800 pt-6 mt-2">
+        <div
+          className="mb-5 rounded-xl bg-white p-5 sm:p-6"
+          style={{ border: "1px solid var(--card-border)" }}
+        >
+          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            Cover Photo
+          </h2>
           <div className="flex items-start gap-4">
             <div className="min-w-0 flex-1">
-              <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-                Upload new logo
-                <input
-                  accept="image/*"
-                  className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50 dark:file:bg-zinc-700 dark:file:text-zinc-100"
-                  name="logo"
-                  type="file"
-                />
-                <span className="text-xs font-normal text-zinc-500">
-                  Leave empty to keep your current logo. JPEG, PNG, or WebP. Max 8MB.
-                </span>
-              </label>
-            </div>
-            {store.logoUrl ? (
-              <img
-                alt=""
-                className="h-24 w-24 shrink-0 rounded-lg border border-zinc-200 object-contain dark:border-zinc-700"
-                src={store.logoUrl}
+              <Input
+                accept="image/*"
+                className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-900"
+                helperText="This image appears as a banner at the top of your store page. Recommended size: 1200 × 400px. Leave empty to keep the current cover photo."
+                label="Cover photo"
+                name="coverPhoto"
+                type="file"
               />
-            ) : null}
-          </div>
-
-          <div className="mt-4 flex items-start gap-4">
-            <div className="min-w-0 flex-1">
-              <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-                Cover photo
-                <input
-                  accept="image/*"
-                  className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50 dark:file:bg-zinc-700 dark:file:text-zinc-100"
-                  name="coverPhoto"
-                  type="file"
-                />
-                <span className="text-xs font-normal text-zinc-500">
-                  This image appears as a banner at the top of your store page. Recommended size: 1200 × 400px. Leave empty to keep the current cover photo.
-                </span>
-              </label>
             </div>
             {store.coverPhotoUrl ? (
               <img
                 alt=""
-                className="w-full max-w-[220px] shrink-0 rounded-lg border border-zinc-200 object-cover dark:border-zinc-700"
+                className="w-full max-w-[220px] shrink-0 rounded-lg border border-zinc-200 object-cover"
                 src={store.coverPhotoUrl}
                 style={{ maxHeight: "160px" }}
               />
@@ -310,12 +292,17 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
           </div>
         </div>
 
-        <div className="border-t border-zinc-100 dark:border-zinc-800 pt-6 mt-2">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Opening hours</h2>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+        <div
+          className="mb-5 rounded-xl bg-white p-5 sm:p-6"
+          style={{ border: "1px solid var(--card-border)" }}
+        >
+          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            Opening Hours
+          </h2>
+          <p className="mb-4 text-sm text-zinc-600">
             Set your opening hours for each day. Add multiple slots for split hours like a lunch break.
           </p>
-          <div className="mt-4 flex flex-col gap-1">
+          <div className="flex flex-col gap-1">
             {DAYS.map((day) => {
               const d = hours[day] ?? DEFAULT_HOURS[day];
               const closed = d.closed;
@@ -324,39 +311,35 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
               return (
                 <div
                   key={day}
-                  className="flex flex-wrap items-start gap-2 border-b border-zinc-100 py-2 last:border-b-0 dark:border-zinc-800"
+                  className="flex flex-wrap items-start gap-2 border-b border-zinc-100 py-2 last:border-b-0"
                 >
-                  <span className="w-28 shrink-0 pt-2 text-sm font-medium capitalize text-zinc-900 dark:text-zinc-50">
-                    {day}
-                  </span>
-                  <label className="flex shrink-0 items-center gap-2 pt-2 text-xs text-zinc-600 dark:text-zinc-400">
+                  <span className="w-28 shrink-0 pt-2 text-sm font-medium capitalize text-zinc-900">{day}</span>
+                  <label className="flex shrink-0 items-center gap-2 pt-2 text-xs text-zinc-600">
                     <input defaultChecked={closed} name={`hours_${day}_closed`} type="checkbox" />
                     Closed
                   </label>
-                  <label className="flex shrink-0 items-center gap-2 pt-2 text-xs text-zinc-600 dark:text-zinc-400">
+                  <label className="flex shrink-0 items-center gap-2 pt-2 text-xs text-zinc-600">
                     <input defaultChecked={allDay} name={`hours_${day}_allDay`} type="checkbox" />
                     24 hours
                   </label>
-                  <input
-                    name={`hours_${day}_slotCount`}
-                    type="hidden"
-                    value={String(Math.min(d.slots.length + 1, 3))}
-                  />
+                  <input name={`hours_${day}_slotCount`} type="hidden" value={String(Math.min(d.slots.length + 1, 3))} />
                   <div className={`min-w-0 flex-1 flex-col gap-2 ${slotHidden ? "hidden" : "flex"}`}>
                     {[0, 1, 2].map((i) => {
                       const slot = d.slots[i];
                       return (
                         <div key={i} className="flex flex-wrap items-center gap-2">
-                          <input
-                            className="rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+                          <Input
+                            className="max-w-[9.5rem] px-2 py-1.5 text-sm"
                             defaultValue={slot?.from ?? ""}
+                            id={`hours-${day}-from-${i}`}
                             name={`hours_${day}_from_${i}`}
                             type="time"
                           />
                           <span className="text-xs text-zinc-500">to</span>
-                          <input
-                            className="rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+                          <Input
+                            className="max-w-[9.5rem] px-2 py-1.5 text-sm"
                             defaultValue={slot?.to ?? ""}
+                            id={`hours-${day}-to-${i}`}
                             name={`hours_${day}_to_${i}`}
                             type="time"
                           />
@@ -370,214 +353,224 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
           </div>
         </div>
 
-        <div className="border-t border-zinc-100 dark:border-zinc-800 pt-6 mt-2">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Search tags</h2>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Add keywords that describe your store. Separate tags with commas. Example: handmade, local, organic
+        <div
+          className="mb-5 rounded-xl bg-white p-5 sm:p-6"
+          style={{ border: "1px solid var(--card-border)" }}
+        >
+          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            Location
+          </h2>
+          <p className="mb-4 text-sm text-zinc-600">
+            Search for your address then drag the pin to fine-tune your exact location.
           </p>
-          <input
-            className="mt-3 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-            defaultValue={store.tags.join(", ")}
-            name="tags"
-            placeholder="handmade, local, organic"
-            type="text"
+          <StoreLocationPicker
+            initialAddress={store.address ?? ""}
+            initialLat={store.latitude ?? null}
+            initialLng={store.longitude ?? null}
           />
         </div>
 
-        <div className="border-t border-zinc-100 dark:border-zinc-800 pt-6 mt-2">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Amenities</h2>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Select the features available at your store.</p>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            {AMENITY_OPTIONS.map((option) => (
-              <label
-                key={option}
-                className="flex cursor-pointer items-center gap-2 text-sm text-zinc-800 dark:text-zinc-200"
-              >
-                <input
-                  className="rounded border border-zinc-300 text-zinc-900 dark:border-zinc-600"
-                  defaultChecked={store.amenities.includes(option)}
-                  name="amenities"
-                  type="checkbox"
-                  value={option}
-                />
-                <span>{option}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div className="border-t border-zinc-100 dark:border-zinc-800 pt-6 mt-2">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Store policies</h2>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Return policy, shipping terms, payment rules, or anything customers should know before buying.
-          </p>
-          <textarea
-            className="mt-3 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-            defaultValue={store.policies ?? ""}
-            maxLength={2000}
-            name="policies"
-            placeholder="Example: We accept returns within 14 days of delivery. Items must be unused and in original packaging."
-            rows={5}
-          ></textarea>
-          <span className="mt-1 text-xs text-zinc-500">Max 2000 characters.</span>
-        </div>
-
-        <div className="border-t border-zinc-100 dark:border-zinc-800 pt-6 mt-2">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Store location</h2>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Search for your address then drag the pin to fine-tune your exact location.
-          </p>
-          <div className="mt-4">
-            <StoreLocationPicker
-              initialAddress={store.address ?? ""}
-              initialLat={store.latitude ?? null}
-              initialLng={store.longitude ?? null}
-            />
-          </div>
-        </div>
-
-        <div className="border-t border-zinc-100 dark:border-zinc-800 pt-6 mt-2">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Social media</h2>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Add your social media handles so customers can find and follow you.
-          </p>
-          <div className="mt-4 flex flex-col gap-4">
-            <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-              Instagram
-              <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-950">
-                <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900">
-                  instagram.com/
-                </span>
-                <input
-                  className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none dark:bg-zinc-950 dark:text-zinc-50"
-                  defaultValue={parsedSocialLinks.instagram ?? ""}
-                  name="social_instagram"
-                  placeholder="yourhandle"
-                  type="text"
-                />
+        <div
+          className="mb-5 rounded-xl bg-white p-5 sm:p-6"
+          style={{ border: "1px solid var(--card-border)" }}
+        >
+          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            Tags &amp; Policies
+          </h2>
+          <div className="flex flex-col gap-4">
+            <div>
+              <p className="mb-4 text-sm text-zinc-600">
+                Add keywords that describe your store. Separate tags with commas. Example: handmade, local, organic
+              </p>
+              <Input
+                className="text-base"
+                defaultValue={store.tags.join(", ")}
+                name="tags"
+                placeholder="handmade, local, organic"
+                type="text"
+              />
+            </div>
+            <div>
+              <p className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                Amenities
+              </p>
+              <p className="mb-4 text-sm text-zinc-600">Select the features available at your store.</p>
+              <div className="mb-4 grid grid-cols-2 gap-3">
+                {AMENITY_OPTIONS.map((option) => (
+                  <label key={option} className="flex cursor-pointer items-center gap-2 text-sm text-zinc-800">
+                    <input
+                      className="rounded border border-zinc-300 text-zinc-900"
+                      defaultChecked={store.amenities.includes(option)}
+                      name="amenities"
+                      type="checkbox"
+                      value={option}
+                    />
+                    <span>{option}</span>
+                  </label>
+                ))}
               </div>
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-              Facebook
-              <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-950">
-                <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900">
-                  facebook.com/
-                </span>
-                <input
-                  className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none dark:bg-zinc-950 dark:text-zinc-50"
-                  defaultValue={parsedSocialLinks.facebook ?? ""}
-                  name="social_facebook"
-                  placeholder="yourpage"
-                  type="text"
-                />
+            </div>
+            <div>
+              <p className="mb-4 text-sm text-zinc-600">
+                Return policy, shipping terms, payment rules, or anything customers should know before buying.
+              </p>
+              <Textarea
+                className="min-h-[140px] text-base"
+                defaultValue={store.policies ?? ""}
+                helperText="Max 2000 characters."
+                maxLength={2000}
+                name="policies"
+                placeholder="Example: We accept returns within 14 days of delivery. Items must be unused and in original packaging."
+                rows={5}
+              />
+            </div>
+            <div>
+              <h3 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                Social media
+              </h3>
+              <p className="mb-4 text-sm text-zinc-600">
+                Add your social media handles so customers can find and follow you.
+              </p>
+              <div className="flex flex-col gap-4">
+                <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800">
+                  Instagram
+                  <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white">
+                    <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400">
+                      instagram.com/
+                    </span>
+                    <input
+                      className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
+                      defaultValue={parsedSocialLinks.instagram ?? ""}
+                      name="social_instagram"
+                      placeholder="yourhandle"
+                      type="text"
+                    />
+                  </div>
+                </label>
+                <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800">
+                  Facebook
+                  <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white">
+                    <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400">
+                      facebook.com/
+                    </span>
+                    <input
+                      className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
+                      defaultValue={parsedSocialLinks.facebook ?? ""}
+                      name="social_facebook"
+                      placeholder="yourpage"
+                      type="text"
+                    />
+                  </div>
+                </label>
+                <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800">
+                  TikTok
+                  <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white">
+                    <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400">
+                      tiktok.com/@
+                    </span>
+                    <input
+                      className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
+                      defaultValue={parsedSocialLinks.tiktok ?? ""}
+                      name="social_tiktok"
+                      placeholder="yourhandle"
+                      type="text"
+                    />
+                  </div>
+                </label>
+                <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800">
+                  YouTube
+                  <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white">
+                    <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400">
+                      youtube.com/@
+                    </span>
+                    <input
+                      className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
+                      defaultValue={parsedSocialLinks.youtube ?? ""}
+                      name="social_youtube"
+                      placeholder="yourchannel"
+                      type="text"
+                    />
+                  </div>
+                </label>
+                <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800">
+                  X
+                  <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white">
+                    <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400">
+                      x.com/
+                    </span>
+                    <input
+                      className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
+                      defaultValue={parsedSocialLinks.x ?? ""}
+                      name="social_x"
+                      placeholder="yourhandle"
+                      type="text"
+                    />
+                  </div>
+                </label>
+                <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800">
+                  LinkedIn
+                  <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white">
+                    <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400">
+                      linkedin.com/in/
+                    </span>
+                    <input
+                      className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
+                      defaultValue={parsedSocialLinks.linkedin ?? ""}
+                      name="social_linkedin"
+                      placeholder="yourprofile"
+                      type="text"
+                    />
+                  </div>
+                </label>
+                <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800">
+                  WhatsApp
+                  <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white">
+                    <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400">
+                      +1 (868)
+                    </span>
+                    <input
+                      className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
+                      defaultValue={parsedSocialLinks.whatsapp ?? ""}
+                      name="social_whatsapp"
+                      placeholder="7001234 — business number"
+                      type="text"
+                    />
+                  </div>
+                </label>
+                <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800">
+                  Website
+                  <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white">
+                    <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400">
+                      https://
+                    </span>
+                    <input
+                      className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
+                      defaultValue={parsedSocialLinks.website ?? ""}
+                      name="social_website"
+                      placeholder="yourwebsite.com"
+                      type="text"
+                    />
+                  </div>
+                </label>
               </div>
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-              TikTok
-              <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-950">
-                <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900">
-                  tiktok.com/@
-                </span>
-                <input
-                  className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none dark:bg-zinc-950 dark:text-zinc-50"
-                  defaultValue={parsedSocialLinks.tiktok ?? ""}
-                  name="social_tiktok"
-                  placeholder="yourhandle"
-                  type="text"
-                />
-              </div>
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-              YouTube
-              <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-950">
-                <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900">
-                  youtube.com/@
-                </span>
-                <input
-                  className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none dark:bg-zinc-950 dark:text-zinc-50"
-                  defaultValue={parsedSocialLinks.youtube ?? ""}
-                  name="social_youtube"
-                  placeholder="yourchannel"
-                  type="text"
-                />
-              </div>
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-              X
-              <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-950">
-                <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900">
-                  x.com/
-                </span>
-                <input
-                  className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none dark:bg-zinc-950 dark:text-zinc-50"
-                  defaultValue={parsedSocialLinks.x ?? ""}
-                  name="social_x"
-                  placeholder="yourhandle"
-                  type="text"
-                />
-              </div>
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-              LinkedIn
-              <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-950">
-                <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900">
-                  linkedin.com/in/
-                </span>
-                <input
-                  className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none dark:bg-zinc-950 dark:text-zinc-50"
-                  defaultValue={parsedSocialLinks.linkedin ?? ""}
-                  name="social_linkedin"
-                  placeholder="yourprofile"
-                  type="text"
-                />
-              </div>
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-              WhatsApp
-              <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-950">
-                <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900">
-                  +1 (868)
-                </span>
-                <input
-                  className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none dark:bg-zinc-950 dark:text-zinc-50"
-                  defaultValue={parsedSocialLinks.whatsapp ?? ""}
-                  name="social_whatsapp"
-                  placeholder="7001234 — business number"
-                  type="text"
-                />
-              </div>
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-              Website
-              <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-950">
-                <span className="shrink-0 border-r border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900">
-                  https://
-                </span>
-                <input
-                  className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none dark:bg-zinc-950 dark:text-zinc-50"
-                  defaultValue={parsedSocialLinks.website ?? ""}
-                  name="social_website"
-                  placeholder="yourwebsite.com"
-                  type="text"
-                />
-              </div>
-            </label>
+            </div>
           </div>
         </div>
       </form>
 
       <GalleryUploadWrapper images={store.images} slotsAvailable={10 - store.images.length} />
 
-      <div className="mt-8 flex flex-wrap gap-3 pt-2">
+      <div className="mt-6 flex flex-col gap-3">
         <button
-          className="inline-flex h-11 items-center justify-center rounded-lg bg-[#D4450A] px-4 text-sm font-medium text-white hover:bg-[#B83A08] dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
-          form="vendor-store-edit-form"
           type="submit"
+          form="vendor-store-edit-form"
+          className="w-full rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          style={{ backgroundColor: "var(--scarlet)" }}
         >
           Save changes
         </button>
         <Link
-          className="inline-flex h-11 items-center justify-center rounded-lg border border-zinc-300 px-4 text-sm font-medium text-zinc-900 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-50 dark:hover:bg-zinc-800"
+          className="inline-flex h-11 items-center justify-center rounded-lg border border-zinc-300 px-4 text-sm font-medium text-zinc-900 hover:bg-zinc-50"
           href={publicStorePath}
           rel="noopener noreferrer"
           target="_blank"

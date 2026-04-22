@@ -10,6 +10,8 @@ import { useCartStore } from "@/lib/cart/cart-store";
 type Props = {
   productId: string;
   stock: number | null;
+  /** Number of units to add in one action (default 1). */
+  quantity?: number;
 };
 
 function mapRows(rows: Awaited<ReturnType<typeof getCart>>): CartItem[] {
@@ -29,7 +31,7 @@ function mapRows(rows: Awaited<ReturnType<typeof getCart>>): CartItem[] {
   }));
 }
 
-export default function AddToCartButton({ productId, stock }: Props) {
+export default function AddToCartButton({ productId, stock, quantity = 1 }: Props) {
   const router = useRouter();
   const setItems = useCartStore((s) => s.setItems);
   const openDrawer = useCartStore((s) => s.openDrawer);
@@ -47,7 +49,7 @@ export default function AddToCartButton({ productId, stock }: Props) {
   const handleClick = async () => {
     setError(null);
     setLoading(true);
-    const result = await addToCart(productId);
+    const result = await addToCart(productId, quantity);
 
     if (result.ok) {
       const rows = await getCart();

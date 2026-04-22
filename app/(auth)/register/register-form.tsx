@@ -1,7 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { useRouter } from "next/navigation";
+import { useActionState, useState } from "react";
 import Link from "next/link";
+
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
 import { registerAction, type AuthFormState } from "../auth-actions";
 
 type SignupKind = "CUSTOMER" | "BUSINESS" | "COURIER";
@@ -39,77 +43,206 @@ const copy: Record<
   },
 };
 
-export function RegisterForm({ signupKind }: { signupKind: SignupKind }) {
+export function RegisterForm({
+  signupKind,
+  embedded = false,
+}: {
+  signupKind: SignupKind;
+  embedded?: boolean;
+}) {
   const [state, formAction, pending] = useActionState(registerAction, {} as AuthFormState);
   const c = copy[signupKind];
 
-  return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">{c.title}</h1>
-      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{c.description}</p>
-      <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
-        Already have an account?{" "}
-        <Link className="font-medium text-zinc-900 underline-offset-4 hover:underline dark:text-zinc-50" href="/login">
-          Sign in
-        </Link>
-        {" · "}
-        <Link className="font-medium text-zinc-900 underline-offset-4 hover:underline dark:text-zinc-50" href="/register">
-          Other signup types
-        </Link>
-      </p>
+  const formInner = (
+    <>
+      {!embedded ? (
+        <>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{c.title}</h1>
+          <p className="mt-2 text-sm text-zinc-600">{c.description}</p>
+          <p className="mt-3 text-sm text-zinc-600">
+            Already have an account?{" "}
+            <Link className="font-medium text-zinc-900 underline-offset-4 hover:underline" href="/login">
+              Sign in
+            </Link>
+            {" · "}
+            <Link className="font-medium text-zinc-900 underline-offset-4 hover:underline" href="/register">
+              Other signup types
+            </Link>
+          </p>
+        </>
+      ) : null}
 
-      <form className="mt-8 flex flex-col gap-4" action={formAction}>
+      <form className={`flex flex-col gap-4 ${embedded ? "" : "mt-8"}`} action={formAction}>
         <input name="signupKind" type="hidden" value={signupKind} />
 
-        <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-          {c.nameLabel}
-          <input
-            required
-            autoComplete={signupKind === "BUSINESS" ? "organization" : "name"}
-            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base font-normal text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-            name="fullName"
-            type="text"
-          />
-          <span className="text-xs font-normal text-zinc-500">{c.nameHelp}</span>
-        </label>
+        <Input
+          required
+          autoComplete={signupKind === "BUSINESS" ? "organization" : "name"}
+          className="text-base font-normal"
+          helperText={c.nameHelp}
+          label={c.nameLabel}
+          name="fullName"
+          type="text"
+        />
 
-        <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-          Email
-          <input
-            required
-            autoComplete="email"
-            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base font-normal text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-            name="email"
-            type="email"
-          />
-        </label>
+        <Input
+          required
+          autoComplete="email"
+          className="text-base font-normal"
+          label="Email"
+          name="email"
+          type="email"
+        />
 
-        <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-          Password
-          <input
-            required
-            autoComplete="new-password"
-            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base font-normal text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-            name="password"
-            type="password"
-          />
-          <span className="text-xs font-normal text-zinc-500">At least 8 characters.</span>
-        </label>
+        <Input
+          required
+          autoComplete="new-password"
+          className="text-base font-normal"
+          helperText="At least 8 characters."
+          label="Password"
+          name="password"
+          type="password"
+        />
 
         {state.error ? (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950/40 dark:text-red-200" role="alert">
+          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
             {state.error}
           </p>
         ) : null}
 
-        <button
-          className="mt-2 inline-flex h-11 items-center justify-center rounded-lg bg-[#D4450A] px-4 text-sm font-medium text-white transition hover:bg-[#B83A08] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
-          disabled={pending}
-          type="submit"
-        >
-          {pending ? "Creating account…" : c.submitLabel}
-        </button>
+        <Button className="mt-2" fullWidth loading={pending} size="lg" type="submit" variant="primary">
+          {c.submitLabel}
+        </Button>
       </form>
+
+      {embedded ? (
+        <p className="mt-4 text-center text-sm text-zinc-500">
+          Already have an account?{" "}
+          <Link className="font-medium text-[#1A7FB5] hover:underline" href="/login">
+            Sign in
+          </Link>
+          {" · "}
+          <Link className="font-medium text-[#1A7FB5] hover:underline" href="/register">
+            Other signup types
+          </Link>
+        </p>
+      ) : null}
+    </>
+  );
+
+  if (embedded) {
+    return formInner;
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-md rounded-xl border border-zinc-200/60 bg-white p-8 shadow-sm">
+      {formInner}
+    </div>
+  );
+}
+
+type HubRole = "customer" | "vendor" | "courier";
+
+const HUB_ROLES: {
+  id: HubRole;
+  icon: string;
+  title: string;
+  description: string;
+}[] = [
+  {
+    id: "customer",
+    icon: "🛒",
+    title: "Shop as Customer",
+    description: "Browse and buy from local vendors",
+  },
+  {
+    id: "vendor",
+    icon: "🏪",
+    title: "Sell as Vendor",
+    description: "Open your store and sell products",
+  },
+  {
+    id: "courier",
+    icon: "🚗",
+    title: "Work as Courier",
+    description: "Deliver orders and earn money",
+  },
+];
+
+const HUB_HREF: Record<HubRole, string> = {
+  customer: "/register/customer",
+  vendor: "/register/business",
+  courier: "/register/courier",
+};
+
+export function RegisterHubClient() {
+  const router = useRouter();
+  const [selectedRole, setSelectedRole] = useState<HubRole | null>(null);
+
+  return (
+    <div className="mx-auto w-full max-w-md">
+      <div className="rounded-xl border border-zinc-200/60 bg-white p-8 shadow-sm">
+        <div className="mb-8 text-center">
+          <span className="text-2xl font-bold text-zinc-900">
+            Link<span style={{ color: "#D4450A" }}>We</span>
+          </span>
+        </div>
+
+        <h1 className="text-center text-xl font-bold text-zinc-900">Join LinkWe</h1>
+        <p className="mb-6 mt-1 text-center text-sm text-zinc-500">How would you like to use LinkWe?</p>
+
+        <div className="grid grid-cols-1 gap-3">
+          {HUB_ROLES.map(({ id, icon, title, description }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setSelectedRole(id)}
+              className={`flex w-full items-center gap-4 rounded-xl border-2 p-4 text-left transition-all duration-150 ${
+                selectedRole === id
+                  ? "border-[#D4450A] bg-[#FEF2EE]"
+                  : "border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50"
+              }`}
+            >
+              <span className="text-2xl">{icon}</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-zinc-900">{title}</p>
+                <p className="mt-0.5 text-xs text-zinc-500">{description}</p>
+              </div>
+              {selectedRole === id ? (
+                <div
+                  className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: "#D4450A" }}
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </div>
+              ) : null}
+            </button>
+          ))}
+        </div>
+
+        <Button
+          className="mt-6"
+          disabled={!selectedRole}
+          fullWidth
+          size="lg"
+          type="button"
+          variant="primary"
+          onClick={() => {
+            if (selectedRole) router.push(HUB_HREF[selectedRole]);
+          }}
+        >
+          Continue →
+        </Button>
+
+        <p className="mt-6 text-center text-sm text-zinc-500">
+          Already have an account?{" "}
+          <a href="/login" className="font-medium text-[#1A7FB5] hover:underline">
+            Sign in
+          </a>
+        </p>
+      </div>
     </div>
   );
 }
