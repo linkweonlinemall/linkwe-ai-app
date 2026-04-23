@@ -124,7 +124,7 @@ export default function OrdersClient({ orders }: Props) {
           className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-900 outline-none ring-zinc-300 placeholder:text-zinc-400 focus:ring-2"
         />
 
-        <div className="mt-3 flex gap-3">
+        <div className="mt-3 flex min-w-0 flex-wrap items-center gap-3">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -248,13 +248,13 @@ export default function OrdersClient({ orders }: Props) {
                 </div>
 
                 <div
-                  className="mt-4 flex items-center justify-between border-t pt-3"
+                  className="mt-4 flex flex-wrap items-center gap-2 border-t pt-3"
                   style={{ borderColor: "var(--card-border-subtle)" }}
                 >
-                  <p className="text-base font-bold" style={{ color: "var(--scarlet)" }}>
+                  <p className="min-w-0 text-base font-bold" style={{ color: "var(--scarlet)" }}>
                     TTD {(order.totalMinor / 100).toFixed(2)}
                   </p>
-                  <div className="flex items-center gap-3">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2 sm:ml-auto sm:shrink-0">
                     {order.status === "SHIPPED" ? (
                       <form action={markOrderReceived}>
                         <input type="hidden" name="orderId" value={order.id} />
@@ -268,13 +268,13 @@ export default function OrdersClient({ orders }: Props) {
                       </form>
                     ) : null}
                     {order.status === "CUSTOMER_RECEIVED" ? (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
                         ✓ Received
                       </span>
                     ) : null}
                     <Link
                       href={`/orders/${order.id}`}
-                      className="text-sm text-zinc-600 transition-colors hover:text-zinc-900"
+                      className="rounded-lg px-3 py-1.5 text-xs text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-900"
                     >
                       View Order
                     </Link>

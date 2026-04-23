@@ -32,6 +32,29 @@ export async function markPackaged(formData: FormData): Promise<void> {
     },
   });
 
+  if (newStatus === "PACKAGED") {
+    const bay = await prisma.dockBay.findFirst({
+      where: { splitOrderId: splitOrderId },
+    });
+
+    if (bay) {
+      await prisma.$transaction([
+        prisma.dockBay.update({
+          where: { id: bay.id },
+          data: {
+            isOccupied: false,
+            splitOrderId: null,
+            assignedAt: null,
+          },
+        }),
+        prisma.splitOrder.update({
+          where: { id: splitOrderId },
+          data: { bayNumber: null },
+        }),
+      ]);
+    }
+  }
+
   await recalculateMainOrderStatus(splitOrder.mainOrderId);
   revalidatePath("/dashboard/admin");
   revalidatePath("/orders/[orderId]", "page");

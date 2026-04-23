@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { advanceCourierOnboardingAction, completeCourierOnboardingAction } from "../actions";
+import Button from "@/components/ui/Button";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { resolveAuthLandingPath } from "@/lib/auth/landing";
 import { getNextCourierOnboardingStep } from "@/lib/onboarding/courier-progress";
@@ -76,13 +77,9 @@ export default async function CourierOnboardingPage({
                 </p>
               </div>
               <form action={completeCourierOnboardingAction}>
-                <button
-                  className="inline-flex h-11 w-full items-center justify-center rounded-lg px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                  type="submit"
-                  style={{ backgroundColor: "var(--scarlet)" }}
-                >
+                <Button type="submit" variant="primary" fullWidth className="h-11">
                   Finish courier onboarding
-                </button>
+                </Button>
               </form>
             </div>
           )}

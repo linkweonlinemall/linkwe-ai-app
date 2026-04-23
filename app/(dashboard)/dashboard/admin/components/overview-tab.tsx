@@ -147,7 +147,7 @@ export default function OverviewTab() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="mb-1 text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+          <h2 className="mb-1 text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
             Command Center
           </h2>
           <p className="mb-6 text-sm" style={{ color: "var(--text-muted)" }}>
@@ -299,7 +299,7 @@ export default function OverviewTab() {
                       window.history.pushState({}, "", url.toString());
                       window.dispatchEvent(new PopStateEvent("popstate"));
                     }}
-                    className="flex cursor-pointer items-center justify-center text-xs font-bold text-white transition-opacity hover:opacity-90"
+                    className="flex cursor-pointer items-center justify-center text-xs font-semibold text-white transition-opacity hover:opacity-90"
                     style={{
                       width: `${pct}%`,
                       backgroundColor: stage.color,
@@ -329,10 +329,12 @@ export default function OverviewTab() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="rounded-2xl" padding="md">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-zinc-900">Alerts</h2>
+            <h2 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+              Alerts
+            </h2>
             {alertList.length > 0 ? (
               <span
-                className="flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white"
+                className="flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold text-white"
                 style={{ backgroundColor: "#E8820C" }}
               >
                 {alertList.length}

@@ -155,17 +155,12 @@ export default function CustomersTab() {
 
       <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
         {loading ? (
-          <div className="divide-y divide-zinc-100">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex animate-pulse gap-4 px-4 py-4">
-                <div className="h-10 flex-1 rounded-lg bg-zinc-100" />
-                <div className="h-10 w-24 rounded-lg bg-zinc-100" />
-                <div className="h-10 w-16 rounded-lg bg-zinc-100" />
-                <div className="h-10 w-24 rounded-lg bg-zinc-100" />
-                <div className="h-10 w-20 rounded-lg bg-zinc-100" />
-                <div className="h-10 w-24 rounded-lg bg-zinc-100" />
-              </div>
-            ))}
+          <div className="p-6">
+            <div className="flex flex-col gap-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-20 rounded-xl animate-pulse bg-zinc-200" />
+              ))}
+            </div>
           </div>
         ) : filtered.length === 0 ? (
           <div className="px-6 py-16 text-center text-sm text-zinc-500">

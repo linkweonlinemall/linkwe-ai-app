@@ -10,6 +10,7 @@ import OrdersTab from "./orders-tab";
 import CouriersTab from "./couriers-tab";
 import VendorsTab from "./vendors-tab";
 import WarehouseTab from "./warehouse-tab";
+import BayMapTab from "./bay-map-tab";
 import MapTab from "./map-tab";
 import CustomersTab from "./customers-tab";
 import SettingsTab from "./settings-tab";
@@ -18,6 +19,7 @@ const TAB_IDS = [
   "overview",
   "orders",
   "warehouse",
+  "bays",
   "couriers",
   "vendors",
   "map",
@@ -63,6 +65,18 @@ const TAB_CONFIG: { id: TabId; label: string; icon: ReactNode }[] = [
     icon: (
       <svg className="h-4 w-4 shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+      </svg>
+    ),
+  },
+  {
+    id: "bays",
+    label: "Bay Map",
+    icon: (
+      <svg className="h-4 w-4 shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" />
       </svg>
     ),
   },
@@ -180,10 +194,10 @@ export default function AdminDashboard({ adminName }: Props) {
       </header>
 
       <nav
-        className="flex w-full overflow-x-auto border-b bg-white px-2"
+        className="flex w-full min-w-0 overflow-x-auto whitespace-nowrap border-b bg-white px-2"
         style={{ borderColor: "var(--card-border)" }}
       >
-        <div className="mx-auto flex max-w-7xl items-center gap-1">
+        <div className="mx-auto flex w-max min-w-0 max-w-7xl items-center gap-1">
           {TAB_CONFIG.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -191,7 +205,7 @@ export default function AdminDashboard({ adminName }: Props) {
                 <button
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className="flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-150 relative"
+                  className="flex shrink-0 items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-150 relative"
                   style={{
                     color: isActive ? "var(--scarlet)" : "var(--text-muted)",
                     borderBottom: isActive ? "2px solid var(--scarlet)" : "2px solid transparent",
@@ -219,6 +233,7 @@ export default function AdminDashboard({ adminName }: Props) {
         {activeTab === "overview" && <OverviewTab />}
         {activeTab === "orders" && <OrdersTab />}
         {activeTab === "warehouse" && <WarehouseTab />}
+        {activeTab === "bays" && <BayMapTab />}
         {activeTab === "couriers" && <CouriersTab />}
         {activeTab === "vendors" && <VendorsTab />}
         {activeTab === "map" && <MapTab />}
@@ -227,6 +242,7 @@ export default function AdminDashboard({ adminName }: Props) {
         {activeTab !== "overview" &&
           activeTab !== "orders" &&
           activeTab !== "warehouse" &&
+          activeTab !== "bays" &&
           activeTab !== "couriers" &&
           activeTab !== "vendors" &&
           activeTab !== "map" &&

@@ -11,7 +11,9 @@ import { recalculateMainOrderStatus } from "@/lib/fulfillment/order-status";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
-export async function markItemsReceivedAtWarehouse(formData: FormData): Promise<void> {
+export async function markItemsReceivedAtWarehouse(
+  formData: FormData,
+): Promise<{ bayNumber: number | null }> {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/");
 
@@ -33,6 +35,27 @@ export async function markItemsReceivedAtWarehouse(formData: FormData): Promise<
         warehouseReceivedAt: new Date(),
       },
     });
+
+    const availableBay = await tx.dockBay.findFirst({
+      where: { isOccupied: false },
+      orderBy: { bayNumber: "asc" },
+    });
+
+    if (availableBay) {
+      await tx.dockBay.update({
+        where: { id: availableBay.id },
+        data: {
+          isOccupied: true,
+          splitOrderId: splitOrderId,
+          assignedAt: new Date(),
+        },
+      });
+
+      await tx.splitOrder.update({
+        where: { id: splitOrderId },
+        data: { bayNumber: availableBay.bayNumber },
+      });
+    }
 
     const inboundShipment = splitOrder.inboundShipmentId
       ? await tx.shipment.findUnique({
@@ -74,9 +97,9 @@ export async function markItemsReceivedAtWarehouse(formData: FormData): Promise<
 
     const region = store?.region ?? inboundShipment.region ?? "";
     const weightForLabel = inboundShipment.totalWeightLbs ?? 1;
-    const feeMinor =
-      inboundShipment.pickupFeeMinor ??
-      getCourierPickupFeeMinor(region, weightForLabel);
+    const feeMinor = inboundShipment.pickupFeeMinor ?? getCourierPickupFeeMinor(region, 1);
+    const labelWeightLbs =
+      inboundShipment.pickupFeeMinor != null ? weightForLabel : 1;
 
     const existingEarning = await tx.courierLedgerEntry.findFirst({
       where: {
@@ -93,7 +116,7 @@ export async function markItemsReceivedAtWarehouse(formData: FormData): Promise<
           currency: "TTD",
           entryType: "PICKUP_EARNING",
           shipmentId: inboundShipment.id,
-          description: getCourierPickupFeeLabel(region, weightForLabel),
+          description: getCourierPickupFeeLabel(region, labelWeightLbs),
         },
       });
     }
@@ -112,4 +135,10 @@ export async function markItemsReceivedAtWarehouse(formData: FormData): Promise<
   await recalculateMainOrderStatus(splitOrder.mainOrderId);
   revalidatePath(`/orders/${splitOrder.mainOrderId}`, "page");
   revalidatePath("/", "page");
+
+  const updatedSplitOrder = await prisma.splitOrder.findUnique({
+    where: { id: splitOrderId },
+    select: { bayNumber: true },
+  });
+  return { bayNumber: updatedSplitOrder?.bayNumber ?? null };
 }

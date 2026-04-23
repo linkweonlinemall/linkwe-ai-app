@@ -141,7 +141,7 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="flex flex-col gap-5 lg:col-span-2">
+          <div className="order-1 flex w-full min-w-0 flex-col gap-5 lg:order-none lg:col-span-2">
             {step === "details" ? (
               <div
                 className="rounded-xl bg-white p-5 sm:p-6"
@@ -306,7 +306,7 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
             ) : null}
           </div>
 
-          <div className="lg:col-span-1">
+          <div className="order-last w-full min-w-0 lg:order-none lg:col-span-1">
             <div
               className="rounded-xl bg-white p-5 lg:sticky lg:top-24"
               style={{ border: "1px solid var(--card-border)" }}

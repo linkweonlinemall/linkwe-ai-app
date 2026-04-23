@@ -24,6 +24,7 @@ export async function getWarehouseIncomingQueue() {
     select: {
       id: true,
       referenceNumber: true,
+      bayNumber: true,
       createdAt: true,
       status: true,
       vendorInboundMethod: true,
@@ -74,6 +75,7 @@ export async function getWarehouseReceivedToday() {
     select: {
       id: true,
       referenceNumber: true,
+      bayNumber: true,
       createdAt: true,
       warehouseReceivedAt: true,
       status: true,

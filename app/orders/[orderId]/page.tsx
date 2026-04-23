@@ -253,7 +253,7 @@ export default async function OrderDetailPage({ params }: Props) {
                             idx + 1
                           )}
                         </div>
-                        <span className="mt-2 max-w-[5.5rem] text-center text-[10px] leading-tight text-zinc-500">
+                        <span className="mt-2 hidden max-w-[5.5rem] text-center text-[10px] leading-tight text-zinc-500 sm:block">
                           {label}
                         </span>
                       </div>
@@ -454,7 +454,7 @@ export default async function OrderDetailPage({ params }: Props) {
           </div>
 
           {/* Sidebar */}
-          <div className="flex flex-col gap-5 lg:col-span-1">
+          <div className="order-2 flex flex-col gap-5 md:col-span-1">
             <section
               className="rounded-xl bg-white p-5 sm:p-6"
               style={{ border: "1px solid var(--card-border)" }}
@@ -513,6 +513,18 @@ export default async function OrderDetailPage({ params }: Props) {
           </div>
         </div>
       </div>
+
+      <footer
+        className="mt-12 py-6 text-center"
+        style={{ borderTop: "1px solid var(--card-border-subtle)" }}
+      >
+        <p className="text-xs" style={{ color: "var(--text-faint)" }}>
+          <a href="/" style={{ color: "var(--scarlet)" }}>
+            LinkWe
+          </a>{" "}
+          — Trinidad & Tobago&apos;s Marketplace
+        </p>
+      </footer>
     </div>
   );
 }

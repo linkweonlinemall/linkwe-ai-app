@@ -70,7 +70,7 @@ function getStatusBadge(status: string): { label: string; className: string } {
 export default function OrdersTab({ splitOrders }: Props) {
   if (splitOrders.length === 0) {
     return (
-      <div className="rounded-2xl border border-zinc-200 bg-white p-12 text-center shadow-sm">
+      <div className="rounded-xl border border-zinc-200/60 bg-white p-12 text-center shadow-sm">
         <p className="text-lg font-semibold text-zinc-900">No orders yet</p>
         <p className="mt-2 text-sm text-zinc-500">
           When customers purchase your products, orders will appear here.
@@ -90,7 +90,7 @@ export default function OrdersTab({ splitOrders }: Props) {
   function renderOrderCard(order: VendorSplitOrder) {
     const badge = getStatusBadge(order.status);
     return (
-      <div key={order.id} className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+      <div key={order.id} className="rounded-xl border border-zinc-200/60 bg-white p-5 shadow-sm">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-zinc-900">

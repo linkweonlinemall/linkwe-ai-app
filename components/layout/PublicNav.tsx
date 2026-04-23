@@ -9,16 +9,20 @@ export default function PublicNav() {
   const itemCount = useCartStore((s) => s.itemCount());
 
   return (
-    <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white shadow-sm">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
-        <Link href="/" className="text-lg font-semibold tracking-tight" style={{ color: "#D4450A" }}>
+    <header className="sticky top-0 z-40 h-14 w-full min-w-0 overflow-x-hidden border-b border-zinc-200 bg-white shadow-sm">
+      <div className="mx-auto flex h-14 w-full min-w-0 max-w-7xl items-center justify-between gap-3 px-4">
+        <Link
+          href="/"
+          className="shrink-0 text-lg font-semibold tracking-tight"
+          style={{ color: "#D4450A" }}
+        >
           LinkWe
         </Link>
 
         <button
           type="button"
           onClick={toggleDrawer}
-          className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white transition-colors hover:bg-zinc-50"
+          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white transition-colors hover:bg-zinc-50"
           aria-label="Open cart"
         >
           <svg

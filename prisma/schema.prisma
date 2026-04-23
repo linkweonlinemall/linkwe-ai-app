@@ -601,12 +601,27 @@ model SplitOrder {
   store                    Store                @relation(fields: [storeId], references: [id])
   ledgerEntries            VendorLedgerEntry[]
   warehouseLines           WarehouseOrderLine[]
+  bayNumber                Int?                 @map("bay_number")
+  dockBay                  DockBay?             @relation("BayAssignment")
 
   @@index([mainOrderId])
   @@index([status])
   @@index([storeId, status])
   @@index([shippingBundleId])
   @@map("split_orders")
+}
+
+model DockBay {
+  id           String      @id @default(cuid())
+  bayNumber    Int         @unique
+  isOccupied   Boolean     @default(false) @map("is_occupied")
+  splitOrderId String?     @unique @map("split_order_id")
+  assignedAt   DateTime?   @map("assigned_at")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+  splitOrder   SplitOrder? @relation("BayAssignment", fields: [splitOrderId], references: [id], onDelete: SetNull)
+
+  @@map("dock_bays")
 }
 
 /// Line items on a **SplitOrder** (warehouse / fulfillment). Distinct from checkout `OrderItem` on `MainOrder`.

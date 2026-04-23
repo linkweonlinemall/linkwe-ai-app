@@ -37,21 +37,22 @@ export const ORDER_STATUS_MAP: Record<MainOrderStatus, OrderStatusInfo> = {
     color: "amber",
   },
   PARTIALLY_IN_HOUSE: {
-    label: "Arrived at Warehouse",
-    description: "Your order has arrived at the LinkWe warehouse.",
-    step: 3,
-    color: "blue",
+    label: "Preparing",
+    description:
+      "Some items have arrived at the warehouse. Waiting for remaining vendors.",
+    step: 2,
+    color: "amber",
   },
   READY_TO_SHIP: {
     label: "Ready to Package",
     description: "All items have arrived at the LinkWe warehouse and are being prepared for dispatch.",
-    step: 2,
+    step: 3,
     color: "blue",
   },
   PACKING_COMPLETE: {
     label: "Packing Complete",
     description: "All vendor packages are packed and ready to dispatch.",
-    step: 2,
+    step: 3,
     color: "emerald",
   },
   SHIPPED: {

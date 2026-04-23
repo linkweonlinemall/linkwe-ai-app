@@ -6,6 +6,32 @@ import { getOperationsMapData } from "@/app/actions/admin-map";
 
 type MapData = Awaited<ReturnType<typeof getOperationsMapData>>;
 
+function getRegionCoordinates(region: string | null): { lat: number; lng: number } | null {
+  if (!region) return null;
+  const r = region.toLowerCase().replace(/\s+/g, "_");
+  const coords: Record<string, { lat: number; lng: number }> = {
+    port_of_spain: { lat: 10.6549, lng: -61.5019 },
+    san_fernando: { lat: 10.2796, lng: -61.4681 },
+    chaguanas: { lat: 10.5167, lng: -61.4167 },
+    tunapuna: { lat: 10.6333, lng: -61.3833 },
+    arima: { lat: 10.6333, lng: -61.2833 },
+    arouca: { lat: 10.6333, lng: -61.35 },
+    diego_martin: { lat: 10.6833, lng: -61.5667 },
+    san_juan: { lat: 10.65, lng: -61.4667 },
+    trincity: { lat: 10.6167, lng: -61.35 },
+    el_dorado: { lat: 10.6167, lng: -61.4 },
+    carapichaima: { lat: 10.45, lng: -61.4167 },
+    couva: { lat: 10.4167, lng: -61.45 },
+    princes_town: { lat: 10.2667, lng: -61.3833 },
+    sangre_grande: { lat: 10.5833, lng: -61.1333 },
+    point_fortin: { lat: 10.1667, lng: -61.6833 },
+    siparia: { lat: 10.1333, lng: -61.5 },
+    tobago: { lat: 11.1833, lng: -60.7333 },
+    scarborough: { lat: 11.1833, lng: -60.7333 },
+  };
+  return coords[r] ?? coords["port_of_spain"] ?? null;
+}
+
 export default function MapTab() {
   const [mapData, setMapData] = useState<MapData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -109,21 +135,32 @@ export default function MapTab() {
 
       mapData.pendingPickups.forEach((pickup) => {
         const store = pickup.inboundForSplitOrder?.store;
-        if (store?.latitude == null || store?.longitude == null) return;
-        const lat = Number(store.latitude);
-        const lng = Number(store.longitude);
-        if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+        const regionSource =
+          store?.region != null
+            ? String(store.region)
+            : pickup.region != null
+              ? String(pickup.region)
+              : null;
+        const regionPin = getRegionCoordinates(regionSource);
+
+        const fromLat = store?.latitude != null ? Number(store.latitude) : null;
+        const fromLng = store?.longitude != null ? Number(store.longitude) : null;
+        const lat =
+          fromLat != null && !Number.isNaN(fromLat) ? fromLat : (regionPin?.lat ?? null);
+        const lng =
+          fromLng != null && !Number.isNaN(fromLng) ? fromLng : (regionPin?.lng ?? null);
+        if (lat == null || lng == null) return;
 
         const icon = L.divIcon({
           html: `<div style="
-          background: #E8820C;
-          width: 28px; height: 28px;
-          border-radius: 50%;
-          border: 3px solid white;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-          display: flex; align-items: center; justify-content: center;
-          color: white; font-size: 12px;
-        ">📦</div>`,
+      background: #E8820C;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: 3px solid white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 14px;
+    ">📦</div>`,
           className: "",
           iconSize: [28, 28],
           iconAnchor: [14, 14],
@@ -131,19 +168,25 @@ export default function MapTab() {
 
         const marker = L.marker([lat, lng], { icon })
           .addTo(map)
-          .bindPopup(`
-          <strong>${store.name}</strong><br/>
-          Awaiting courier pickup<br/>
-          ${store.region ?? ""}
-        `);
+          .bindPopup(
+            `<strong>${store?.name ?? "Pickup"}</strong><br/>` +
+              `Awaiting courier pickup<br/>` +
+              `${(regionSource ?? "").replace(/_/g, " ")}`,
+          );
 
         markersRef.current.push(marker);
       });
 
       mapData.warehouseLocations.forEach((wh) => {
-        const lat = wh.address?.latitude != null ? Number(wh.address.latitude) : null;
-        const lng = wh.address?.longitude != null ? Number(wh.address.longitude) : null;
-        if (lat == null || lng == null || Number.isNaN(lat) || Number.isNaN(lng)) return;
+        const addr = wh.address;
+        const fromLat = addr?.latitude != null ? Number(addr.latitude) : null;
+        const fromLng = addr?.longitude != null ? Number(addr.longitude) : null;
+        const regionPin = getRegionCoordinates(addr?.region != null ? String(addr.region) : null);
+        const lat =
+          fromLat != null && !Number.isNaN(fromLat) ? fromLat : (regionPin?.lat ?? null);
+        const lng =
+          fromLng != null && !Number.isNaN(fromLng) ? fromLng : (regionPin?.lng ?? null);
+        if (lat == null || lng == null) return;
 
         const icon = L.divIcon({
           html: `<div style="
@@ -160,13 +203,12 @@ export default function MapTab() {
           iconAnchor: [14, 14],
         });
 
-        const addr = wh.address;
         const marker = L.marker([lat, lng], { icon })
           .addTo(map)
           .bindPopup(`
           <strong>${wh.name}</strong><br/>
-          ${addr ? `${addr.line1}, ${addr.city}` : ""}<br/>
-          ${addr?.region ?? ""}
+          ${wh.address ? `${wh.address.line1}, ${wh.address.city}` : ""}<br/>
+          ${wh.address?.region?.replace(/_/g, " ") ?? ""}
         `);
 
         markersRef.current.push(marker);

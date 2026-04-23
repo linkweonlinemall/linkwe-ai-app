@@ -53,6 +53,7 @@ export async function getOperationsMapData() {
         createdAt: true,
         inboundForSplitOrder: {
           select: {
+            // `region` is used in map-tab when lat/lng are null (see getRegionCoordinates there).
             store: {
               select: {
                 name: true,

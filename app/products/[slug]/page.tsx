@@ -144,16 +144,16 @@ export default async function PublicProductPage({ params }: Props) {
         : "bg-red-600";
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5]">
+    <div className="min-h-screen bg-[#F5F5F5]">
       <div className="mx-auto max-w-6xl px-4 py-6">
         <nav className="mb-6 flex items-center gap-2 text-sm text-zinc-500">
-          <Link href="/" className="hover:text-zinc-900 dark:hover:text-zinc-50">
+          <Link href="/" className="hover:text-zinc-900">
             ← LinkWe
           </Link>
           <span className="text-zinc-300">/</span>
           <Link
             href={`/store/${store.slug}`}
-            className="max-w-[min(100%,12rem)] truncate hover:text-zinc-900 dark:hover:text-zinc-50 sm:max-w-none"
+            className="max-w-[min(100%,12rem)] truncate hover:text-zinc-900 sm:max-w-none"
           >
             ← {store.name}
           </Link>

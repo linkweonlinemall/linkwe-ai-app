@@ -29,6 +29,10 @@ export default function WarehouseTab() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState(false);
+  const [bayAlert, setBayAlert] = useState<{
+    ref: string;
+    bayNumber: number | null;
+  } | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -135,7 +139,12 @@ export default function WarehouseTab() {
   async function handleSingleReceive(row: SplitOrderRow) {
     const fd = new FormData();
     fd.append("splitOrderId", row.id);
-    await markItemsReceivedAtWarehouse(fd);
+    const result = await markItemsReceivedAtWarehouse(fd);
+    setBayAlert({
+      ref: row.referenceNumber ?? row.id.slice(-8).toUpperCase(),
+      bayNumber: result.bayNumber,
+    });
+    setTimeout(() => setBayAlert(null), 8000);
     setRecentlyReceived((prev) => [
       {
         id: row.id,
@@ -297,6 +306,43 @@ export default function WarehouseTab() {
         </p>
       ) : null}
 
+      {bayAlert ? (
+        <div
+          className="mb-4 flex items-center gap-4 rounded-xl px-5 py-4"
+          style={{
+            backgroundColor: bayAlert.bayNumber ? "#FEF2EE" : "#F7F7F6",
+            border: `1px solid ${bayAlert.bayNumber ? "#FBB9A5" : "var(--card-border)"}`,
+          }}
+        >
+          <div
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-bold text-white"
+            style={{ backgroundColor: bayAlert.bayNumber ? "#D4450A" : "#A1A1AA" }}
+          >
+            {bayAlert.bayNumber ?? "—"}
+          </div>
+          <div>
+            <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
+              {bayAlert.bayNumber
+                ? `Place order ${bayAlert.ref} in Bay #${bayAlert.bayNumber}`
+                : `Order ${bayAlert.ref} received — no bays available`}
+            </p>
+            <p className="mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
+              {bayAlert.bayNumber
+                ? `Bay #${bayAlert.bayNumber} is now occupied`
+                : "All bays are currently full. Please clear a bay first."}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setBayAlert(null)}
+            className="ml-auto text-xs"
+            style={{ color: "var(--text-faint)" }}
+          >
+            Dismiss ×
+          </button>
+        </div>
+      ) : null}
+
       {loading ? (
         <div className="rounded-2xl border border-zinc-200 bg-white p-12 text-center shadow-sm">
           <p className="text-sm text-zinc-400">Loading warehouse queue...</p>
@@ -336,6 +382,7 @@ export default function WarehouseTab() {
                   />
                 </th>
                 <th className="px-5 py-3 text-left">Ref</th>
+                <th className="px-5 py-3 text-left">Bay</th>
                 <th className="px-5 py-3 text-left">Vendor</th>
                 <th className="px-5 py-3 text-left">Method</th>
                 <th className="px-5 py-3 text-left">Items</th>
@@ -420,6 +467,20 @@ export default function WarehouseTab() {
                       </div>
                     </td>
                     <td className="px-3 py-3">
+                      {row.bayNumber != null ? (
+                        <span
+                          className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-xs font-bold text-white"
+                          style={{ backgroundColor: "var(--scarlet)" }}
+                        >
+                          {row.bayNumber}
+                        </span>
+                      ) : (
+                        <span className="text-xs" style={{ color: "var(--text-faint)" }}>
+                          —
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-3">
                       <span className="font-medium text-zinc-900">{row.store.name}</span>
                     </td>
                     <td className="px-3 py-3">
@@ -483,7 +544,7 @@ export default function WarehouseTab() {
                   {expandedRow === row.id ? (
                     <tr key={`${row.id}-expanded`} className="border-b border-zinc-200 bg-zinc-50">
                       <td
-                        colSpan={selectedStatus === "INCOMING" ? 10 : 9}
+                        colSpan={selectedStatus === "INCOMING" ? 11 : 10}
                         className="px-6 py-4"
                       >
                         <div className="grid grid-cols-3 gap-6">

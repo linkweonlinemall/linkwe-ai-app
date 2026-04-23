@@ -374,9 +374,9 @@ export default function StorefrontTabs({
           WebkitBackdropFilter: "blur(12px)",
         }}
       >
-        <div className="mx-auto px-4 sm:px-6" style={{ maxWidth: 1024, margin: "0 auto" }}>
+        <div className="mx-auto min-w-0 px-4 sm:px-6" style={{ maxWidth: 1024, margin: "0 auto" }}>
           <div
-            className="hide-scrollbar flex gap-0 overflow-x-auto"
+            className="hide-scrollbar -mx-1 flex gap-0 overflow-x-auto px-1"
             style={{
               borderBottom: "1px solid var(--card-border)",
               scrollbarWidth: "none",

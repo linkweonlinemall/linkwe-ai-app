@@ -20,14 +20,18 @@ export default async function CartPage() {
       <PublicNav />
 
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col gap-3 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between">
           <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
             Your Cart
             <span className="ml-2 text-base font-normal" style={{ color: "var(--text-muted)" }}>
               ({itemCount} item{itemCount !== 1 ? "s" : ""})
             </span>
           </h1>
-          <a href="/store" className="text-sm hover:underline" style={{ color: "var(--blue)" }}>
+          <a
+            href="/store"
+            className="w-fit shrink-0 text-sm hover:underline min-[400px]:ml-auto"
+            style={{ color: "var(--blue)" }}
+          >
             Continue shopping
           </a>
         </div>
@@ -51,7 +55,7 @@ export default async function CartPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <div className="flex flex-col gap-3 lg:col-span-2">
+            <div className="min-w-0 flex flex-col gap-3 lg:col-span-2">
               {items.map((item) => {
                 const img = item.product.images[0];
                 const atMaxStock =
@@ -59,7 +63,7 @@ export default async function CartPage() {
                 return (
                   <div
                     key={item.id}
-                    className="flex gap-4 rounded-xl bg-white p-4"
+                    className="flex min-w-0 gap-4 rounded-xl bg-white p-4"
                     style={{ border: "1px solid var(--card-border)" }}
                   >
                     <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-zinc-100">
@@ -162,6 +166,18 @@ export default async function CartPage() {
           </div>
         )}
       </div>
+
+      <footer
+        className="mt-12 py-6 text-center"
+        style={{ borderTop: "1px solid var(--card-border-subtle)" }}
+      >
+        <p className="text-xs" style={{ color: "var(--text-faint)" }}>
+          <a href="/" style={{ color: "var(--scarlet)" }}>
+            LinkWe
+          </a>{" "}
+          — Trinidad & Tobago&apos;s Marketplace
+        </p>
+      </footer>
     </div>
   );
 }

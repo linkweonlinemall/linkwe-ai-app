@@ -24,7 +24,7 @@ export default function StoreTab({
 }: Props) {
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+      <div className="rounded-xl border border-zinc-200/60 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-4">
           {store.logoUrl ? (
             <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-zinc-200">
@@ -58,7 +58,7 @@ export default function StoreTab({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+      <div className="rounded-xl border border-zinc-200/60 bg-white p-6 shadow-sm">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-zinc-900">Store profile</h2>
           <span className="text-sm font-medium text-zinc-500">

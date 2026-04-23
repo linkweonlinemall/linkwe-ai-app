@@ -9,6 +9,7 @@ import {
   type CourierOnboardingBootstrap,
   type CourierOnboardingFormState,
 } from "@/app/actions/courier";
+import Button from "@/components/ui/Button";
 import { TRINIDAD_ONBOARDING_REGION_OPTIONS } from "@/lib/onboarding/tt-region-options";
 
 const VEHICLE_TYPES = ["Car", "Motorcycle", "Van", "Truck"] as const;
@@ -120,13 +121,9 @@ export default function CourierDashboardOnboardingPage() {
 
               {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
 
-              <button
-                className="rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                style={{ backgroundColor: "var(--scarlet)" }}
-                type="submit"
-              >
+              <Button type="submit" variant="primary">
                 Next
-              </button>
+              </Button>
             </form>
           ) : (
             <form className="flex flex-col gap-4" action={formAction} key="courier-onboarding-step-2">
@@ -168,13 +165,9 @@ export default function CourierDashboardOnboardingPage() {
 
               {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
 
-              <button
-                className="rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                style={{ backgroundColor: "var(--scarlet)" }}
-                type="submit"
-              >
+              <Button type="submit" variant="primary">
                 Complete setup
-              </button>
+              </Button>
             </form>
           )}
         </div>

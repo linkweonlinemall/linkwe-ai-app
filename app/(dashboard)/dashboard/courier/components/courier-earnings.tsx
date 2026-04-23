@@ -38,9 +38,9 @@ export default function CourierEarnings() {
 
   if (loading || !data) {
     return (
-      <div className="flex flex-col gap-4 animate-pulse">
+      <div className="flex flex-col gap-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-24 rounded-2xl bg-zinc-100" />
+          <div key={i} className="h-20 rounded-xl animate-pulse bg-zinc-200" />
         ))}
       </div>
     );
@@ -108,7 +108,9 @@ export default function CourierEarnings() {
 
       {!pendingPayout && data.availableBalance >= 5000 ? (
         <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <h3 className="mb-3 text-sm font-semibold text-zinc-900">Request a Payout</h3>
+          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            Request a Payout
+          </h2>
           {!hasBankDetails ? (
             <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-amber-700">Add your bank details to request a payout.</p>

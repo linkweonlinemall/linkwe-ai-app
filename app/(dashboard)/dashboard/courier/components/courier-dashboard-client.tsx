@@ -217,7 +217,7 @@ export default function CourierDashboardClient({
       </div>
 
       <div className="mx-auto max-w-4xl px-4 py-6">
-        <div className="mb-6 rounded-2xl bg-white p-5 shadow-sm">
+        <div className="mb-6 rounded-xl border border-zinc-200/60 bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h1 className="text-xl font-semibold text-zinc-900">Courier Dashboard</h1>
@@ -266,7 +266,7 @@ export default function CourierDashboardClient({
         {tab === "available" ? (
         <div className="flex flex-col gap-4">
           {availablePickups.length === 0 ? (
-            <p className="rounded-2xl border border-zinc-200 bg-white p-6 text-sm text-zinc-600 shadow-sm">
+            <p className="rounded-xl border border-zinc-200/60 bg-white p-6 text-sm text-zinc-600 shadow-sm">
               No pickups available right now. Check back soon.
             </p>
           ) : (
@@ -278,7 +278,7 @@ export default function CourierDashboardClient({
               const zone = getShippingZone(shipment.region ?? "");
               const fee = pickupTtdFromShipment(shipment);
               return (
-                <div key={shipment.id} className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+                <div key={shipment.id} className="rounded-xl border border-zinc-200/60 bg-white p-5 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-semibold text-zinc-900">{store?.name ?? "Unknown store"}</p>
@@ -330,7 +330,7 @@ export default function CourierDashboardClient({
       {tab === "active" ? (
         <div className="flex flex-col gap-4">
           {myActivePickups.length === 0 ? (
-            <p className="rounded-2xl border border-zinc-200 bg-white p-6 text-sm text-zinc-600 shadow-sm">
+            <p className="rounded-xl border border-zinc-200/60 bg-white p-6 text-sm text-zinc-600 shadow-sm">
               You have no active pickups.
             </p>
           ) : (
@@ -340,7 +340,7 @@ export default function CourierDashboardClient({
               const items = split?.items ?? [];
               const status = shipment.shipmentStatus;
               return (
-                <div key={shipment.id} className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+                <div key={shipment.id} className="rounded-xl border border-zinc-200/60 bg-white p-5 shadow-sm">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
                       <p className="font-semibold text-zinc-900">{store?.name ?? "Unknown store"}</p>
@@ -401,14 +401,14 @@ export default function CourierDashboardClient({
       {tab === "completed" ? (
         <div className="flex flex-col gap-3">
           {completedPickups.length === 0 ? (
-            <p className="rounded-2xl border border-zinc-200 bg-white p-6 text-sm text-zinc-600 shadow-sm">
+            <p className="rounded-xl border border-zinc-200/60 bg-white p-6 text-sm text-zinc-600 shadow-sm">
               No completed pickups yet.
             </p>
           ) : (
             completedPickups.map((shipment) => (
               <div
                 key={shipment.id}
-                className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm"
+                className="rounded-xl border border-zinc-200/60 bg-white p-4 shadow-sm"
               >
                 <div className="flex items-start justify-between">
                   <div>

@@ -153,7 +153,9 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
       {/* Request payout */}
       {!pendingPayout && availableBalance >= 5000 ? (
         <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <h3 className="mb-4 text-lg font-semibold text-zinc-900">Request a Payout</h3>
+          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            Request a Payout
+          </h2>
           {!hasBankOnFile ? (
             <p className="text-sm text-amber-600">
               ⚠ Please add your bank details below before requesting a payout.
@@ -206,7 +208,9 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
         <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-zinc-900">Subscription</h3>
+              <h2 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                Subscription
+              </h2>
               <p className="mt-1 text-xs text-zinc-500">Starter plan — Free tier</p>
             </div>
             <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600">Free</span>
@@ -318,7 +322,9 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
       {/* Bank details */}
       {activeSection === "bank" ? (
         <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <h3 className="mb-4 text-lg font-semibold text-zinc-900">Bank Details</h3>
+          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            Bank Details
+          </h2>
           {hasBankOnFile ? (
             <div className="mb-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
               <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">Current Details</p>

@@ -174,13 +174,10 @@ export default function VendorsTab() {
       </div>
 
       {loading ? (
-        <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
-          <div className="animate-pulse space-y-3 p-6">
-            <div className="h-8 rounded-lg bg-zinc-100" />
-            <div className="h-24 rounded-xl bg-zinc-100" />
-            <div className="h-24 rounded-xl bg-zinc-100" />
-            <div className="h-24 rounded-xl bg-zinc-100" />
-          </div>
+        <div className="flex flex-col gap-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-20 rounded-xl animate-pulse bg-zinc-200" />
+          ))}
         </div>
       ) : activeView === "payouts" ? (
         payoutRequests.length === 0 ? (

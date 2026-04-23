@@ -619,6 +619,7 @@ export default function OrdersTab() {
                                       <th className="py-1.5 text-left text-zinc-400">Ref</th>
                                       <th className="py-1.5 text-left text-zinc-400">Vendor</th>
                                       <th className="py-1.5 text-left text-zinc-400">Status</th>
+                                      <th className="py-1.5 text-center text-zinc-400">Bay</th>
                                       <th className="py-1.5 text-right text-zinc-400">Subtotal</th>
                                       <th className="py-2 text-right text-xs font-semibold uppercase text-zinc-400">
                                         Pack
@@ -628,7 +629,7 @@ export default function OrdersTab() {
                                   <tbody>
                                     {row.splitOrders.length === 0 ? (
                                       <tr>
-                                        <td colSpan={5} className="py-3 text-zinc-500">
+                                        <td colSpan={6} className="py-3 text-zinc-500">
                                           No split orders
                                         </td>
                                       </tr>
@@ -640,6 +641,20 @@ export default function OrdersTab() {
                                           </td>
                                           <td className="py-2 text-zinc-800">{so.store.name}</td>
                                           <td className="py-2 text-zinc-700">{splitStatusLabel(so.status)}</td>
+                                          <td className="py-2 text-center">
+                                            {so.bayNumber != null ? (
+                                              <span
+                                                className="inline-flex h-6 w-6 items-center justify-center rounded-md text-xs font-bold text-white"
+                                                style={{ backgroundColor: "var(--scarlet)" }}
+                                              >
+                                                {so.bayNumber}
+                                              </span>
+                                            ) : (
+                                              <span className="text-xs" style={{ color: "var(--text-faint)" }}>
+                                                —
+                                              </span>
+                                            )}
+                                          </td>
                                           <td className="py-2 text-right font-mono text-zinc-900">
                                             {formatTTD(so.subtotalMinor)}
                                           </td>

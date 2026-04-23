@@ -74,6 +74,18 @@ export default async function OrdersPage() {
           <OrdersClient orders={orders} />
         )}
       </div>
+
+      <footer
+        className="mt-12 py-6 text-center"
+        style={{ borderTop: "1px solid var(--card-border-subtle)" }}
+      >
+        <p className="text-xs" style={{ color: "var(--text-faint)" }}>
+          <a href="/" style={{ color: "var(--scarlet)" }}>
+            LinkWe
+          </a>{" "}
+          — Trinidad & Tobago&apos;s Marketplace
+        </p>
+      </footer>
     </div>
   );
 }

@@ -153,11 +153,11 @@ export default function VendorDashboardTabs({
 
   return (
     <>
-      <nav className="flex overflow-x-auto whitespace-nowrap border-b border-zinc-200 bg-white md:hidden">
+      <nav className="flex w-full min-w-0 overflow-x-auto whitespace-nowrap border-b border-zinc-200 bg-white md:hidden">
         <Link
           href="/dashboard/vendor/products"
           className={[
-            "inline-block px-4 py-3 text-sm",
+            "inline-block shrink-0 whitespace-nowrap px-3 py-3 text-sm",
             productsActive
               ? "border-b-2 border-[#D4450A] font-medium text-[#D4450A]"
               : "text-zinc-500 hover:text-zinc-800",
@@ -171,7 +171,7 @@ export default function VendorDashboardTabs({
             type="button"
             onClick={() => setActiveTab(tab.id)}
             className={[
-              "inline-block px-4 py-3 text-sm",
+              "inline-block shrink-0 whitespace-nowrap px-3 py-3 text-sm",
               activeTab === tab.id
                 ? "border-b-2 border-[#D4450A] font-medium text-[#D4450A]"
                 : "text-zinc-500 hover:text-zinc-800",
