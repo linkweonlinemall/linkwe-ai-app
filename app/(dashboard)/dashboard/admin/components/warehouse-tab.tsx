@@ -89,7 +89,7 @@ export default function WarehouseTab() {
         (r) =>
           (r.referenceNumber ?? r.id).toLowerCase().includes(q) ||
           r.store.name.toLowerCase().includes(q) ||
-          r.inboundShipment?.courier?.fullName?.toLowerCase().includes(q) ||
+          (r.inboundShipment ?? r.legacyInboundShipment)?.courier?.fullName?.toLowerCase().includes(q) ||
           r.mainOrder.buyer.fullName.toLowerCase().includes(q),
       );
     }
@@ -458,7 +458,7 @@ export default function WarehouseTab() {
                     </td>
                     <td className="px-3 py-3">
                       <span className="text-xs text-zinc-600">
-                        {row.inboundShipment?.courier?.fullName ?? "—"}
+                        {(row.inboundShipment ?? row.legacyInboundShipment)?.courier?.fullName ?? "—"}
                       </span>
                     </td>
                     <td className="px-3 py-3">
@@ -575,14 +575,17 @@ export default function WarehouseTab() {
                                     : "Courier pickup"}
                                 </p>
                               </div>
-                              {row.inboundShipment?.courier ? (
-                                <div>
-                                  <p className="text-xs text-zinc-400">Courier</p>
-                                  <p className="text-sm font-medium text-zinc-900">
-                                    {row.inboundShipment.courier.fullName}
-                                  </p>
-                                </div>
-                              ) : null}
+                              {(() => {
+                                const inboundLeg = row.inboundShipment ?? row.legacyInboundShipment;
+                                return inboundLeg?.courier ? (
+                                  <div>
+                                    <p className="text-xs text-zinc-400">Courier</p>
+                                    <p className="text-sm font-medium text-zinc-900">
+                                      {inboundLeg.courier.fullName}
+                                    </p>
+                                  </div>
+                                ) : null;
+                              })()}
                               <div>
                                 <p className="text-xs text-zinc-400">Status</p>
                                 <p className="text-sm font-medium text-zinc-900">
@@ -689,11 +692,14 @@ export default function WarehouseTab() {
                   Courier pickup
                 </span>
               )}
-              {singleModal.inboundShipment?.courier ? (
-                <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs text-zinc-600">
-                  {singleModal.inboundShipment.courier.fullName}
-                </span>
-              ) : null}
+              {(() => {
+                const inboundLeg = singleModal.inboundShipment ?? singleModal.legacyInboundShipment;
+                return inboundLeg?.courier ? (
+                  <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs text-zinc-600">
+                    {inboundLeg.courier.fullName}
+                  </span>
+                ) : null;
+              })()}
               {singleModal.mainOrder.referenceNumber ? (
                 <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 font-mono text-xs text-zinc-500">
                   {singleModal.mainOrder.referenceNumber}

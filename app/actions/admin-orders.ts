@@ -4,7 +4,10 @@ import type { MainOrderStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { getCourierPickupFeeMinor } from "@/lib/fulfillment/courier-pickup-rates";
+import {
+  getCourierPickupFeeLabel,
+  getCourierPickupFeeMinor,
+} from "@/lib/fulfillment/courier-pickup-rates";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { calculateCommissionMinor, calculateVendorNetMinor } from "@/lib/platform/commission";
@@ -25,6 +28,7 @@ export async function completeOrders(orderIds: string[]): Promise<void> {
             storeId: true,
             subtotalMinor: true,
             vendorInboundMethod: true,
+            inboundShipmentId: true,
             store: { select: { region: true } },
           },
         },
@@ -39,6 +43,8 @@ export async function completeOrders(orderIds: string[]): Promise<void> {
         where: { id: orderId },
         data: { status: "COMPLETED" },
       });
+
+      const debitedPickupShipments = new Set<string>();
 
       for (const splitOrder of order.splitOrders) {
         const existingEntry = await tx.vendorLedgerEntry.findFirst({
@@ -82,20 +88,44 @@ export async function completeOrders(orderIds: string[]): Promise<void> {
         });
 
         if (splitOrder.vendorInboundMethod === "PICKUP_REQUESTED") {
-          const feeMinor = getCourierPickupFeeMinor(splitOrder.store.region ?? "");
-          await tx.vendorLedgerEntry.create({
-            data: {
-              storeId: splitOrder.storeId,
-              currency: "TTD",
-              entryType: "DEBIT_PLATFORM_FEE",
-              ledgerEntryType: "COURIER_PICKUP_FEE",
-              amountMinor: feeMinor,
-              splitOrderId: splitOrder.id,
-              splitOrderRef: splitOrder.id,
-              mainOrderId: orderId,
-              description: `Courier pickup fee deducted`,
-            },
-          });
+          let feeMinor = 0;
+          let description = "";
+          let shouldRecordPickup = true;
+
+          if (splitOrder.inboundShipmentId) {
+            if (debitedPickupShipments.has(splitOrder.inboundShipmentId)) {
+              shouldRecordPickup = false;
+            } else {
+              debitedPickupShipments.add(splitOrder.inboundShipmentId);
+              const ship = await tx.shipment.findUnique({
+                where: { id: splitOrder.inboundShipmentId },
+                select: { pickupFeeMinor: true, totalWeightLbs: true, region: true },
+              });
+              const region = splitOrder.store.region ?? ship?.region ?? "";
+              const w = ship?.totalWeightLbs ?? 1;
+              feeMinor = ship?.pickupFeeMinor ?? getCourierPickupFeeMinor(region, w);
+              description = getCourierPickupFeeLabel(region, w);
+            }
+          } else {
+            feeMinor = getCourierPickupFeeMinor(splitOrder.store.region ?? "", 1);
+            description = "Courier pickup fee deducted";
+          }
+
+          if (shouldRecordPickup && feeMinor > 0) {
+            await tx.vendorLedgerEntry.create({
+              data: {
+                storeId: splitOrder.storeId,
+                currency: "TTD",
+                entryType: "DEBIT_PLATFORM_FEE",
+                ledgerEntryType: "COURIER_PICKUP_FEE",
+                amountMinor: feeMinor,
+                splitOrderId: splitOrder.id,
+                splitOrderRef: splitOrder.id,
+                mainOrderId: orderId,
+                description,
+              },
+            });
+          }
         }
       }
     });

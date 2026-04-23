@@ -3,7 +3,11 @@ import { redirect } from "next/navigation";
 
 import { chooseCourierPickup, chooseVendorDropoff } from "@/app/actions/fulfillment";
 import { getSession } from "@/lib/auth/session";
-import { getCourierPickupFee } from "@/lib/fulfillment/courier-pickup-rates";
+import {
+  calculateBatchWeightLbs,
+  getCourierPickupFee,
+  getCourierPickupFeeMinor,
+} from "@/lib/fulfillment/courier-pickup-rates";
 import { calculateCommissionMinor, calculateVendorNetMinor } from "@/lib/platform/commission";
 import { prisma } from "@/lib/prisma";
 
@@ -179,6 +183,23 @@ export default async function VendorOrderDetailPage({ params }: Props) {
           claimedAt: true,
           pickedUpAt: true,
           courierId: true,
+          pickupFeeMinor: true,
+          totalWeightLbs: true,
+          courier: {
+            select: { fullName: true, region: true, phone: true },
+          },
+        },
+      },
+      legacyInboundShipment: {
+        select: {
+          id: true,
+          shipmentStatus: true,
+          region: true,
+          claimedAt: true,
+          pickedUpAt: true,
+          courierId: true,
+          pickupFeeMinor: true,
+          totalWeightLbs: true,
           courier: {
             select: { fullName: true, region: true, phone: true },
           },
@@ -189,6 +210,46 @@ export default async function VendorOrderDetailPage({ params }: Props) {
 
   if (!splitOrder) redirect("/dashboard/vendor");
 
+  let batchWeightLbsForDisplay = 1;
+  if (splitOrder.status === "AWAITING_VENDOR_ACTION") {
+    const batchSplits = await prisma.splitOrder.findMany({
+      where: {
+        storeId: splitOrder.storeId,
+        status: "AWAITING_VENDOR_ACTION",
+        inboundShipmentId: null,
+      },
+      select: {
+        mainOrderId: true,
+        items: { select: { quantity: true, listingId: true } },
+      },
+    });
+    const mainOrderIds = [...new Set(batchSplits.map((s) => s.mainOrderId))];
+    const listingIds = [...new Set(batchSplits.flatMap((s) => s.items.map((i) => i.listingId)))];
+    if (mainOrderIds.length > 0 && listingIds.length > 0) {
+      const orderItems = await prisma.orderItem.findMany({
+        where: {
+          mainOrderId: { in: mainOrderIds },
+          listingId: { in: listingIds },
+        },
+        select: { mainOrderId: true, listingId: true, weightLbs: true },
+      });
+      const weightInputs = batchSplits.flatMap((so) =>
+        so.items.map((it) => {
+          const oi = orderItems.find(
+            (o) => o.mainOrderId === so.mainOrderId && o.listingId === it.listingId,
+          );
+          const unitLbs = oi && oi.weightLbs > 0 ? oi.weightLbs : 1;
+          return {
+            quantity: it.quantity,
+            product: { weight: unitLbs, weightUnit: "LB" as const },
+          };
+        }),
+      );
+      const raw = calculateBatchWeightLbs(weightInputs);
+      batchWeightLbsForDisplay = raw > 0 ? raw : 1;
+    }
+  }
+
   const badge = getStatusBadge(splitOrder.status);
   const splitRef = splitOrder.referenceNumber ?? `SP-${splitOrder.id.slice(-8).toUpperCase()}`;
   const mainRef =
@@ -196,16 +257,21 @@ export default async function VendorOrderDetailPage({ params }: Props) {
   const stepIndex = getVendorStepIndex(splitOrder.status);
   const commissionMinor = calculateCommissionMinor(splitOrder.subtotalMinor);
   const netAfterCommission = calculateVendorNetMinor(splitOrder.subtotalMinor);
+  const courierLeg = splitOrder.inboundShipment ?? splitOrder.legacyInboundShipment;
+  const regionForPickup = splitOrder.store.region ?? "";
+  const weightForPickupFee =
+    courierLeg?.totalWeightLbs ??
+    (splitOrder.status === "AWAITING_VENDOR_ACTION" ? batchWeightLbsForDisplay : 1);
   const pickupFeeMinor =
     splitOrder.vendorInboundMethod === "PICKUP_REQUESTED"
-      ? Math.round(getCourierPickupFee(splitOrder.store.region ?? "") * 100)
+      ? courierLeg?.pickupFeeMinor ?? getCourierPickupFeeMinor(regionForPickup, weightForPickupFee)
       : 0;
   const netEarningsMinor = netAfterCommission - pickupFeeMinor;
 
   const showFulfillmentChoice = splitOrder.status === "AWAITING_VENDOR_ACTION";
-  const showCourierAssigned = Boolean(splitOrder.inboundShipment?.courierId && splitOrder.inboundShipment.courier);
+  const showCourierAssigned = Boolean(courierLeg?.courierId && courierLeg.courier);
   const showCourierWaiting =
-    splitOrder.status === "AWAITING_COURIER_PICKUP" && !splitOrder.inboundShipment?.courierId;
+    splitOrder.status === "AWAITING_COURIER_PICKUP" && !courierLeg?.courierId;
 
   return (
     <div className="min-h-screen bg-[#f5f5f5]">
@@ -342,7 +408,9 @@ export default async function VendorOrderDetailPage({ params }: Props) {
                       <p className="text-sm font-semibold text-zinc-900">Request courier pickup</p>
                       <p className="mt-1 text-xs text-zinc-500">A LinkWe courier will collect your items.</p>
                       <p className="mt-2 text-xs font-semibold text-amber-600">
-                        TTD {getCourierPickupFee(splitOrder.store.region ?? "").toFixed(2)} pickup fee — deducted from
+                        TTD{" "}
+                        {getCourierPickupFee(splitOrder.store.region ?? "", batchWeightLbsForDisplay).toFixed(2)}{" "}
+                        pickup fee (batched weight) — deducted from
                         earnings
                       </p>
                     </button>
@@ -363,7 +431,7 @@ export default async function VendorOrderDetailPage({ params }: Props) {
               </div>
             ) : null}
 
-            {showCourierAssigned && splitOrder.inboundShipment?.courier ? (
+            {showCourierAssigned && courierLeg?.courier ? (
               <div
                 className="rounded-xl bg-white p-5 sm:p-6"
                 style={{ border: "1px solid var(--card-border)" }}
@@ -373,27 +441,27 @@ export default async function VendorOrderDetailPage({ params }: Props) {
                 </h2>
                 <div className="flex items-start gap-3">
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-sm font-bold text-zinc-700">
-                    {splitOrder.inboundShipment.courier.fullName.charAt(0).toUpperCase()}
+                    {courierLeg.courier.fullName.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
-                    <p className="font-semibold text-zinc-900">{splitOrder.inboundShipment.courier.fullName}</p>
+                    <p className="font-semibold text-zinc-900">{courierLeg.courier.fullName}</p>
                     <p className="text-sm capitalize text-zinc-500">
-                      {splitOrder.inboundShipment.courier.region?.replace(/_/g, " ") ?? "—"}
+                      {courierLeg.courier.region?.replace(/_/g, " ") ?? "—"}
                     </p>
-                    {splitOrder.inboundShipment.courier.phone ? (
-                      <p className="mt-1 text-sm text-zinc-600">{splitOrder.inboundShipment.courier.phone}</p>
+                    {courierLeg.courier.phone ? (
+                      <p className="mt-1 text-sm text-zinc-600">{courierLeg.courier.phone}</p>
                     ) : null}
                     <p className="mt-2 text-xs text-zinc-500">
-                      Status: {splitOrder.inboundShipment.shipmentStatus?.replace(/_/g, " ") ?? "—"}
+                      Status: {courierLeg.shipmentStatus?.replace(/_/g, " ") ?? "—"}
                     </p>
-                    {splitOrder.inboundShipment.claimedAt ? (
+                    {courierLeg.claimedAt ? (
                       <p className="text-xs text-zinc-500">
-                        Claimed: {formatDate(splitOrder.inboundShipment.claimedAt)}
+                        Claimed: {formatDate(courierLeg.claimedAt)}
                       </p>
                     ) : null}
-                    {splitOrder.inboundShipment.pickedUpAt ? (
+                    {courierLeg.pickedUpAt ? (
                       <p className="text-xs text-zinc-500">
-                        Picked up: {formatDate(splitOrder.inboundShipment.pickedUpAt)}
+                        Picked up: {formatDate(courierLeg.pickedUpAt)}
                       </p>
                     ) : null}
                   </div>

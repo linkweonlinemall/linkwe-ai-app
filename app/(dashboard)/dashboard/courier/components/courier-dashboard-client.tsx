@@ -31,6 +31,8 @@ type PickupShipment = {
   id: string;
   shipmentStatus: string | null;
   region: string | null;
+  pickupFeeMinor: number | null;
+  totalWeightLbs: number | null;
   claimedAt: Date | null;
   pickedUpAt: Date | null;
   deliveredAt: Date | null;
@@ -41,6 +43,8 @@ type PickupShipment = {
 type CompletedShipment = {
   id: string;
   deliveredAt: Date | null;
+  pickupFeeMinor: number | null;
+  totalWeightLbs: number | null;
   inboundForSplitOrder: {
     id: string;
     store: { name: string; region: string | null };
@@ -75,6 +79,20 @@ function activeStatusLabel(status: string | null): string {
     default:
       return status ?? "Unknown";
   }
+}
+
+function pickupTtdFromShipment(shipment: PickupShipment): number {
+  if (shipment.pickupFeeMinor != null) return shipment.pickupFeeMinor / 100;
+  const reg = shipment.region ?? shipment.inboundForSplitOrder?.store.region ?? "";
+  const w = shipment.totalWeightLbs ?? 1;
+  return getCourierPickupFee(reg, w);
+}
+
+function completedPickupTtd(shipment: CompletedShipment): number {
+  if (shipment.pickupFeeMinor != null) return shipment.pickupFeeMinor / 100;
+  const reg = shipment.inboundForSplitOrder?.store.region ?? "";
+  const w = shipment.totalWeightLbs ?? 1;
+  return getCourierPickupFee(reg, w);
 }
 
 function formatCreatedRelative(d: Date | string): string {
@@ -258,7 +276,7 @@ export default function CourierDashboardClient({
               const items = split?.items ?? [];
               const itemCount = items.reduce((s, i) => s + i.quantity, 0);
               const zone = getShippingZone(shipment.region ?? "");
-              const fee = getCourierPickupFee(shipment.region ?? store?.region ?? "");
+              const fee = pickupTtdFromShipment(shipment);
               return (
                 <div key={shipment.id} className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
@@ -425,7 +443,7 @@ export default function CourierDashboardClient({
                     <p className="text-xs text-zinc-500">Earned</p>
                     <p className="mt-0.5 text-xs font-semibold" style={{ color: "#D4450A" }}>
                       TTD{" "}
-                      {getCourierPickupFee(shipment.inboundForSplitOrder?.store.region ?? "").toFixed(2)}
+                      {completedPickupTtd(shipment).toFixed(2)}
                     </p>
                   </div>
                   <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-2.5 text-center">

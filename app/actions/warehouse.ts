@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import {
+  getCourierPickupFeeLabel,
+  getCourierPickupFeeMinor,
+} from "@/lib/fulfillment/courier-pickup-rates";
 import { recalculateMainOrderStatus } from "@/lib/fulfillment/order-status";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -16,7 +20,7 @@ export async function markItemsReceivedAtWarehouse(formData: FormData): Promise<
 
   const splitOrder = await prisma.splitOrder.findUnique({
     where: { id: splitOrderId },
-    select: { id: true, mainOrderId: true, storeId: true },
+    select: { id: true, mainOrderId: true, storeId: true, inboundShipmentId: true },
   });
 
   if (!splitOrder) redirect("/");
@@ -30,41 +34,71 @@ export async function markItemsReceivedAtWarehouse(formData: FormData): Promise<
       },
     });
 
-    const inboundShipment = await tx.shipment.findFirst({
+    const inboundShipment = splitOrder.inboundShipmentId
+      ? await tx.shipment.findUnique({
+          where: { id: splitOrder.inboundShipmentId },
+          select: {
+            id: true,
+            courierId: true,
+            region: true,
+            pickupFeeMinor: true,
+            totalWeightLbs: true,
+            shipmentStatus: true,
+            type: true,
+          },
+        })
+      : await tx.shipment.findFirst({
+          where: {
+            inboundForSplitOrderId: splitOrderId,
+            type: "INBOUND_COURIER_PICKUP",
+          },
+          select: {
+            id: true,
+            courierId: true,
+            region: true,
+            pickupFeeMinor: true,
+            totalWeightLbs: true,
+            shipmentStatus: true,
+            type: true,
+          },
+        });
+
+    if (!inboundShipment || inboundShipment.type !== "INBOUND_COURIER_PICKUP" || !inboundShipment.courierId) {
+      return;
+    }
+
+    const store = await tx.store.findUnique({
+      where: { id: splitOrder.storeId },
+      select: { region: true },
+    });
+
+    const region = store?.region ?? inboundShipment.region ?? "";
+    const weightForLabel = inboundShipment.totalWeightLbs ?? 1;
+    const feeMinor =
+      inboundShipment.pickupFeeMinor ??
+      getCourierPickupFeeMinor(region, weightForLabel);
+
+    const existingEarning = await tx.courierLedgerEntry.findFirst({
       where: {
-        inboundForSplitOrderId: splitOrderId,
-        type: "INBOUND_COURIER_PICKUP",
-      },
-      select: {
-        id: true,
-        courierId: true,
-        region: true,
+        shipmentId: inboundShipment.id,
+        entryType: "PICKUP_EARNING",
       },
     });
 
-    if (inboundShipment?.courierId) {
-      const { getCourierPickupFeeMinor } = await import("@/lib/fulfillment/courier-pickup-rates");
-
-      const store = await tx.store.findUnique({
-        where: { id: splitOrder.storeId },
-        select: { region: true },
+    if (!existingEarning && feeMinor > 0) {
+      await tx.courierLedgerEntry.create({
+        data: {
+          courierId: inboundShipment.courierId,
+          amountMinor: feeMinor,
+          currency: "TTD",
+          entryType: "PICKUP_EARNING",
+          shipmentId: inboundShipment.id,
+          description: getCourierPickupFeeLabel(region, weightForLabel),
+        },
       });
+    }
 
-      const feeMinor = getCourierPickupFeeMinor(store?.region ?? inboundShipment.region ?? "");
-
-      if (feeMinor > 0) {
-        await tx.courierLedgerEntry.create({
-          data: {
-            courierId: inboundShipment.courierId,
-            amountMinor: feeMinor,
-            currency: "TTD",
-            entryType: "PICKUP_EARNING",
-            shipmentId: inboundShipment.id,
-            description: `Pickup earning — items received at warehouse`,
-          },
-        });
-      }
-
+    if (inboundShipment.shipmentStatus !== "DELIVERED_TO_WAREHOUSE") {
       await tx.shipment.update({
         where: { id: inboundShipment.id },
         data: {

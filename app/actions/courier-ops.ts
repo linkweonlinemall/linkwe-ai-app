@@ -4,12 +4,15 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getSession } from "@/lib/auth/session";
-import { getCourierPickupFeeMinor } from "@/lib/fulfillment/courier-pickup-rates";
+import {
+  getCourierPickupFeeLabel,
+  getCourierPickupFeeMinor,
+} from "@/lib/fulfillment/courier-pickup-rates";
 import { recalculateMainOrderStatus } from "@/lib/fulfillment/order-status";
 import { prisma } from "@/lib/prisma";
 
 type ClaimTxResult =
-  | { ok: true; mainOrderId: string | undefined }
+  | { ok: true; mainOrderIds: string[] }
   | { ok: false; error: string };
 
 export async function claimPickup(formData: FormData): Promise<{ ok: boolean; error?: string }> {
@@ -53,21 +56,37 @@ export async function claimPickup(formData: FormData): Promise<{ ok: boolean; er
         return { ok: false, error: "already_claimed" } as ClaimTxResult;
       }
 
-      if (shipment.inboundForSplitOrder) {
+      const batchUpdated = await tx.splitOrder.updateMany({
+        where: { inboundShipmentId: shipmentId },
+        data: { status: "COURIER_ASSIGNED" },
+      });
+
+      if (batchUpdated.count === 0 && shipment.inboundForSplitOrder) {
         await tx.splitOrder.update({
           where: { id: shipment.inboundForSplitOrder.id },
           data: { status: "COURIER_ASSIGNED" },
         });
       }
 
+      const whereOr: { inboundShipmentId?: string; id?: string }[] = [{ inboundShipmentId: shipmentId }];
+      if (shipment.inboundForSplitOrder) {
+        whereOr.push({ id: shipment.inboundForSplitOrder.id });
+      }
+      const mains = await tx.splitOrder.findMany({
+        where: { OR: whereOr },
+        select: { mainOrderId: true },
+      });
+
       return {
         ok: true,
-        mainOrderId: shipment.inboundForSplitOrder?.mainOrderId,
+        mainOrderIds: [...new Set(mains.map((m) => m.mainOrderId))],
       } as ClaimTxResult;
     });
 
-    if (result.ok && result.mainOrderId) {
-      await recalculateMainOrderStatus(result.mainOrderId);
+    if (result.ok) {
+      for (const mainOrderId of result.mainOrderIds) {
+        await recalculateMainOrderStatus(mainOrderId);
+      }
     }
 
     revalidatePath("/dashboard/courier");
@@ -100,7 +119,7 @@ export async function markPickedUp(formData: FormData): Promise<void> {
 
   if (!shipment) redirect("/dashboard/courier");
 
-  await prisma.$transaction(async (tx) => {
+  const mainOrderIds = await prisma.$transaction(async (tx) => {
     await tx.shipment.update({
       where: { id: shipmentId },
       data: {
@@ -109,17 +128,33 @@ export async function markPickedUp(formData: FormData): Promise<void> {
       },
     });
 
-    if (shipment.inboundForSplitOrder) {
+    const batchUpdated = await tx.splitOrder.updateMany({
+      where: { inboundShipmentId: shipmentId },
+      data: { status: "COURIER_PICKED_UP" },
+    });
+
+    if (batchUpdated.count === 0 && shipment.inboundForSplitOrder) {
       await tx.splitOrder.update({
         where: { id: shipment.inboundForSplitOrder.id },
         data: { status: "COURIER_PICKED_UP" },
       });
     }
+
+    const whereOr: { inboundShipmentId?: string; id?: string }[] = [{ inboundShipmentId: shipmentId }];
+    if (shipment.inboundForSplitOrder) {
+      whereOr.push({ id: shipment.inboundForSplitOrder.id });
+    }
+    const mains = await tx.splitOrder.findMany({
+      where: { OR: whereOr },
+      select: { mainOrderId: true },
+    });
+
+    return [...new Set(mains.map((m) => m.mainOrderId))];
   });
 
-  if (shipment.inboundForSplitOrder?.mainOrderId) {
-    await recalculateMainOrderStatus(shipment.inboundForSplitOrder.mainOrderId);
-    revalidatePath(`/orders/${shipment.inboundForSplitOrder.mainOrderId}`, "page");
+  for (const mainOrderId of mainOrderIds) {
+    await recalculateMainOrderStatus(mainOrderId);
+    revalidatePath(`/orders/${mainOrderId}`, "page");
   }
 
   revalidatePath("/dashboard/courier");
@@ -142,6 +177,8 @@ export async function markDeliveredToWarehouse(formData: FormData): Promise<void
       id: true,
       courierId: true,
       region: true,
+      pickupFeeMinor: true,
+      totalWeightLbs: true,
       inboundForSplitOrder: {
         select: {
           id: true,
@@ -155,7 +192,9 @@ export async function markDeliveredToWarehouse(formData: FormData): Promise<void
 
   if (!shipment?.courierId) redirect("/dashboard/admin");
 
-  await prisma.$transaction(async (tx) => {
+  const courierId = shipment.courierId;
+
+  const mainOrderIds = await prisma.$transaction(async (tx) => {
     await tx.shipment.update({
       where: { id: shipmentId },
       data: {
@@ -164,43 +203,65 @@ export async function markDeliveredToWarehouse(formData: FormData): Promise<void
       },
     });
 
-    if (shipment.inboundForSplitOrder) {
+    const receivedAt = new Date();
+    const batchUpdated = await tx.splitOrder.updateMany({
+      where: { inboundShipmentId: shipmentId },
+      data: {
+        status: "AT_WAREHOUSE",
+        warehouseReceivedAt: receivedAt,
+      },
+    });
+
+    if (batchUpdated.count === 0 && shipment.inboundForSplitOrder) {
       await tx.splitOrder.update({
         where: { id: shipment.inboundForSplitOrder.id },
         data: {
           status: "AT_WAREHOUSE",
-          warehouseReceivedAt: new Date(),
+          warehouseReceivedAt: receivedAt,
         },
       });
     }
-  });
 
-  if (shipment.inboundForSplitOrder?.mainOrderId) {
-    await recalculateMainOrderStatus(shipment.inboundForSplitOrder.mainOrderId);
-    revalidatePath(`/orders/${shipment.inboundForSplitOrder.mainOrderId}`, "page");
-  }
+    const region = shipment.inboundForSplitOrder?.store.region ?? shipment.region ?? "";
+    const weightForFee = shipment.totalWeightLbs ?? 1;
+    const earningMinor =
+      shipment.pickupFeeMinor ?? getCourierPickupFeeMinor(region, weightForFee);
 
-  const storeId = shipment.inboundForSplitOrder?.storeId;
-  const store = storeId
-    ? await prisma.store.findUnique({
-        where: { id: storeId },
-        select: { region: true },
-      })
-    : null;
-
-  const earningMinor = getCourierPickupFeeMinor(store?.region ?? shipment.region ?? "");
-
-  if (earningMinor > 0) {
-    await prisma.courierLedgerEntry.create({
-      data: {
-        courierId: shipment.courierId,
-        amountMinor: earningMinor,
-        currency: "TTD",
+    const existingEarning = await tx.courierLedgerEntry.findFirst({
+      where: {
+        shipmentId,
         entryType: "PICKUP_EARNING",
-        shipmentId: shipmentId,
-        description: `Pickup earning — ${shipment.region ?? "unknown"} zone`,
       },
     });
+
+    if (!existingEarning && earningMinor > 0) {
+      await tx.courierLedgerEntry.create({
+        data: {
+          courierId,
+          amountMinor: earningMinor,
+          currency: "TTD",
+          entryType: "PICKUP_EARNING",
+          shipmentId,
+          description: getCourierPickupFeeLabel(region, weightForFee),
+        },
+      });
+    }
+
+    const whereOr: { inboundShipmentId?: string; id?: string }[] = [{ inboundShipmentId: shipmentId }];
+    if (shipment.inboundForSplitOrder) {
+      whereOr.push({ id: shipment.inboundForSplitOrder.id });
+    }
+    const mains = await tx.splitOrder.findMany({
+      where: { OR: whereOr },
+      select: { mainOrderId: true },
+    });
+
+    return [...new Set(mains.map((m) => m.mainOrderId))];
+  });
+
+  for (const mainOrderId of mainOrderIds) {
+    await recalculateMainOrderStatus(mainOrderId);
+    revalidatePath(`/orders/${mainOrderId}`, "page");
   }
 
   revalidatePath("/dashboard/courier");

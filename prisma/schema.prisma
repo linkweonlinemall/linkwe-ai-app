@@ -586,12 +586,16 @@ model SplitOrder {
   vendorDropoffCompletedAt DateTime?            @map("vendor_dropoff_completed_at")
   customerMarkedReceivedAt DateTime?            @map("customer_marked_received_at")
   shippingBundleId         String?              @map("shipping_bundle_id")
+  inboundShipmentId        String?              @map("inbound_shipment_id")
   createdAt                DateTime             @default(now()) @map("created_at")
   updatedAt                DateTime             @updatedAt @map("updated_at")
   documents                OrderDocument[]
   items                    SplitOrderItem[]
   shipments                Shipment[]           @relation("OutboundShipment")
-  inboundShipment          Shipment?            @relation("InboundShipment")
+  /// Shipment row where `inboundForSplitOrderId` points at this split (legacy single-split inbound).
+  legacyInboundShipment    Shipment?            @relation("InboundShipment")
+  /// Shared inbound courier pickup shipment when batched with other split orders from the same store.
+  inboundShipment          Shipment?            @relation("BatchInboundShipment", fields: [inboundShipmentId], references: [id])
   mainOrder                MainOrder            @relation(fields: [mainOrderId], references: [id], onDelete: Cascade)
   shippingBundle           ShippingBundle?      @relation(fields: [shippingBundleId], references: [id])
   store                    Store                @relation(fields: [storeId], references: [id])
@@ -668,12 +672,15 @@ model Shipment {
   proofUrl                 String?         @map("proof_url")
   estimatedDeliveryAt      DateTime?       @map("estimated_delivery_at")
   deliveredAt              DateTime?       @map("delivered_at")
+  totalWeightLbs           Float?          @map("total_weight_lbs")
+  pickupFeeMinor           Int?            @map("pickup_fee_minor")
   createdAt                DateTime        @default(now()) @map("created_at")
   updatedAt                DateTime        @updatedAt @map("updated_at")
   courier                  User?           @relation("CourierShipments", fields: [courierId], references: [id])
   shippingBundle           ShippingBundle? @relation(fields: [shippingBundleId], references: [id])
   splitOrder               SplitOrder?     @relation("OutboundShipment", fields: [splitOrderId], references: [id], onDelete: Cascade)
   inboundForSplitOrder     SplitOrder?     @relation("InboundShipment", fields: [inboundForSplitOrderId], references: [id])
+  batchedSplitOrders       SplitOrder[]    @relation("BatchInboundShipment")
 
   @@index([splitOrderId])
   @@index([courierId, status])

@@ -42,6 +42,11 @@ export async function getWarehouseIncomingQueue() {
           courier: { select: { fullName: true } },
         },
       },
+      legacyInboundShipment: {
+        select: {
+          courier: { select: { fullName: true } },
+        },
+      },
       mainOrder: {
         select: {
           referenceNumber: true,
@@ -84,6 +89,11 @@ export async function getWarehouseReceivedToday() {
         },
       },
       inboundShipment: {
+        select: {
+          courier: { select: { fullName: true } },
+        },
+      },
+      legacyInboundShipment: {
         select: {
           courier: { select: { fullName: true } },
         },

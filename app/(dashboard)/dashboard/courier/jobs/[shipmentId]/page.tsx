@@ -110,7 +110,11 @@ export default async function CourierJobDetailPage({ params }: Props) {
   const store = split?.store;
   const items = split?.items ?? [];
   const totalUnits = items.reduce((s, i) => s + i.quantity, 0);
-  const pickupFee = getCourierPickupFee(store?.region ?? "");
+  const w = shipment.totalWeightLbs ?? 1;
+  const pickupFee =
+    shipment.pickupFeeMinor != null
+      ? shipment.pickupFeeMinor / 100
+      : getCourierPickupFee(store?.region ?? shipment.region ?? "", w);
   const storeZone = store?.region ? getShippingZone(store.region) : null;
   const badge = shipmentStatusBadge(shipment.shipmentStatus);
   const shipmentRef = shipment.id.slice(-8).toUpperCase();
