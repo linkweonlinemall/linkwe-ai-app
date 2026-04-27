@@ -130,6 +130,15 @@ export default function StorefrontTabs({
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [showShareSheet, setShowShareSheet] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [showAll, setShowAll] = useState(false);
+
+  function openLightbox(url: string) {
+    const index = store.images.findIndex((img) => img.url === url);
+    setLightboxIndex(index >= 0 ? index : 0);
+    setZoom(1);
+  }
 
   useEffect(() => {
     if (!showShareSheet) return;
@@ -139,6 +148,28 @@ export default function StorefrontTabs({
     document.addEventListener("click", handler);
     return () => document.removeEventListener("click", handler);
   }, [showShareSheet]);
+
+  useEffect(() => {
+    if (lightboxIndex === null) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setLightboxIndex(null);
+        setZoom(1);
+      }
+      if (e.key === "ArrowRight") {
+        setLightboxIndex((i) => (i === null ? null : (i + 1) % store.images.length));
+        setZoom(1);
+      }
+      if (e.key === "ArrowLeft") {
+        setLightboxIndex((i) =>
+          i === null ? null : (i - 1 + store.images.length) % store.images.length,
+        );
+        setZoom(1);
+      }
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [lightboxIndex, store.images.length]);
 
   const categories = useMemo(() => {
     const unique = new Set<string>();
@@ -165,7 +196,7 @@ export default function StorefrontTabs({
           <Link
             href="/dashboard/vendor/store/edit"
             style={{ backgroundColor: "#D4450A" }}
-            className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium text-white shadow-sm hover:opacity-90 transition-all"
+            className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium text-white shadow-[0_4px_24px_rgba(0,0,0,0.08)] hover:opacity-90 transition-all"
             title="Edit store"
           >
             <svg
@@ -189,7 +220,7 @@ export default function StorefrontTabs({
             <button
               type="button"
               onClick={() => setShowShareSheet(!showShareSheet)}
-              className="inline-flex items-center justify-center h-9 w-9 rounded-xl border border-zinc-200 bg-white shadow-sm hover:shadow-md hover:border-zinc-300 transition-all text-zinc-600"
+              className="inline-flex items-center justify-center h-9 w-9 rounded-xl border border-zinc-200 bg-white shadow-[0_4px_24px_rgba(0,0,0,0.08)] hover:shadow-md hover:border-zinc-300 transition-all text-zinc-600"
               title="Share store"
             >
               <svg
@@ -302,7 +333,7 @@ export default function StorefrontTabs({
 
           <button
             type="button"
-            className="inline-flex items-center justify-center h-9 w-9 rounded-xl border border-zinc-200 bg-white shadow-sm hover:shadow-md hover:border-zinc-300 transition-all text-zinc-600"
+            className="inline-flex items-center justify-center h-9 w-9 rounded-xl border border-zinc-200 bg-white shadow-[0_4px_24px_rgba(0,0,0,0.08)] hover:shadow-md hover:border-zinc-300 transition-all text-zinc-600"
             title="Message store"
           >
             <svg
@@ -322,7 +353,7 @@ export default function StorefrontTabs({
 
           <button
             type="button"
-            className="inline-flex items-center justify-center h-9 w-9 rounded-xl border border-zinc-200 bg-white shadow-sm hover:shadow-md hover:border-zinc-300 transition-all text-zinc-600"
+            className="inline-flex items-center justify-center h-9 w-9 rounded-xl border border-zinc-200 bg-white shadow-[0_4px_24px_rgba(0,0,0,0.08)] hover:shadow-md hover:border-zinc-300 transition-all text-zinc-600"
             title="Save store"
           >
             <svg
@@ -342,7 +373,7 @@ export default function StorefrontTabs({
 
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-700 shadow-sm hover:shadow-md hover:border-zinc-300 transition-all"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-700 shadow-[0_4px_24px_rgba(0,0,0,0.08)] hover:shadow-md hover:border-zinc-300 transition-all"
             title="Follow store"
           >
             <svg
@@ -429,27 +460,117 @@ export default function StorefrontTabs({
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="flex flex-col gap-6 lg:col-span-2">
             {store.images && store.images.length > 0 ? (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-                <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-zinc-400">Gallery</p>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {store.images.map((img) => (
-                    <div key={img.id} className="overflow-hidden rounded-xl">
-                      <img alt="" className="h-36 w-full object-cover" src={img.url} />
-                    </div>
-                  ))}
+              <div
+                className="rounded-2xl border border-zinc-200 bg-white p-5
+    shadow-[0_4px_24px_rgba(0,0,0,0.08)]"
+              >
+                <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                  Gallery
+                </p>
+                <div className="grid grid-cols-2 gap-2" style={{ gridTemplateRows: "auto" }}>
+                  <div
+                    className="group relative row-span-2 cursor-pointer overflow-hidden rounded-xl"
+                    style={{ minHeight: 280 }}
+                    onClick={() => openLightbox(store.images[0].url)}
+                  >
+                    <img
+                      alt=""
+                      src={store.images[0].url}
+                      className="absolute inset-0 h-full w-full object-cover
+            transition-transform duration-200 group-hover:scale-105"
+                    />
+                  </div>
+                  <div
+                    className="group relative cursor-pointer overflow-hidden rounded-xl"
+                    style={{ height: 136 }}
+                    onClick={() => store.images[1] && openLightbox(store.images[1].url)}
+                  >
+                    {store.images[1] && (
+                      <img
+                        alt=""
+                        src={store.images[1].url}
+                        className="absolute inset-0 h-full w-full object-cover
+              transition-transform duration-200 group-hover:scale-105"
+                      />
+                    )}
+                  </div>
+                  <div
+                    className="group relative cursor-pointer overflow-hidden rounded-xl"
+                    style={{ height: 136 }}
+                    onClick={() => {
+                      if (store.images.length > 3) {
+                        setShowAll(true);
+                      } else if (store.images[2]) {
+                        openLightbox(store.images[2].url);
+                      }
+                    }}
+                  >
+                    {store.images[2] && (
+                      <>
+                        <img
+                          alt=""
+                          src={store.images[2].url}
+                          className="absolute inset-0 h-full w-full object-cover
+                transition-transform duration-200 group-hover:scale-105"
+                        />
+                        {store.images.length > 3 && (
+                          <div
+                            className="absolute inset-0 flex flex-col
+                items-center justify-center rounded-xl bg-black/55"
+                          >
+                            <div className="mb-1.5 grid grid-cols-2 gap-0.5">
+                              {[0, 1, 2, 3].map((k) => (
+                                <div key={k} className="h-3 w-3 rounded-sm bg-white/80" />
+                              ))}
+                            </div>
+                            <span className="text-base font-semibold text-white">
+                              +{store.images.length - 3}
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
+
+                {showAll && (
+                  <div className="mt-3 columns-3 gap-2 space-y-2">
+                    {store.images.slice(3).map((img) => (
+                      <div
+                        key={img.id}
+                        className="group break-inside-avoid cursor-pointer
+              overflow-hidden rounded-xl"
+                        onClick={() => openLightbox(img.url)}
+                      >
+                        <img
+                          alt=""
+                          src={img.url}
+                          className="w-full object-cover transition-transform duration-200
+                group-hover:scale-105"
+                        />
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setShowAll(false)}
+                      className="mt-2 text-xs text-zinc-400 underline hover:text-zinc-600"
+                    >
+                      Show less
+                    </button>
+                  </div>
+                )}
               </div>
             ) : null}
 
             {store.description ? (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">About</p>
                 <p className="text-sm leading-7 text-zinc-600">{store.description}</p>
               </div>
             ) : null}
 
             {store.policies ? (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">Store policies</p>
                 <p className="whitespace-pre-wrap text-sm leading-6 text-zinc-600">
                   {store.policies}
@@ -467,7 +588,7 @@ export default function StorefrontTabs({
 
           <div className="flex flex-col gap-6">
             {openingHours ? (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
                 <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-zinc-400">Opening hours</p>
                 <ul className="space-y-2">
                   {DAYS.map((day) => {
@@ -500,7 +621,7 @@ export default function StorefrontTabs({
             ) : null}
 
             {store.tags && store.tags.length > 0 ? (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">Tags</p>
                 <div className="flex flex-wrap gap-2">
                   {store.tags.map((tag) => (
@@ -516,7 +637,7 @@ export default function StorefrontTabs({
             ) : null}
 
             {store.amenities && store.amenities.length > 0 ? (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">Amenities</p>
                 <div className="flex flex-col gap-2">
                   {store.amenities.map((a) => (
@@ -528,14 +649,14 @@ export default function StorefrontTabs({
               </div>
             ) : null}
 
-            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
               <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">Owner</p>
               <p className="text-sm font-medium text-zinc-900">{store.owner.fullName}</p>
               <p className="mt-1 text-xs text-zinc-500">Message this vendor directly through LinkWe.</p>
             </div>
 
             {hasSocialLinks ? (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
                 <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-zinc-400">Follow us</p>
                 <div className="flex flex-wrap gap-3">
                   {socialLinks.instagram ? (
@@ -544,7 +665,7 @@ export default function StorefrontTabs({
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ backgroundColor: "#E1306C" }}
-                      className="flex h-10 w-10 items-center justify-center rounded-xl shadow-sm hover:shadow-md hover:opacity-90 transition-all text-white"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.08)] hover:shadow-md hover:opacity-90 transition-all text-white"
                       title="Instagram"
                     >
                       <svg
@@ -564,7 +685,7 @@ export default function StorefrontTabs({
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ backgroundColor: "#1877F2" }}
-                      className="flex h-10 w-10 items-center justify-center rounded-xl shadow-sm hover:shadow-md hover:opacity-90 transition-all text-white"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.08)] hover:shadow-md hover:opacity-90 transition-all text-white"
                       title="Facebook"
                     >
                       <svg
@@ -584,7 +705,7 @@ export default function StorefrontTabs({
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ backgroundColor: "#000000" }}
-                      className="flex h-10 w-10 items-center justify-center rounded-xl shadow-sm hover:shadow-md hover:opacity-90 transition-all text-white"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.08)] hover:shadow-md hover:opacity-90 transition-all text-white"
                       title="TikTok"
                     >
                       <svg
@@ -604,7 +725,7 @@ export default function StorefrontTabs({
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ backgroundColor: "#FF0000" }}
-                      className="flex h-10 w-10 items-center justify-center rounded-xl shadow-sm hover:shadow-md hover:opacity-90 transition-all text-white"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.08)] hover:shadow-md hover:opacity-90 transition-all text-white"
                       title="YouTube"
                     >
                       <svg
@@ -624,7 +745,7 @@ export default function StorefrontTabs({
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ backgroundColor: "#000000" }}
-                      className="flex h-10 w-10 items-center justify-center rounded-xl shadow-sm hover:shadow-md hover:opacity-90 transition-all text-white"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.08)] hover:shadow-md hover:opacity-90 transition-all text-white"
                       title="X"
                     >
                       <svg
@@ -644,7 +765,7 @@ export default function StorefrontTabs({
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ backgroundColor: "#0A66C2" }}
-                      className="flex h-10 w-10 items-center justify-center rounded-xl shadow-sm hover:shadow-md hover:opacity-90 transition-all text-white"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.08)] hover:shadow-md hover:opacity-90 transition-all text-white"
                       title="LinkedIn"
                     >
                       <svg
@@ -664,7 +785,7 @@ export default function StorefrontTabs({
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ backgroundColor: "#25D366" }}
-                      className="flex h-10 w-10 items-center justify-center rounded-xl shadow-sm hover:shadow-md hover:opacity-90 transition-all text-white"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.08)] hover:shadow-md hover:opacity-90 transition-all text-white"
                       title="WhatsApp"
                     >
                       <svg
@@ -684,7 +805,7 @@ export default function StorefrontTabs({
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ backgroundColor: "#D4450A" }}
-                      className="flex h-10 w-10 items-center justify-center rounded-xl shadow-sm hover:shadow-md hover:opacity-90 transition-all text-white"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.08)] hover:shadow-md hover:opacity-90 transition-all text-white"
                       title="Website"
                     >
                       <svg
@@ -708,7 +829,7 @@ export default function StorefrontTabs({
       {activeTab === "store" ? (
         <div className="mt-6 flex flex-col gap-6 lg:flex-row">
           <aside className="lg:w-56 shrink-0">
-            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
               <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-zinc-400">Filter</p>
               <div className="flex flex-wrap gap-2">
                 {categories.map((c) => (
@@ -741,7 +862,7 @@ export default function StorefrontTabs({
 
           <div className="flex-1 min-w-0">
             {products.length === 0 ? (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm text-center">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-[0_4px_24px_rgba(0,0,0,0.08)] text-center">
                 <p className="text-sm font-medium text-zinc-500">Products coming soon</p>
                 <p className="mt-1 text-xs text-zinc-400">This store has not listed any products yet.</p>
               </div>
@@ -759,17 +880,167 @@ export default function StorefrontTabs({
       ) : null}
 
       {activeTab === "bookings" ? (
-        <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
+        <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
           <p className="text-sm font-medium text-zinc-500">Bookings coming soon</p>
         </div>
       ) : null}
 
       {activeTab === "reviews" ? (
-        <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
+        <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
           <p className="text-sm font-medium text-zinc-500">Reviews coming soon</p>
         </div>
       ) : null}
       </main>
+
+      {lightboxIndex !== null && store.images[lightboxIndex] && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col bg-black/95"
+          onClick={() => {
+            setLightboxIndex(null);
+            setZoom(1);
+          }}
+        >
+          {/* Header */}
+          <div
+            className="flex shrink-0 items-center justify-between px-4 py-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="text-sm text-zinc-400">
+              {lightboxIndex + 1} of {store.images.length}
+            </span>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setZoom((z) => Math.min(z + 0.5, 3))}
+                className="rounded-lg p-1.5 text-lg leading-none text-zinc-400
+            hover:bg-white/10 hover:text-white"
+                title="Zoom in"
+              >
+                +
+              </button>
+              <button
+                type="button"
+                onClick={() => setZoom((z) => Math.max(z - 0.5, 1))}
+                className="rounded-lg p-1.5 text-lg leading-none text-zinc-400
+            hover:bg-white/10 hover:text-white"
+                title="Zoom out"
+              >
+                −
+              </button>
+              <a
+                href={store.images[lightboxIndex].url}
+                download
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg p-1.5 text-zinc-400
+            hover:bg-white/10 hover:text-white"
+                title="Download"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  setLightboxIndex(null);
+                  setZoom(1);
+                }}
+                className="rounded-lg p-1.5 text-xl leading-none text-zinc-400
+            hover:bg-white/10 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+
+          {/* Image area */}
+          <div
+            className="relative flex flex-1 items-center justify-center overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {store.images.length > 1 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setLightboxIndex((i) =>
+                    i === null ? null : (i - 1 + store.images.length) % store.images.length,
+                  );
+                  setZoom(1);
+                }}
+                className="absolute left-3 z-10 flex h-10 w-10 items-center justify-center
+            rounded-full bg-white/10 text-white
+            hover:bg-white/20"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              </button>
+            )}
+
+            <img
+              src={store.images[lightboxIndex].url}
+              alt=""
+              className="max-h-full max-w-full select-none rounded-lg
+          object-contain transition-transform duration-200"
+              style={{ transform: `scale(${zoom})`, cursor: zoom > 1 ? "zoom-out" : "zoom-in" }}
+              onClick={() => setZoom((z) => (z > 1 ? 1 : 2))}
+              onWheel={(e) => {
+                e.preventDefault();
+                setZoom((z) => Math.min(Math.max(z - e.deltaY * 0.001, 1), 3));
+              }}
+              draggable={false}
+            />
+
+            {store.images.length > 1 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setLightboxIndex((i) => (i === null ? null : (i + 1) % store.images.length));
+                  setZoom(1);
+                }}
+                className="absolute right-3 z-10 flex h-10 w-10 items-center justify-center
+            rounded-full bg-white/10 text-white
+            hover:bg-white/20"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {/* Thumbnail strip */}
+          {store.images.length > 1 && (
+            <div
+              className="flex shrink-0 gap-2 overflow-x-auto px-4 py-3"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {store.images.map((img, i) => (
+                <button
+                  type="button"
+                  key={img.id}
+                  onClick={() => {
+                    setLightboxIndex(i);
+                    setZoom(1);
+                  }}
+                  className={`h-12 w-12 shrink-0 overflow-hidden rounded-lg
+              transition-all ${
+                lightboxIndex === i
+                  ? "opacity-100 ring-2 ring-[#D4450A]"
+                  : "opacity-40 hover:opacity-70"
+              }`}
+                >
+                  <img src={img.url} alt="" className="h-full w-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </>
   );
 }

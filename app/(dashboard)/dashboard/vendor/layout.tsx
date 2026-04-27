@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth/current-user";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getNextBusinessOnboardingStep } from "@/lib/onboarding/business-progress";
 import { getStoreByOwnerId } from "@/lib/store/get-vendor-store";
+import FloatingAIChat from "@/components/vendor/floating-ai-chat";
 
 export default async function VendorDashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -19,5 +20,10 @@ export default async function VendorDashboardLayout({ children }: { children: Re
     redirect(`/onboarding/business/step-${nextStep}`);
   }
 
-  return children;
+  return (
+    <>
+      {children}
+      <FloatingAIChat />
+    </>
+  );
 }

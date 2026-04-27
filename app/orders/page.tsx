@@ -7,9 +7,19 @@ import { prisma } from "@/lib/prisma";
 
 import OrdersClient from "./orders-client";
 
+function getDashboardPath(role: string) {
+  if (role === "VENDOR") return "/dashboard/vendor";
+  if (role === "COURIER") return "/dashboard/courier";
+  if (role === "ADMIN") return "/dashboard/admin";
+  return "/dashboard/customer";
+}
+
 export default async function OrdersPage() {
   const session = await getSession();
   if (!session) redirect("/login");
+
+  const userRecord = await prisma.user.findUnique({ where: { id: session.userId } });
+  const continueHref = userRecord ? getDashboardPath(userRecord.role) : null;
 
   const orders = await prisma.mainOrder.findMany({
     where: { buyerId: session.userId },
@@ -42,7 +52,14 @@ export default async function OrdersPage() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
-      <PublicNav />
+      <PublicNav
+        user={
+          userRecord
+            ? { name: userRecord.fullName ?? "Account", href: continueHref! }
+            : null
+        }
+        dashboardHref={continueHref ?? undefined}
+      />
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>

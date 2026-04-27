@@ -19,6 +19,9 @@ export default function CourierDashboardOnboardingPage() {
   const searchParams = useSearchParams();
   const [bootstrap, setBootstrap] = useState<CourierOnboardingBootstrap | null | undefined>(undefined);
   const [state, formAction] = useActionState(saveCourierOnboardingStep, {} as CourierOnboardingFormState);
+  const [selectedVehicle, setSelectedVehicle] = useState<string>(
+    bootstrap?.vehicleType ?? ""
+  );
 
   useEffect(() => {
     readCourierOnboardingBootstrap().then((b) => {
@@ -33,6 +36,12 @@ export default function CourierDashboardOnboardingPage() {
       setBootstrap(b);
     });
   }, [router]);
+
+  useEffect(() => {
+    if (bootstrap != null) {
+      setSelectedVehicle(bootstrap.vehicleType ?? "");
+    }
+  }, [bootstrap]);
 
   const urlStep = searchParams.get("step") === "2" ? 2 : 1;
 
@@ -82,24 +91,31 @@ export default function CourierDashboardOnboardingPage() {
               <input name="step" type="hidden" value="1" />
               <input name="userId" type="hidden" value={bootstrap.id} />
 
-              <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800">
-                Vehicle type
-                <select
-                  required
-                  className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2"
-                  name="vehicleType"
-                >
-                  <option value="">Select…</option>
-                  {VEHICLE_TYPES.map((v) => (
-                    <option key={v} value={v}>
-                      {v}
-                    </option>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-zinc-700">Vehicle type</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {VEHICLE_TYPES.map((type) => (
+                    <label
+                      key={type}
+                      className={`flex items-center gap-2 rounded-lg border p-3 cursor-pointer ${
+                        selectedVehicle === type
+                          ? "border-[#D4450A] bg-[#D4450A]/5"
+                          : "border-zinc-200 hover:border-zinc-300"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="vehicleType"
+                        value={type}
+                        checked={selectedVehicle === type}
+                        onChange={() => setSelectedVehicle(type)}
+                        className="accent-[#D4450A]"
+                      />
+                      <span className="text-sm font-medium text-zinc-700">{type}</span>
+                    </label>
                   ))}
-                </select>
-                <span className="text-xs font-normal text-zinc-500">
-                  Your vehicle details will be saved to your courier profile when that feature is ready.
-                </span>
-              </label>
+                </div>
+              </div>
 
               <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800">
                 Operating region
@@ -150,18 +166,21 @@ export default function CourierDashboardOnboardingPage() {
                 <p className="text-xs text-zinc-500">Trinidad & Tobago number. Enter your 7-digit number.</p>
               </div>
 
-              <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800">
-                Short bio (optional)
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-zinc-700">
+                  Tell customers about yourself
+                </label>
                 <textarea
-                  className="min-h-[100px] rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2"
-                  name="bio"
-                  placeholder="A sentence about your delivery experience or coverage area."
+                  name="courierBio"
+                  defaultValue={bootstrap.courierBio ?? ""}
+                  placeholder="e.g. Fast and reliable courier based in Port of Spain. 3 years experience delivering across Trinidad."
                   rows={4}
+                  className="w-full resize-none rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-[#D4450A] focus:outline-none"
                 />
-                <span className="text-xs font-normal text-zinc-500">
-                  Optional. This helps vendors and customers know who is delivering their orders.
-                </span>
-              </label>
+                <p className="text-xs text-zinc-500">
+                  This will be visible to customers when you accept deliveries.
+                </p>
+              </div>
 
               {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
 

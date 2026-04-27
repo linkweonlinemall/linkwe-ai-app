@@ -24,8 +24,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="flex min-h-screen flex-col bg-[#F5F5F5]">
       <header className="flex h-14 shrink-0 items-center justify-between bg-[#1C1C1A] px-4 md:px-6">
         <div className="flex min-w-0 flex-wrap items-center">
-          <Link className="text-lg font-bold text-white" href={getRoleDashboardPath(session.role)}>
-            LinkWe
+          <Link href={getRoleDashboardPath(session.role)} className="flex items-center">
+            <img
+              src="/linkwe-new-logo-light-2.png"
+              alt="LinkWe"
+              className="h-8 w-auto object-contain"
+            />
           </Link>
           <span className="text-lg leading-none" style={{ color: "#D4450A" }}>
             ·

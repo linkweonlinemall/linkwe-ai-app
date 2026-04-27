@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useTransition, useState, type ChangeEvent } from "react";
-import { addStoreImageClient, removeStoreImageClient } from "@/app/actions/store";
+import { useRef, useTransition, useState, type ChangeEvent, type DragEvent } from "react";
+import { addStoreImageClient, removeStoreImageClient, reorderStoreGallery } from "@/app/actions/store";
 
 type GalleryImage = { id: string; url: string; position: number };
 
@@ -13,6 +13,8 @@ type Props = {
 export default function GalleryUpload({ images: initialImages, slotsAvailable: initialSlots }: Props) {
   const [isPending, startTransition] = useTransition();
   const [images, setImages] = useState<GalleryImage[]>(initialImages);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const slotsAvailable = 10 - images.length;
@@ -53,6 +55,35 @@ export default function GalleryUpload({ images: initialImages, slotsAvailable: i
     });
   }
 
+  function handleDragStart(index: number) {
+    setDragIndex(index);
+  }
+
+  function handleDragOver(e: DragEvent, index: number) {
+    e.preventDefault();
+    setDragOverIndex(index);
+  }
+
+  function handleDrop(index: number) {
+    if (dragIndex === null || dragIndex === index) {
+      setDragIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+    const newImages = [...images];
+    const [moved] = newImages.splice(dragIndex, 1);
+    newImages.splice(index, 0, moved);
+    setImages(newImages);
+    setDragIndex(null);
+    setDragOverIndex(null);
+    void reorderStoreGallery(newImages.map((img) => img.id));
+  }
+
+  function handleDragEnd() {
+    setDragIndex(null);
+    setDragOverIndex(null);
+  }
+
   return (
     <div className="border-t border-zinc-100 pt-6 mt-2">
       <h2 className="text-sm font-semibold text-zinc-900">Store gallery</h2>
@@ -63,15 +94,44 @@ export default function GalleryUpload({ images: initialImages, slotsAvailable: i
 
       {images.length > 0 ? (
         <div className="mt-4 grid grid-cols-3 gap-3">
-          {images.map((image) => (
-            <div key={image.id} className="flex flex-col gap-2">
-              <img
-                alt=""
-                className="aspect-square w-full rounded-lg border border-zinc-200 object-cover"
-                src={image.url}
-              />
+          {images.map((image, i) => (
+            <div
+              key={image.id}
+              draggable
+              onDragStart={() => handleDragStart(i)}
+              onDragOver={(e) => handleDragOver(e, i)}
+              onDrop={() => handleDrop(i)}
+              onDragEnd={handleDragEnd}
+              className={`flex flex-col gap-2 cursor-grab transition-all
+                active:cursor-grabbing
+                ${dragOverIndex === i && dragIndex !== i ? "ring-2 ring-[#D4450A] scale-105 rounded-lg" : ""}
+                ${dragIndex === i ? "opacity-50" : "opacity-100"}`}
+            >
+              <div className="relative">
+                <img
+                  alt=""
+                  className="aspect-square w-full rounded-lg border border-zinc-200 object-cover"
+                  src={image.url}
+                />
+                {i === 0 && (
+                  <span className="absolute bottom-0 left-0 right-0 rounded-b-lg bg-[#D4450A]/80 py-0.5 text-center text-[10px] text-white">
+                    Featured
+                  </span>
+                )}
+                <div className="absolute top-1 left-1 flex h-5 w-5 items-center justify-center rounded bg-black/40">
+                  <svg width="8" height="8" viewBox="0 0 10 10" fill="white">
+                    <circle cx="3" cy="2" r="1" />
+                    <circle cx="7" cy="2" r="1" />
+                    <circle cx="3" cy="5" r="1" />
+                    <circle cx="7" cy="5" r="1" />
+                    <circle cx="3" cy="8" r="1" />
+                    <circle cx="7" cy="8" r="1" />
+                  </svg>
+                </div>
+              </div>
               <button
-                className="w-full rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100 disabled:opacity-50"
+                className="w-full rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium
+                  text-zinc-700 hover:bg-zinc-100 disabled:opacity-50"
                 disabled={isPending}
                 onClick={() => handleRemove(image.id)}
                 type="button"

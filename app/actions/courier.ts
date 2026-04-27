@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/current-user";
+import { getSession } from "@/lib/auth/session";
 
 export type CourierOnboardingFormState = { error?: string };
 
@@ -10,17 +11,34 @@ export type CourierOnboardingBootstrap = {
   id: string;
   region: string | null;
   phone: string | null;
+  vehicleType: string | null;
+  courierBio: string | null;
   courierOnboardingStep: number;
 };
 
 /** Loads signed-in courier fields for the onboarding client page (no extra routes). */
 export async function readCourierOnboardingBootstrap(): Promise<CourierOnboardingBootstrap | null> {
-  const user = await getCurrentUser();
+  const session = await getSession();
+  if (!session?.userId) return null;
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: {
+      id: true,
+      role: true,
+      region: true,
+      phone: true,
+      vehicleType: true,
+      courierBio: true,
+      courierOnboardingStep: true,
+    },
+  });
   if (!user || user.role !== "COURIER") return null;
   return {
     id: user.id,
     region: user.region,
     phone: user.phone,
+    vehicleType: user.vehicleType,
+    courierBio: user.courierBio,
     courierOnboardingStep: user.courierOnboardingStep,
   };
 }
@@ -39,7 +57,7 @@ function isValidCourierPhone(phone: string): boolean {
 
 /**
  * Persists courier onboarding for the signed-in user (userId in form must match session).
- * Step 1: region. Step 2: phone. Vehicle type and bio are not persisted (no User fields).
+ * Step 1: region and vehicleType. Step 2: phone and courierBio.
  */
 export async function saveCourierOnboardingStep(
   _prev: CourierOnboardingFormState,
@@ -58,11 +76,13 @@ export async function saveCourierOnboardingStep(
     if (!region) {
       return { error: "Please choose an operating region." };
     }
+    const vehicleType = String(formData.get("vehicleType") ?? "").trim() || null;
 
     await prisma.user.update({
       where: { id: user.id },
       data: {
         region,
+        vehicleType,
         courierOnboardingStep: 1,
       },
     });
@@ -79,12 +99,14 @@ export async function saveCourierOnboardingStep(
     if (!phone || !isValidCourierPhone(phone)) {
       return { error: "Please enter a valid phone number" };
     }
+    const courierBio = String(formData.get("courierBio") ?? "").trim() || null;
 
     try {
       await prisma.user.update({
         where: { id: user.id },
         data: {
           phone,
+          courierBio,
           courierOnboardingStep: 2,
         },
       });

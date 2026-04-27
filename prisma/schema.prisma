@@ -20,6 +20,8 @@ model User {
   idVerificationStatus IdVerificationStatus @default(UNSUBMITTED) @map("id_verification_status")
   /// Courier orientation: 0 = not started, 1 = step 1 done, 2 = both steps done (Phase A).
   courierOnboardingStep Int                  @default(0) @map("courier_onboarding_step")
+  vehicleType            String?
+  courierBio            String?
   isActive               Boolean                @default(true) @map("is_active")
   createdAt              DateTime               @default(now()) @map("created_at")
   updatedAt              DateTime               @updatedAt @map("updated_at")
@@ -39,6 +41,7 @@ model User {
   courierPayoutRequests CourierPayoutRequest[] @relation("CourierPayouts")
   courierLocation       CourierLocation?       @relation("CourierLocation")
   productCartItems      ProductCartItem[]
+  vendorChats           VendorChat[]
 
   @@index([email])
   @@index([createdAt])
@@ -1742,4 +1745,27 @@ model StoreContentRelationship {
   @@index([requestingStoreId])
   @@index([targetStoreId])
   @@index([status])
+}
+
+model VendorChat {
+  id        String              @id @default(cuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String              @default("New conversation")
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  messages  VendorChatMessage[]
+
+  @@index([userId])
+}
+
+model VendorChatMessage {
+  id        String     @id @default(cuid())
+  chatId    String
+  chat      VendorChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  role      String
+  content   String     @db.Text
+  createdAt DateTime   @default(now())
+
+  @@index([chatId])
 }

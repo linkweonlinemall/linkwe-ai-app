@@ -25,7 +25,13 @@ export default async function CourierDashboardPage() {
 
   const courier = await prisma.user.findUnique({
     where: { id: courierId },
-    select: { fullName: true, region: true },
+    select: {
+      fullName: true,
+      region: true,
+      vehicleType: true,
+      courierBio: true,
+      phone: true,
+    },
   });
 
   const courierRegion = courier?.region ?? null;
@@ -115,6 +121,9 @@ export default async function CourierDashboardPage() {
         availablePickups={sortedAvailablePickups}
         myActivePickups={myActivePickups}
         completedPickups={completedPickups}
+        vehicleType={courier?.vehicleType ?? null}
+        courierBio={courier?.courierBio ?? null}
+        phone={courier?.phone ?? null}
       />
     </div>
   );

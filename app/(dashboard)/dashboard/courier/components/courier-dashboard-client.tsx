@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { updateCourierProfile } from "@/app/actions/courier-profile";
 import { setCourierInactive, updateCourierLocation } from "@/app/actions/courier-location";
 import { claimPickup, markPickedUp } from "@/app/actions/courier-ops";
 import CourierEarnings from "./courier-earnings";
@@ -58,6 +59,9 @@ type Props = {
   availablePickups: PickupShipment[];
   myActivePickups: PickupShipment[];
   completedPickups: CompletedShipment[];
+  vehicleType: string | null;
+  courierBio: string | null;
+  phone: string | null;
 };
 
 type TabId = "available" | "active" | "completed" | "earnings";
@@ -118,8 +122,14 @@ export default function CourierDashboardClient({
   availablePickups,
   myActivePickups,
   completedPickups,
+  vehicleType,
+  courierBio,
+  phone,
 }: Props) {
   const [tab, setTab] = useState<TabId>("available");
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [profileSuccess, setProfileSuccess] = useState(false);
 
   useEffect(() => {
     if (myActivePickups.length === 0) return;
@@ -217,6 +227,97 @@ export default function CourierDashboardClient({
       </div>
 
       <div className="mx-auto max-w-4xl px-4 py-6">
+        <div className="mb-4 rounded-xl border border-zinc-200 bg-white p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-zinc-900">Courier profile</h2>
+            <button
+              type="button"
+              onClick={() => setEditingProfile((v) => !v)}
+              className="text-xs text-zinc-500 underline hover:text-zinc-800"
+            >
+              {editingProfile ? "Cancel" : "Edit"}
+            </button>
+          </div>
+
+          {!editingProfile ? (
+            <div className="space-y-2 text-sm text-zinc-700">
+              <div className="flex gap-2">
+                <span className="w-24 shrink-0 text-zinc-400">Vehicle</span>
+                <span>{vehicleType ?? "Not set"}</span>
+              </div>
+              <div className="flex gap-2">
+                <span className="w-24 shrink-0 text-zinc-400">Phone</span>
+                <span>{phone ?? "Not set"}</span>
+              </div>
+              <div className="flex gap-2">
+                <span className="w-24 shrink-0 text-zinc-400">Bio</span>
+                <span>{courierBio ?? "Not set"}</span>
+              </div>
+            </div>
+          ) : (
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setSaving(true);
+                const fd = new FormData(e.currentTarget);
+                const result = await updateCourierProfile(fd);
+                setSaving(false);
+                if (result.ok) {
+                  setProfileSuccess(true);
+                  setEditingProfile(false);
+                  setTimeout(() => setProfileSuccess(false), 3000);
+                }
+              }}
+              className="space-y-3"
+            >
+              <div>
+                <label className="text-xs font-medium text-zinc-600">Vehicle type</label>
+                <select
+                  name="vehicleType"
+                  defaultValue={vehicleType ?? ""}
+                  className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+                >
+                  <option value="">Select vehicle</option>
+                  <option value="Car">Car</option>
+                  <option value="Motorcycle">Motorcycle</option>
+                  <option value="Van">Van</option>
+                  <option value="Truck">Truck</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-zinc-600">Phone</label>
+                <input
+                  name="phone"
+                  defaultValue={phone ?? ""}
+                  placeholder="+1 868 XXX XXXX"
+                  className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-zinc-600">Bio</label>
+                <textarea
+                  name="courierBio"
+                  defaultValue={courierBio ?? ""}
+                  placeholder="Tell customers about yourself..."
+                  rows={3}
+                  className="mt-1 w-full resize-none rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={saving}
+                className="rounded-lg bg-[#D4450A] px-4 py-2 text-sm text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {saving ? "Saving..." : "Save profile"}
+              </button>
+            </form>
+          )}
+
+          {profileSuccess && !editingProfile ? (
+            <p className="mt-3 text-xs text-green-600">Profile updated successfully.</p>
+          ) : null}
+        </div>
+
         <div className="mb-6 rounded-xl border border-zinc-200/60 bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>

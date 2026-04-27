@@ -5,6 +5,8 @@ import type { ProductCondition, WeightUnit } from "@prisma/client";
 
 import type { ProductFieldErrors } from "@/app/actions/product";
 import { updateProduct } from "@/app/actions/product";
+import DraggableImageGrid from "@/components/vendor/draggable-image-grid";
+import { reorderProductImages } from "@/app/actions/ai-vendor-image";
 import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
@@ -291,25 +293,28 @@ export function ProductEditForm({ product }: { product: VendorProductEditPayload
             Images
           </h2>
           <div className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              {remainingImages.map((url) => (
-                <div key={url} className="relative h-16 w-16">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt="" className="h-full w-full rounded-lg object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => removeExisting(url)}
-                    className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-zinc-900 text-xs text-white hover:bg-red-600"
-                    aria-label="Remove image"
-                  >
-                    ×
-                  </button>
+            <div className="space-y-2">
+              <DraggableImageGrid
+                images={remainingImages}
+                onReorder={async (newImages) => {
+                  setRemainingImages(newImages);
+                  await reorderProductImages(product.id, newImages);
+                }}
+                onRemove={(url) => removeExisting(url)}
+              />
+              {previews.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {previews.map((p) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={p.url}
+                      src={p.url}
+                      alt={p.name}
+                      className="h-16 w-16 rounded-lg object-cover ring-2 ring-[#E8820C]"
+                    />
+                  ))}
                 </div>
-              ))}
-              {previews.map((p) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={p.url} src={p.url} alt={p.name} className="h-16 w-16 rounded-lg object-cover ring-2 ring-[#E8820C]" />
-              ))}
+              )}
             </div>
             <Input
               accept="image/jpeg,image/png,image/webp"

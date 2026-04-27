@@ -3,7 +3,15 @@ import { notFound } from "next/navigation";
 
 import PublicNav from "@/components/layout/PublicNav";
 import StorefrontTabs from "@/components/storefront/StorefrontTabs";
+import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+
+function getDashboardPath(role: string) {
+  if (role === "VENDOR") return "/dashboard/vendor";
+  if (role === "COURIER") return "/dashboard/courier";
+  if (role === "ADMIN") return "/dashboard/admin";
+  return "/dashboard/customer";
+}
 
 type TimeSlot = { from: string; to: string };
 type DaySchedule = { closed: boolean; allDay: boolean; slots: TimeSlot[] };
@@ -34,6 +42,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function PublicStorePage({ params }: Props) {
+  const session = await getSession();
+  const navUser = session
+    ? await prisma.user.findUnique({ where: { id: session.userId } })
+    : null;
+  const continueHref = navUser ? getDashboardPath(navUser.role) : null;
+
   const { slug } = await params;
   const normalized = slug.trim().toLowerCase();
   if (!normalized) {
@@ -130,7 +144,15 @@ export default async function PublicStorePage({ params }: Props) {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "var(--surface)" }}>
-      <PublicNav />
+      <PublicNav
+        transparent
+        user={
+          navUser
+            ? { name: navUser.fullName ?? "Account", href: continueHref! }
+            : null
+        }
+        dashboardHref={continueHref ?? undefined}
+      />
 
       <section className="relative w-full" style={{ height: "clamp(180px, 28vw, 320px)" }}>
         {store.coverPhotoUrl ? (

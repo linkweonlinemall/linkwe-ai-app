@@ -13,7 +13,7 @@ export default function CartProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     void getCart().then((rows) => {
-      const items: CartItem[] = rows.map((row) => ({
+      const items: CartItem[] = (rows ?? []).map((row) => ({
         id: row.id,
         productId: row.productId,
         quantity: row.quantity,

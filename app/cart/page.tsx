@@ -2,8 +2,23 @@ import Link from "next/link";
 
 import { getCart, removeFromCart, updateCartQuantity } from "@/app/actions/cart";
 import PublicNav from "@/components/layout/PublicNav";
+import { getSession } from "@/lib/auth/session";
+import { prisma } from "@/lib/prisma";
+
+function getDashboardPath(role: string) {
+  if (role === "VENDOR") return "/dashboard/vendor";
+  if (role === "COURIER") return "/dashboard/courier";
+  if (role === "ADMIN") return "/dashboard/admin";
+  return "/dashboard/customer";
+}
 
 export default async function CartPage() {
+  const session = await getSession();
+  const user = session
+    ? await prisma.user.findUnique({ where: { id: session.userId } })
+    : null;
+  const continueHref = user ? getDashboardPath(user.role) : null;
+
   const rows = await getCart();
   const items = rows.map((row) => ({
     id: row.id,
@@ -17,7 +32,10 @@ export default async function CartPage() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
-      <PublicNav />
+      <PublicNav
+        user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null}
+        dashboardHref={continueHref ?? undefined}
+      />
 
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         <div className="mb-6 flex flex-col gap-3 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between">

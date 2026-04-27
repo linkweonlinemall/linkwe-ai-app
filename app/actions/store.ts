@@ -366,3 +366,35 @@ export async function removeStoreImageClient(formData: FormData): Promise<{ ok: 
   await prisma.storeImage.delete({ where: { id: imageId } });
   return { ok: true };
 }
+
+export async function reorderStoreGallery(
+  imageIds: string[]
+): Promise<{ ok: boolean; error?: string }> {
+  const session = await getSession();
+  if (!session || session.role !== "VENDOR") {
+    return { ok: false, error: "Unauthorized" };
+  }
+  const store = await prisma.store.findFirst({
+    where: { ownerId: session.userId },
+    select: { id: true },
+  });
+  if (!store) return { ok: false, error: "No store found" };
+
+  const owned = await prisma.storeImage.findMany({
+    where: { storeId: store.id, id: { in: imageIds } },
+    select: { id: true },
+  });
+  if (owned.length !== imageIds.length) {
+    return { ok: false, error: "Invalid image list" };
+  }
+
+  await Promise.all(
+    imageIds.map((id, index) =>
+      prisma.storeImage.update({
+        where: { id },
+        data: { position: index },
+      })
+    )
+  );
+  return { ok: true };
+}
