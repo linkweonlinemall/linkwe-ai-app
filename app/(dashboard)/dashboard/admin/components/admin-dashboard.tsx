@@ -2,6 +2,8 @@
 
 import type { ReactNode } from "react";
 import { Fragment, useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { logoutAction } from "@/app/(auth)/auth-actions";
 
@@ -142,6 +144,8 @@ type Props = {
 };
 
 export default function AdminDashboard({ adminName }: Props) {
+  const pathname = usePathname();
+  const productsNavActive = pathname?.startsWith("/dashboard/admin/products") ?? false;
   const [activeTab, setActiveTab] = useState<TabId>("overview");
 
   useEffect(() => {
@@ -226,6 +230,33 @@ export default function AdminDashboard({ adminName }: Props) {
               </Fragment>
             );
           })}
+          <div className="mx-1 h-5 w-px shrink-0 bg-zinc-200" aria-hidden />
+          <Link
+            href="/dashboard/admin/products"
+            className="flex shrink-0 items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-150 relative"
+            style={{
+              color: productsNavActive ? "var(--scarlet)" : "var(--text-muted)",
+              borderBottom: productsNavActive
+                ? "2px solid var(--scarlet)"
+                : "2px solid transparent",
+            }}
+          >
+            <svg
+              className="h-4 w-4 shrink-0"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden
+            >
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <path d="M16 10a4 4 0 0 1-8 0" />
+            </svg>
+            Products
+          </Link>
         </div>
       </nav>
 

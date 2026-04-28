@@ -61,17 +61,6 @@ export async function POST(req: NextRequest) {
         controller.enqueue(encoder.encode(`data: ${data}\n\n`))
       }
 
-      const streamTextDeltas = async (s: AsyncIterable<Anthropic.MessageStreamEvent>) => {
-        for await (const event of s) {
-          if (
-            event.type === "content_block_delta" &&
-            event.delta.type === "text_delta"
-          ) {
-            send(JSON.stringify({ text: event.delta.text }))
-          }
-        }
-      }
-
       try {
         const lastUserMessage = [...messages]
           .reverse()
@@ -101,12 +90,23 @@ export async function POST(req: NextRequest) {
             })
 
             if (results.length > 0) {
+              const productSummary = results
+                .map(
+                  (p) =>
+                    `- ${p.name} | TTD ${p.price} | Store: ${p.storeName} | ID: ${p.id} | Slug: ${p.slug} | Images: ${p.images.slice(0, 1).join("")} | Category: ${p.category ?? ""} | Stock: ${p.stock ?? "unlimited"} | Region: ${p.storeRegion}`
+                )
+                .join("\n")
+
               productContext = `
 
-AVAILABLE PRODUCTS FOR THIS QUERY:
-${JSON.stringify(results, null, 2)}
+PRODUCTS FOUND FOR THIS QUERY:
+${productSummary}
 
-When showing these products to the customer, format them using the products code block as instructed.`
+To display these products use the products code block with this exact structure:
+\`\`\`products
+[{"id":"PRODUCT_ID","name":"PRODUCT_NAME","slug":"PRODUCT_SLUG","price":PRICE,"images":["IMAGE_URL"],"category":"CATEGORY","stock":STOCK,"storeName":"STORE_NAME","storeSlug":"STORE_SLUG","storeRegion":"REGION"}]
+\`\`\`
+Fill in the values from the products listed above.`
             }
           } catch (searchErr) {
             console.error("Search error:", searchErr)
@@ -115,7 +115,7 @@ When showing these products to the customer, format them using the products code
 
         const systemWithContext = LINKWE_SYSTEM_PROMPT + productContext
 
-        const cleanMessages = messages
+        const cleanMessages: Anthropic.MessageParam[] = messages
           .filter((m) => m.role === "user" || m.role === "assistant")
           .filter((m) => {
             if (typeof m.content === "string") return m.content.length > 0
@@ -127,112 +127,91 @@ When showing these products to the customer, format them using the products code
             content: m.content as Anthropic.MessageParam["content"],
           }))
 
-        const response = await client.messages.create({
-          model: "claude-sonnet-4-5",
-          max_tokens: 1024,
-          system: systemWithContext,
-          tools: [ADD_TO_CART_TOOL],
-          tool_choice: { type: "auto" },
-          messages: cleanMessages,
-        })
+        let currentMessages: Anthropic.MessageParam[] = [...cleanMessages]
+        let continueLoop = true
 
-        if (response.stop_reason === "tool_use") {
-          const toolBlock = response.content.find(
-            (b) => b.type === "tool_use"
-          ) as Anthropic.ToolUseBlock | undefined
+        while (continueLoop) {
+          const response = await client.messages.create({
+            model: "claude-sonnet-4-5",
+            max_tokens: 1024,
+            system: systemWithContext,
+            tools: [ADD_TO_CART_TOOL],
+            tool_choice: { type: "auto" },
+            messages: currentMessages,
+          })
 
-          if (toolBlock && toolBlock.name === "add_to_cart") {
-            const input = toolBlock.input as {
-              product_id?: string
-              quantity?: number
+          if (response.stop_reason === "tool_use") {
+            const toolBlocks = response.content.filter(
+              (b): b is Anthropic.ToolUseBlock => b.type === "tool_use"
+            )
+
+            if (toolBlocks.length === 0) {
+              continueLoop = false
+              break
             }
 
-            let toolResultContent: string
-
-            if (!input?.product_id || typeof input.product_id !== "string") {
-              toolResultContent = JSON.stringify({
-                ok: false,
-                error: "product_id is required to add a product to the cart.",
-              })
-            } else {
-              try {
-                const result = await addToCart(
-                  input.product_id,
-                  input.quantity != null && Number.isFinite(input.quantity)
-                    ? input.quantity
-                    : 1
-                )
-                if (result.ok) {
-                  toolResultContent = JSON.stringify({ ok: true })
-                } else {
-                  toolResultContent = JSON.stringify(
-                    mapCartError(result.error)
-                  )
+            const toolResultBlocks: Anthropic.ToolResultBlockParam[] = []
+            for (const toolBlock of toolBlocks) {
+              if (toolBlock.name === "add_to_cart") {
+                const input = toolBlock.input as {
+                  product_id?: string
+                  quantity?: number
                 }
-              } catch {
-                toolResultContent = JSON.stringify({
-                  ok: false,
-                  error: "Could not add to cart. Please try again.",
+                let toolResultContent: string
+                if (!input?.product_id || typeof input.product_id !== "string") {
+                  toolResultContent = JSON.stringify({
+                    ok: false,
+                    error: "product_id is required",
+                  })
+                } else {
+                  try {
+                    const result = await addToCart(
+                      input.product_id,
+                      input.quantity != null && Number.isFinite(input.quantity)
+                        ? input.quantity
+                        : 1
+                    )
+                    toolResultContent = result.ok
+                      ? JSON.stringify({ ok: true })
+                      : JSON.stringify(mapCartError(result.error))
+                  } catch {
+                    toolResultContent = JSON.stringify({
+                      ok: false,
+                      error: "Could not add to cart. Please try again.",
+                    })
+                  }
+                }
+                toolResultBlocks.push({
+                  type: "tool_result" as const,
+                  tool_use_id: toolBlock.id,
+                  content: toolResultContent,
+                })
+              } else {
+                toolResultBlocks.push({
+                  type: "tool_result" as const,
+                  tool_use_id: toolBlock.id,
+                  content: JSON.stringify({
+                    ok: false,
+                    error: "That action is not available.",
+                  }),
                 })
               }
             }
 
-            const followUp = client.messages.stream({
-              model: "claude-sonnet-4-5",
-              max_tokens: 1024,
-              system: systemWithContext,
-              messages: [
-                ...cleanMessages,
-                { role: "assistant" as const, content: response.content.filter((b) => b.type === "tool_use") },
-                {
-                  role: "user" as const,
-                  content: [
-                    {
-                      type: "tool_result" as const,
-                      tool_use_id: toolBlock.id,
-                      content: toolResultContent,
-                    },
-                  ],
-                },
-              ],
-            })
-
-            await streamTextDeltas(followUp)
-          } else if (toolBlock) {
-            const unsupported = client.messages.stream({
-              model: "claude-sonnet-4-5",
-              max_tokens: 1024,
-              system: systemWithContext,
-              messages: [
-                ...cleanMessages,
-                { role: "assistant" as const, content: response.content },
-                {
-                  role: "user" as const,
-                  content: [
-                    {
-                      type: "tool_result" as const,
-                      tool_use_id: toolBlock.id,
-                      content: JSON.stringify({
-                        ok: false,
-                        error: "That action is not available.",
-                      }),
-                    },
-                  ],
-                },
-              ],
-            })
-            await streamTextDeltas(unsupported)
+            currentMessages = [
+              ...currentMessages,
+              {
+                role: "assistant" as const,
+                content: response.content.filter((b) => b.type === "tool_use"),
+              },
+              { role: "user" as const, content: toolResultBlocks },
+            ]
           } else {
+            continueLoop = false
             for (const block of response.content) {
               if (block.type === "text") {
                 send(JSON.stringify({ text: block.text }))
               }
-            }
-          }
-        } else {
-          for (const block of response.content) {
-            if (block.type === "text") {
-              send(JSON.stringify({ text: block.text }))
             }
           }
         }

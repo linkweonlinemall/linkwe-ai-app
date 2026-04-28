@@ -1,13 +1,20 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback, type ChangeEvent, type Dispatch, type KeyboardEvent, type SetStateAction } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import type { MessageParam } from "@anthropic-ai/sdk/resources/messages"
 import ReactMarkdown, { type Components } from "react-markdown"
-import { addToCart, getCart } from "@/app/actions/cart"
-import { useChat } from "@/lib/chat/useChat"
 import { useCartStore } from "@/lib/cart/cart-store"
-import type { ChatProduct } from "@/lib/chat/types"
+import { addToCart, getCart } from "@/app/actions/cart"
+import {
+  createVendorChat,
+  getVendorChats,
+  getVendorChatMessages,
+  saveVendorChatMessage,
+} from "@/app/actions/vendor-chat"
+import { parseAssistantMessage } from "@/lib/chat/parseMessage"
+import type { ChatMessage, ChatProduct } from "@/lib/chat/types"
 import type { CartItem } from "@/lib/cart/cart-store"
 
 const SUGGESTIONS = [
@@ -52,6 +59,188 @@ function mapRows(rows: Awaited<ReturnType<typeof getCart>>): CartItem[] {
       store: row.product.store,
     },
   }))
+}
+
+type ValidImageMedia = "image/jpeg" | "image/png" | "image/gif" | "image/webp"
+
+function parseDataUrlForImage(
+  imageDataUrl: string
+): { data: string; media_type: ValidImageMedia } {
+  const [header, data] = imageDataUrl.split(",")
+  const mediaType = header?.match(/:(.*?);/)?.[1] ?? "image/jpeg"
+  const validTypes: ValidImageMedia[] = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+  const safeType = validTypes.includes(mediaType as ValidImageMedia)
+    ? (mediaType as ValidImageMedia)
+    : "image/jpeg"
+  return { data: data ?? "", media_type: safeType }
+}
+
+function chatMessageToApiParam(m: ChatMessage): MessageParam {
+  if (m.role === "user" && m.imagePreview) {
+    const { data, media_type } = parseDataUrlForImage(m.imagePreview)
+    return {
+      role: "user",
+      content: [
+        {
+          type: "image",
+          source: { type: "base64", media_type, data },
+        },
+        { type: "text", text: m.content },
+      ],
+    }
+  }
+  if (m.role === "user") {
+    return { role: "user", content: m.content }
+  }
+  return { role: "assistant", content: m.content }
+}
+
+function usePersistedChat(
+  isLoggedIn: boolean,
+  chatId: string | null,
+  setChatId: (id: string | null) => void,
+  setChatList: Dispatch<SetStateAction<{ id: string; title: string; createdAt: Date | string }[]>>,
+  setItems: (items: CartItem[]) => void
+) {
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+
+  const sendMessage = useCallback(
+    async (content: string, imageDataUrl?: string) => {
+      let resolvedChatId: string | null = chatId
+      if (isLoggedIn) {
+        if (!resolvedChatId) {
+          const { id } = await createVendorChat(content)
+          resolvedChatId = id
+          setChatId(id)
+          const list = await getVendorChats()
+          setChatList(list)
+        }
+        await saveVendorChatMessage(resolvedChatId, "user", content)
+      }
+
+      const userMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content,
+        imagePreview: imageDataUrl,
+      }
+
+      const assistantId = crypto.randomUUID()
+      const assistantMessage: ChatMessage = {
+        id: assistantId,
+        role: "assistant",
+        content: "",
+        isStreaming: true,
+      }
+
+      setMessages((prev) => [...prev, userMessage, assistantMessage])
+      setIsLoading(true)
+
+      let newUserApi: MessageParam
+      if (imageDataUrl) {
+        const { data, media_type } = parseDataUrlForImage(imageDataUrl)
+        newUserApi = {
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: { type: "base64", media_type, data },
+            },
+            { type: "text", text: content },
+          ],
+        }
+      } else {
+        newUserApi = { role: "user", content }
+      }
+
+      const apiMessages: MessageParam[] = [...messages.map((m) => chatMessageToApiParam(m)), newUserApi]
+
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: apiMessages }),
+        })
+
+        const reader = res.body?.getReader()
+        const decoder = new TextDecoder()
+        let fullContent = ""
+
+        stream: while (reader) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          const chunk = decoder.decode(value)
+          const lines = chunk.split("\n")
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue
+            const data = line.slice(6)
+            if (data === "[DONE]") break stream
+
+            try {
+              const parsed = JSON.parse(data) as { text?: string; error?: string }
+              if (parsed.error) {
+                console.error("Chat error from API:", parsed.error)
+                break stream
+              }
+              if (parsed.text) {
+                fullContent += parsed.text
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantId
+                      ? {
+                          ...m,
+                          content: fullContent,
+                          segments: parseAssistantMessage(fullContent),
+                        }
+                      : m
+                  )
+                )
+              }
+            } catch {
+              // skip malformed chunk
+            }
+          }
+        }
+
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? {
+                  ...m,
+                  content: fullContent,
+                  segments: parseAssistantMessage(fullContent),
+                  isStreaming: false,
+                }
+              : m
+          )
+        )
+
+        if (isLoggedIn && resolvedChatId && fullContent) {
+          await saveVendorChatMessage(resolvedChatId, "assistant", fullContent)
+        }
+
+        if (
+          fullContent.toLowerCase().includes("added") &&
+          fullContent.toLowerCase().includes("cart")
+        ) {
+          try {
+            const cartItems = await getCart()
+            setItems(mapRows(cartItems))
+          } catch {}
+        }
+      } catch (err) {
+        console.error("Chat error:", err)
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [messages, isLoggedIn, chatId, setChatId, setChatList, setItems]
+  )
+
+  return { messages, isLoading, sendMessage, setMessages }
 }
 
 function ProductCard({ product }: { product: ChatProduct }) {
@@ -172,8 +361,33 @@ function TypingIndicator() {
   )
 }
 
-export default function ShoppingChat() {
-  const { messages, isLoading, sendMessage } = useChat()
+type ShoppingChatProps = {
+  initialChatList?: { id: string; title: string; createdAt: Date | string }[]
+  isLoggedIn?: boolean
+}
+
+export default function ShoppingChat({
+  initialChatList = [],
+  isLoggedIn = false,
+}: ShoppingChatProps) {
+  const [chatId, setChatId] = useState<string | null>(null)
+  const [chatList, setChatList] = useState(initialChatList)
+  const [showHistory, setShowHistory] = useState(false)
+
+  useEffect(() => {
+    setChatList(initialChatList)
+  }, [initialChatList])
+
+  const setItems = useCartStore((s) => s.setItems)
+
+  const { messages, isLoading, sendMessage, setMessages } = usePersistedChat(
+    isLoggedIn,
+    chatId,
+    setChatId,
+    setChatList,
+    setItems
+  )
+
   const [input, setInput] = useState("")
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -184,7 +398,33 @@ export default function ShoppingChat() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, isLoading])
 
-  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+  async function openChat(id: string) {
+    const rows = await getVendorChatMessages(id)
+    setChatId(id)
+    const mapped: ChatMessage[] = []
+    for (const row of rows) {
+      if (row.role === "user") {
+        mapped.push({ id: crypto.randomUUID(), role: "user", content: row.content })
+      } else {
+        mapped.push({
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: row.content,
+          segments: parseAssistantMessage(row.content),
+        })
+      }
+    }
+    setMessages(mapped)
+    setShowHistory(false)
+  }
+
+  function handleNewChat() {
+    setChatId(null)
+    setMessages([])
+    setShowHistory(false)
+  }
+
+  function handleImageSelect(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -208,7 +448,7 @@ export default function ShoppingChat() {
     if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
-  function handleKey(e: React.KeyboardEvent) {
+  function handleKey(e: KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
       handleSend()
@@ -216,7 +456,65 @@ export default function ShoppingChat() {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col">
+      <div
+        className="flex shrink-0 items-center gap-2 border-b px-4 py-2"
+        style={{ borderColor: "var(--card-border)", backgroundColor: "var(--surface)" }}
+      >
+        {isLoggedIn ? (
+          <>
+            <button
+              type="button"
+              onClick={() => setShowHistory((s) => !s)}
+              className="rounded-lg border px-3 py-1.5 text-sm font-medium"
+              style={{ borderColor: "var(--card-border)", color: "var(--text-primary)" }}
+            >
+              {showHistory ? "Hide history" : "History"}
+            </button>
+            <button
+              type="button"
+              onClick={handleNewChat}
+              className="rounded-lg border px-3 py-1.5 text-sm font-medium"
+              style={{ borderColor: "var(--card-border)", color: "var(--text-primary)" }}
+            >
+              New chat
+            </button>
+          </>
+        ) : null}
+      </div>
+      <div className="flex min-h-0 flex-1">
+        {showHistory && isLoggedIn ? (
+          <div
+            className="w-56 max-w-[40%] shrink-0 overflow-y-auto border-r p-2 sm:w-64"
+            style={{ borderColor: "var(--card-border)", backgroundColor: "white" }}
+          >
+            {chatList.length === 0 ? (
+              <p className="px-2 text-xs" style={{ color: "var(--text-muted)" }}>
+                No past conversations yet
+              </p>
+            ) : (
+              chatList.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => void openChat(c.id)}
+                  className={
+                    c.id === chatId
+                      ? "mb-1 w-full rounded-lg bg-amber-50 px-2 py-2 text-left text-sm transition-colors"
+                      : "mb-1 w-full rounded-lg px-2 py-2 text-left text-sm transition-colors hover:bg-zinc-100"
+                  }
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  <div className="line-clamp-2 font-medium">{c.title}</div>
+                  <div className="text-[10px] text-zinc-500">
+                    {new Date(c.createdAt).toLocaleString()}
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        ) : null}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
         {/* Empty state */}
@@ -443,6 +741,8 @@ export default function ShoppingChat() {
               <polygon points="22 2 15 22 11 13 2 9 22 2" />
             </svg>
           </button>
+        </div>
+      </div>
         </div>
       </div>
     </div>

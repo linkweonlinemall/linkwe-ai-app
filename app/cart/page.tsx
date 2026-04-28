@@ -1,23 +1,17 @@
 import Link from "next/link";
 
 import { getCart, removeFromCart, updateCartQuantity } from "@/app/actions/cart";
-import PublicNav from "@/components/layout/PublicNav";
+import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-
-function getDashboardPath(role: string) {
-  if (role === "VENDOR") return "/dashboard/vendor";
-  if (role === "COURIER") return "/dashboard/courier";
-  if (role === "ADMIN") return "/dashboard/admin";
-  return "/dashboard/customer";
-}
+import PublicNav from "@/components/layout/PublicNav";
 
 export default async function CartPage() {
   const session = await getSession();
   const user = session
     ? await prisma.user.findUnique({ where: { id: session.userId } })
     : null;
-  const continueHref = user ? getDashboardPath(user.role) : null;
+  const continueHref = user ? getRoleDashboardPath(user.role) : null;
 
   const rows = await getCart();
   const items = rows.map((row) => ({

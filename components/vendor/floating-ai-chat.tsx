@@ -7,6 +7,7 @@ import {
   getVendorChats,
   getVendorChatMessages,
 } from "@/app/actions/vendor-chat"
+import { uploadVendorChatImages } from "@/app/actions/ai-vendor-image"
 
 async function compressImage(
   dataUrl: string,
@@ -66,6 +67,9 @@ type ChatMsg = {
   images?: string[]
 }
 
+const ACCEPT_CHAT_IMAGES =
+  "image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+
 export default function FloatingAIChat() {
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<ChatMsg[]>([
@@ -84,7 +88,9 @@ export default function FloatingAIChat() {
   >([])
   const [showHistory, setShowHistory] = useState(false)
   const [createdProductId, setCreatedProductId] = useState<string | null>(null)
-  const [attachedImages, setAttachedImages] = useState<string[]>([])
+  const [focusedProductId, setFocusedProductId] = useState<string | null>(
+    null
+  )
   const [attachedPreviews, setAttachedPreviews] = useState<string[]>([])
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -102,26 +108,63 @@ export default function FloatingAIChat() {
 
   const sendMessage = useCallback(
     async (text?: string) => {
-      const content = (text ?? input).trim()
-      if ((!content && attachedPreviews.length === 0) || loading) return
+      const rawText = text ?? input
+      const content = rawText.trim()
+      const previewSnapshot = [...attachedPreviews]
+      if ((!content && previewSnapshot.length === 0) || loading) return
+
+      let uploadedUrls: string[] = []
+      if (previewSnapshot.length > 0) {
+        const fd = new FormData()
+        for (let i = 0; i < previewSnapshot.length; i++) {
+          const dataUrl = previewSnapshot[i]!
+          const blob = await fetch(dataUrl).then((r) => r.blob())
+          const ext =
+            blob.type === "image/png"
+              ? "png"
+              : blob.type === "image/webp"
+                ? "webp"
+                : "jpg"
+          fd.append(
+            "images",
+            new File([blob], `photo-${i}.${ext}`, {
+              type: blob.type || "image/jpeg",
+            })
+          )
+        }
+        const uploadResult = await uploadVendorChatImages(fd)
+        if (!uploadResult.ok) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: Date.now().toString(),
+              role: "assistant",
+              content:
+                uploadResult.error ??
+                "Could not upload images. Use JPG, PNG, or WebP under 12MB.",
+            },
+          ])
+          return
+        }
+        uploadedUrls = uploadResult.urls
+      }
+
       setInput("")
+      setAttachedPreviews([])
       setLoading(true)
 
       const userMsg: ChatMsg = {
         id: Date.now().toString(),
         role: "user",
         content,
-        images:
-          attachedPreviews.length > 0 ? [...attachedPreviews] : undefined,
+        images: uploadedUrls.length > 0 ? uploadedUrls : undefined,
       }
       setMessages((prev) => [...prev, userMsg])
-      setAttachedPreviews([])
-      setAttachedImages([])
 
       const messageContent: ApiUserMessageContent =
-        userMsg.images && userMsg.images.length > 0
+        previewSnapshot.length > 0
           ? [
-              ...userMsg.images.map((dataUrl) => {
+              ...previewSnapshot.map((dataUrl) => {
                 const commaI = dataUrl.indexOf(",")
                 const meta = commaI >= 0 ? dataUrl.slice(0, commaI) : ""
                 const data = commaI >= 0 ? dataUrl.slice(commaI + 1) : dataUrl
@@ -184,7 +227,12 @@ export default function FloatingAIChat() {
         const res = await fetch("/api/vendor-ai", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: apiMessages }),
+          body: JSON.stringify({
+            messages: apiMessages,
+            focusProductId: focusedProductId ?? undefined,
+            uploadedImageUrls:
+              uploadedUrls.length > 0 ? uploadedUrls : undefined,
+          }),
         })
 
         const reader = res.body?.getReader()
@@ -194,7 +242,13 @@ export default function FloatingAIChat() {
         const assistantId = Date.now().toString() + "-a"
         setMessages((prev) => [
           ...prev,
-          { id: assistantId, role: "assistant", content: "" },
+          {
+            id: assistantId,
+            role: "assistant",
+            content: "",
+            images:
+              uploadedUrls.length > 0 ? [...uploadedUrls] : undefined,
+          },
         ])
 
         while (true) {
@@ -206,10 +260,22 @@ export default function FloatingAIChat() {
             const data = line.slice(6)
             if (data === "[DONE]") break
             try {
-              const parsed = JSON.parse(data)
-              if (parsed.productId) setCreatedProductId(parsed.productId)
-              if (parsed.text) {
-                assistantText += parsed.text
+              const parsed = JSON.parse(data) as {
+                productId?: string
+                focusProductId?: string
+                text?: string
+                galleryUpdate?: {
+                  productId: string
+                  images: string[]
+                }
+              }
+              if (parsed.productId) {
+                setCreatedProductId(parsed.productId)
+                setFocusedProductId(parsed.productId)
+              }
+              if (parsed.focusProductId)
+                setFocusedProductId(parsed.focusProductId)
+              if (parsed.text) {                assistantText += parsed.text
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === assistantId ? { ...m, content: assistantText } : m
@@ -243,7 +309,7 @@ export default function FloatingAIChat() {
         setTimeout(() => inputRef.current?.focus(), 50)
       }
     },
-    [input, loading, messages, chatId, attachedPreviews]
+    [input, loading, messages, chatId, attachedPreviews, focusedProductId]
   )
 
   return (
@@ -295,9 +361,9 @@ export default function FloatingAIChat() {
                   ])
                   setChatId(null)
                   setCreatedProductId(null)
+                  setFocusedProductId(null)
                   setInput("")
                   setAttachedPreviews([])
-                  setAttachedImages([])
                 }}
                 className="text-xs text-zinc-400 hover:text-white"
               >
@@ -386,6 +452,18 @@ export default function FloatingAIChat() {
                     className={`max-w-[85%] rounded-xl px-3 py-2 text-sm leading-relaxed
                     ${"rounded-bl-sm bg-zinc-800 text-zinc-200"}`}
                   >
+                    {m.images && m.images.length > 0 ? (
+                      <div className="mb-2 flex flex-wrap gap-1.5">
+                        {m.images.map((src, ii) => (
+                          <img
+                            key={src.slice(-24) + ii}
+                            src={src}
+                            alt=""
+                            className="h-20 w-20 rounded-lg object-cover ring-1 ring-zinc-700"
+                          />
+                        ))}
+                      </div>
+                    ) : null}
                     {m.content ||
                       (loading && m.role === "assistant" ? (
                         <span className="flex gap-1">
@@ -463,9 +541,6 @@ export default function FloatingAIChat() {
                         setAttachedPreviews((prev) =>
                           prev.filter((_, idx) => idx !== i)
                         )
-                        setAttachedImages((prev) =>
-                          prev.filter((_, idx) => idx !== i)
-                        )
                       }}
                       className="absolute -top-1 -right-1 flex h-3.5 w-3.5
                         items-center justify-center rounded-full bg-red-500
@@ -482,6 +557,7 @@ export default function FloatingAIChat() {
                 className="flex h-9 w-9 shrink-0 cursor-pointer
                   items-center justify-center rounded-xl bg-zinc-700
                   hover:bg-zinc-600"
+                title="Attach images (JPG, PNG, WebP)"
               >
                 <svg
                   width="16"
@@ -490,26 +566,29 @@ export default function FloatingAIChat() {
                   fill="none"
                   stroke="white"
                   strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
                 >
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <polyline points="21 15 16 10 5 21" />
+                  <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
                 </svg>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept={ACCEPT_CHAT_IMAGES}
                   multiple
                   className="hidden"
                   onChange={(e) => {
-                    const files = Array.from(e.target.files ?? [])
-                    for (const file of files) {
+                    const picked = Array.from(e.target.files ?? [])
+                    const ok = picked.filter((f) =>
+                      ["image/jpeg", "image/png", "image/webp"].includes(f.type)
+                    )
+                    for (const file of ok) {
                       const reader = new FileReader()
                       reader.onload = () => {
                         void (async () => {
                           const dataUrl = reader.result as string
                           const compressed = await compressImage(dataUrl)
                           setAttachedPreviews((prev) => [...prev, compressed])
-                          setAttachedImages((prev) => [...prev, compressed])
                         })()
                       }
                       reader.readAsDataURL(file)

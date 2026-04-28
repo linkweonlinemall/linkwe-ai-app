@@ -8,34 +8,40 @@ import { StorefrontMapAndProducts, type StorefrontProductRow } from "@/component
 
 const PLACEHOLDER_COLORS = ["#E8820C", "#1A7FB5", "#D4450A", "#15803D", "#7C3AED"] as const;
 
-type StoreTabProduct = StorefrontProductRow & { stock: number | null };
+type StoreTabProduct = StorefrontProductRow & {
+  stock: number | null;
+  compareAtPrice?: number | null;
+};
 
 function StoreTabProductCard({ product }: { product: StoreTabProduct }) {
   const [hovered, setHovered] = useState(false);
   const img = product.images[0];
   const bgColor = PLACEHOLDER_COLORS[product.name.length % PLACEHOLDER_COLORS.length];
+  const isLowStock = product.stock !== null && product.stock <= 5 && product.stock > 0;
+  const isOutOfStock = product.stock === 0;
+  const compareAt = product.compareAtPrice ?? null;
 
   return (
     <li className="h-full">
       <div
-        className="group relative flex flex-col overflow-hidden rounded-2xl bg-white transition-all duration-300"
+        className="group relative flex flex-col overflow-hidden rounded-2xl bg-white transition-all duration-300 h-full"
         style={{
           border: "1px solid var(--card-border)",
           boxShadow: hovered
-            ? "0 8px 30px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)"
-            : "0 1px 3px rgba(0,0,0,0.04)",
-          transform: hovered ? "translateY(-2px)" : "translateY(0)",
+            ? "0 12px 40px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.06)"
+            : "0 2px 8px rgba(0,0,0,0.06)",
+          transform: hovered ? "translateY(-4px)" : "translateY(0)",
         }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
         <div className="relative">
           <Link href={`/products/${product.slug}`} className="block">
-            <div className="relative overflow-hidden" style={{ aspectRatio: "4/3" }}>
+            <div className="relative overflow-hidden" style={{ aspectRatio: "1/1" }}>
               {img ? (
                 <img
-                  alt=""
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                  alt={product.name}
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
                   src={img}
                 />
               ) : (
@@ -44,40 +50,76 @@ function StoreTabProductCard({ product }: { product: StoreTabProduct }) {
                   style={{ backgroundColor: `${bgColor}12` }}
                 >
                   <div
-                    className="flex h-12 w-12 items-center justify-center rounded-xl text-lg font-bold text-white"
-                    style={{ backgroundColor: `${bgColor}30` }}
+                    className="flex h-14 w-14 items-center justify-center rounded-2xl text-xl font-bold text-white"
+                    style={{ backgroundColor: `${bgColor}40` }}
                   >
                     {product.name.charAt(0)}
                   </div>
                 </div>
               )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
           </Link>
+
+          {isLowStock && (
+            <div className="absolute top-2 left-2 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+              Only {product.stock} left
+            </div>
+          )}
+          {isOutOfStock && (
+            <div className="absolute top-2 left-2 bg-zinc-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+              Out of stock
+            </div>
+          )}
+
           <div
-            className={`absolute inset-0 flex items-end justify-center px-3 pb-3 transition-opacity duration-200 ${
-              hovered ? "pointer-events-auto" : "pointer-events-none"
-            }`}
-            style={{ opacity: hovered ? 1 : 0 }}
+            className="absolute inset-x-0 bottom-0 flex justify-center px-3 pb-3"
+            style={{
+              opacity: hovered ? 1 : 0,
+              transform: hovered ? "translateY(0)" : "translateY(8px)",
+              transition: "opacity 0.2s, transform 0.2s",
+              pointerEvents: hovered ? "auto" : "none",
+            }}
           >
-            <div
-              className="w-full max-w-[220px]"
-              style={{
-                transform: hovered ? "translateY(0)" : "translateY(8px)",
-                transition: "transform 0.2s",
-              }}
-            >
+            <div className="w-full max-w-[220px]">
               <AddToCartButton productId={product.id} stock={product.stock} />
             </div>
           </div>
         </div>
-        <Link href={`/products/${product.slug}`} className="flex flex-col gap-1 p-3.5 pt-3">
-          <p className="line-clamp-2 text-sm font-semibold leading-snug" style={{ color: "var(--text-primary)" }}>
-            {product.name}
-          </p>
-          <div className="mt-0.5 flex items-baseline justify-between">
-            <p className="text-lg font-bold" style={{ color: "var(--scarlet)" }}>
-              TTD {product.price.toFixed(2)}
+
+        <Link href={`/products/${product.slug}`} className="flex flex-col p-4 flex-1 bg-white">
+          {product.category ? (
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+              {product.category.replace(/_/g, " ")}
             </p>
+          ) : null}
+
+          <p className="mb-2 line-clamp-2 flex-1 text-sm font-semibold leading-snug text-zinc-900">{product.name}</p>
+
+          <div className="mt-auto flex items-center justify-between border-t border-zinc-100 pt-2">
+            <div>
+              <p className="text-base font-black" style={{ color: "var(--scarlet)" }}>
+                TTD {product.price.toFixed(2)}
+              </p>
+              {compareAt && compareAt > product.price ? (
+                <p className="-mt-0.5 text-xs text-zinc-400 line-through">TTD {compareAt.toFixed(2)}</p>
+              ) : null}
+            </div>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#D4450A]/10 transition-colors duration-200 group-hover:bg-[#D4450A]">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                className="text-[#D4450A] group-hover:text-white transition-colors duration-200"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </div>
           </div>
         </Link>
       </div>
@@ -129,6 +171,10 @@ export default function StorefrontTabs({
   const [activeTab, setActiveTab] = useState<TabId>("about");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
+  const [sortBy, setSortBy] = useState("default");
+  const [inStockOnly, setInStockOnly] = useState(false);
   const [showShareSheet, setShowShareSheet] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -182,16 +228,26 @@ export default function StorefrontTabs({
 
   const filteredProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return products.filter((p) => {
-      const nameOk = q === "" || p.name.toLowerCase().includes(q);
+    let result = products.filter((p) => {
+      const nameOk =
+        !q ||
+        p.name.toLowerCase().includes(q) ||
+        (p.category?.toLowerCase() ?? "").includes(q);
       const catOk = category === "All" || (p.category?.trim() ?? "") === category;
-      return nameOk && catOk;
+      const minOk = !priceMin || p.price >= parseFloat(priceMin);
+      const maxOk = !priceMax || p.price <= parseFloat(priceMax);
+      const stockOk = !inStockOnly || p.stock === null || p.stock > 0;
+      return nameOk && catOk && minOk && maxOk && stockOk;
     });
-  }, [products, search, category]);
+    if (sortBy === "price_asc") result = [...result].sort((a, b) => a.price - b.price);
+    if (sortBy === "price_desc") result = [...result].sort((a, b) => b.price - a.price);
+    if (sortBy === "name") result = [...result].sort((a, b) => a.name.localeCompare(b.name));
+    return result;
+  }, [products, search, category, priceMin, priceMax, sortBy, inStockOnly]);
 
   return (
     <>
-      <div className="mx-auto px-4 pt-1 sm:px-6" style={{ maxWidth: 1024, margin: "0 auto" }}>
+      <div className="mx-auto max-w-7xl px-4 pt-1 sm:px-6">
         <div className="flex shrink-0 items-center justify-end gap-2 pb-2">
           <Link
             href="/dashboard/vendor/store/edit"
@@ -405,7 +461,7 @@ export default function StorefrontTabs({
           WebkitBackdropFilter: "blur(12px)",
         }}
       >
-        <div className="mx-auto min-w-0 px-4 sm:px-6" style={{ maxWidth: 1024, margin: "0 auto" }}>
+        <div className="mx-auto min-w-0 max-w-7xl px-4 sm:px-6">
           <div
             className="hide-scrollbar -mx-1 flex gap-0 overflow-x-auto px-1"
             style={{
@@ -455,7 +511,7 @@ export default function StorefrontTabs({
         </div>
       </div>
 
-      <main className="mx-auto px-4 py-6 sm:px-6 sm:py-8" style={{ maxWidth: 1024, margin: "0 auto" }}>
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
       {activeTab === "about" ? (
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="flex flex-col gap-6 lg:col-span-2">
@@ -828,36 +884,139 @@ export default function StorefrontTabs({
 
       {activeTab === "store" ? (
         <div className="mt-6 flex flex-col gap-6 lg:flex-row">
-          <aside className="lg:w-56 shrink-0">
-            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
-              <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-zinc-400">Filter</p>
-              <div className="flex flex-wrap gap-2">
-                {categories.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setCategory(c)}
-                    className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                      category === c
-                        ? "bg-[#D4450A] text-white"
-                        : "border border-[#D4450A] bg-white text-[#D4450A]"
-                    }`}
-                  >
-                    {c}
-                  </button>
-                ))}
+          <aside className="shrink-0 lg:w-64">
+            <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
+              <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
+                <p className="text-sm font-bold text-zinc-900">Filters</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCategory("All");
+                    setSearch("");
+                    setPriceMin("");
+                    setPriceMax("");
+                    setSortBy("default");
+                    setInStockOnly(false);
+                  }}
+                  className="text-xs font-medium text-[#D4450A] hover:underline"
+                >
+                  Clear all
+                </button>
               </div>
-              <label className="mt-4 flex flex-col gap-1">
-                <span className="sr-only">Search products</span>
+
+              <div className="border-b border-zinc-100 px-5 py-4">
+                <p className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-500">Search</p>
                 <input
                   type="search"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search products…"
-                  className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-900 outline-none ring-[#D4450A]/30 placeholder:text-zinc-400 focus:border-[#D4450A] focus:ring-2"
+                  className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-[#D4450A]"
                 />
-              </label>
+              </div>
+
+              <div className="border-b border-zinc-100 px-5 py-4">
+                <p className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-500">Sort by</p>
+                <div className="flex flex-col gap-2">
+                  {[
+                    { value: "default", label: "Featured" },
+                    { value: "price_asc", label: "Price: Low to High" },
+                    { value: "price_desc", label: "Price: High to Low" },
+                    { value: "name", label: "Name A–Z" },
+                  ].map((opt) => (
+                    <label
+                      key={opt.value}
+                      className="group flex cursor-pointer items-center gap-2.5"
+                      onClick={() => setSortBy(opt.value)}
+                    >
+                      <div
+                        className={`flex h-4 w-4 items-center justify-center rounded-full border-2 transition-colors ${
+                          sortBy === opt.value
+                            ? "border-[#D4450A] bg-[#D4450A]"
+                            : "border-zinc-300 group-hover:border-[#D4450A]"
+                        }`}
+                      >
+                        {sortBy === opt.value ? <div className="h-1.5 w-1.5 rounded-full bg-white" /> : null}
+                      </div>
+                      <span className="text-sm text-zinc-700">{opt.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="border-b border-zinc-100 px-5 py-4">
+                <p className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-500">Category</p>
+                <div className="flex flex-col gap-1.5">
+                  {categories.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setCategory(c)}
+                      className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-colors ${
+                        category === c
+                          ? "bg-[#D4450A]/10 font-semibold text-[#D4450A]"
+                          : "text-zinc-600 hover:bg-zinc-50"
+                      }`}
+                    >
+                      <span>{c.replace(/_/g, " ")}</span>
+                      {category === c ? (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      ) : null}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="border-b border-zinc-100 px-5 py-4">
+                <p className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-500">Price range (TTD)</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={priceMin}
+                    onChange={(e) => setPriceMin(e.target.value)}
+                    placeholder="Min"
+                    className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm focus:border-[#D4450A] focus:outline-none"
+                  />
+                  <span className="shrink-0 text-sm text-zinc-400">–</span>
+                  <input
+                    type="number"
+                    value={priceMax}
+                    onChange={(e) => setPriceMax(e.target.value)}
+                    placeholder="Max"
+                    className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm focus:border-[#D4450A] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="px-5 py-4">
+                <p className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-500">Availability</p>
+                <label
+                  className="flex cursor-pointer items-center gap-2.5"
+                  onClick={() => setInStockOnly((v) => !v)}
+                >
+                  <div
+                    className={`relative h-5 w-10 cursor-pointer rounded-full transition-colors ${
+                      inStockOnly ? "bg-[#D4450A]" : "bg-zinc-200"
+                    }`}
+                  >
+                    <div
+                      className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                        inStockOnly ? "translate-x-5" : "translate-x-0.5"
+                      }`}
+                    />
+                  </div>
+                  <span className="text-sm text-zinc-700">In stock only</span>
+                </label>
+              </div>
             </div>
+
+            {(category !== "All" || priceMin || priceMax || inStockOnly || sortBy !== "default") && (
+              <p className="mt-3 text-center text-xs text-zinc-500">
+                {filteredProducts.length} product{filteredProducts.length !== 1 ? "s" : ""} found
+              </p>
+            )}
           </aside>
 
           <div className="flex-1 min-w-0">
@@ -869,7 +1028,7 @@ export default function StorefrontTabs({
             ) : filteredProducts.length === 0 ? (
               <p className="py-12 text-center text-sm text-zinc-500">No products found</p>
             ) : (
-              <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 {filteredProducts.map((product) => (
                   <StoreTabProductCard key={product.id} product={product} />
                 ))}

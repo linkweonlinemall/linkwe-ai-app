@@ -12,7 +12,12 @@ import {
   getVendorChatMessages,
   deleteVendorChat,
 } from "@/app/actions/vendor-chat"
-import { reorderProductImages, removeProductImageAI } from "@/app/actions/ai-vendor-image"
+import {
+  addProductImagesFromUrlsForVendor,
+  reorderProductImages,
+  removeProductImageAI,
+  uploadVendorChatImages,
+} from "@/app/actions/ai-vendor-image"
 import DraggableImageGrid from "@/components/vendor/draggable-image-grid"
 import BulkUploadTab from "./bulk-upload-tab"
 
@@ -50,6 +55,9 @@ function stripMarkdown(input: string): string {
   s = s.replace(/`{1,3}[^`]*`{1,3}/g, "")
   return s.trim()
 }
+
+const ACCEPT_CHAT_IMAGES =
+  "image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
 
 const AUTO_START_MESSAGE =
   "I have uploaded my product images. Please analyse them and help me create a listing."
@@ -103,6 +111,7 @@ export default function VendorAIAssistantPage() {
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [createdProductId, setCreatedProductId] = useState<string | null>(null)
+  const [focusedProductId, setFocusedProductId] = useState<string | null>(null)
   const [productImages, setProductImages] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
   const [startImages, setStartImages] = useState<string[]>([])
@@ -118,7 +127,6 @@ export default function VendorAIAssistantPage() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const selectionRef = useRef({ start: 0, end: 0 })
-  const autoUploadDoneForProductRef = useRef<string | null>(null)
   const sendMessageRef = useRef<
     (text: string) => void | Promise<void>
   >(() => {})
@@ -173,44 +181,6 @@ export default function VendorAIAssistantPage() {
   useEffect(() => {
     messagesRef.current = messages
   }, [messages])
-
-  useEffect(() => {
-    if (!createdProductId) return
-    if (startImagePreviews.length === 0) return
-    if (autoUploadDoneForProductRef.current === createdProductId) return
-
-    const productId = createdProductId
-    const previews = [...startImagePreviews]
-    const names = [...startImages]
-    autoUploadDoneForProductRef.current = createdProductId
-
-    const autoUpload = async () => {
-      setUploading(true)
-      try {
-        for (let i = 0; i < previews.length; i++) {
-          const dataUrl = previews[i]!
-          const res = await fetch(dataUrl)
-          const blob = await res.blob()
-          const name = names[i] || `product-image-${i + 1}.jpg`
-          const file = new File([blob], name, { type: blob.type || "image/jpeg" })
-          const fd = new FormData()
-          fd.append("image", file)
-          const { uploadProductImage } = await import(
-            "@/app/actions/ai-vendor-image"
-          )
-          const result = await uploadProductImage(productId, fd)
-          if (result.ok && result.images) {
-            setProductImages(result.images)
-          }
-        }
-      } finally {
-        setUploading(false)
-        setStartImagePreviews([])
-        setStartImages([])
-      }
-    }
-    void autoUpload()
-  }, [createdProductId, startImagePreviews, startImages])
 
   const adjustTextareaHeight = useCallback(() => {
     const el = inputRef.current
@@ -291,6 +261,43 @@ export default function VendorAIAssistantPage() {
 
       const hasStartPreviews = isFirstInThread && previewCount > 0
       const previewsForApi = [...startImagePreviews]
+
+      let heroUploadedUrls: string[] = []
+      if (previewsForApi.length > 0) {
+        const fd = new FormData()
+        for (let i = 0; i < previewsForApi.length; i++) {
+          const dataUrl = previewsForApi[i]!
+          const blob = await fetch(dataUrl).then((r) => r.blob())
+          const ext =
+            blob.type === "image/png"
+              ? "png"
+              : blob.type === "image/webp"
+                ? "webp"
+                : "jpg"
+          fd.append(
+            "images",
+            new File([blob], `hero-${i}.${ext}`, {
+              type: blob.type || "image/jpeg",
+            })
+          )
+        }
+        const up = await uploadVendorChatImages(fd)
+        if (!up.ok) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: crypto.randomUUID(),
+              role: "assistant",
+              content: up.error ?? "Could not upload images.",
+            },
+          ])
+          return
+        }
+        heroUploadedUrls = up.urls
+        setStartImagePreviews([])
+        setStartImages([])
+      }
+
       const textForApi =
         trimmed ||
         (hasStartPreviews
@@ -299,7 +306,7 @@ export default function VendorAIAssistantPage() {
 
       const finalContent: string = trimmed
       const displayText =
-        previewsForApi.length > 0
+        previewsForApi.length > 0 || heroUploadedUrls.length > 0
           ? textForApi
           : finalContent
 
@@ -307,15 +314,20 @@ export default function VendorAIAssistantPage() {
         id: crypto.randomUUID(),
         role: "user",
         content: displayText,
-        ...(previewsForApi.length > 0
-          ? { images: [...previewsForApi] }
-          : {}),
+        ...(heroUploadedUrls.length > 0
+          ? { images: [...heroUploadedUrls] }
+          : previewsForApi.length > 0
+            ? { images: [...previewsForApi] }
+            : {}),
       }
       const assistantId = crypto.randomUUID()
       const assistantMsg: ChatMsg = {
         id: assistantId,
         role: "assistant",
         content: "",
+        ...(heroUploadedUrls.length > 0
+          ? { images: [...heroUploadedUrls] }
+          : {}),
       }
 
       let saveChatId = chatId
@@ -371,7 +383,12 @@ export default function VendorAIAssistantPage() {
         const res = await fetch("/api/vendor-ai", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: apiMessages }),
+          body: JSON.stringify({
+            messages: apiMessages,
+            focusProductId: focusedProductId ?? undefined,
+            uploadedImageUrls:
+              heroUploadedUrls.length > 0 ? heroUploadedUrls : undefined,
+          }),
         })
 
         if (res.status === 401) {
@@ -396,10 +413,29 @@ export default function VendorAIAssistantPage() {
                 text?: string
                 error?: string
                 productId?: string
+                focusProductId?: string
+                galleryUpdate?: {
+                  productId: string
+                  images: string[]
+                }
               }
+              if (p.galleryUpdate?.images?.length) {
+                setProductImages(p.galleryUpdate.images)
+              }
+              if (p.focusProductId) setFocusedProductId(p.focusProductId)
               if (p.productId) {
                 setCreatedProductId(p.productId)
-                setProductImages([])
+                setFocusedProductId(p.productId)
+                if (heroUploadedUrls.length > 0) {
+                  void addProductImagesFromUrlsForVendor(
+                    p.productId,
+                    heroUploadedUrls
+                  ).then((attach) => {
+                    if (attach.ok && attach.images) {
+                      setProductImages(attach.images)
+                    }
+                  })
+                }
               }
               if (p.error) {
                 full += `\n[Error: ${p.error}]`
@@ -434,9 +470,7 @@ export default function VendorAIAssistantPage() {
         const errText = "Something went wrong. Please try again."
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === assistantId
-              ? { ...m, content: errText }
-              : m
+            m.id === assistantId ? { ...m, content: errText } : m
           )
         )
         try {
@@ -457,6 +491,7 @@ export default function VendorAIAssistantPage() {
       startImagePreviews,
       adjustTextareaHeight,
       chatId,
+      focusedProductId,
     ]
   )
 
@@ -519,11 +554,11 @@ export default function VendorAIAssistantPage() {
                 ])
                 setChatId(null)
                 setCreatedProductId(null)
+                setFocusedProductId(null)
                 setProductImages([])
                 setStartImages([])
                 setStartImagePreviews([])
                 setInput("")
-                autoUploadDoneForProductRef.current = null
               }}
               className="rounded bg-zinc-700 px-2 py-1 text-xs text-zinc-400 hover:text-white"
             >
@@ -557,6 +592,7 @@ export default function VendorAIAssistantPage() {
                   ])
                   setChatId(chat.id)
                   setCreatedProductId(null)
+                  setFocusedProductId(null)
                   setProductImages([])
                 }}
               >
@@ -667,7 +703,7 @@ export default function VendorAIAssistantPage() {
                   {uploadingStart ? "Uploading..." : "+ Add Images"}
                   <input
                     type="file"
-                    accept="image/*"
+                    accept={ACCEPT_CHAT_IMAGES}
                     multiple
                     className="hidden"
                     disabled={uploadingStart}
@@ -753,9 +789,23 @@ export default function VendorAIAssistantPage() {
                 {m.role === "user" ? (
                   <div className="whitespace-pre-wrap">{m.content}</div>
                 ) : (
-                  <div className="prose prose-invert prose-sm max-w-none [&_p]:mb-2 [&_p:last-child]:mb-0">
-                    <ReactMarkdown>{m.content}</ReactMarkdown>
-                  </div>
+                  <>
+                    {m.images && m.images.length > 0 ? (
+                      <div className="mb-2 flex flex-wrap gap-1.5">
+                        {m.images.map((src, i) => (
+                          <img
+                            key={src.slice(-32) + i}
+                            src={src}
+                            alt=""
+                            className="h-16 w-16 rounded object-cover ring-1 ring-zinc-700"
+                          />
+                        ))}
+                      </div>
+                    ) : null}
+                    <div className="prose prose-invert prose-sm max-w-none [&_p]:mb-2 [&_p:last-child]:mb-0">
+                      <ReactMarkdown>{m.content}</ReactMarkdown>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -808,8 +858,7 @@ export default function VendorAIAssistantPage() {
                 {uploading ? "Uploading..." : "Add Image"}
                 <input
                   type="file"
-                  accept="image/*"
-                  multiple
+                  accept={ACCEPT_CHAT_IMAGES}                  multiple
                   className="hidden"
                   disabled={uploading}
                   onChange={async (e) => {

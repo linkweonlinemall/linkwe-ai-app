@@ -108,6 +108,12 @@ export default function VendorProductsPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-6">
+      <Link
+        href="/dashboard/vendor"
+        className="mb-4 inline-block text-sm text-zinc-500 hover:text-zinc-800"
+      >
+        ← Back to dashboard
+      </Link>
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1

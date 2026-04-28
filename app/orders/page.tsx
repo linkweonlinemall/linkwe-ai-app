@@ -1,25 +1,19 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import PublicNav from "@/components/layout/PublicNav";
+import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import PublicNav from "@/components/layout/PublicNav";
 
 import OrdersClient from "./orders-client";
-
-function getDashboardPath(role: string) {
-  if (role === "VENDOR") return "/dashboard/vendor";
-  if (role === "COURIER") return "/dashboard/courier";
-  if (role === "ADMIN") return "/dashboard/admin";
-  return "/dashboard/customer";
-}
 
 export default async function OrdersPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
   const userRecord = await prisma.user.findUnique({ where: { id: session.userId } });
-  const continueHref = userRecord ? getDashboardPath(userRecord.role) : null;
+  const continueHref = userRecord ? getRoleDashboardPath(userRecord.role) : null;
 
   const orders = await prisma.mainOrder.findMany({
     where: { buyerId: session.userId },

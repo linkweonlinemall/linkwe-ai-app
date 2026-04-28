@@ -1,17 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import PublicNav from "@/components/layout/PublicNav";
-import StorefrontTabs from "@/components/storefront/StorefrontTabs";
+import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-
-function getDashboardPath(role: string) {
-  if (role === "VENDOR") return "/dashboard/vendor";
-  if (role === "COURIER") return "/dashboard/courier";
-  if (role === "ADMIN") return "/dashboard/admin";
-  return "/dashboard/customer";
-}
+import PublicNav from "@/components/layout/PublicNav";
+import StorefrontTabs from "@/components/storefront/StorefrontTabs";
 
 type TimeSlot = { from: string; to: string };
 type DaySchedule = { closed: boolean; allDay: boolean; slots: TimeSlot[] };
@@ -46,7 +40,7 @@ export default async function PublicStorePage({ params }: Props) {
   const navUser = session
     ? await prisma.user.findUnique({ where: { id: session.userId } })
     : null;
-  const continueHref = navUser ? getDashboardPath(navUser.role) : null;
+  const continueHref = navUser ? getRoleDashboardPath(navUser.role) : null;
 
   const { slug } = await params;
   const normalized = slug.trim().toLowerCase();

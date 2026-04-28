@@ -51,7 +51,7 @@ export default function HeroSlider({ continueHref }: Props) {
     const timer = setInterval(() => {
       setCurrent((c) => (c + 1) % SLIDES.length);
       setAnimKey((k) => k + 1);
-    }, 6000);
+    }, 7000);
     return () => clearInterval(timer);
   }, []);
 
@@ -69,28 +69,28 @@ export default function HeroSlider({ continueHref }: Props) {
     >
       <style>{`
         @keyframes kenburns-left {
-          from { transform: scale(1.08) translateX(2%); }
-          to { transform: scale(1) translateX(0%); }
+          from { transform: scale(1.08) translateX(2%); opacity: 0; }
+          to { transform: scale(1) translateX(0%); opacity: 1; }
         }
         @keyframes kenburns-right {
-          from { transform: scale(1.08) translateX(-2%); }
-          to { transform: scale(1) translateX(0%); }
+          from { transform: scale(1.08) translateX(-2%); opacity: 0; }
+          to { transform: scale(1) translateX(0%); opacity: 1; }
         }
         @keyframes kenburns-bottom {
-          from { transform: scale(1.08) translateY(2%); }
-          to { transform: scale(1) translateY(0%); }
+          from { transform: scale(1.08) translateY(2%); opacity: 0; }
+          to { transform: scale(1) translateY(0%); opacity: 1; }
         }
         @keyframes fade-up {
           from { opacity: 0; transform: translateY(24px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        .kb-left { animation: kenburns-left 6.5s ease-out forwards; }
-        .kb-right { animation: kenburns-right 6.5s ease-out forwards; }
-        .kb-bottom { animation: kenburns-bottom 6.5s ease-out forwards; }
-        .fade-up-1 { animation: fade-up 0.7s ease-out 0.1s both; }
-        .fade-up-2 { animation: fade-up 0.7s ease-out 0.25s both; }
-        .fade-up-3 { animation: fade-up 0.7s ease-out 0.4s both; }
-        .fade-up-4 { animation: fade-up 0.7s ease-out 0.55s both; }
+        .kb-left { animation: kenburns-left 1.2s ease-out forwards; }
+        .kb-right { animation: kenburns-right 1.2s ease-out forwards; }
+        .kb-bottom { animation: kenburns-bottom 1.2s ease-out forwards; }
+        .fade-up-1 { animation: fade-up 0.7s ease-out 0.3s both; }
+        .fade-up-2 { animation: fade-up 0.7s ease-out 0.45s both; }
+        .fade-up-3 { animation: fade-up 0.7s ease-out 0.6s both; }
+        .fade-up-4 { animation: fade-up 0.7s ease-out 0.75s both; }
       `}</style>
 
       <div key={`bg-${animKey}`} className="absolute inset-0">

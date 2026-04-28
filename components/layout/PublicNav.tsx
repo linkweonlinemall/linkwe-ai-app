@@ -53,6 +53,32 @@ export default function PublicNav({ transparent = false, user = null, dashboardH
 
         <div className="flex min-w-0 items-center gap-4 sm:gap-6">
           <div className="hidden sm:flex items-center gap-1">
+            {/* Stores */}
+            <Link
+              href="/stores"
+              title="Stores"
+              className={`relative group w-9 h-9 flex items-center justify-center
+      rounded-xl transition-colors
+      ${
+        transparent
+          ? "text-white/80 hover:bg-white/10 hover:text-white"
+          : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+      }`}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M5 22V12l7-5 7 5v10" />
+                <path d="M9 22v-7h6v7" />
+                <path strokeLinecap="round" d="M2 12h20" />
+              </svg>
+              <span
+                className="absolute top-full mt-1 left-1/2 -translate-x-1/2
+      bg-zinc-900 text-white text-[10px] px-2 py-0.5 rounded whitespace-nowrap
+      opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50"
+              >
+                Stores
+              </span>
+            </Link>
+
             {/* Shop */}
             <Link
               href="/shop"
@@ -191,7 +217,8 @@ export default function PublicNav({ transparent = false, user = null, dashboardH
                   <div className="py-1">
                     {(
                       [
-                        { label: "My dashboard", href: dashboardHref ?? user.href, icon: "🏠" },
+                        { label: "Home", href: "/", icon: "🏠" },
+                        { label: "My dashboard", href: dashboardHref ?? user.href, icon: "⚡" },
                         { label: "My orders", href: "/orders", icon: "📦" },
                         { label: "My cart", href: "/cart", icon: "🛒" },
                         { label: "Settings", href: user.href + "/settings", icon: "⚙️" },
@@ -225,17 +252,19 @@ export default function PublicNav({ transparent = false, user = null, dashboardH
               )}
             </div>
           ) : (
-            <Link
-              href="/login"
+            <button
+              type="button"
+              onClick={() => {
+                const current = window.location.pathname + window.location.search;
+                window.location.href = `/login?callbackUrl=${encodeURIComponent(current)}`;
+              }}
               className={`px-4 py-1.5 rounded-xl text-sm font-medium transition-colors
-      ${
-        transparent
-          ? "bg-white/10 hover:bg-white/20 text-white border border-white/20"
-          : "bg-[#D4450A] hover:opacity-90 text-white"
-      }`}
+    ${transparent
+      ? "bg-white/10 hover:bg-white/20 text-white border border-white/20"
+      : "bg-[#D4450A] hover:opacity-90 text-white"}`}
             >
               Sign in
-            </Link>
+            </button>
           )}
         </div>
       </div>
@@ -266,9 +295,22 @@ export default function PublicNav({ transparent = false, user = null, dashboardH
         </Link>
 
         <Link
+          href="/stores"
+          className="flex flex-col items-center gap-0.5 rounded-xl
+      px-2 py-1 text-zinc-500 transition-colors hover:text-[#D4450A]"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M5 22V12l7-5 7 5v10" />
+            <path d="M9 22v-7h6v7" />
+            <path strokeLinecap="round" d="M2 12h20" />
+          </svg>
+          <span className="text-[10px] font-medium">Stores</span>
+        </Link>
+
+        <Link
           href="/shop"
           className="flex flex-col items-center gap-0.5 rounded-xl
-      px-3 py-1 text-zinc-500 transition-colors hover:text-[#D4450A]"
+      px-2 py-1 text-zinc-500 transition-colors hover:text-[#D4450A]"
         >
           <svg
             width="22"

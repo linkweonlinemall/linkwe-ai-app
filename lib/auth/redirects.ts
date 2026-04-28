@@ -1,12 +1,6 @@
-import type { UserRole } from "@prisma/client";
-
 export function getRoleDashboardPath(role?: string | null) {
   if (!role) {
-    return "/dashboard"; // fallback
-  }
-
-  if (role === "CUSTOMER") {
-    return "/";
+    return "/dashboard";
   }
 
   if (role === "ADMIN") {

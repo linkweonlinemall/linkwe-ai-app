@@ -1,22 +1,17 @@
 import Link from "next/link"
 
-import PublicNav from "@/components/layout/PublicNav"
+import { getRoleDashboardPath } from "@/lib/auth/redirects"
 import { getSession } from "@/lib/auth/session"
 import { prisma } from "@/lib/prisma"
 
-function getDashboardPath(role: string) {
-  if (role === "VENDOR") return "/dashboard/vendor"
-  if (role === "COURIER") return "/dashboard/courier"
-  if (role === "ADMIN") return "/dashboard/admin"
-  return "/dashboard/customer"
-}
+import PublicNav from "@/components/layout/PublicNav"
 
 export default async function EventsPage() {
   const session = await getSession()
   const user = session
     ? await prisma.user.findUnique({ where: { id: session.userId } })
     : null
-  const continueHref = user ? getDashboardPath(user.role) : null
+  const continueHref = user ? getRoleDashboardPath(user.role) : null
 
   return (
     <div className="min-h-screen bg-[#1C1C1A]">

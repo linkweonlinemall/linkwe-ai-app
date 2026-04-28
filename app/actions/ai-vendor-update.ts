@@ -104,6 +104,7 @@ export async function getVendorProductDetails(
       metaTitle: true,
       metaDescription: true,
       isPublished: true,
+      images: true,
     },
   })
   return product as Record<string, unknown> | null

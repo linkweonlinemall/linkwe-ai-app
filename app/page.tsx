@@ -1,23 +1,17 @@
 import Link from "next/link";
 
+import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import HeroSlider from "@/components/layout/HeroSlider";
 import PublicNav from "@/components/layout/PublicNav";
-
-function getDashboardPath(role: string) {
-  if (role === "VENDOR") return "/dashboard/vendor";
-  if (role === "COURIER") return "/dashboard/courier";
-  if (role === "ADMIN") return "/dashboard/admin";
-  return "/dashboard/customer";
-}
 
 export default async function Home() {
   const session = await getSession();
   const user = session
     ? await prisma.user.findUnique({ where: { id: session.userId } })
     : null;
-  const continueHref = user ? getDashboardPath(user.role) : null;
+  const continueHref = user ? getRoleDashboardPath(user.role) : null;
 
   const featuredStores = await prisma.store.findMany({
     where: { status: "ACTIVE" },

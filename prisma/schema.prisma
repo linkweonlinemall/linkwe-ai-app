@@ -1198,6 +1198,8 @@ model Product {
   address               String?
 
   isPublished           Boolean           @default(false)
+  /// Soft admin archive — not shown on storefront alongside drafts.
+  isArchived            Boolean           @default(false)
   isFeatured            Boolean           @default(false)
   viewCount             Int               @default(0)
   metaTitle             String?
@@ -1217,6 +1219,7 @@ model Product {
 
   @@index([storeId])
   @@index([isPublished])
+  @@index([isArchived])
 }
 
 model ProductCartItem {

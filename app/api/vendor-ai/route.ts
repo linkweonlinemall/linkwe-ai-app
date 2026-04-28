@@ -5,6 +5,13 @@ import {
   searchVendorProducts,
   updateProductFromAI,
 } from "@/app/actions/ai-vendor-update"
+import {
+  addProductImagesFromUrls,
+  removeProductImageAtIndex,
+  replaceProductImageAtIndex,
+  reorderProductGalleryValidated,
+  setProductCoverImage,
+} from "@/app/actions/ai-vendor-image"
 import { createProductFromAIRaw } from "@/app/actions/ai-vendor"
 import { getSession } from "@/lib/auth/session"
 import { VENDOR_SYSTEM_PROMPT } from "@/lib/chat/vendorSystemPrompt"
@@ -114,11 +121,107 @@ const UPDATE_PRODUCT_TOOL: Anthropic.Tool = {
   },
 }
 
+const ATTACH_PRODUCT_IMAGES_TOOL: Anthropic.Tool = {
+  name: "attach_product_images",
+  description:
+    "Append uploaded image URLs to a product listing gallery. Use exact URLs from this turn's upload list in the system prompt. Max 10 photos per product total.",
+  input_schema: {
+    type: "object",
+    properties: {
+      product_id: { type: "string" },
+      image_urls: {
+        type: "array",
+        items: { type: "string" },
+        description: "Full https URLs from the vendor's latest upload",
+      },
+    },
+    required: ["product_id", "image_urls"],
+  },
+}
+
+const REORDER_GALLERY_TOOL: Anthropic.Tool = {
+  name: "reorder_product_gallery",
+  description:
+    "Set a new order for all product photos. image_urls must include every current photo URL exactly once (full reorder).",
+  input_schema: {
+    type: "object",
+    properties: {
+      product_id: { type: "string" },
+      image_urls: {
+        type: "array",
+        items: { type: "string" },
+        description: "Complete gallery in the desired order (first = featured image)",
+      },
+    },
+    required: ["product_id", "image_urls"],
+  },
+}
+
+const REMOVE_IMAGE_TOOL: Anthropic.Tool = {
+  name: "remove_product_image",
+  description:
+    "Remove one photo from the gallery by 1-based position (1 = first / cover image).",
+  input_schema: {
+    type: "object",
+    properties: {
+      product_id: { type: "string" },
+      image_index: {
+        type: "number",
+        description: "1-based index: 1 is the first photo",
+      },
+    },
+    required: ["product_id", "image_index"],
+  },
+}
+
+const SET_COVER_TOOL: Anthropic.Tool = {
+  name: "set_product_cover_image",
+  description:
+    "Make an existing gallery image the cover/featured image by moving it to the first position.",
+  input_schema: {
+    type: "object",
+    properties: {
+      product_id: { type: "string" },
+      image_url: {
+        type: "string",
+        description: "Must match one of the URLs in product.images exactly",
+      },
+    },
+    required: ["product_id", "image_url"],
+  },
+}
+
+const REPLACE_IMAGE_TOOL: Anthropic.Tool = {
+  name: "replace_product_image",
+  description:
+    "Replace an existing gallery slot with a newly uploaded URL (e.g. vendor said 'replace the first photo' after uploading).",
+  input_schema: {
+    type: "object",
+    properties: {
+      product_id: { type: "string" },
+      image_index: {
+        type: "number",
+        description: "1-based slot to replace",
+      },
+      new_image_url: {
+        type: "string",
+        description: "Https URL from the vendor's uploaded images this turn",
+      },
+    },
+    required: ["product_id", "image_index", "new_image_url"],
+  },
+}
+
 const VENDOR_TOOLS: Anthropic.Tool[] = [
   CREATE_PRODUCT_TOOL,
   SEARCH_PRODUCTS_TOOL,
   GET_PRODUCT_TOOL,
   UPDATE_PRODUCT_TOOL,
+  ATTACH_PRODUCT_IMAGES_TOOL,
+  REORDER_GALLERY_TOOL,
+  REMOVE_IMAGE_TOOL,
+  SET_COVER_TOOL,
+  REPLACE_IMAGE_TOOL,
 ]
 
 /** Body messages: string or Anthropic user content (text + image blocks). */
@@ -143,8 +246,21 @@ export async function POST(req: NextRequest) {
     return new Response("No store found", { status: 400 })
   }
 
-  const body = (await req.json()) as { messages?: IncomingMessage[] }
+  const body = (await req.json()) as {
+    messages?: IncomingMessage[]
+    focusProductId?: string | null
+    uploadedImageUrls?: string[]
+  }
   const messages: IncomingMessage[] = body.messages ?? []
+  const focusProductIdFromBody =
+    typeof body.focusProductId === "string"
+      ? body.focusProductId.trim()
+      : null
+  const uploadedImageUrlsPayload = Array.isArray(body.uploadedImageUrls)
+    ? body.uploadedImageUrls.filter(
+        (u): u is string => typeof u === "string" && u.startsWith("https://")
+      )
+    : []
 
   console.log("Vendor AI called, messages:", messages.length)
   console.log("API key present:", !!process.env.ANTHROPIC_API_KEY)
@@ -172,7 +288,12 @@ export async function POST(req: NextRequest) {
 
       const handleOneTool = async (
         toolBlock: Anthropic.ToolUseBlock
-      ): Promise<{ content: string; productId?: string }> => {
+      ): Promise<{
+        content: string
+        productId?: string
+        focusProductId?: string
+        galleryUpdate?: { productId: string; images: string[] }
+      }> => {
         if (toolBlock.name === "create_product") {
           const raw = toolBlock.input as Record<string, unknown>
           const input = {
@@ -246,6 +367,7 @@ export async function POST(req: NextRequest) {
               return {
                 content: JSON.stringify(result),
                 productId: result.productId,
+                focusProductId: result.productId,
               }
             }
             return { content: JSON.stringify(result) }
@@ -271,7 +393,12 @@ export async function POST(req: NextRequest) {
           const details = raw.product_id
             ? await getVendorProductDetails(raw.product_id)
             : null
-          return { content: JSON.stringify(details) }
+          return {
+            content: JSON.stringify(details),
+            ...(raw.product_id && details
+              ? { focusProductId: String(raw.product_id) }
+              : {}),
+          }
         }
 
         if (toolBlock.name === "update_product") {
@@ -338,6 +465,147 @@ export async function POST(req: NextRequest) {
           return { content: JSON.stringify(result) }
         }
 
+        if (toolBlock.name === "attach_product_images") {
+          const raw = toolBlock.input as {
+            product_id?: string
+            image_urls?: unknown
+          }
+          const pid = String(raw.product_id ?? "")
+          const urls = Array.isArray(raw.image_urls)
+            ? raw.image_urls.filter((u): u is string => typeof u === "string")
+            : []
+          const result = await addProductImagesFromUrls(
+            pid,
+            urls,
+            session.userId,
+            store.id
+          )
+          if (result.ok) {
+            return {
+              content: JSON.stringify(result),
+              focusProductId: pid,
+              galleryUpdate: {
+                productId: pid,
+                images: result.images,
+              },
+            }
+          }
+          return { content: JSON.stringify(result) }
+        }
+
+        if (toolBlock.name === "reorder_product_gallery") {
+          const raw = toolBlock.input as {
+            product_id?: string
+            image_urls?: unknown
+          }
+          const pid = String(raw.product_id ?? "")
+          const urls = Array.isArray(raw.image_urls)
+            ? raw.image_urls.filter((u): u is string => typeof u === "string")
+            : []
+          const result = await reorderProductGalleryValidated(
+            pid,
+            urls,
+            session.userId,
+            store.id
+          )
+          if (result.ok) {
+            return {
+              content: JSON.stringify(result),
+              focusProductId: pid,
+              galleryUpdate: {
+                productId: pid,
+                images: result.images,
+              },
+            }
+          }
+          return { content: JSON.stringify(result) }
+        }
+
+        if (toolBlock.name === "remove_product_image") {
+          const raw = toolBlock.input as {
+            product_id?: string
+            image_index?: unknown
+          }
+          const pid = String(raw.product_id ?? "")
+          const idx = Number(raw.image_index)
+          const result = await removeProductImageAtIndex(
+            pid,
+            idx,
+            session.userId,
+            store.id
+          )
+          if (result.ok) {
+            return {
+              content: JSON.stringify(result),
+              focusProductId: pid,
+              galleryUpdate: {
+                productId: pid,
+                images: result.images,
+              },
+            }
+          }
+          return { content: JSON.stringify(result) }
+        }
+
+        if (toolBlock.name === "set_product_cover_image") {
+          const raw = toolBlock.input as {
+            product_id?: string
+            image_url?: unknown
+          }
+          const pid = String(raw.product_id ?? "")
+          const url =
+            typeof raw.image_url === "string" ? raw.image_url.trim() : ""
+          const result = await setProductCoverImage(
+            pid,
+            url,
+            session.userId,
+            store.id
+          )
+          if (result.ok) {
+            return {
+              content: JSON.stringify(result),
+              focusProductId: pid,
+              galleryUpdate: {
+                productId: pid,
+                images: result.images,
+              },
+            }
+          }
+          return { content: JSON.stringify(result) }
+        }
+
+        if (toolBlock.name === "replace_product_image") {
+          const raw = toolBlock.input as {
+            product_id?: string
+            image_index?: unknown
+            new_image_url?: unknown
+          }
+          const pid = String(raw.product_id ?? "")
+          const idx = Number(raw.image_index)
+          const newUrl =
+            typeof raw.new_image_url === "string"
+              ? raw.new_image_url.trim()
+              : ""
+          const result = await replaceProductImageAtIndex(
+            pid,
+            idx,
+            newUrl,
+            session.userId,
+            store.id
+          )
+          if (result.ok) {
+            return {
+              content: JSON.stringify(result),
+              focusProductId: pid,
+              galleryUpdate: {
+                productId: pid,
+                images: result.images,
+              },
+            }
+          }
+          return { content: JSON.stringify(result) }
+        }
+
         return {
           content: JSON.stringify({
             ok: false,
@@ -347,6 +615,54 @@ export async function POST(req: NextRequest) {
       }
 
       try {
+        let systemPrompt = VENDOR_SYSTEM_PROMPT
+        if (uploadedImageUrlsPayload.length > 0) {
+          const n = uploadedImageUrlsPayload.length
+          let extra = `
+
+────────────────────────────────────────────────────────
+SYSTEM MESSAGE — CDN UPLOAD (CONFIRM THIS TO THE VENDOR)
+────────────────────────────────────────────────────────
+Uploaded successfully: ${n} image${n === 1 ? "" : "s"} (${n === 1 ? "this file has" : "these files have"}) been saved to your vendor store media on our CDN. The canonical URLs below are what you must reference in attach/replace/set_cover tools.
+Numbered URLs (same order as the vendor selected):
+`
+          uploadedImageUrlsPayload.forEach((u, i) => {
+            extra += `${i + 1}. ${u}\n`
+          })
+          extra += `
+Your reply MUST begin by acknowledging how many images you received and that ${n === 1 ? "it was" : "they were"} uploaded successfully to the store (CDN URLs above), before analysing the photos, proposing listing copy, or using tools.
+If SYSTEM notes further down report an issue with attaching to a product gallery, explain that clearly after giving the acknowledgement (the uploads themselves still succeeded).
+`
+          if (focusProductIdFromBody) {
+            const attach = await addProductImagesFromUrls(
+              focusProductIdFromBody,
+              uploadedImageUrlsPayload,
+              session.userId,
+              store.id
+            )
+            if (attach.ok) {
+              extra += `\n[System: These were also added to the gallery for product_id="${focusProductIdFromBody}". Gallery order is now:]\n`
+              attach.images.forEach((u, i) => {
+                extra += `  ${i + 1}. ${u}\n`
+              })
+              send(
+                JSON.stringify({
+                  galleryUpdate: {
+                    productId: focusProductIdFromBody,
+                    images: attach.images,
+                  },
+                })
+              )
+            } else {
+              extra += `\n[System: The ${n} image(s) uploaded to the CDN successfully, but auto-attaching to the focused product failed: ${attach.error}. Acknowledge the uploads first, then offer to attach these URLs with attach_product_images or help the vendor pick a listing.]\n`
+            }
+          } else {
+            extra +=
+              "\nIf you know which draft product the vendor is updating, use attach_product_images with that product_id.\n"
+          }
+          systemPrompt = VENDOR_SYSTEM_PROMPT + extra
+        }
+
         const cleanMessages: Anthropic.MessageParam[] = messages
           .filter((m) => m.role === "user" || m.role === "assistant")
           .filter((m) => {
@@ -373,7 +689,7 @@ export async function POST(req: NextRequest) {
           const messageStream = client.messages.stream({
             model: "claude-sonnet-4-5",
             max_tokens: 1024,
-            system: VENDOR_SYSTEM_PROMPT,
+            system: systemPrompt,
             tools: VENDOR_TOOLS,
             tool_choice: { type: "auto" },
             messages: currentMessages,
@@ -398,6 +714,12 @@ export async function POST(req: NextRequest) {
             const out = await handleOneTool(toolBlock)
             if (out.productId) {
               send(JSON.stringify({ productId: out.productId }))
+            }
+            if (out.focusProductId) {
+              send(JSON.stringify({ focusProductId: out.focusProductId }))
+            }
+            if (out.galleryUpdate) {
+              send(JSON.stringify({ galleryUpdate: out.galleryUpdate }))
             }
             userToolResults.push({
               type: "tool_result",
