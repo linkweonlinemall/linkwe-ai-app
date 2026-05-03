@@ -273,18 +273,7 @@ export async function POST(req: NextRequest) {
         controller.enqueue(encoder.encode(`data: ${data}\n\n`))
       }
 
-      const streamTextDeltas = async (
-        s: AsyncIterable<Anthropic.MessageStreamEvent>
-      ) => {
-        for await (const event of s) {
-          if (
-            event.type === "content_block_delta" &&
-            event.delta.type === "text_delta"
-          ) {
-            send(JSON.stringify({ text: event.delta.text }))
-          }
-        }
-      }
+      let galleryUpdateSent = false
 
       const handleOneTool = async (
         toolBlock: Anthropic.ToolUseBlock
@@ -481,6 +470,12 @@ export async function POST(req: NextRequest) {
             store.id
           )
           if (result.ok) {
+            if (galleryUpdateSent) {
+              return {
+                content: JSON.stringify(result),
+                focusProductId: pid,
+              }
+            }
             return {
               content: JSON.stringify(result),
               focusProductId: pid,
@@ -509,6 +504,12 @@ export async function POST(req: NextRequest) {
             store.id
           )
           if (result.ok) {
+            if (galleryUpdateSent) {
+              return {
+                content: JSON.stringify(result),
+                focusProductId: pid,
+              }
+            }
             return {
               content: JSON.stringify(result),
               focusProductId: pid,
@@ -535,6 +536,12 @@ export async function POST(req: NextRequest) {
             store.id
           )
           if (result.ok) {
+            if (galleryUpdateSent) {
+              return {
+                content: JSON.stringify(result),
+                focusProductId: pid,
+              }
+            }
             return {
               content: JSON.stringify(result),
               focusProductId: pid,
@@ -562,6 +569,12 @@ export async function POST(req: NextRequest) {
             store.id
           )
           if (result.ok) {
+            if (galleryUpdateSent) {
+              return {
+                content: JSON.stringify(result),
+                focusProductId: pid,
+              }
+            }
             return {
               content: JSON.stringify(result),
               focusProductId: pid,
@@ -594,6 +607,12 @@ export async function POST(req: NextRequest) {
             store.id
           )
           if (result.ok) {
+            if (galleryUpdateSent) {
+              return {
+                content: JSON.stringify(result),
+                focusProductId: pid,
+              }
+            }
             return {
               content: JSON.stringify(result),
               focusProductId: pid,
@@ -651,8 +670,9 @@ If SYSTEM notes further down report an issue with attaching to a product gallery
                     productId: focusProductIdFromBody,
                     images: attach.images,
                   },
-                })
+                }),
               )
+              galleryUpdateSent = true
             } else {
               extra += `\n[System: The ${n} image(s) uploaded to the CDN successfully, but auto-attaching to the focused product failed: ${attach.error}. Acknowledge the uploads first, then offer to attach these URLs with attach_product_images or help the vendor pick a listing.]\n`
             }
@@ -665,6 +685,31 @@ If SYSTEM notes further down report an issue with attaching to a product gallery
 
         const cleanMessages: Anthropic.MessageParam[] = messages
           .filter((m) => m.role === "user" || m.role === "assistant")
+          .map((msg) => {
+            if (Array.isArray(msg.content)) {
+              const filtered = msg.content.filter((block: unknown) => {
+                if (
+                  typeof block === "object" &&
+                  block !== null &&
+                  "type" in block &&
+                  (block as { type: unknown }).type === "text"
+                ) {
+                  const text =
+                    "text" in block &&
+                    typeof (block as { text: unknown }).text === "string"
+                      ? String((block as { text: string }).text)
+                      : ""
+                  if (!text.trim()) return false
+                }
+                return true
+              })
+              return { ...msg, content: filtered }
+            }
+            if (typeof msg.content === "string" && msg.content.trim() === "") {
+              return { ...msg, content: "..." }
+            }
+            return msg
+          })
           .filter((m) => {
             if (typeof m.content === "string") return m.content.length > 0
             if (Array.isArray(m.content)) return m.content.length > 0
@@ -695,8 +740,17 @@ If SYSTEM notes further down report an issue with attaching to a product gallery
             messages: currentMessages,
           })
 
-          await streamTextDeltas(messageStream)
           const final = await messageStream.finalMessage()
+
+          let assistantRoundText = ""
+          for (const block of final.content) {
+            if (block.type === "text" && typeof block.text === "string") {
+              assistantRoundText += block.text
+            }
+          }
+          if (assistantRoundText.length > 0) {
+            send(JSON.stringify({ text: assistantRoundText }))
+          }
 
           if (final.stop_reason !== "tool_use") {
             break
@@ -727,6 +781,8 @@ If SYSTEM notes further down report an issue with attaching to a product gallery
               content: out.content,
             })
           }
+
+          galleryUpdateSent = false
 
           currentMessages = [
             ...currentMessages,

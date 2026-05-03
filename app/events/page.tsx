@@ -14,7 +14,7 @@ export default async function EventsPage() {
   const continueHref = user ? getRoleDashboardPath(user.role) : null
 
   return (
-    <div className="min-h-screen bg-[#1C1C1A]">
+    <div className="min-h-screen bg-[#1C1C1A] pb-16 sm:pb-0">
       <PublicNav
         transparent
         user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null}

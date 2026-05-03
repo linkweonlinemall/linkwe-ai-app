@@ -37,7 +37,7 @@ export default async function CustomerDashboardPage() {
   const thumb = (o: (typeof orders)[0]) => o.items[0]?.product?.images?.[0];
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5]">
+    <div className="min-h-screen bg-[#F5F5F5] pb-16 sm:pb-0">
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-zinc-900">

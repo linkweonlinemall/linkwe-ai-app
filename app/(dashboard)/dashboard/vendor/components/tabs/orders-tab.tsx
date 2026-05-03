@@ -154,12 +154,15 @@ export default function OrdersTab({ splitOrders }: Props) {
         </div>
 
         <div className="mt-3">
-          <a
+          <Link
             href={`/dashboard/vendor/orders/${order.id}`}
-            className="text-sm text-zinc-600 transition-colors hover:text-zinc-900"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50"
           >
-            View order →
-          </a>
+            View order
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </Link>
         </div>
 
         {order.status === "AWAITING_VENDOR_ACTION" ? (

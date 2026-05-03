@@ -159,6 +159,7 @@ type Props = {
   openingHours: WeekSchedule | null;
   socialLinks: Record<string, string>;
   hasSocialLinks: boolean;
+  canEditStore?: boolean;
 };
 
 export default function StorefrontTabs({
@@ -167,6 +168,7 @@ export default function StorefrontTabs({
   openingHours,
   socialLinks,
   hasSocialLinks,
+  canEditStore,
 }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>("about");
   const [search, setSearch] = useState("");
@@ -249,28 +251,30 @@ export default function StorefrontTabs({
     <>
       <div className="mx-auto max-w-7xl px-4 pt-1 sm:px-6">
         <div className="flex shrink-0 items-center justify-end gap-2 pb-2">
-          <Link
-            href="/dashboard/vendor/store/edit"
-            style={{ backgroundColor: "#D4450A" }}
-            className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium text-white shadow-[0_4px_24px_rgba(0,0,0,0.08)] hover:opacity-90 transition-all"
-            title="Edit store"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="13"
-              height="13"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          {canEditStore ? (
+            <Link
+              href="/dashboard/vendor/store/edit"
+              style={{ backgroundColor: "#D4450A" }}
+              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium text-white shadow-[0_4px_24px_rgba(0,0,0,0.08)] hover:opacity-90 transition-all"
+              title="Edit store"
             >
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-            </svg>
-            Edit store
-          </Link>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+              Edit store
+            </Link>
+          ) : null}
 
           <div className="relative">
             <button

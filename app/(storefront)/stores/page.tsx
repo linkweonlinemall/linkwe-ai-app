@@ -148,7 +148,7 @@ export default async function StoresDiscoveryPage({
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-20 sm:pb-8">
+    <div className="min-h-screen bg-[#F5F5F5] pb-16 sm:pb-0">
       <PublicNav
         user={
           navUser ? { name: navUser.fullName ?? "Account", href: continueHref! } : null

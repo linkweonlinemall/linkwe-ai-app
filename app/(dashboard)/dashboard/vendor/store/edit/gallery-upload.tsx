@@ -1,9 +1,14 @@
 "use client";
 
-import { useRef, useTransition, useState, type ChangeEvent, type DragEvent } from "react";
+import { useRouter } from "next/navigation";
+import { useRef, useTransition, useState, useEffect, type ChangeEvent, type DragEvent } from "react";
 import { addStoreImageClient, removeStoreImageClient, reorderStoreGallery } from "@/app/actions/store";
 
 type GalleryImage = { id: string; url: string; position: number };
+
+type AddGalleryResult =
+  | { ok: false; error?: string }
+  | { ok: true; newImages?: GalleryImage[] };
 
 type Props = {
   images: GalleryImage[];
@@ -11,11 +16,16 @@ type Props = {
 };
 
 export default function GalleryUpload({ images: initialImages, slotsAvailable: initialSlots }: Props) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [images, setImages] = useState<GalleryImage[]>(initialImages);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setImages(initialImages);
+  }, [initialImages]);
 
   const slotsAvailable = 10 - images.length;
 
@@ -35,9 +45,10 @@ export default function GalleryUpload({ images: initialImages, slotsAvailable: i
     });
 
     startTransition(async () => {
-      const result = await addStoreImageClient(formData);
+      const result = (await addStoreImageClient(formData)) as AddGalleryResult;
       if (result.ok) {
-        window.location.reload();
+        router.refresh();
+        if (result.newImages) setImages(result.newImages);
       }
       if (fileInputRef.current) fileInputRef.current.value = "";
     });

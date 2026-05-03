@@ -15,7 +15,7 @@ export default async function ChatPage() {
   const chatList = session ? await getVendorChats() : []
 
   return (
-    <div className="flex flex-col" style={{ height: "100dvh" }}>
+    <div className="flex flex-col pb-16 sm:pb-0" style={{ height: "100dvh" }}>
       <PublicNav
         user={session ? { name: session.fullName ?? "Account", href: dashboardHref! } : null}
         dashboardHref={dashboardHref ?? undefined}

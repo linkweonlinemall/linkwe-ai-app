@@ -108,7 +108,7 @@ export default async function ShopPage({ searchParams }: Props) {
   });
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5]">
+    <div className="min-h-screen bg-[#F5F5F5] pb-16 sm:pb-0">
       <PublicNav
         user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null}
         dashboardHref={continueHref ?? undefined}

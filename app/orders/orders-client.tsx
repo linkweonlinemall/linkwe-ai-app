@@ -274,9 +274,19 @@ export default function OrdersClient({ orders }: Props) {
                     ) : null}
                     <Link
                       href={`/orders/${order.id}`}
-                      className="rounded-lg px-3 py-1.5 text-xs text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-900"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 hover:border-zinc-300 shadow-sm"
                     >
                       View Order
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                      >
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
                     </Link>
                     <a
                       href={`/api/invoice/${order.id}`}

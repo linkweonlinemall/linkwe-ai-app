@@ -25,7 +25,7 @@ export default async function CartPage() {
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5]">
+    <div className="min-h-screen bg-[#F5F5F5] pb-16 sm:pb-0">
       <PublicNav
         user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null}
         dashboardHref={continueHref ?? undefined}

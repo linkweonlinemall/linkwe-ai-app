@@ -41,7 +41,7 @@ export default async function CheckoutPage() {
   const subtotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5]">
+    <div className="min-h-screen bg-[#F5F5F5] pb-16 sm:pb-0">
       <PublicNav
         user={
           userRecord

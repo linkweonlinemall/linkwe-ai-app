@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import type {
@@ -148,7 +148,13 @@ export default function VendorDashboardTabs({
   payoutRequests,
 }: VendorDashboardTabsProps) {
   const pathname = usePathname();
-  const [activeTab, setActiveTab] = useState<TabId>("store");
+  const searchParams = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<TabId>(
+    tabFromUrl && TABS.find((t) => t.id === tabFromUrl)
+      ? (tabFromUrl as TabId)
+      : TABS[0].id,
+  );
   const productsActive = pathname === "/dashboard/vendor/products";
 
   return (
