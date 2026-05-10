@@ -1,8 +1,9 @@
 "use client";
 
+import { type ReactNode, useState } from "react";
+
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useState } from "react";
 
 import type {
   LedgerEntryType,
@@ -109,6 +110,9 @@ export type VendorDashboardTabsProps = {
   dashboardErrorMessage: string | null;
   ledgerEntries: VendorDashboardStore["ledgerEntries"];
   payoutRequests: VendorDashboardStore["payoutRequests"];
+  /** Shown inside the store header card after action buttons when ID verification is approved. */
+  verificationApprovedBanner?: ReactNode;
+  verificationChecklist?: ReactNode;
 };
 
 function SidebarNavLink({
@@ -146,6 +150,8 @@ export default function VendorDashboardTabs({
   dashboardErrorMessage,
   ledgerEntries,
   payoutRequests,
+  verificationApprovedBanner,
+  verificationChecklist,
 }: VendorDashboardTabsProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -237,6 +243,8 @@ export default function VendorDashboardTabs({
                 completionPercent={completionPercent}
                 store={store}
                 totalCount={totalCount}
+                verificationApprovedBanner={verificationApprovedBanner}
+                verificationChecklist={verificationChecklist}
               />
             )}
             {activeTab === "orders" && <OrdersTab splitOrders={splitOrders} />}
@@ -255,25 +263,6 @@ export default function VendorDashboardTabs({
           </div>
 
           <div className="flex w-full shrink-0 flex-col gap-6 lg:w-72">
-            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">Your store</p>
-              <div className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-zinc-900">{store.name}</span>
-                <span className="text-zinc-500">{store.slug}</span>
-                {store.tagline ? <span className="text-xs text-zinc-400">{store.tagline}</span> : null}
-              </div>
-              <div className="mt-3 flex flex-col gap-2">
-                <a
-                  href={`/store/${store.slug}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
-                >
-                  View public store
-                </a>
-              </div>
-            </div>
-
             <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
               <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">Quick stats</p>
               <ul className="space-y-3">

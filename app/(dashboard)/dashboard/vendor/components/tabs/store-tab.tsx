@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 
 type CompletenessItem = { label: string; done: boolean; detail?: string };
@@ -13,6 +14,8 @@ type Props = {
   completedCount: number;
   totalCount: number;
   completionPercent: number;
+  verificationApprovedBanner?: ReactNode;
+  verificationChecklist?: ReactNode;
 };
 
 export default function StoreTab({
@@ -21,6 +24,8 @@ export default function StoreTab({
   completedCount,
   totalCount,
   completionPercent,
+  verificationApprovedBanner,
+  verificationChecklist,
 }: Props) {
   return (
     <div className="flex flex-col gap-6">
@@ -54,6 +59,7 @@ export default function StoreTab({
                 View public store
               </Link>
             </div>
+            {verificationApprovedBanner}
           </div>
         </div>
       </div>
@@ -88,6 +94,10 @@ export default function StoreTab({
             </li>
           ))}
         </ul>
+
+        {verificationChecklist ? (
+          <div className="mt-4 border-t border-zinc-100 pt-4">{verificationChecklist}</div>
+        ) : null}
       </div>
     </div>
   );

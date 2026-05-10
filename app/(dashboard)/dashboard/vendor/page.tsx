@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
+
 import VendorDashboardTabs from "@/app/(dashboard)/dashboard/vendor/components/vendor-dashboard-tabs";
+import VendorVerificationChecklist from "@/components/vendor/VendorVerificationChecklist";
 import { getSession } from "@/lib/auth/session";
 import { assertDashboardRole } from "@/lib/auth/assert-role";
-import { getCurrentUser } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/prisma";
 
 const DASHBOARD_MESSAGES: Record<string, string> = {
@@ -18,7 +19,22 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
   if (!session) redirect("/login");
   assertDashboardRole(session, "VENDOR");
 
-  const user = await getCurrentUser();
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: {
+      id: true,
+      idDocumentUrl: true,
+      idVerificationStatus: true,
+      bankDetails: {
+        select: {
+          bankName: true,
+          accountName: true,
+          accountNumber: true,
+          accountType: true,
+        },
+      },
+    },
+  });
   if (!user) redirect("/login");
 
   const store = await prisma.store.findFirst({
@@ -69,11 +85,6 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
     },
   });
   if (!store) redirect("/onboarding/business/step-3");
-
-  const bankDetails = await prisma.vendorBankDetails.findUnique({
-    where: { userId: session.userId },
-    select: { bankName: true, accountName: true, accountNumber: true, accountType: true },
-  });
 
   const listings = await prisma.listing.findMany({
     where: { storeId: store.id },
@@ -133,7 +144,6 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
     { label: "Store policies", done: !!store.policies },
     { label: "Store location", done: !!store.latitude },
     { label: "Social links", done: !!store.socialLinks },
-    { label: "Payout details", done: !!bankDetails },
   ];
 
   const completedCount = completenessItems.filter((i) => i.done).length;
@@ -146,7 +156,7 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
         store={store}
         listings={listings}
         splitOrders={splitOrders}
-        bankDetails={bankDetails}
+        bankDetails={user.bankDetails}
         ledgerEntries={store.ledgerEntries}
         payoutRequests={store.payoutRequests}
         completenessItems={completenessItems}
@@ -155,6 +165,31 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
         completionPercent={completionPercent}
         dashboardSuccessMessage={dashboardSuccessMessage}
         dashboardErrorMessage={dashboardErrorMessage}
+        verificationApprovedBanner={
+          user.idVerificationStatus === "APPROVED" ? (
+            <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                <polyline points="9 12 11 14 15 10" />
+              </svg>
+              <div>
+                <p className="text-xs font-bold text-emerald-800">Confirmed to sell ✓</p>
+                <p className="text-[10px] text-emerald-600">Identity verified — store is live on LinkWe</p>
+              </div>
+            </div>
+          ) : undefined
+        }
+        verificationChecklist={
+          <VendorVerificationChecklist
+            embedded
+            idStatus={user.idVerificationStatus}
+            idDocumentUrl={user.idDocumentUrl}
+            bankName={user.bankDetails?.bankName ?? null}
+            accountName={user.bankDetails?.accountName ?? null}
+            accountNumber={user.bankDetails?.accountNumber ?? null}
+            accountType={user.bankDetails?.accountType ?? null}
+          />
+        }
       />
     </div>
   );
