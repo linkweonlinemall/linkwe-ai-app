@@ -1,25 +1,55 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
-export default async function EditServicePlaceholder({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+import EditServiceForm from "./EditServiceForm";
+import { getSession } from "@/lib/auth/session";
+import { prisma } from "@/lib/prisma";
+
+type Props = { params: Promise<{ id: string }> };
+
+export default async function EditServicePage({ params }: Props) {
   const { id } = await params;
+  const session = await getSession();
+  if (!session) redirect("/login");
+
+  const store = await prisma.store.findFirst({
+    where: { ownerId: session.userId },
+    select: { id: true },
+  });
+  if (!store) redirect("/dashboard/vendor/services");
+
+  const service = await prisma.product.findFirst({
+    where: { id, storeId: store.id, isService: true },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      category: true,
+      serviceType: true,
+      serviceLocation: true,
+      price: true,
+      serviceDuration: true,
+      requiresDeposit: true,
+      depositAmount: true,
+      bookingPaymentMode: true,
+      tags: true,
+      isPublished: true,
+    },
+  });
+
+  if (!service) redirect("/dashboard/vendor/services");
 
   return (
-    <div className="mx-auto max-w-xl px-4 py-16 text-center">
-      <h1 className="text-xl font-bold text-zinc-900">Edit service</h1>
-      <p className="mt-2 text-sm text-zinc-500">
-        Form editor for service <span className="font-mono text-zinc-700">{id}</span> ships in the next step.
-      </p>
-      <Link
-        href="/dashboard/vendor/services"
-        className="mt-6 inline-block rounded-xl px-5 py-2.5 text-sm font-semibold text-white"
-        style={{ backgroundColor: "#D4450A" }}
-      >
-        Back to My Services
-      </Link>
+    <div className="mx-auto max-w-2xl px-4 py-8">
+      <div className="mb-6 flex items-center gap-3">
+        <Link href="/dashboard/vendor/services" className="text-sm text-zinc-500 hover:text-zinc-900">
+          ← Services
+        </Link>
+        <span className="text-zinc-300">/</span>
+        <span className="text-sm font-semibold text-zinc-900">Edit service</span>
+      </div>
+      <h1 className="mb-6 text-2xl font-bold text-zinc-900">Edit Service</h1>
+      <EditServiceForm service={service} />
     </div>
   );
 }

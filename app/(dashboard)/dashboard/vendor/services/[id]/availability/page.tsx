@@ -17,7 +17,7 @@ export default async function ServiceAvailabilityPage({ params }: Props) {
   if (!service) redirect("/dashboard/vendor/services");
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
+    <div className="px-6 py-8">
       <div className="mb-6 flex items-center gap-3">
         <Link
           href="/dashboard/vendor/services"

@@ -1,9 +1,8 @@
 "use client";
 
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
-import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 import type {
   LedgerEntryType,
@@ -35,10 +34,6 @@ const TABS = [
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
-
-const SIDEBAR_ITEM =
-  "mx-2 flex w-[calc(100%-1rem)] items-center gap-3 rounded-lg px-4 py-2.5 text-sm text-zinc-600 transition-colors duration-150 hover:bg-zinc-50 hover:text-zinc-900";
-const SIDEBAR_ITEM_ACTIVE = "bg-[#D4450A]/10 font-medium text-[#D4450A]";
 
 export type VendorDashboardStore = {
   id: string;
@@ -115,28 +110,6 @@ export type VendorDashboardTabsProps = {
   verificationChecklist?: ReactNode;
 };
 
-function SidebarNavLink({
-  href,
-  active,
-  icon,
-  label,
-}: {
-  href: string;
-  active: boolean;
-  icon: string;
-  label: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className={[SIDEBAR_ITEM, active ? SIDEBAR_ITEM_ACTIVE : ""].filter(Boolean).join(" ")}
-    >
-      <span aria-hidden>{icon}</span>
-      <span>{label}</span>
-    </Link>
-  );
-}
-
 export default function VendorDashboardTabs({
   store,
   listings,
@@ -153,7 +126,6 @@ export default function VendorDashboardTabs({
   verificationApprovedBanner,
   verificationChecklist,
 }: VendorDashboardTabsProps) {
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const tabFromUrl = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState<TabId>(
@@ -161,74 +133,18 @@ export default function VendorDashboardTabs({
       ? (tabFromUrl as TabId)
       : TABS[0].id,
   );
-  const productsActive = pathname === "/dashboard/vendor/products";
-  const servicesActive = pathname.startsWith("/dashboard/vendor/services");
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab && TABS.some((t) => t.id === tab)) {
+      setActiveTab(tab as TabId);
+    } else {
+      setActiveTab(TABS[0].id);
+    }
+  }, [searchParams]);
 
   return (
-    <>
-      <nav className="flex w-full min-w-0 overflow-x-auto whitespace-nowrap border-b border-zinc-200 bg-white md:hidden">
-        <Link
-          href="/dashboard/vendor/products"
-          className={[
-            "inline-block shrink-0 whitespace-nowrap px-3 py-3 text-sm",
-            productsActive
-              ? "border-b-2 border-[#D4450A] font-medium text-[#D4450A]"
-              : "text-zinc-500 hover:text-zinc-800",
-          ].join(" ")}
-        >
-          <span aria-hidden>📦 </span>Products
-        </Link>
-        <Link
-          href="/dashboard/vendor/services"
-          className={[
-            "inline-block shrink-0 whitespace-nowrap px-3 py-3 text-sm",
-            servicesActive
-              ? "border-b-2 border-[#D4450A] font-medium text-[#D4450A]"
-              : "text-zinc-500 hover:text-zinc-800",
-          ].join(" ")}
-        >
-          <span aria-hidden>📅 </span>My Services
-        </Link>
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={[
-              "inline-block shrink-0 whitespace-nowrap px-3 py-3 text-sm",
-              activeTab === tab.id
-                ? "border-b-2 border-[#D4450A] font-medium text-[#D4450A]"
-                : "text-zinc-500 hover:text-zinc-800",
-            ].join(" ")}
-          >
-            <span aria-hidden>{tab.icon} </span>
-            {tab.label}
-          </button>
-        ))}
-      </nav>
-
-      <aside className="hidden min-h-screen w-56 shrink-0 flex-col border-r border-zinc-100 bg-white pb-6 pt-4 md:flex">
-        <SidebarNavLink href="/dashboard/vendor/products" active={productsActive} icon="📦" label="Products" />
-        <SidebarNavLink
-          href="/dashboard/vendor/services"
-          active={servicesActive}
-          icon="📅"
-          label="My Services"
-        />
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={[SIDEBAR_ITEM, activeTab === tab.id ? SIDEBAR_ITEM_ACTIVE : "", "text-left"].join(" ")}
-          >
-            <span aria-hidden>{tab.icon}</span>
-            <span>{tab.label}</span>
-          </button>
-        ))}
-      </aside>
-
-      <main className="min-w-0 flex-1 bg-[#F5F5F5] px-6 py-6">
+    <main className="min-w-0 flex-1 bg-[#F5F5F5] px-6 py-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-zinc-900">Vendor dashboard</h1>
           <p className="mt-1 text-sm text-zinc-500">Manage your store and listings.</p>
@@ -301,6 +217,5 @@ export default function VendorDashboardTabs({
           </div>
         </div>
       </main>
-    </>
   );
 }

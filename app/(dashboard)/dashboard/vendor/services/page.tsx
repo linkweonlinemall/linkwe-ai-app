@@ -1,6 +1,9 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
-import { getVendorServices } from "@/app/actions/services";
+import { deleteService, getVendorServices } from "@/app/actions/services";
 
 function serviceTypeLabel(type: string | null) {
   switch (type) {
@@ -19,11 +22,70 @@ function serviceTypeLabel(type: string | null) {
   }
 }
 
-export default async function VendorServicesPage() {
-  const services = await getVendorServices();
+type Service = Awaited<ReturnType<typeof getVendorServices>>[number];
+
+export default function VendorServicesPage() {
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+
+  useEffect(() => {
+    getVendorServices()
+      .then((data) => {
+        setServices(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === services.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(services.map((s) => s.id)));
+    }
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (
+      !confirm(
+        `Archive ${selectedIds.size} service${selectedIds.size > 1 ? "s" : ""}? They will be hidden from customers.`,
+      )
+    )
+      return;
+    const ids = [...selectedIds];
+    setBulkLoading(true);
+    for (const id of ids) {
+      await deleteService(id);
+    }
+    setServices((prev) => prev.filter((s) => !ids.includes(s.id)));
+    setSelectedIds(new Set());
+    setBulkLoading(false);
+  }
+
+  if (loading) {
+    return (
+      <div className="px-6 py-8">
+        <div className="flex items-center justify-center py-20">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-200 border-t-[#D4450A]" />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <div className="px-6 py-8">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900">My Services</h1>
@@ -39,6 +101,31 @@ export default async function VendorServicesPage() {
           + New service
         </Link>
       </div>
+
+      {selectedIds.size > 0 ? (
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[#D4450A]/20 bg-[#D4450A]/5 px-4 py-3">
+          <span className="text-xs font-semibold text-[#D4450A]">
+            {selectedIds.size} selected
+          </span>
+          <div className="ml-auto flex gap-2">
+            <button
+              type="button"
+              disabled={bulkLoading}
+              onClick={() => void handleBulkDelete()}
+              className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100 disabled:opacity-50"
+            >
+              Archive selected
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedIds(new Set())}
+              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-50"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {services.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-white py-20 text-center">
@@ -57,13 +144,32 @@ export default async function VendorServicesPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2 px-1">
+            <input
+              type="checkbox"
+              checked={selectedIds.size === services.length && services.length > 0}
+              onChange={toggleSelectAll}
+              className="h-4 w-4 rounded accent-[#D4450A]"
+            />
+            <span className="text-xs text-zinc-500">Select all</span>
+          </div>
+
           {services.map((service) => {
             const type = serviceTypeLabel(service.serviceType);
+            const isSelected = selectedIds.has(service.id);
             return (
               <div
                 key={service.id}
-                className="flex items-center gap-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm"
+                className={`flex items-center gap-3 rounded-2xl border bg-white p-4 shadow-sm transition-all ${
+                  isSelected ? "border-[#D4450A]/40 ring-1 ring-[#D4450A]/20" : "border-zinc-200"
+                }`}
               >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => toggleSelect(service.id)}
+                  className="h-4 w-4 shrink-0 rounded accent-[#D4450A]"
+                />
                 <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-zinc-100">
                   {service.images[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element

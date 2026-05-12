@@ -29,6 +29,7 @@ export default function NewServicePage() {
   const [serviceType, setServiceType] = useState("");
   const [serviceLocation, setServiceLocation] = useState("");
   const [requiresDeposit, setRequiresDeposit] = useState(false);
+  const [paymentMode, setPaymentMode] = useState("CUSTOMER_CHOOSES");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -38,6 +39,7 @@ export default function NewServicePage() {
     formData.set("serviceType", serviceType);
     formData.set("serviceLocation", serviceLocation);
     formData.set("requiresDeposit", requiresDeposit ? "true" : "false");
+    formData.set("bookingPaymentMode", paymentMode);
     const result = await createService(formData);
     if (result?.error) {
       setError(result.error);
@@ -199,6 +201,57 @@ export default function NewServicePage() {
             ) : null}
           </div>
         </div>
+
+        {(serviceType === "BOOKABLE" || serviceType === "VIRTUAL") ? (
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+            <p className="mb-3 text-sm font-bold text-zinc-900">Payment preference</p>
+            <div className="flex flex-col gap-2">
+              {[
+                {
+                  value: "CUSTOMER_CHOOSES",
+                  label: "Customer chooses",
+                  description: "Show both pay online and pay on arrival options",
+                  icon: "🔀",
+                },
+                {
+                  value: "ONLINE_ONLY",
+                  label: "Online payment only",
+                  description: "Customer must pay via card to confirm booking",
+                  icon: "💳",
+                },
+                {
+                  value: "ON_ARRIVAL_ONLY",
+                  label: "Pay on arrival only",
+                  description: "Customer pays when they arrive — no online payment",
+                  icon: "💵",
+                },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setPaymentMode(opt.value)}
+                  className={`flex items-start gap-3 rounded-xl border-2 p-3 text-left transition-all ${
+                    paymentMode === opt.value
+                      ? "border-[#D4450A] bg-[#D4450A]/5"
+                      : "border-zinc-200 bg-white hover:border-zinc-300"
+                  }`}
+                >
+                  <span className="text-xl">{opt.icon}</span>
+                  <div>
+                    <p
+                      className={`text-sm font-semibold ${
+                        paymentMode === opt.value ? "text-[#D4450A]" : "text-zinc-900"
+                      }`}
+                    >
+                      {opt.label}
+                    </p>
+                    <p className="text-xs text-zinc-500">{opt.description}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         {(serviceType === "BOOKABLE" || serviceType === "VIRTUAL") ? (
           <div className="rounded-2xl border border-zinc-200 bg-white p-5">

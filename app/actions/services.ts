@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { BookingPaymentMode } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth/session";
@@ -63,6 +64,19 @@ export async function createService(formData: FormData) {
   const tagsRaw = formData.get("tags") as string;
   const tags = tagsRaw ? tagsRaw.split(",").map((t) => t.trim()).filter(Boolean) : [];
 
+  const bookingPaymentModeRaw =
+    (formData.get("bookingPaymentMode") as string) || "CUSTOMER_CHOOSES";
+  const allowedPaymentModes = [
+    "ONLINE_ONLY",
+    "ON_ARRIVAL_ONLY",
+    "CUSTOMER_CHOOSES",
+  ] as const;
+  const bookingPaymentMode = allowedPaymentModes.includes(
+    bookingPaymentModeRaw as (typeof allowedPaymentModes)[number],
+  )
+    ? (bookingPaymentModeRaw as BookingPaymentMode)
+    : BookingPaymentMode.CUSTOMER_CHOOSES;
+
   if (!name || !serviceType || Number.isNaN(price)) return { error: "Missing required fields" };
 
   let slug = slugify(name);
@@ -88,6 +102,8 @@ export async function createService(formData: FormData) {
       isPublished,
       tags,
       images: [],
+      isBookable: serviceType === "BOOKABLE" || serviceType === "VIRTUAL",
+      bookingPaymentMode,
     },
   });
 
@@ -126,6 +142,21 @@ export async function updateService(id: string, formData: FormData) {
   const tagsRaw = formData.get("tags") as string;
   const tags = tagsRaw ? tagsRaw.split(",").map((t) => t.trim()).filter(Boolean) : [];
 
+  const bookingPaymentModeRaw =
+    (formData.get("bookingPaymentMode") as string) || "CUSTOMER_CHOOSES";
+  const allowedPaymentModes = [
+    "ONLINE_ONLY",
+    "ON_ARRIVAL_ONLY",
+    "CUSTOMER_CHOOSES",
+  ] as const;
+  const bookingPaymentMode = allowedPaymentModes.includes(
+    bookingPaymentModeRaw as (typeof allowedPaymentModes)[number],
+  )
+    ? (bookingPaymentModeRaw as BookingPaymentMode)
+    : BookingPaymentMode.CUSTOMER_CHOOSES;
+
+  if (!name || !serviceType || Number.isNaN(price)) return { error: "Missing required fields" };
+
   await prisma.product.update({
     where: { id },
     data: {
@@ -136,12 +167,15 @@ export async function updateService(id: string, formData: FormData) {
       serviceType: serviceType as any,
       serviceLocation:
         serviceLocationRaw.trim().length > 0 ? (serviceLocationRaw.trim() as any) : null,
-      serviceDuration: serviceDuration && !Number.isNaN(serviceDuration) ? serviceDuration : null,
+      serviceDuration:
+        serviceDuration && !Number.isNaN(serviceDuration) ? serviceDuration : null,
       requiresDeposit,
       depositAmount:
         depositAmount !== null && !Number.isNaN(depositAmount) ? depositAmount : null,
       isPublished,
       tags,
+      bookingPaymentMode,
+      isBookable: serviceType === "BOOKABLE" || serviceType === "VIRTUAL",
     },
   });
 

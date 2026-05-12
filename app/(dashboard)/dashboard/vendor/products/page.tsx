@@ -88,7 +88,7 @@ export default function VendorProductsPage() {
 
   if (products === null && !loadError) {
     return (
-      <div className="mx-auto max-w-5xl px-6 py-6">
+      <div className="px-6 py-8">
         <p className="text-sm" style={{ color: "var(--text-muted)" }}>
           Loading…
         </p>
@@ -98,7 +98,7 @@ export default function VendorProductsPage() {
 
   if (loadError) {
     return (
-      <div className="mx-auto max-w-5xl px-6 py-6">
+      <div className="px-6 py-8">
         <p className="text-sm" style={{ color: "var(--text-muted)" }}>
           Couldn&apos;t load products. Please refresh the page.
         </p>
@@ -107,7 +107,7 @@ export default function VendorProductsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-6">
+    <div className="px-6 py-8">
       <Link
         href="/dashboard/vendor"
         className="mb-4 inline-block text-sm text-zinc-500 hover:text-zinc-800"

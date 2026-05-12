@@ -1171,6 +1171,12 @@ enum ServiceLocation {
   FLEXIBLE
 }
 
+enum BookingPaymentMode {
+  ONLINE_ONLY
+  ON_ARRIVAL_ONLY
+  CUSTOMER_CHOOSES
+}
+
 model Product {
   id                    String            @id @default(cuid())
   storeId               String
@@ -1224,6 +1230,7 @@ model Product {
   cancellationHours     Int?
   maxGroupSize          Int?
   requiresApproval      Boolean           @default(false)
+  bookingPaymentMode    BookingPaymentMode? @default(CUSTOMER_CHOOSES)
 
   latitude              Float?
   longitude             Float?

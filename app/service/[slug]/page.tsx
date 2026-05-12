@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import PublicNav from "@/components/layout/PublicNav";
+import BookingWidget from "@/components/service/BookingWidget";
 import { getServiceCategoryLabel } from "@/lib/categories";
 import { prisma } from "@/lib/prisma";
 
@@ -98,12 +99,38 @@ export default async function ServiceDetailPage({ params }: Props) {
       serviceDuration: true,
       requiresDeposit: true,
       depositAmount: true,
+      requiresApproval: true,
+      bookingPaymentMode: true,
       isFeatured: true,
       store: { select: { name: true, slug: true, logoUrl: true, region: true } },
     },
   });
 
   if (!service || !service.isPublished || !service.isService || service.isArchived) notFound();
+
+  const slugKey = slug.trim().toLowerCase();
+
+  const bookingData =
+    service.serviceType === "BOOKABLE" || service.serviceType === "VIRTUAL"
+      ? await prisma.product.findUnique({
+          where: { slug: slugKey },
+          select: {
+            id: true,
+            advanceBookingDays: true,
+            bookingPaymentMode: true,
+            requiresDeposit: true,
+            depositAmount: true,
+            requiresApproval: true,
+            availabilitySchedule: true,
+            availabilityOverrides: {
+              where: { date: { gte: new Date() } },
+            },
+            bookingSlots: {
+              where: { date: { gte: new Date() }, isAvailable: true },
+            },
+          },
+        })
+      : null;
 
   const typeInfo = serviceTypeDisplay(service.serviceType);
   const location = locationDisplay(service.serviceLocation);
@@ -243,13 +270,57 @@ export default async function ServiceDetailPage({ params }: Props) {
                 </div>
               ) : null}
 
-              <div className="mt-4 rounded-xl border border-dashed border-zinc-200 bg-zinc-50 px-4 py-5 text-center">
-                <p className="mb-2 text-2xl">🔧</p>
-                <p className="text-sm font-bold text-zinc-900">Booking coming soon</p>
-                <p className="mt-1 text-xs leading-relaxed text-zinc-500">
-                  Online booking for this service is being set up. Contact the provider directly in the meantime.
-                </p>
-              </div>
+              {(service.serviceType === "BOOKABLE" || service.serviceType === "VIRTUAL") &&
+              bookingData ? (
+                <BookingWidget
+                  serviceId={service.id}
+                  serviceSlug={service.slug}
+                  serviceName={service.name}
+                  price={service.price}
+                  serviceDuration={service.serviceDuration ?? 60}
+                  requiresDeposit={service.requiresDeposit}
+                  depositAmount={service.depositAmount}
+                  requiresApproval={service.requiresApproval ?? false}
+                  bookingPaymentMode={
+                    bookingData.bookingPaymentMode ?? "CUSTOMER_CHOOSES"
+                  }
+                  advanceBookingDays={bookingData.advanceBookingDays ?? 30}
+                  availabilitySchedule={bookingData.availabilitySchedule}
+                  availabilityOverrides={bookingData.availabilityOverrides}
+                  existingSlots={bookingData.bookingSlots}
+                />
+              ) : service.serviceType === "QUOTE" ? (
+                <div className="rounded-xl border border-dashed border-amber-200 bg-amber-50 px-4 py-5 text-center">
+                  <p className="mb-2 text-2xl">💬</p>
+                  <p className="text-sm font-bold text-amber-900">Request a quote</p>
+                  <p className="mt-1 text-xs leading-relaxed text-amber-700">
+                    Contact the provider to get a custom quote for this service.
+                  </p>
+                </div>
+              ) : service.serviceType === "SUBSCRIPTION" ? (
+                <div className="rounded-xl border border-dashed border-purple-200 bg-purple-50 px-4 py-5 text-center">
+                  <p className="mb-2 text-2xl">🔄</p>
+                  <p className="text-sm font-bold text-purple-900">Subscribe</p>
+                  <p className="mt-1 text-xs leading-relaxed text-purple-700">
+                    Recurring service — contact the provider to set up your subscription.
+                  </p>
+                </div>
+              ) : service.serviceType === "ON_DEMAND" ? (
+                <div className="rounded-xl border border-dashed border-emerald-200 bg-emerald-50 px-4 py-5 text-center">
+                  <p className="mb-2 text-2xl">⚡</p>
+                  <p className="text-sm font-bold text-emerald-900">Request now</p>
+                  <p className="mt-1 text-xs leading-relaxed text-emerald-700">
+                    On-demand service — contact the provider to request immediately.
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50 px-4 py-5 text-center">
+                  <p className="text-sm font-bold text-zinc-900">Contact provider</p>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Visit the store to get in touch.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
