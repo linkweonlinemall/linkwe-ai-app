@@ -128,7 +128,7 @@ export default function VendorAIAssistantPage() {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const selectionRef = useRef({ start: 0, end: 0 })
   const sendMessageRef = useRef<
-    (text: string) => void | Promise<void>
+    (overrideMessage?: string) => void | Promise<void>
   >(() => {})
   const messagesRef = useRef<ChatMsg[]>([])
   const autoChatTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -149,12 +149,6 @@ export default function VendorAIAssistantPage() {
     if (id) {
       getVendorChatMessages(id).then((msgs) => {
         setMessages([
-          {
-            id: "welcome",
-            role: "assistant",
-            content:
-              "Hi! I'm your LinkWe assistant. Tell me what you'd like to list and I'll help you create it.",
-          },
           ...msgs.map((m, i) => ({
             id: String(i),
             role: m.role as "user" | "assistant",
@@ -250,13 +244,13 @@ export default function VendorAIAssistantPage() {
     })
   }
 
-  const sendMessage = useCallback(
-    async (text: string) => {
-      const trimmed = text.trim()
+  const handleSend = useCallback(
+    async (overrideMessage?: string) => {
+      const text = (overrideMessage ?? input).trim()
       const isFirstInThread = !messages.some((m) => m.role === "user")
       const previewCount = startImagePreviews.length
       const canSendWithImages = isFirstInThread && previewCount > 0
-      if (!canSendWithImages && !trimmed) return
+      if (!canSendWithImages && !text) return
       if (loading || !allowed) return
 
       const hasStartPreviews = isFirstInThread && previewCount > 0
@@ -299,12 +293,12 @@ export default function VendorAIAssistantPage() {
       }
 
       const textForApi =
-        trimmed ||
+        text ||
         (hasStartPreviews
           ? "Please analyse my product images and help me create a listing."
           : "")
 
-      const finalContent: string = trimmed
+      const finalContent: string = text
       const displayText =
         previewsForApi.length > 0 || heroUploadedUrls.length > 0
           ? textForApi
@@ -369,7 +363,7 @@ export default function VendorAIAssistantPage() {
           { type: "text" as const, text: textForApi },
         ]
       } else {
-        lastUserContent = trimmed
+        lastUserContent = text
       }
 
       const historyForApi = messages.filter((m) => m.id !== "welcome")
@@ -487,6 +481,7 @@ export default function VendorAIAssistantPage() {
       allowed,
       loading,
       messages,
+      input,
       router,
       startImagePreviews,
       adjustTextareaHeight,
@@ -496,8 +491,32 @@ export default function VendorAIAssistantPage() {
   )
 
   useEffect(() => {
-    sendMessageRef.current = sendMessage
-  }, [sendMessage])
+    sendMessageRef.current = handleSend
+  }, [handleSend])
+
+  function isListingTypeMessage(content: string): boolean {
+    return (
+      content.includes("Simple product") &&
+      content.includes("Variable product") &&
+      content.includes("Service")
+    )
+  }
+
+  const LISTING_TYPE_OPTIONS = [
+    {
+      label: "🛍️ Simple product",
+      value: "Simple product — one price, one stock level",
+    },
+    {
+      label: "🎨 Variable product",
+      value:
+        "Variable product — different sizes, colours, or options",
+    },
+    {
+      label: "🛎️ Service",
+      value: "Service — bookable, quote, subscription, or on-demand",
+    },
+  ]
 
   if (allowed === null) {
     return (
@@ -544,14 +563,7 @@ export default function VendorAIAssistantPage() {
             <button
               type="button"
               onClick={() => {
-                setMessages([
-                  {
-                    id: "welcome",
-                    role: "assistant",
-                    content:
-                      "Hi! I'm your LinkWe assistant. Tell me what you'd like to list and I'll help you create it.",
-                  },
-                ])
+                setMessages([])
                 setChatId(null)
                 setCreatedProductId(null)
                 setFocusedProductId(null)
@@ -578,12 +590,6 @@ export default function VendorAIAssistantPage() {
                 onClick={async () => {
                   const msgs = await getVendorChatMessages(chat.id)
                   setMessages([
-                    {
-                      id: "welcome",
-                      role: "assistant",
-                      content:
-                        "Hi! I'm your LinkWe assistant. Tell me what you'd like to list and I'll help you create it.",
-                    },
                     ...msgs.map((m, i) => ({
                       id: String(i),
                       role: m.role as "user" | "assistant",
@@ -649,7 +655,7 @@ export default function VendorAIAssistantPage() {
           {activeTab === "assistant" && (
             <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col px-4 py-4">
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-4">
-          {messages.length <= 1 ? (
+          {messages.length === 0 ? (
             <div className="mx-4 mt-4 rounded-lg border border-dashed border-zinc-600 p-4">
               <p className="mb-1 text-sm font-medium text-zinc-300">
                 Upload product images first (optional)
@@ -746,10 +752,57 @@ export default function VendorAIAssistantPage() {
           ) : null}
 
           {messages.length === 0 ? (
-            <p className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm leading-relaxed text-zinc-300">
-              Hi! I&apos;m your LinkWe assistant. Tell me what you&apos;d like
-              to list and I&apos;ll help you create it.
-            </p>
+            <div className="flex flex-col gap-4">
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-5 py-4 text-sm leading-relaxed text-zinc-300">
+                <p className="mb-1 text-base font-bold text-white">
+                  Hi! I&apos;m your LinkWe assistant.
+                </p>
+                <p className="text-zinc-400">
+                  What would you like to create today? Pick an option or type
+                  your own message below.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  {
+                    label: "🛍️ Simple product",
+                    description: "One price, one stock level",
+                    message: "I want to create a simple product",
+                  },
+                  {
+                    label: "🎨 Variable product",
+                    description:
+                      "Different sizes, colours, or options",
+                    message:
+                      "I want to create a variable product with different sizes or colours",
+                  },
+                  {
+                    label: "🛎️ Service",
+                    description: "Bookable, quote, or subscription",
+                    message: "I want to create a service listing",
+                  },
+                  {
+                    label: "✏️ Edit a product",
+                    description: "Update an existing listing",
+                    message: "I want to edit an existing product",
+                  },
+                ].map((opt) => (
+                  <button
+                    key={opt.label}
+                    type="button"
+                    onClick={() => void handleSend(opt.message)}
+                    className="flex flex-col gap-1 rounded-2xl border border-zinc-700 bg-zinc-800/60 px-4 py-3 text-left transition-all hover:border-[#D4450A] hover:bg-zinc-800 active:scale-95"
+                  >
+                    <span className="text-sm font-bold text-white">
+                      {opt.label}
+                    </span>
+                    <span className="text-xs text-zinc-400">
+                      {opt.description}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
           ) : null}
 
           {messages.map((m) => (
@@ -805,6 +858,22 @@ export default function VendorAIAssistantPage() {
                     <div className="prose prose-invert prose-sm max-w-none [&_p]:mb-2 [&_p:last-child]:mb-0">
                       <ReactMarkdown>{m.content}</ReactMarkdown>
                     </div>
+                    {isListingTypeMessage(m.content) && !loading ? (
+                      <div className="mt-3 flex flex-col gap-2">
+                        {LISTING_TYPE_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => {
+                              void handleSend(opt.label)
+                            }}
+                            className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-left text-sm font-semibold text-zinc-100 transition-all hover:border-[#D4450A] hover:bg-zinc-700 active:scale-95"
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
                   </>
                 )}
               </div>
@@ -973,7 +1042,7 @@ export default function VendorAIAssistantPage() {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault()
-                  void sendMessage(input)
+                  void handleSend()
                 }
               }}
               placeholder="Describe what you want to list…"
@@ -985,7 +1054,7 @@ export default function VendorAIAssistantPage() {
             />
             <button
               type="button"
-              onClick={() => void sendMessage(input)}
+              onClick={() => void handleSend()}
               disabled={
                 loading ||
                 (!input.trim() &&

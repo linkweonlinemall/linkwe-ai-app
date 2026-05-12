@@ -198,7 +198,44 @@ export async function createProduct(
   };
 
   try {
-    await prisma.product.create({ data });
+    const product = await prisma.product.create({ data });
+
+    const hasVariants = formData.get("hasVariants") === "true";
+    const variantsJson = formData.get("variantsJson") as string;
+
+    if (hasVariants && variantsJson) {
+      try {
+        const variants = JSON.parse(variantsJson) as unknown;
+        if (Array.isArray(variants) && variants.length > 0) {
+          await prisma.product.update({
+            where: { id: product.id },
+            data: { hasVariants: true },
+          });
+          for (const v of variants as {
+            name?: string;
+            sku?: unknown;
+            price?: unknown;
+            stock?: unknown;
+            images?: unknown;
+            attributes?: unknown;
+          }[]) {
+            await prisma.productVariant.create({
+              data: {
+                productId: product.id,
+                name: v.name ?? "",
+                sku: v.sku != null ? String(v.sku) : null,
+                price: v.price != null ? parseFloat(String(v.price)) : null,
+                stock: v.stock != null ? parseInt(String(v.stock), 10) : null,
+                images: Array.isArray(v.images) ? v.images : [],
+                attributes: (Array.isArray(v.attributes) ? v.attributes : []) as Prisma.InputJsonValue,
+              },
+            });
+          }
+        }
+      } catch {
+        // variants parse failed — continue without them
+      }
+    }
   } catch (e) {
     console.error(e);
     return { ok: false, errors: { _general: "Could not save product. Try again." } };

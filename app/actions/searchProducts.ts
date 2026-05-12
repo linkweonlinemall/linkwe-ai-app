@@ -147,6 +147,7 @@ export async function searchProducts(input: SearchInput): Promise<ChatProduct[]>
       images: true,
       category: true,
       stock: true,
+      hasVariants: true,
       brand: true,
       shortDescription: true,
       store: {
@@ -179,6 +180,7 @@ export async function searchProducts(input: SearchInput): Promise<ChatProduct[]>
         images: true,
         category: true,
         stock: true,
+        hasVariants: true,
         brand: true,
         shortDescription: true,
         store: {
@@ -202,6 +204,7 @@ export async function searchProducts(input: SearchInput): Promise<ChatProduct[]>
     images: p.images,
     category: p.category,
     stock: p.stock,
+    hasVariants: p.hasVariants,
     storeName: p.store.name,
     storeSlug: p.store.slug,
     storeRegion: p.store.region,

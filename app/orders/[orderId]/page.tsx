@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 
 import MarkReceivedButton from "@/app/orders/components/mark-received-button";
 import PublicNav from "@/components/layout/PublicNav";
+import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import {
   getProgressStep,
@@ -138,6 +139,8 @@ export default async function OrderDetailPage({ params }: Props) {
     notFound();
   }
 
+  const dashboardHref = session ? getRoleDashboardPath(session.role) : null;
+
   const qrCodeDataUrl = await generateOrderQRCodeDataURL(order.id);
   const orderUrl = getOrderUrl(order.id);
 
@@ -146,7 +149,10 @@ export default async function OrderDetailPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
-      <PublicNav />
+      <PublicNav
+        user={session ? { name: session.fullName ?? "Account", href: dashboardHref! } : null}
+        dashboardHref={dashboardHref ?? undefined}
+      />
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
         <a
           href="/orders"

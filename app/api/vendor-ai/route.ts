@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server"
 import Anthropic from "@anthropic-ai/sdk"
+import type { Prisma } from "@prisma/client"
 import {
   getVendorProductDetails,
   searchVendorProducts,
@@ -48,6 +49,31 @@ const CREATE_PRODUCT_TOOL: Anthropic.Tool = {
       isFeatured: { type: "boolean" },
       metaTitle: { type: "string" },
       metaDescription: { type: "string" },
+      hasVariants: { type: "boolean" },
+      variants: {
+        type: "array",
+        description: "Array of variant objects for variable products",
+        items: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            price: { type: "number" },
+            stock: { type: "number" },
+            sku: { type: "string" },
+            attributes: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  value: { type: "string" },
+                  hex: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+      },
     },
     required: ["name", "price", "condition"],
   },
@@ -212,8 +238,41 @@ const REPLACE_IMAGE_TOOL: Anthropic.Tool = {
   },
 }
 
+const CREATE_SERVICE_TOOL: Anthropic.Tool = {
+  name: "create_service",
+  description:
+    "Creates a service listing as a draft or published. Call this when you have collected enough information from the vendor about their service.",
+  input_schema: {
+    type: "object",
+    properties: {
+      name: { type: "string" },
+      description: { type: "string" },
+      shortDescription: { type: "string" },
+      category: { type: "string" },
+      serviceType: {
+        type: "string",
+        enum: ["BOOKABLE", "QUOTE", "SUBSCRIPTION", "ON_DEMAND", "VIRTUAL"],
+      },
+      serviceLocation: {
+        type: "string",
+        enum: ["AT_VENDOR", "AT_CUSTOMER", "VIRTUAL", "FLEXIBLE"],
+      },
+      price: { type: "number" },
+      serviceDuration: { type: "number" },
+      requiresDeposit: { type: "boolean" },
+      depositAmount: { type: "number" },
+      tags: { type: "array", items: { type: "string" } },
+      isPublished: { type: "boolean" },
+      metaTitle: { type: "string" },
+      metaDescription: { type: "string" },
+    },
+    required: ["name", "price", "serviceType"],
+  },
+}
+
 const VENDOR_TOOLS: Anthropic.Tool[] = [
   CREATE_PRODUCT_TOOL,
+  CREATE_SERVICE_TOOL,
   SEARCH_PRODUCTS_TOOL,
   GET_PRODUCT_TOOL,
   UPDATE_PRODUCT_TOOL,
@@ -353,6 +412,52 @@ export async function POST(req: NextRequest) {
             )
             console.log("createProductFromAIRaw result:", JSON.stringify(result))
             if (result.ok) {
+              // If vendor uploaded images before creating the product,
+              // attach them now with the initial upload images first
+              if (uploadedImageUrlsPayload.length > 0) {
+                await addProductImagesFromUrls(
+                  result.productId,
+                  uploadedImageUrlsPayload,
+                  session.userId,
+                  store.id
+                )
+              }
+
+              // Handle variable product variants
+              const hasVariants = raw.hasVariants === true
+              const variantsRaw = Array.isArray(raw.variants) ? raw.variants : []
+
+              if (hasVariants && variantsRaw.length > 0) {
+                try {
+                  // Update product to mark as variable
+                  await prisma.product.update({
+                    where: { id: result.productId },
+                    data: { hasVariants: true },
+                  })
+                  // Create each variant
+                  for (const v of variantsRaw) {
+                    const vObj = v as Record<string, unknown>
+                    await prisma.productVariant.create({
+                      data: {
+                        productId: result.productId,
+                        name: String(vObj.name ?? ""),
+                        sku: vObj.sku ? String(vObj.sku) : null,
+                        price: vObj.price != null ? Number(vObj.price) : null,
+                        stock: vObj.stock != null ? Number(vObj.stock) : null,
+                        images: [],
+                        attributes: (
+                          Array.isArray(vObj.attributes)
+                            ? vObj.attributes
+                            : []
+                        ) as Prisma.InputJsonValue,
+                      },
+                    })
+                  }
+                } catch (err) {
+                  console.error("Failed to create variants:", err)
+                }
+              }
+
               return {
                 content: JSON.stringify(result),
                 productId: result.productId,
@@ -367,6 +472,86 @@ export async function POST(req: NextRequest) {
                 ok: false,
                 error: "Action threw an error",
               }),
+            }
+          }
+        }
+
+        if (toolBlock.name === "create_service") {
+          const raw = toolBlock.input as Record<string, unknown>
+
+          const name = String(raw.name ?? "").trim()
+          if (!name) {
+            return {
+              content: JSON.stringify({ ok: false, error: "Service name is required." }),
+            }
+          }
+
+          const price = Number(raw.price ?? 0)
+          if (!price) {
+            return {
+              content: JSON.stringify({ ok: false, error: "Price is required." }),
+            }
+          }
+
+          // Generate slug
+          let slug = name
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9\s-]/g, "")
+            .replace(/\s+/g, "-")
+            .replace(/-+/g, "-")
+
+          const existing = await prisma.product.findUnique({ where: { slug } })
+          if (existing) slug = `${slug}-${Date.now()}`
+
+          const tags = Array.isArray(raw.tags)
+            ? (raw.tags as unknown[]).map((t) => String(t))
+            : []
+
+          try {
+            const service = await prisma.product.create({
+              data: {
+                storeId: store.id,
+                name,
+                slug,
+                description: raw.description ? String(raw.description) : null,
+                shortDescription: raw.shortDescription ? String(raw.shortDescription) : null,
+                category: raw.category ? String(raw.category) : null,
+                price,
+                tags,
+                isService: true,
+                serviceType: raw.serviceType ? (raw.serviceType as any) : "BOOKABLE",
+                serviceLocation: raw.serviceLocation ? (raw.serviceLocation as any) : null,
+                serviceDuration: raw.serviceDuration ? Number(raw.serviceDuration) : null,
+                requiresDeposit: raw.requiresDeposit === true,
+                depositAmount: raw.depositAmount ? Number(raw.depositAmount) : null,
+                isPublished: raw.isPublished === true,
+                metaTitle: raw.metaTitle ? String(raw.metaTitle) : null,
+                metaDescription: raw.metaDescription ? String(raw.metaDescription) : null,
+                images: [],
+              },
+            })
+
+            // Attach any uploaded images
+            if (uploadedImageUrlsPayload.length > 0) {
+              await prisma.product.update({
+                where: { id: service.id },
+                data: { images: uploadedImageUrlsPayload },
+              })
+            }
+
+            return {
+              content: JSON.stringify({
+                ok: true,
+                serviceId: service.id,
+                slug: service.slug,
+                message: `Service "${name}" created successfully.`,
+              }),
+            }
+          } catch (err) {
+            console.error("create_service error:", err)
+            return {
+              content: JSON.stringify({ ok: false, error: "Failed to create service." }),
             }
           }
         }
@@ -733,7 +918,7 @@ If SYSTEM notes further down report an issue with attaching to a product gallery
 
           const messageStream = client.messages.stream({
             model: "claude-sonnet-4-5",
-            max_tokens: 1024,
+            max_tokens: 4096,
             system: systemPrompt,
             tools: VENDOR_TOOLS,
             tool_choice: { type: "auto" },

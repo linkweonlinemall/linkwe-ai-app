@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import AddToCartButton from "@/components/product/AddToCartButton";
+import ProductCardChooseOptionsLink from "@/components/shop/ProductCardChooseOptionsLink";
 import { StorefrontMapAndProducts, type StorefrontProductRow } from "@/components/storefront/StorefrontMapAndProducts";
 
 const PLACEHOLDER_COLORS = ["#E8820C", "#1A7FB5", "#D4450A", "#15803D", "#7C3AED"] as const;
@@ -11,6 +12,7 @@ const PLACEHOLDER_COLORS = ["#E8820C", "#1A7FB5", "#D4450A", "#15803D", "#7C3AED
 type StoreTabProduct = StorefrontProductRow & {
   stock: number | null;
   compareAtPrice?: number | null;
+  hasVariants: boolean;
 };
 
 function StoreTabProductCard({ product }: { product: StoreTabProduct }) {
@@ -82,7 +84,11 @@ function StoreTabProductCard({ product }: { product: StoreTabProduct }) {
             }}
           >
             <div className="w-full max-w-[220px]">
-              <AddToCartButton productId={product.id} stock={product.stock} />
+              {product.hasVariants ? (
+                <ProductCardChooseOptionsLink slug={product.slug} />
+              ) : (
+                <AddToCartButton productId={product.id} stock={product.stock} />
+              )}
             </div>
           </div>
         </div>

@@ -9,6 +9,7 @@ export interface ChatProduct {
   storeName: string
   storeSlug: string
   storeRegion: string | null
+  hasVariants?: boolean
 }
 
 export interface CartAction {

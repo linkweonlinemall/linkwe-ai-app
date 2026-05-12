@@ -119,7 +119,7 @@ export async function getVendorProductsList(): Promise<VendorProductListItem[]> 
     redirect("/onboarding/business/step-3")
   }
   return prisma.product.findMany({
-    where: { storeId },
+    where: { storeId, isService: false },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,

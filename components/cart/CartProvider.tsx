@@ -26,6 +26,18 @@ export default function CartProvider({ children }: { children: React.ReactNode }
           stock: row.product.stock,
           store: row.product.store,
         },
+        variant: row.variant
+          ? {
+              id: row.variant.id,
+              name: row.variant.name,
+              price: row.variant.price,
+              attributes: row.variant.attributes as {
+                name: string;
+                value: string;
+                hex?: string;
+              }[],
+            }
+          : null,
       }));
       setItems(items);
     });

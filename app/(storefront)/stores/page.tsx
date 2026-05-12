@@ -14,22 +14,9 @@ import StoreSearchBar from "@/components/storefront/StoreSearchBar";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { STORE_CATEGORIES } from "@/lib/categories";
 
-const CATEGORIES = [
-  { value: "all", label: "All categories" },
-  { value: "clothing_apparel", label: "Clothing" },
-  { value: "shoes_footwear", label: "Shoes" },
-  { value: "jewellery_watches", label: "Jewellery" },
-  { value: "health_beauty", label: "Health & Beauty" },
-  { value: "food_beverages", label: "Food & Drinks" },
-  { value: "home_furniture", label: "Home" },
-  { value: "electronics", label: "Electronics" },
-  { value: "sports_fitness", label: "Sports" },
-  { value: "toys_games", label: "Toys" },
-  { value: "books_stationery", label: "Books" },
-  { value: "art_crafts", label: "Art & Crafts" },
-  { value: "automotive_parts", label: "Automotive" },
-] as const;
+const CATEGORIES = [{ value: "all", label: "All categories" }, ...STORE_CATEGORIES];
 
 const SORTS: { value: PublicStoreSort; label: string }[] = [
   { value: "newest", label: "Newest" },

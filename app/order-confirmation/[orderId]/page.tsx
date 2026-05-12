@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import PublicNav from "@/components/layout/PublicNav";
+import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
@@ -14,6 +15,7 @@ export default async function OrderConfirmationPage({ params }: Props) {
   }
 
   const session = await getSession();
+  const dashboardHref = session ? getRoleDashboardPath(session.role) : null;
   if (!session) {
     redirect("/login");
   }
@@ -43,7 +45,10 @@ export default async function OrderConfirmationPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
-      <PublicNav />
+      <PublicNav
+        user={session ? { name: session.fullName ?? "Account", href: dashboardHref! } : null}
+        dashboardHref={dashboardHref ?? undefined}
+      />
       <div className="mx-auto max-w-2xl px-4 py-16 text-center">
         <div className="mb-8 flex flex-col items-center">
           <div

@@ -1,28 +1,18 @@
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { Prisma } from "@prisma/client";
+
 import ProductSearchBar from "@/components/shop/ProductSearchBar";
+import ShopProductCardActions from "@/components/shop/ShopProductCardActions";
 import ShopFilters from "@/components/shop/ShopFilters";
 import PublicNav from "@/components/layout/PublicNav";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { PRODUCT_CATEGORIES } from "@/lib/categories";
 
-const CATEGORIES = [
-  { value: "all", label: "All" },
-  { value: "clothing_apparel", label: "Clothing" },
-  { value: "shoes_footwear", label: "Shoes" },
-  { value: "jewellery_watches", label: "Jewellery" },
-  { value: "health_beauty", label: "Health & Beauty" },
-  { value: "food_beverages", label: "Food & Drinks" },
-  { value: "home_furniture", label: "Home" },
-  { value: "electronics", label: "Electronics" },
-  { value: "sports_fitness", label: "Sports" },
-  { value: "toys_games", label: "Toys" },
-  { value: "books_stationery", label: "Books" },
-  { value: "art_crafts", label: "Art & Crafts" },
-  { value: "automotive_parts", label: "Automotive" },
-] as const;
+const CATEGORIES = [{ value: "all", label: "All" }, ...PRODUCT_CATEGORIES];
 
 type Props = {
   searchParams: Promise<{
@@ -33,6 +23,10 @@ type Props = {
     minPrice?: string;
     maxPrice?: string;
     inStock?: string;
+    condition?: string;
+    brand?: string;
+    colour?: string;
+    size?: string;
   }>;
 };
 
@@ -57,6 +51,10 @@ export default async function ShopPage({ searchParams }: Props) {
   const minPrice = parsePriceParam(params.minPrice);
   const maxPrice = parsePriceParam(params.maxPrice);
   const inStock = params.inStock === "true";
+  const condition = params.condition || undefined;
+  const brand = params.brand || undefined;
+  const colour = params.colour || undefined;
+  const size = params.size || undefined;
 
   const shopFiltersKey = [
     params.category ?? "",
@@ -64,7 +62,33 @@ export default async function ShopPage({ searchParams }: Props) {
     params.minPrice ?? "",
     params.maxPrice ?? "",
     params.inStock ?? "",
+    params.condition ?? "",
+    params.brand ?? "",
+    params.colour ?? "",
+    params.size ?? "",
   ].join("|");
+
+  /** Colour/size: Postgres JSON lacks Prisma-client `array_contains` on Json; use JSONB @> containment. */
+  let variantProductIdFilter: { id: { in: string[] } } | Record<string, never> = {};
+  if (colour || size) {
+    const predicates: Prisma.Sql[] = [];
+    if (colour) {
+      predicates.push(
+        Prisma.sql`pv."attributes"::jsonb @> (${JSON.stringify([{ name: "Colour", value: colour }])})::jsonb`,
+      );
+    }
+    if (size) {
+      predicates.push(
+        Prisma.sql`pv."attributes"::jsonb @> (${JSON.stringify([{ name: "Size", value: size }])})::jsonb`,
+      );
+    }
+    const variantWhere = predicates.length === 1 ? predicates[0]! : Prisma.join(predicates, " AND ");
+    const rows = await prisma.$queryRaw<{ productId: string }[]>`
+      SELECT DISTINCT pv."productId"
+      FROM "ProductVariant" pv
+      WHERE ${variantWhere}`;
+    variantProductIdFilter = rows.length ? { id: { in: rows.map((r) => r.productId) } } : { id: { in: [] } };
+  }
 
   const orderBy =
     sort === "price_asc"
@@ -92,6 +116,9 @@ export default async function ShopPage({ searchParams }: Props) {
           }
         : {}),
       ...(inStock ? { stock: { gt: 0 } } : {}),
+      ...(condition ? { condition: condition as any } : {}),
+      ...(brand ? { brand: { contains: brand, mode: "insensitive" as const } } : {}),
+      ...variantProductIdFilter,
     },
     select: {
       id: true,
@@ -101,6 +128,8 @@ export default async function ShopPage({ searchParams }: Props) {
       compareAtPrice: true,
       images: true,
       category: true,
+      isFeatured: true,
+      hasVariants: true,
       store: { select: { name: true, slug: true, region: true } },
     },
     orderBy,
@@ -114,95 +143,181 @@ export default async function ShopPage({ searchParams }: Props) {
         dashboardHref={continueHref ?? undefined}
       />
 
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-zinc-900">Shop</h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            {products.length} products from local vendors across Trinidad & Tobago
-          </p>
-        </div>
-
-        <div className="mb-6">
+      {/* Amazon-style search hero bar */}
+      <div className="bg-[#1C1C1A] py-4">
+        <div className="mx-auto max-w-screen-xl px-4 sm:px-6">
           <ProductSearchBar defaultValue={q} category={category} />
         </div>
+      </div>
 
-        <div className="flex flex-col gap-6 lg:flex-row">
+      {/* Category horizontal scroll strip */}
+      <div className="border-b border-zinc-200 bg-white shadow-sm">
+        <div className="mx-auto max-w-screen-xl px-4 sm:px-6">
+          <div className="flex gap-1 overflow-x-auto py-2.5 scrollbar-hide">
+            {CATEGORIES.map((cat) => (
+              <Link
+                key={cat.value}
+                href={cat.value === "all" ? "/shop" : `/shop?category=${cat.value}`}
+                className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap transition-all ${
+                  (!category && cat.value === "all") || category === cat.value
+                    ? "bg-[#D4450A] text-white shadow-sm"
+                    : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                }`}
+              >
+                {cat.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="mx-auto max-w-screen-xl px-4 py-6 sm:px-6">
+        {/* Results header */}
+        <div className="mb-5 flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-zinc-900">
+              {category
+                ? CATEGORIES.find((c) => c.value === category)?.label ?? "Products"
+                : q
+                  ? `Results for "${q}"`
+                  : "All Products"}
+            </h1>
+            <p className="mt-0.5 text-sm text-zinc-500">
+              {products.length} product{products.length !== 1 ? "s" : ""} from local vendors across Trinidad & Tobago
+            </p>
+          </div>
+          {(category || q) && (
+            <Link
+              href="/shop"
+              className="rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50"
+            >
+              Clear filters
+            </Link>
+          )}
+        </div>
+
+        <div className="flex gap-6">
+          {/* Sidebar */}
           <Suspense
             fallback={
-              <aside className="w-full shrink-0 lg:w-64">
+              <aside className="hidden lg:block w-56 shrink-0">
                 <div className="h-96 animate-pulse rounded-2xl border border-zinc-200 bg-zinc-100" />
               </aside>
             }
           >
-            <ShopFilters
-              key={shopFiltersKey}
-              defaultCategory={category ?? "all"}
-              defaultSort={sort}
-              productCount={products.length}
-            />
+            <div className="hidden lg:block w-56 shrink-0">
+              <ShopFilters
+                key={shopFiltersKey}
+                defaultCategory={category ?? "all"}
+                defaultSort={sort}
+                productCount={products.length}
+                availableBrands={["Aurevia", "Bad Dawg", "Serato", "Virgo Vibes TT", "VYNTIX"]}
+                availableCategories={[
+                  "bags_luggage",
+                  "clothing_apparel",
+                  "electronics",
+                  "health_beauty",
+                  "home_kitchen",
+                  "jewellery_watches",
+                  "stationery",
+                ]}
+                availableColours={[
+                  { value: "black", hex: "#000000" },
+                  {
+                    value: "multicolour",
+                    hex: "linear-gradient(135deg, #ff0000, #ffff00, #00ff00, #0000ff)",
+                  },
+                ]}
+                availableSizes={["S", "M"]}
+              />
+            </div>
           </Suspense>
 
+          {/* Product grid */}
           <div className="min-w-0 flex-1">
-            <div className="mb-6 flex flex-wrap gap-2">
-              {CATEGORIES.map((cat) => (
-                <Link
-                  key={cat.value}
-                  href={cat.value === "all" ? "/shop" : `/shop?category=${cat.value}`}
-                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
-                    (!category && cat.value === "all") || category === cat.value
-                      ? "bg-[#D4450A] text-white"
-                      : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100"
-                  }`}
-                >
-                  {cat.label}
-                </Link>
-              ))}
-            </div>
-
             {products.length === 0 ? (
-              <div className="py-20 text-center">
-                <p className="mb-4 text-5xl">🔍</p>
-                <h2 className="mb-2 text-lg font-semibold text-zinc-900">No products found</h2>
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-white py-24 text-center">
+                <span className="mb-4 text-6xl">🔍</span>
+                <h2 className="mb-2 text-lg font-bold text-zinc-900">No products found</h2>
                 <p className="mb-6 text-sm text-zinc-500">Try a different category or search term</p>
-                <Link href="/shop" className="text-sm text-[#D4450A] hover:underline">
-                  Clear filters
+                <Link
+                  href="/shop"
+                  className="rounded-full bg-[#D4450A] px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
+                >
+                  Browse all products
                 </Link>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-                {products.map((product) => (
-                  <Link
-                    key={product.id}
-                    href={`/products/${product.slug}`}
-                    className="group overflow-hidden rounded-xl bg-white shadow-sm transition-all hover:shadow-md"
-                  >
-                    <div className="aspect-square overflow-hidden bg-zinc-100">
-                      {product.images[0] ? (
-                        <img
-                          src={product.images[0]}
-                          alt={product.name}
-                          className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center">
-                          <span className="text-4xl text-zinc-300">📦</span>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {products.map((product) => {
+                  const discount =
+                    product.compareAtPrice && product.compareAtPrice > product.price
+                      ? Math.round((1 - product.price / product.compareAtPrice) * 100)
+                      : null;
+                  return (
+                    <div
+                      key={product.id}
+                      className="group flex flex-col overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-zinc-200/60 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:ring-zinc-300"
+                    >
+                      <Link href={`/products/${product.slug}`} className="block">
+                        {/* Image */}
+                        <div className="relative aspect-square overflow-hidden bg-zinc-100">
+                          {product.images[0] ? (
+                            <img
+                              src={product.images[0]}
+                              alt={product.name}
+                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center">
+                              <span className="text-4xl text-zinc-300">📦</span>
+                            </div>
+                          )}
+                          {/* Badges */}
+                          <div className="absolute left-2 top-2 flex flex-col gap-1">
+                            {product.isFeatured ? (
+                              <span className="rounded-full bg-[#D4450A] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow">
+                                Featured
+                              </span>
+                            ) : null}
+                            {discount ? (
+                              <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-[9px] font-bold text-white shadow">
+                                -{discount}%
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
-                      )}
-                    </div>
-                    <div className="p-3">
-                      <p className="mb-0.5 truncate text-[10px] capitalize text-zinc-400">{product.store.name}</p>
-                      <p className="mb-1 truncate text-sm font-semibold text-zinc-900">{product.name}</p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold text-[#D4450A]">TTD {product.price.toFixed(2)}</p>
-                        {product.compareAtPrice != null && product.compareAtPrice > product.price ? (
-                          <p className="text-xs text-zinc-400 line-through">
-                            TTD {product.compareAtPrice.toFixed(2)}
+                      </Link>
+
+                      {/* Info */}
+                      <div className="flex flex-1 flex-col gap-1 p-3">
+                        <Link href={`/products/${product.slug}`} className="block flex min-h-0 flex-1 flex-col gap-1">
+                          <p className="truncate text-[10px] font-medium text-zinc-400">
+                            {product.store.name}
+                            {product.store.region ? ` · ${product.store.region}` : ""}
                           </p>
-                        ) : null}
+                          <p className="line-clamp-2 text-sm font-semibold leading-snug text-zinc-900">
+                            {product.name}
+                          </p>
+                          <div className="mt-auto pt-2">
+                            <p className="text-sm font-black text-[#D4450A]">TTD {product.price.toFixed(2)}</p>
+                            {product.compareAtPrice != null && product.compareAtPrice > product.price ? (
+                              <p className="text-xs text-zinc-400 line-through">
+                                TTD {product.compareAtPrice.toFixed(2)}
+                              </p>
+                            ) : null}
+                          </div>
+                        </Link>
+                        <ShopProductCardActions
+                          hasVariants={product.hasVariants}
+                          slug={product.slug}
+                          productId={product.id}
+                        />
                       </div>
                     </div>
-                  </Link>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

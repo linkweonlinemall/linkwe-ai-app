@@ -5,6 +5,7 @@ import { useActionState, useCallback, useState } from "react";
 import type { ProductFieldErrors } from "@/app/actions/product";
 import { createProduct } from "@/app/actions/product";
 import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
+import ProductVariantEditor, { type VariantRow } from "@/components/vendor/ProductVariantEditor";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
@@ -62,6 +63,9 @@ export function ProductForm() {
   const [slugManual, setSlugManual] = useState(false);
   const [allowDelivery, setAllowDelivery] = useState(false);
   const [previews, setPreviews] = useState<{ url: string; name: string }[]>([]);
+  const [productType, setProductType] = useState<"simple" | "variable">("simple");
+  const [variants, setVariants] = useState<VariantRow[]>([]);
+  const [priceInput, setPriceInput] = useState("");
 
   const onNameChange = useCallback(
     (v: string) => {
@@ -127,6 +131,57 @@ export function ProductForm() {
             {errors._general}
           </p>
         ) : null}
+
+        <input type="hidden" name="hasVariants" value={productType === "variable" ? "true" : "false"} />
+
+        <div
+          className="rounded-xl bg-white p-5 sm:p-6"
+          style={{ border: "1px solid var(--card-border)" }}
+        >
+          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            Product Type
+          </h2>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setProductType("simple")}
+              className={`flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all ${
+                productType === "simple"
+                  ? "border-[#D4450A] bg-[#D4450A]/5"
+                  : "border-zinc-200 hover:border-zinc-300"
+              }`}
+            >
+              <div className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
+                productType === "simple" ? "border-[#D4450A]" : "border-zinc-300"
+              }`}>
+                {productType === "simple" ? <div className="h-2 w-2 rounded-full bg-[#D4450A]" /> : null}
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-zinc-900">Simple product</p>
+                <p className="mt-0.5 text-xs text-zinc-500">One price, one stock level. No variants.</p>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setProductType("variable")}
+              className={`flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all ${
+                productType === "variable"
+                  ? "border-[#D4450A] bg-[#D4450A]/5"
+                  : "border-zinc-200 hover:border-zinc-300"
+              }`}
+            >
+              <div className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
+                productType === "variable" ? "border-[#D4450A]" : "border-zinc-300"
+              }`}>
+                {productType === "variable" ? <div className="h-2 w-2 rounded-full bg-[#D4450A]" /> : null}
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-zinc-900">Variable product</p>
+                <p className="mt-0.5 text-xs text-zinc-500">Multiple sizes, colours, or other options.</p>
+              </div>
+            </button>
+          </div>
+        </div>
 
         <div
           className="rounded-xl bg-white p-5 sm:p-6"
@@ -210,6 +265,8 @@ export function ProductForm() {
                 name="price"
                 step={0.01}
                 type="number"
+                value={priceInput}
+                onChange={(e) => setPriceInput(e.target.value)}
               />
               <Input
                 helperText="Leave blank for unlimited stock"
@@ -231,6 +288,24 @@ export function ProductForm() {
             <Input helperText="Your internal reference code" label="SKU" name="sku" />
           </div>
         </div>
+
+        {productType === "variable" ? (
+          <div
+            className="rounded-xl bg-white p-5 sm:p-6"
+            style={{ border: "1px solid var(--card-border)" }}
+          >
+            <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+              Product Variants
+            </h2>
+            <ProductVariantEditor
+              productId=""
+              basePrice={Number(priceInput) || 0}
+              createMode
+              onChange={setVariants}
+            />
+            <input type="hidden" name="variantsJson" value={JSON.stringify(variants)} />
+          </div>
+        ) : null}
 
         <div
           className="rounded-xl bg-white p-5 sm:p-6"

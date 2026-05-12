@@ -70,6 +70,8 @@ export async function getAdminProducts(
     andClauses.push(stWhere);
   }
 
+  andClauses.push({ isService: false });
+
   const where: Prisma.ProductWhereInput =
     andClauses.length > 0 ? { AND: andClauses } : {};
 

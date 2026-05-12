@@ -162,6 +162,7 @@ export default function VendorDashboardTabs({
       : TABS[0].id,
   );
   const productsActive = pathname === "/dashboard/vendor/products";
+  const servicesActive = pathname.startsWith("/dashboard/vendor/services");
 
   return (
     <>
@@ -176,6 +177,17 @@ export default function VendorDashboardTabs({
           ].join(" ")}
         >
           <span aria-hidden>📦 </span>Products
+        </Link>
+        <Link
+          href="/dashboard/vendor/services"
+          className={[
+            "inline-block shrink-0 whitespace-nowrap px-3 py-3 text-sm",
+            servicesActive
+              ? "border-b-2 border-[#D4450A] font-medium text-[#D4450A]"
+              : "text-zinc-500 hover:text-zinc-800",
+          ].join(" ")}
+        >
+          <span aria-hidden>📅 </span>My Services
         </Link>
         {TABS.map((tab) => (
           <button
@@ -197,6 +209,12 @@ export default function VendorDashboardTabs({
 
       <aside className="hidden min-h-screen w-56 shrink-0 flex-col border-r border-zinc-100 bg-white pb-6 pt-4 md:flex">
         <SidebarNavLink href="/dashboard/vendor/products" active={productsActive} icon="📦" label="Products" />
+        <SidebarNavLink
+          href="/dashboard/vendor/services"
+          active={servicesActive}
+          icon="📅"
+          label="My Services"
+        />
         {TABS.map((tab) => (
           <button
             key={tab.id}

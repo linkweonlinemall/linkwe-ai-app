@@ -4,8 +4,8 @@ import type { Metadata } from "next";
 import type { ProductCondition } from "@prisma/client";
 
 import PublicNav from "@/components/layout/PublicNav";
-import AddToCartButton from "@/components/product/AddToCartButton";
 import { ProductGallery } from "@/components/product/ProductGallery";
+import ProductBuyBox from "@/components/product/ProductBuyBox";
 import { getSession } from "@/lib/auth/session";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { prisma } from "@/lib/prisma";
@@ -99,11 +99,27 @@ export default async function PublicProductPage({ params }: Props) {
       isPublished: true,
       createdAt: true,
       storeId: true,
+      hasVariants: true,
       store: { select: { name: true, slug: true, logoUrl: true, region: true } },
     },
   });
 
   if (!product?.isPublished) notFound();
+
+  const variants = product.hasVariants
+    ? await prisma.productVariant.findMany({
+        where: { productId: product.id },
+        select: {
+          id: true,
+          name: true,
+          attributes: true,
+          price: true,
+          stock: true,
+          images: true,
+        },
+        orderBy: { createdAt: "asc" },
+      })
+    : [];
 
   // Fetch related products from same store
   const relatedProducts = await prisma.product.findMany({
@@ -127,21 +143,15 @@ export default async function PublicProductPage({ params }: Props) {
 
   const store = product.store;
   const cond = product.condition ? conditionDisplay(product.condition) : null;
-  const discount =
-    product.compareAtPrice && product.compareAtPrice > product.price
-      ? Math.round((1 - product.price / product.compareAtPrice) * 100)
-      : null;
 
-  const stockStatus =
-    product.stock === null || product.stock > 10
-      ? { text: "In stock", color: "text-emerald-600", dot: "bg-emerald-500" }
-      : product.stock >= 1
-        ? {
-            text: `Only ${product.stock} left`,
-            color: "text-amber-600",
-            dot: "bg-amber-500",
-          }
-        : { text: "Out of stock", color: "text-red-600", dot: "bg-red-500" };
+  const buyBoxVariants = variants.map((v) => ({
+    id: v.id,
+    name: v.name,
+    attributes: v.attributes as any,
+    price: v.price,
+    stock: v.stock,
+    images: v.images,
+  }));
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] pb-16 sm:pb-0">
@@ -150,7 +160,8 @@ export default async function PublicProductPage({ params }: Props) {
         dashboardHref={dashboardHref ?? undefined}
       />
 
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+      <div className="mx-auto max-w-screen-2xl px-4 py-6 sm:px-6">
+        <div className="mb-4 h-1 w-16 rounded-full bg-[#D4450A]" />
         {/* Breadcrumb */}
         <nav className="mb-6 flex items-center gap-2 text-sm text-zinc-400">
           <Link href="/" className="transition-colors hover:text-zinc-700">
@@ -202,31 +213,8 @@ export default async function PublicProductPage({ params }: Props) {
 
             {/* Name */}
             <div>
-              <h1 className="text-2xl font-black leading-tight text-zinc-900 sm:text-3xl">{product.name}</h1>
+              <h1 className="text-3xl font-black leading-tight text-zinc-900 sm:text-4xl">{product.name}</h1>
               {product.brand ? <p className="mt-1 text-sm text-zinc-400">by {product.brand}</p> : null}
-            </div>
-
-            {/* Price */}
-            <div className="flex items-baseline gap-3">
-              <span className="text-3xl font-black" style={{ color: "#D4450A" }}>
-                TTD {product.price.toFixed(2)}
-              </span>
-              {product.compareAtPrice && product.compareAtPrice > product.price ? (
-                <>
-                  <span className="text-base text-zinc-400 line-through">
-                    TTD {product.compareAtPrice.toFixed(2)}
-                  </span>
-                  <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-600">
-                    {discount}% off
-                  </span>
-                </>
-              ) : null}
-            </div>
-
-            {/* Stock status */}
-            <div className="flex items-center gap-2">
-              <span className={`h-2 w-2 rounded-full ${stockStatus.dot}`} />
-              <span className={`text-sm font-semibold ${stockStatus.color}`}>{stockStatus.text}</span>
             </div>
 
             {/* Short description */}
@@ -340,26 +328,17 @@ export default async function PublicProductPage({ params }: Props) {
           <div className="flex flex-col gap-4 lg:sticky lg:top-6 lg:col-span-3 lg:self-start">
             {/* Price card */}
             <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-              <div className="mb-1">
-                <span className="text-2xl font-black" style={{ color: "#D4450A" }}>
-                  TTD {product.price.toFixed(2)}
-                </span>
-                {product.compareAtPrice && product.compareAtPrice > product.price ? (
-                  <p className="text-sm text-zinc-400 line-through">
-                    TTD {product.compareAtPrice.toFixed(2)}
-                  </p>
-                ) : null}
-              </div>
+              <ProductBuyBox
+                productId={product.id}
+                basePrice={product.price}
+                compareAtPrice={product.compareAtPrice}
+                baseStock={product.stock}
+                hasVariants={product.hasVariants}
+                variants={buyBoxVariants}
+              />
+            </div>
 
-              <div className="mb-4 flex items-center gap-2">
-                <span className={`h-2 w-2 rounded-full ${stockStatus.dot}`} />
-                <span className={`text-sm font-semibold ${stockStatus.color}`}>{stockStatus.text}</span>
-              </div>
-
-              <AddToCartButton productId={product.id} stock={product.stock} />
-
-              <hr className="my-4 border-zinc-100" />
-
+            <div className="rounded-xl bg-zinc-50 border border-zinc-100 px-4 py-3">
               <div className="flex flex-col gap-2.5">
                 {product.allowDelivery ? (
                   <div className="flex items-center gap-2 text-xs text-zinc-600">

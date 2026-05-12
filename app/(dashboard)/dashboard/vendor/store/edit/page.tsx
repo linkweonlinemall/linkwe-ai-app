@@ -4,34 +4,19 @@ import { redirect } from "next/navigation";
 
 import { updateStore } from "@/app/actions/store";
 import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
+import OpeningHoursEditor from "@/components/vendor/OpeningHoursEditor";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
 import GalleryUploadWrapper from "./gallery-upload-wrapper";
 import { getSession } from "@/lib/auth/session";
+import { STORE_CATEGORIES } from "@/lib/categories";
 import { TRINIDAD_ONBOARDING_REGION_OPTIONS } from "@/lib/onboarding/tt-region-options";
 import { prisma } from "@/lib/prisma";
-
-const CATEGORY_OPTIONS = [
-  { id: "retail", label: "Retail" },
-  { id: "general_retail", label: "General Retail" },
-  { id: "food_beverage", label: "Food & Beverage" },
-  { id: "services", label: "Services" },
-  { id: "fashion", label: "Fashion" },
-  { id: "electronics", label: "Electronics" },
-  { id: "health_beauty", label: "Health & Beauty" },
-  { id: "home_garden", label: "Home & Garden" },
-  { id: "automotive", label: "Automotive" },
-  { id: "real_estate", label: "Real Estate" },
-  { id: "events", label: "Events" },
-  { id: "other", label: "Other" },
-] as const;
 
 type TimeSlot = { from: string; to: string };
 type DaySchedule = { closed: boolean; allDay: boolean; slots: TimeSlot[] };
 type WeekSchedule = Record<string, DaySchedule>;
-
-const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
 
 const DEFAULT_HOURS: WeekSchedule = {
   monday: { closed: false, allDay: false, slots: [{ from: "08:00", to: "17:00" }] },
@@ -241,13 +226,13 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
             </Select>
             <Select required className="text-base" defaultValue={store.categoryId} label="Category" name="categoryId">
               <option value="">Select…</option>
-              {!CATEGORY_OPTIONS.some((c) => c.id === store.categoryId) ? (
-                <option value={store.categoryId}>Current ({store.categoryId})</option>
-              ) : null}
-              {CATEGORY_OPTIONS.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
+              {!STORE_CATEGORIES.some((c) => c.value === store.categoryId) ? (
+                <option value={store.categoryId ?? ""}>
+                  Current ({store.categoryId})
                 </option>
+              ) : null}
+              {STORE_CATEGORIES.map((c) => (
+                <option key={c.value} value={c.value}>{c.label}</option>
               ))}
             </Select>
             <Textarea
@@ -302,55 +287,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
           <p className="mb-4 text-sm text-zinc-600">
             Set your opening hours for each day. Add multiple slots for split hours like a lunch break.
           </p>
-          <div className="flex flex-col gap-1">
-            {DAYS.map((day) => {
-              const d = hours[day] ?? DEFAULT_HOURS[day];
-              const closed = d.closed;
-              const allDay = d.allDay;
-              const slotHidden = closed || allDay;
-              return (
-                <div
-                  key={day}
-                  className="flex flex-wrap items-start gap-2 border-b border-zinc-100 py-2 last:border-b-0"
-                >
-                  <span className="w-28 shrink-0 pt-2 text-sm font-medium capitalize text-zinc-900">{day}</span>
-                  <label className="flex shrink-0 items-center gap-2 pt-2 text-xs text-zinc-600">
-                    <input defaultChecked={closed} name={`hours_${day}_closed`} type="checkbox" />
-                    Closed
-                  </label>
-                  <label className="flex shrink-0 items-center gap-2 pt-2 text-xs text-zinc-600">
-                    <input defaultChecked={allDay} name={`hours_${day}_allDay`} type="checkbox" />
-                    24 hours
-                  </label>
-                  <input name={`hours_${day}_slotCount`} type="hidden" value={String(Math.min(d.slots.length + 1, 3))} />
-                  <div className={`min-w-0 flex-1 flex-col gap-2 ${slotHidden ? "hidden" : "flex"}`}>
-                    {[0, 1, 2].map((i) => {
-                      const slot = d.slots[i];
-                      return (
-                        <div key={i} className="flex flex-wrap items-center gap-2">
-                          <Input
-                            className="max-w-[9.5rem] px-2 py-1.5 text-sm"
-                            defaultValue={slot?.from ?? ""}
-                            id={`hours-${day}-from-${i}`}
-                            name={`hours_${day}_from_${i}`}
-                            type="time"
-                          />
-                          <span className="text-xs text-zinc-500">to</span>
-                          <Input
-                            className="max-w-[9.5rem] px-2 py-1.5 text-sm"
-                            defaultValue={slot?.to ?? ""}
-                            id={`hours-${day}-to-${i}`}
-                            name={`hours_${day}_to_${i}`}
-                            type="time"
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <OpeningHoursEditor initialHours={hours} />
         </div>
 
         <div

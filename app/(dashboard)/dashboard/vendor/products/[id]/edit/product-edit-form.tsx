@@ -6,6 +6,7 @@ import type { ProductCondition, WeightUnit } from "@prisma/client";
 import type { ProductFieldErrors } from "@/app/actions/product";
 import { updateProduct } from "@/app/actions/product";
 import DraggableImageGrid from "@/components/vendor/draggable-image-grid";
+import ProductVariantEditor from "@/components/vendor/ProductVariantEditor";
 import { reorderProductImages } from "@/app/actions/ai-vendor-image";
 import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
 import Input from "@/components/ui/Input";
@@ -75,9 +76,25 @@ export type VendorProductEditPayload = {
   isFeatured: boolean;
   metaTitle: string | null;
   metaDescription: string | null;
+  hasVariants: boolean;
 };
 
-export function ProductEditForm({ product }: { product: VendorProductEditPayload }) {
+export type VendorProductInitialVariant = {
+  id: string;
+  name: string;
+  attributes: any;
+  price: number | null;
+  stock: number | null;
+  sku: string | null;
+  images: string[];
+};
+
+type ProductEditFormProps = {
+  product: VendorProductEditPayload;
+  variants?: VendorProductInitialVariant[];
+};
+
+export function ProductEditForm({ product, variants = [] }: ProductEditFormProps) {
   const [state, formAction, pending] = useActionState(
     async (_prev: unknown, formData: FormData) => updateProduct(_prev, formData),
     null as { ok: false; errors: ProductFieldErrors } | { ok: false; error: string } | null,
@@ -92,6 +109,9 @@ export function ProductEditForm({ product }: { product: VendorProductEditPayload
   const [allowDelivery, setAllowDelivery] = useState(product.allowDelivery);
   const [remainingImages, setRemainingImages] = useState<string[]>(product.images);
   const [previews, setPreviews] = useState<{ url: string; name: string }[]>([]);
+  const [productType, setProductType] = useState<"simple" | "variable">(
+    product.hasVariants ? "variable" : "simple",
+  );
 
   const onNewFilesChange = (e: import("react").ChangeEvent<HTMLInputElement>) => {
     const list = e.target.files;
@@ -158,6 +178,59 @@ export function ProductEditForm({ product }: { product: VendorProductEditPayload
             {topError}
           </p>
         ) : null}
+
+        <div
+          className="rounded-xl bg-white p-5 sm:p-6"
+          style={{ border: "1px solid var(--card-border)" }}
+        >
+          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            Product Type
+          </h2>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setProductType("simple")}
+              className={`flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all
+                ${
+                  productType === "simple"
+                    ? "border-[#D4450A] bg-[#D4450A]/5"
+                    : "border-zinc-200 hover:border-zinc-300"
+                }`}
+            >
+              <div
+                className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2
+                  ${productType === "simple" ? "border-[#D4450A]" : "border-zinc-300"}`}
+              >
+                {productType === "simple" ? <div className="h-2 w-2 rounded-full bg-[#D4450A]" /> : null}
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-zinc-900">Simple product</p>
+                <p className="mt-0.5 text-xs text-zinc-500">One price, one stock level. No variants.</p>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setProductType("variable")}
+              className={`flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all
+                ${
+                  productType === "variable"
+                    ? "border-[#D4450A] bg-[#D4450A]/5"
+                    : "border-zinc-200 hover:border-zinc-300"
+                }`}
+            >
+              <div
+                className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2
+                  ${productType === "variable" ? "border-[#D4450A]" : "border-zinc-300"}`}
+              >
+                {productType === "variable" ? <div className="h-2 w-2 rounded-full bg-[#D4450A]" /> : null}
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-zinc-900">Variable product</p>
+                <p className="mt-0.5 text-xs text-zinc-500">Multiple sizes, colours, or other options.</p>
+              </div>
+            </button>
+          </div>
+        </div>
 
         <div
           className="rounded-xl bg-white p-5 sm:p-6"
@@ -284,6 +357,21 @@ export function ProductEditForm({ product }: { product: VendorProductEditPayload
             />
           </div>
         </div>
+
+        {productType === "variable" ? (
+          <div
+            className="rounded-xl bg-white p-5 sm:p-6"
+            style={{ border: "1px solid var(--card-border)" }}
+          >
+            <h2 className="mb-1 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+              Variants
+            </h2>
+            <p className="mb-5 text-xs text-zinc-500">
+              Add colours, sizes, materials and other options. Each combination gets its own price and stock.
+            </p>
+            <ProductVariantEditor productId={product.id} initialVariants={variants} basePrice={product.price} />
+          </div>
+        ) : null}
 
         <div
           className="rounded-xl bg-white p-5 sm:p-6"

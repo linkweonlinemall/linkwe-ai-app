@@ -7,6 +7,7 @@ import type { MessageParam } from "@anthropic-ai/sdk/resources/messages"
 import ReactMarkdown, { type Components } from "react-markdown"
 import { useCartStore } from "@/lib/cart/cart-store"
 import { addToCart, getCart } from "@/app/actions/cart"
+import ProductCardChooseOptionsLink from "@/components/shop/ProductCardChooseOptionsLink"
 import {
   createVendorChat,
   getVendorChats,
@@ -58,6 +59,14 @@ function mapRows(rows: Awaited<ReturnType<typeof getCart>>): CartItem[] {
       stock: row.product.stock,
       store: row.product.store,
     },
+    variant: row.variant
+      ? {
+          id: row.variant.id,
+          name: row.variant.name,
+          price: row.variant.price,
+          attributes: row.variant.attributes as { name: string; value: string; hex?: string }[],
+        }
+      : null,
   }))
 }
 
@@ -314,17 +323,21 @@ function ProductCard({ product }: { product: ChatProduct }) {
         <p className="mt-auto text-sm font-bold" style={{ color: "var(--scarlet)" }}>
           TTD {product.price.toFixed(2)}
         </p>
-        <button
-          type="button"
-          onClick={handleAdd}
-          disabled={loading}
-          className="mt-1 w-full rounded-lg py-1.5 text-xs font-semibold text-white transition-all disabled:opacity-60"
-          style={{
-            backgroundColor: added ? "#15803D" : "var(--scarlet)",
-          }}
-        >
-          {loading ? "…" : added ? "✓ Added" : "Add to Cart"}
-        </button>
+        {product.hasVariants ? (
+          <ProductCardChooseOptionsLink slug={product.slug} />
+        ) : (
+          <button
+            type="button"
+            onClick={handleAdd}
+            disabled={loading}
+            className="mt-1 w-full rounded-lg py-1.5 text-xs font-semibold text-white transition-all disabled:opacity-60"
+            style={{
+              backgroundColor: added ? "#15803D" : "var(--scarlet)",
+            }}
+          >
+            {loading ? "…" : added ? "✓ Added" : "Add to Cart"}
+          </button>
+        )}
         {error ? <p className="text-center text-[10px] text-red-600">{error}</p> : null}
       </div>
     </div>

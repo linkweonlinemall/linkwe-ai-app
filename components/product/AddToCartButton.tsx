@@ -12,6 +12,8 @@ type Props = {
   stock: number | null;
   /** Number of units to add in one action (default 1). */
   quantity?: number;
+  variantId?: string;
+  disabled?: boolean;
 };
 
 function mapRows(rows: Awaited<ReturnType<typeof getCart>>): CartItem[] {
@@ -28,10 +30,18 @@ function mapRows(rows: Awaited<ReturnType<typeof getCart>>): CartItem[] {
       stock: row.product.stock,
       store: row.product.store,
     },
+    variant: row.variant
+      ? {
+          id: row.variant.id,
+          name: row.variant.name,
+          price: row.variant.price,
+          attributes: row.variant.attributes as { name: string; value: string; hex?: string }[],
+        }
+      : null,
   }));
 }
 
-export default function AddToCartButton({ productId, stock, quantity = 1 }: Props) {
+export default function AddToCartButton({ productId, stock, quantity = 1, variantId, disabled }: Props) {
   const router = useRouter();
   const setItems = useCartStore((s) => s.setItems);
   const openDrawer = useCartStore((s) => s.openDrawer);
@@ -49,7 +59,7 @@ export default function AddToCartButton({ productId, stock, quantity = 1 }: Prop
   const handleClick = async () => {
     setError(null);
     setLoading(true);
-    const result = await addToCart(productId, quantity);
+    const result = await addToCart(productId, quantity, variantId);
 
     if (result.ok) {
       const rows = await getCart();
@@ -60,11 +70,25 @@ export default function AddToCartButton({ productId, stock, quantity = 1 }: Prop
       router.push("/login");
     } else if (result.error === "out_of_stock") {
       setError("This item is out of stock");
+    } else if (result.error === "variant_required") {
+      setError("Please select a variant");
     } else {
       setError("Could not add to cart");
     }
     setLoading(false);
   };
+
+  if (disabled) {
+    return (
+      <button
+        type="button"
+        disabled
+        className="h-12 w-full cursor-not-allowed rounded-xl bg-zinc-200 text-sm font-medium text-zinc-400"
+      >
+        Select options to add to cart
+      </button>
+    );
+  }
 
   if (stock === 0) {
     return (
@@ -83,7 +107,7 @@ export default function AddToCartButton({ productId, stock, quantity = 1 }: Prop
       <button
         type="button"
         onClick={() => void handleClick()}
-        disabled={loading}
+        disabled={loading || Boolean(disabled)}
         className={`h-12 w-full rounded-xl text-sm font-medium text-white transition-opacity ${
           added ? "bg-emerald-600" : "opacity-100"
         } ${loading && !added ? "opacity-75" : ""}`}

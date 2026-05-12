@@ -70,16 +70,33 @@ type ChatMsg = {
 const ACCEPT_CHAT_IMAGES =
   "image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
 
+function isListingTypeMessage(content: string): boolean {
+  return (
+    content.includes("Simple product") &&
+    content.includes("Variable product") &&
+    content.includes("Service")
+  )
+}
+
+const LISTING_TYPE_OPTIONS = [
+  {
+    label: "🛍️ Simple product",
+    value: "Simple product — one price, one stock level",
+  },
+  {
+    label: "🎨 Variable product",
+    value:
+      "Variable product — different sizes, colours, or options",
+  },
+  {
+    label: "🛎️ Service",
+    value: "Service — bookable, quote, subscription, or on-demand",
+  },
+]
+
 export default function FloatingAIChat() {
   const [open, setOpen] = useState(false)
-  const [messages, setMessages] = useState<ChatMsg[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content:
-        "Hi! I'm your LinkWe assistant. Ask me to create or edit any product, or help with your store.",
-    },
-  ])
+  const [messages, setMessages] = useState<ChatMsg[]>([])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [chatId, setChatId] = useState<string | null>(null)
@@ -106,12 +123,11 @@ export default function FloatingAIChat() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, loading])
 
-  const sendMessage = useCallback(
-    async (text?: string) => {
-      const rawText = text ?? input
-      const content = rawText.trim()
+  const handleSend = useCallback(
+    async (overrideMessage?: string) => {
+      const text = (overrideMessage ?? input).trim()
       const previewSnapshot = [...attachedPreviews]
-      if ((!content && previewSnapshot.length === 0) || loading) return
+      if ((!text && previewSnapshot.length === 0) || loading) return
 
       let uploadedUrls: string[] = []
       if (previewSnapshot.length > 0) {
@@ -156,7 +172,7 @@ export default function FloatingAIChat() {
       const userMsg: ChatMsg = {
         id: Date.now().toString(),
         role: "user",
-        content,
+        content: text,
         images: uploadedUrls.length > 0 ? uploadedUrls : undefined,
       }
       setMessages((prev) => [...prev, userMsg])
@@ -178,12 +194,12 @@ export default function FloatingAIChat() {
                   },
                 }
               }),
-              { type: "text" as const, text: content },
+              { type: "text" as const, text },
             ]
-          : content
+          : text
 
       const saveUserString = [
-        content,
+        text,
         userMsg.images && userMsg.images.length > 0
           ? `[${userMsg.images.length} image(s)]`
           : "",
@@ -194,7 +210,7 @@ export default function FloatingAIChat() {
       let currentChatId = chatId
       if (!currentChatId) {
         const firstTitle =
-          content ||
+          text ||
           (userMsg.images && userMsg.images.length > 0 ? "Image message" : "")
         const chat = await createVendorChat(firstTitle)
         currentChatId = chat.id
@@ -351,14 +367,7 @@ export default function FloatingAIChat() {
               <button
                 type="button"
                 onClick={() => {
-                  setMessages([
-                    {
-                      id: "welcome",
-                      role: "assistant",
-                      content:
-                        "Hi! I'm your LinkWe assistant. Ask me to create or edit any product, or help with your store.",
-                    },
-                  ])
+                  setMessages([])
                   setChatId(null)
                   setCreatedProductId(null)
                   setFocusedProductId(null)
@@ -391,11 +400,6 @@ export default function FloatingAIChat() {
                   onClick={async () => {
                     const msgs = await getVendorChatMessages(chat.id)
                     setMessages([
-                      {
-                        id: "welcome",
-                        role: "assistant",
-                        content: "Hi! I'm your LinkWe assistant.",
-                      },
                       ...msgs.map((m, i) => ({
                         id: String(i),
                         role: m.role as "user" | "assistant",
@@ -418,6 +422,44 @@ export default function FloatingAIChat() {
           )}
 
           <div className="flex-1 space-y-3 overflow-y-auto p-4">
+            {messages.length === 0 ? (
+              <div className="flex flex-col gap-3 px-1 py-2">
+                <div className="rounded-xl bg-zinc-800 px-3 py-2.5 text-sm leading-relaxed text-zinc-200">
+                  Hi! I&apos;m your LinkWe assistant. What would you like to
+                  create today?
+                </div>
+                <div className="flex flex-col gap-2">
+                  {[
+                    {
+                      label: "🛍️ Simple product",
+                      message: "I want to create a simple product",
+                    },
+                    {
+                      label: "🎨 Variable product",
+                      message:
+                        "I want to create a variable product with different sizes or colours",
+                    },
+                    {
+                      label: "🛎️ Service",
+                      message: "I want to create a service listing",
+                    },
+                    {
+                      label: "✏️ Edit an existing product",
+                      message: "I want to edit an existing product",
+                    },
+                  ].map((opt) => (
+                    <button
+                      key={opt.label}
+                      type="button"
+                      onClick={() => void handleSend(opt.message)}
+                      className="w-full rounded-xl border border-zinc-600 bg-zinc-700/60 px-3 py-2.5 text-left text-xs font-semibold text-zinc-100 transition-all hover:border-[#D4450A] hover:bg-zinc-700 active:scale-95"
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             {messages.map((m) => (
               <div
                 key={m.id}
@@ -485,6 +527,23 @@ export default function FloatingAIChat() {
                       ) : (
                         ""
                       ))}
+                    {m.content && isListingTypeMessage(m.content) && !loading ? (
+                      <div className="mt-3 flex flex-col gap-2">
+                        {LISTING_TYPE_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => {
+                              setInput(opt.label)
+                              void handleSend(opt.label)
+                            }}
+                            className="w-full rounded-xl border border-zinc-600 bg-zinc-700 px-3 py-2.5 text-left text-xs font-semibold text-zinc-100 transition-all hover:border-[#D4450A] hover:bg-zinc-600 active:scale-95"
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                 )}
               </div>
@@ -604,7 +663,7 @@ export default function FloatingAIChat() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault()
-                    void sendMessage()
+                    void handleSend()
                   }
                 }}
                 placeholder="Ask me anything..."
@@ -617,7 +676,7 @@ export default function FloatingAIChat() {
               />
               <button
                 type="button"
-                onClick={() => void sendMessage()}
+                onClick={() => void handleSend()}
                 disabled={
                   loading || (!input.trim() && attachedPreviews.length === 0)
                 }

@@ -10,7 +10,10 @@ export async function getCart() {
 
   const items = await prisma.productCartItem.findMany({
     where: { userId: session.userId },
-    include: {
+    select: {
+      id: true,
+      productId: true,
+      quantity: true,
       product: {
         select: {
           id: true,
@@ -24,6 +27,15 @@ export async function getCart() {
           },
         },
       },
+      variant: {
+        select: {
+          id: true,
+          name: true,
+          attributes: true,
+          price: true,
+          images: true,
+        },
+      },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -33,46 +45,75 @@ export async function getCart() {
 
 export async function addToCart(
   productId: string,
-  addQuantity: number = 1,
+  quantity: number,
+  variantId?: string | null,
 ): Promise<{ ok: boolean; error?: string }> {
   const session = await getSession();
   if (!session) return { ok: false, error: "not_logged_in" };
 
-  if (!Number.isFinite(addQuantity) || addQuantity < 1) {
+  if (!Number.isFinite(quantity) || quantity < 1) {
     return { ok: false, error: "invalid_quantity" };
   }
 
-  const addQty = Math.floor(addQuantity);
+  const addQty = Math.floor(quantity);
 
   const product = await prisma.product.findUnique({
     where: { id: productId },
-    select: { id: true, stock: true, isPublished: true },
+    select: { id: true, stock: true, isPublished: true, hasVariants: true },
   });
 
   if (!product || !product.isPublished) {
     return { ok: false, error: "product_not_found" };
   }
 
-  const existing = await prisma.productCartItem.findUnique({
-    where: { userId_productId: { userId: session.userId, productId } },
+  let effectiveStock: number | null = product.stock;
+  if (product.hasVariants) {
+    if (variantId == null || variantId === "") {
+      return { ok: false, error: "variant_required" };
+    }
+    const variantRow = await prisma.productVariant.findFirst({
+      where: { id: variantId, productId },
+      select: { stock: true },
+    });
+    if (!variantRow) {
+      return { ok: false, error: "variant_not_found" };
+    }
+    effectiveStock = variantRow.stock;
+  }
+
+  const existing = await prisma.productCartItem.findFirst({
+    where: {
+      userId: session.userId,
+      productId,
+      productVariantId: variantId ?? null,
+    },
+    select: { quantity: true, id: true },
   });
 
+  const nextQty = (existing?.quantity ?? 0) + addQty;
   if (existing) {
-    const newQty = existing.quantity + addQty;
-    if (product.stock !== null && newQty > product.stock) {
+    if (effectiveStock !== null && nextQty > effectiveStock) {
       return { ok: false, error: "out_of_stock" };
     }
+  } else if (effectiveStock !== null && effectiveStock < 1) {
+    return { ok: false, error: "out_of_stock" };
+  }
+
+  const createQty = effectiveStock !== null ? Math.min(addQty, effectiveStock) : addQty;
+
+  if (existing) {
     await prisma.productCartItem.update({
-      where: { userId_productId: { userId: session.userId, productId } },
-      data: { quantity: newQty },
+      where: { id: existing.id },
+      data: { quantity: existing.quantity + addQty },
     });
   } else {
-    if (product.stock !== null && product.stock < 1) {
-      return { ok: false, error: "out_of_stock" };
-    }
-    const createQty = product.stock !== null ? Math.min(addQty, product.stock) : addQty;
     await prisma.productCartItem.create({
-      data: { userId: session.userId, productId, quantity: createQty },
+      data: {
+        userId: session.userId,
+        productId,
+        productVariantId: variantId ?? null,
+        quantity: createQty,
+      },
     });
   }
 
@@ -100,8 +141,8 @@ export async function updateCartQuantity(productId: string, quantity: number): P
       where: { userId: session.userId, productId },
     });
   } else {
-    await prisma.productCartItem.update({
-      where: { userId_productId: { userId: session.userId, productId } },
+    await prisma.productCartItem.updateMany({
+      where: { userId: session.userId, productId },
       data: { quantity },
     });
   }

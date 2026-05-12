@@ -35,6 +35,7 @@ export default async function Home() {
       slug: true,
       price: true,
       images: true,
+      isFeatured: true,
       store: { select: { name: true, slug: true } },
     },
     take: 8,
@@ -51,6 +52,7 @@ export default async function Home() {
             slug: true,
             price: true,
             images: true,
+            isFeatured: true,
             store: { select: { name: true, slug: true } },
           },
           take: 8,
@@ -125,7 +127,7 @@ export default async function Home() {
                   className="group overflow-hidden rounded-xl bg-white shadow-sm
                     transition-all hover:shadow-md"
                 >
-                  <div className="aspect-square overflow-hidden bg-zinc-100">
+                  <div className="relative aspect-square overflow-hidden bg-zinc-100">
                     {product.images[0] ? (
                       <img
                         src={product.images[0]}
@@ -138,6 +140,16 @@ export default async function Home() {
                         <span className="text-4xl text-zinc-300">📦</span>
                       </div>
                     )}
+                    {product.isFeatured ? (
+                      <div
+                        className="
+                          absolute left-2 top-2 rounded-full bg-[#D4450A] px-2 py-0.5 text-[10px]
+                          font-bold uppercase tracking-wide text-white
+                        "
+                      >
+                        Featured
+                      </div>
+                    ) : null}
                   </div>
                   <div className="p-3">
                     <p className="mb-1 text-xs text-zinc-400">{product.store.name}</p>

@@ -102,19 +102,17 @@ function previewText(text: string | null | undefined, max = 140): string | null 
 }
 
 /**
- * Stores shown in discovery: vendors typically stay `DRAFT` until moderation sets `ACTIVE`.
- * They may sell via `Product` (shop) and/or marketplace `Listing` rows — require at least one
- * published product OR one published listing so empty shells stay out of results.
+ * Stores shown in discovery must be `ACTIVE` and have at least one published product or
+ * published listing so empty shells stay out of results.
  */
 function discoverableStoreEligibility(): Prisma.StoreWhereInput {
   return {
     status: {
-      in: [StoreStatus.ACTIVE, StoreStatus.PENDING_APPROVAL, StoreStatus.DRAFT],
+      in: [StoreStatus.ACTIVE],
     },
     OR: [
       { products: { some: { isPublished: true } } },
       { listings: { some: { status: ListingStatus.PUBLISHED } } },
-      { onboardingStep: { gte: 3 } },
     ],
   };
 }
@@ -437,6 +435,7 @@ export type PublicStoreProductRow = {
   images: string[];
   category: string | null;
   stock: number | null;
+  hasVariants: boolean;
 };
 
 export type PublicStoreProductsResult = {
@@ -477,6 +476,7 @@ export async function getStoreProducts(
         images: true,
         category: true,
         stock: true,
+        hasVariants: true,
       },
     }),
   ]);

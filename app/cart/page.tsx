@@ -19,9 +19,13 @@ export default async function CartPage() {
     productId: row.productId,
     quantity: row.quantity,
     product: row.product,
+    variant: row.variant ?? null,
   }));
 
-  const total = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
+  const total = items.reduce((sum, i) => {
+    const price = i.variant?.price ?? i.product.price;
+    return sum + price * i.quantity;
+  }, 0);
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
 
   return (
@@ -40,7 +44,7 @@ export default async function CartPage() {
             </span>
           </h1>
           <a
-            href="/store"
+            href="/shop"
             className="w-fit shrink-0 text-sm hover:underline min-[400px]:ml-auto"
             style={{ color: "var(--blue)" }}
           >
@@ -58,7 +62,7 @@ export default async function CartPage() {
               Browse stores to find products you&apos;ll love
             </p>
             <a
-              href="/"
+              href="/shop"
               className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white"
               style={{ backgroundColor: "var(--scarlet)" }}
             >
@@ -85,14 +89,19 @@ export default async function CartPage() {
                       ) : null}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                      <Link href={`/store/${item.product.store.slug}`} className="text-xs hover:underline" style={{ color: "var(--text-muted)" }}>
                         {item.product.store.name}
-                      </p>
+                      </Link>
+                      {item.variant ? (
+                        <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                          {(item.variant.attributes as { name: string; value: string }[]).map((a) => a.value).join(" / ")}
+                        </p>
+                      ) : null}
                       <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
                         {item.product.name}
                       </p>
                       <p className="mt-1 text-sm font-bold" style={{ color: "var(--scarlet)" }}>
-                        TTD {item.product.price.toFixed(2)}
+                        TTD {(item.variant?.price ?? item.product.price).toFixed(2)}
                       </p>
                     </div>
                     <div className="flex shrink-0 flex-col items-end justify-between self-stretch">

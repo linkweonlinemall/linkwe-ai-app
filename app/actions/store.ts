@@ -304,7 +304,13 @@ export async function removeStoreImage(formData: FormData): Promise<void> {
   redirect("/dashboard/vendor");
 }
 
-export async function addStoreImageClient(formData: FormData): Promise<{ ok: boolean; error?: string }> {
+export async function addStoreImageClient(
+  formData: FormData
+): Promise<{
+  ok: boolean;
+  error?: string;
+  images?: { id: string; url: string; position: number }[];
+}> {
   const session = await getSession();
   if (!session || session.role !== "VENDOR") return { ok: false, error: "unauthorized" };
 
@@ -344,7 +350,12 @@ export async function addStoreImageClient(formData: FormData): Promise<{ ok: boo
     }
   }
 
-  return { ok: true };
+  const updatedImages = await prisma.storeImage.findMany({
+    where: { storeId: store.id },
+    select: { id: true, url: true, position: true },
+    orderBy: { position: "asc" },
+  });
+  return { ok: true, images: updatedImages };
 }
 
 export async function removeStoreImageClient(formData: FormData): Promise<{ ok: boolean; error?: string }> {

@@ -8,9 +8,9 @@ import {
   getStoreReviews,
 } from "@/app/actions/public-stores";
 import PublicNav from "@/components/layout/PublicNav";
+import ProductCardChooseOptionsLink from "@/components/shop/ProductCardChooseOptionsLink";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
-import { prisma } from "@/lib/prisma";
 
 type WeekSchedule = Record<
   string,
@@ -115,10 +115,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PublicStoreSlugPage({ params, searchParams }: Props) {
   const session = await getSession();
-  const navUser = session
-    ? await prisma.user.findUnique({ where: { id: session.userId } })
-    : null;
-  const continueHref = navUser ? getRoleDashboardPath(navUser.role) : null;
+  const dashboardHref = session ? getRoleDashboardPath(session.role) : null;
 
   const { slug } = await params;
   const normalized = slug.trim().toLowerCase();
@@ -166,10 +163,8 @@ export default async function PublicStoreSlugPage({ params, searchParams }: Prop
     <div className="min-h-screen pb-20 sm:pb-8" style={{ backgroundColor: "var(--surface)" }}>
       <PublicNav
         transparent
-        user={
-          navUser ? { name: navUser.fullName ?? "Account", href: continueHref! } : null
-        }
-        dashboardHref={continueHref ?? undefined}
+        user={session ? { name: session.fullName ?? "Account", href: dashboardHref! } : null}
+        dashboardHref={dashboardHref ?? undefined}
       />
 
       <section className="relative w-full" style={{ height: "clamp(180px, 28vw, 320px)" }}>
@@ -336,38 +331,42 @@ export default async function PublicStoreSlugPage({ params, searchParams }: Prop
             <>
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                 {catalog.items.map((product) => (
-                  <Link
+                  <div
                     key={product.id}
-                    href={`/products/${product.slug}`}
                     className="group overflow-hidden rounded-xl bg-white shadow-sm transition-all hover:shadow-md"
                   >
-                    <div className="aspect-square overflow-hidden bg-zinc-100">
-                      {product.images[0] ? (
-                        <img
-                          src={product.images[0]}
-                          alt={product.name}
-                          className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center">
-                          <span className="text-4xl text-zinc-300">📦</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-3">
-                      <p className="truncate text-sm font-medium text-zinc-900">{product.name}</p>
-                      <div className="mt-1 flex items-center gap-2">
-                        <p className="text-sm font-bold text-[#D4450A]">
-                          TTD {product.price.toFixed(2)}
-                        </p>
-                        {product.compareAtPrice != null && (
-                          <p className="text-xs text-zinc-400 line-through">
-                            TTD {product.compareAtPrice.toFixed(2)}
-                          </p>
+                    <Link href={`/products/${product.slug}`} className="block">
+                      <div className="aspect-square overflow-hidden bg-zinc-100">
+                        {product.images[0] ? (
+                          <img
+                            src={product.images[0]}
+                            alt={product.name}
+                            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center">
+                            <span className="text-4xl text-zinc-300">📦</span>
+                          </div>
                         )}
                       </div>
+                    </Link>
+                    <div className="p-3">
+                      <Link href={`/products/${product.slug}`} className="block">
+                        <p className="truncate text-sm font-medium text-zinc-900">{product.name}</p>
+                        <div className="mt-1 flex items-center gap-2">
+                          <p className="text-sm font-bold text-[#D4450A]">
+                            TTD {product.price.toFixed(2)}
+                          </p>
+                          {product.compareAtPrice != null && (
+                            <p className="text-xs text-zinc-400 line-through">
+                              TTD {product.compareAtPrice.toFixed(2)}
+                            </p>
+                          )}
+                        </div>
+                      </Link>
+                      {product.hasVariants ? <ProductCardChooseOptionsLink slug={product.slug} /> : null}
                     </div>
-                  </Link>
+                  </div>
                 ))}
               </div>
 

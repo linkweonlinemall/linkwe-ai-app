@@ -5,8 +5,6 @@ import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { logoutAction } from "@/app/(auth)/auth-actions";
-
 import OverviewTab from "./overview-tab";
 import OrdersTab from "./orders-tab";
 import CouriersTab from "./couriers-tab";
@@ -143,9 +141,11 @@ type Props = {
   adminName: string;
 };
 
-export default function AdminDashboard({ adminName }: Props) {
+export default function AdminDashboard({ adminName: _adminName }: Props) {
   const pathname = usePathname();
   const productsNavActive = pathname?.startsWith("/dashboard/admin/products") ?? false;
+  const storesNavActive = pathname?.startsWith("/dashboard/admin/stores") ?? false;
+  const verificationNavActive = pathname?.startsWith("/dashboard/admin/verification") ?? false;
   const [activeTab, setActiveTab] = useState<TabId>("overview");
 
   useEffect(() => {
@@ -176,27 +176,6 @@ export default function AdminDashboard({ adminName }: Props) {
 
   return (
     <div className="min-h-screen bg-[#f5f5f5]">
-      <header className="flex h-14 items-center justify-between bg-[#1C1C1A] px-6">
-        <div className="flex items-center gap-3">
-          <span className="text-xl font-bold text-[#D4450A]">LinkWe</span>
-          <span className="text-zinc-500" aria-hidden>
-            /
-          </span>
-          <span className="text-sm text-zinc-400">Admin Panel</span>
-        </div>
-        <div className="flex items-center">
-          <span className="mr-4 text-sm text-zinc-300">{adminName}</span>
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              className="rounded-lg border border-zinc-600 px-3 py-1 text-xs text-zinc-300 transition-colors hover:border-zinc-400"
-            >
-              Sign out
-            </button>
-          </form>
-        </div>
-      </header>
-
       <nav
         className="flex w-full min-w-0 overflow-x-auto whitespace-nowrap border-b bg-white px-2"
         style={{ borderColor: "var(--card-border)" }}
@@ -256,6 +235,54 @@ export default function AdminDashboard({ adminName }: Props) {
               <path d="M16 10a4 4 0 0 1-8 0" />
             </svg>
             Products
+          </Link>
+          <Link
+            href="/dashboard/admin/stores"
+            className="flex shrink-0 items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-150 relative"
+            style={{
+              color: storesNavActive ? "var(--scarlet)" : "var(--text-muted)",
+              borderBottom: storesNavActive
+                ? "2px solid var(--scarlet)"
+                : "2px solid transparent",
+            }}
+          >
+            <svg
+              aria-hidden
+              className="h-4 w-4 shrink-0"
+              fill="none"
+              height="16"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+              width="16"
+            >
+              <path d="M3 21h18" />
+              <path d="M5 21V8l9-6 9 6v13" />
+              <path d="M9 21v-6h6v6" />
+            </svg>
+            Stores
+          </Link>
+          <Link
+            href="/dashboard/admin/verification"
+            style={{
+              color: verificationNavActive ? "var(--scarlet)" : "var(--text-muted)",
+              borderBottom: verificationNavActive ? "2px solid var(--scarlet)" : "2px solid transparent",
+            }}
+            className="flex shrink-0 items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-150 relative"
+          >
+            <svg
+              className="h-4 w-4 shrink-0"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden
+            >
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+            Verification
           </Link>
         </div>
       </nav>

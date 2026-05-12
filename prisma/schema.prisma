@@ -25,6 +25,16 @@ model User {
   isActive               Boolean                @default(true) @map("is_active")
   createdAt              DateTime               @default(now()) @map("created_at")
   updatedAt              DateTime               @updatedAt @map("updated_at")
+
+  // Vendor verification (id document URL/status above)
+  idVerifiedAt           DateTime?              @map("id_verified_at")
+  idVerifiedById         String?                @map("id_verified_by_id")
+
+  // Vendor payout details
+  bankName               String?                @map("bank_name")
+  accountName            String?                @map("account_name")
+  accountNumber          String?                @map("account_number")
+
   addresses           Address[]
   aiChatSessions      AIChatSession[]
   carts               Cart[]
@@ -1146,6 +1156,21 @@ enum CourierEntryType {
   ADJUSTMENT
 }
 
+enum ServiceType {
+  BOOKABLE
+  QUOTE
+  SUBSCRIPTION
+  ON_DEMAND
+  VIRTUAL
+}
+
+enum ServiceLocation {
+  AT_VENDOR
+  AT_CUSTOMER
+  VIRTUAL
+  FLEXIBLE
+}
+
 model Product {
   id                    String            @id @default(cuid())
   storeId               String
@@ -1186,6 +1211,13 @@ model Product {
   licenceType           LicenceType?
 
   isBookable            Boolean           @default(false)
+  isService             Boolean           @default(false)
+  serviceType           ServiceType?
+  serviceLocation       ServiceLocation?
+  serviceDuration       Int?
+  requiresDeposit       Boolean           @default(false)
+  depositAmount         Float?
+
   bookingType           BookingType?
   sessionDuration       Int?
   advanceBookingDays    Int?
@@ -1208,6 +1240,8 @@ model Product {
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
 
+  hasVariants           Boolean           @default(false) @map("has_variants")
+
   variants              ProductVariant[]
   availabilitySchedule  ProductAvailabilitySchedule[]
   availabilityOverrides ProductAvailabilityOverride[]
@@ -1223,17 +1257,20 @@ model Product {
 }
 
 model ProductCartItem {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  productId String   @map("product_id")
-  quantity  Int      @default(1)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id               String          @id @default(cuid())
+  userId           String          @map("user_id")
+  productId        String          @map("product_id")
+  productVariantId String?         @map("product_variant_id")
+  quantity         Int             @default(1)
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product          Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant          ProductVariant? @relation(fields: [productVariantId], references: [id], onDelete: SetNull)
 
-  @@unique([userId, productId])
+  @@unique([userId, productId, productVariantId])
   @@index([userId])
+  @@index([productVariantId])
   @@map("product_cart_items")
 }
 
@@ -1249,6 +1286,7 @@ model ProductVariant {
   attributes  Json
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  cartItems   ProductCartItem[]
 
   @@index([productId])
 }

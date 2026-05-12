@@ -21,6 +21,14 @@ function mapRows(rows: Awaited<ReturnType<typeof getCart>>): CartItem[] {
       stock: row.product.stock,
       store: row.product.store,
     },
+    variant: row.variant
+      ? {
+          id: row.variant.id,
+          name: row.variant.name,
+          price: row.variant.price,
+          attributes: row.variant.attributes as { name: string; value: string; hex?: string }[],
+        }
+      : null,
   }));
 }
 
@@ -39,7 +47,7 @@ export default function CartDrawer() {
 
   const itemCount = useMemo(() => items.reduce((sum, i) => sum + i.quantity, 0), [items]);
   const subtotalVal = useMemo(
-    () => items.reduce((sum, i) => sum + i.product.price * i.quantity, 0),
+    () => items.reduce((sum, i) => sum + (i.variant?.price ?? i.product.price) * i.quantity, 0),
     [items],
   );
 
@@ -153,9 +161,16 @@ export default function CartDrawer() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-zinc-900">{item.product.name}</p>
-                      <p className="text-xs text-zinc-400">{item.product.store.name}</p>
-                      <p className="mt-1 text-sm text-zinc-900">
-                        TTD {item.product.price.toFixed(2)}
+                      <Link href={`/store/${item.product.store.slug}`} className="text-xs text-zinc-400 hover:underline" onClick={closeDrawer}>
+                        {item.product.store.name}
+                      </Link>
+                      {item.variant ? (
+                        <p className="text-xs text-zinc-500">
+                          {item.variant.attributes.map((a) => a.value).join(" / ")}
+                        </p>
+                      ) : null}
+                      <p className="mt-1 text-sm font-semibold text-zinc-900">
+                        TTD {(item.variant?.price ?? item.product.price).toFixed(2)}
                       </p>
                       <div className="mt-1 flex items-center gap-2">
                         <button

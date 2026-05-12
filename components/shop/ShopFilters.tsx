@@ -1,68 +1,96 @@
 "use client";
-
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { PRODUCT_CATEGORIES } from "@/lib/categories";
 
-const CATEGORIES = [
-  { value: "all", label: "All" },
-  { value: "clothing_apparel", label: "Clothing" },
-  { value: "shoes_footwear", label: "Shoes" },
-  { value: "jewellery_watches", label: "Jewellery" },
-  { value: "health_beauty", label: "Health & Beauty" },
-  { value: "food_beverages", label: "Food & Drinks" },
-  { value: "home_furniture", label: "Home" },
-  { value: "electronics", label: "Electronics" },
-  { value: "sports_fitness", label: "Sports" },
-  { value: "toys_games", label: "Toys" },
-  { value: "books_stationery", label: "Books" },
-  { value: "art_crafts", label: "Art & Crafts" },
-  { value: "automotive_parts", label: "Automotive" },
+const ALL_CATEGORIES = [{ value: "all", label: "All" }, ...PRODUCT_CATEGORIES];
+
+const SORT_OPTIONS = [
+  { value: "featured", label: "Featured" },
+  { value: "price_asc", label: "Price: Low to High" },
+  { value: "price_desc", label: "Price: High to Low" },
+  { value: "newest", label: "Newest" },
+  { value: "name", label: "Name A–Z" },
 ];
+
+const CONDITIONS = [
+  { value: "NEW", label: "New" },
+  { value: "USED", label: "Used" },
+  { value: "REFURBISHED", label: "Refurbished" },
+];
+
+type ColourOption = { value: string; hex: string };
 
 type Props = {
   defaultCategory?: string;
   defaultSort?: string;
   productCount: number;
+  availableBrands?: string[];
+  availableCategories?: string[];
+  availableColours?: ColourOption[];
+  availableSizes?: string[];
 };
 
 export default function ShopFilters({
   defaultCategory = "all",
   defaultSort = "featured",
   productCount,
+  availableBrands = [],
+  availableCategories = [],
+  availableColours = [],
+  availableSizes = [],
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+
   const [category, setCategory] = useState(defaultCategory);
   const [sort, setSort] = useState(defaultSort);
   const [priceMin, setPriceMin] = useState(searchParams.get("minPrice") ?? "");
   const [priceMax, setPriceMax] = useState(searchParams.get("maxPrice") ?? "");
   const [inStock, setInStock] = useState(searchParams.get("inStock") === "true");
+  const [condition, setCondition] = useState(searchParams.get("condition") ?? "");
+  const [brand, setBrand] = useState(searchParams.get("brand") ?? "");
+  const [colour, setColour] = useState(searchParams.get("colour") ?? "");
+  const [size, setSize] = useState(searchParams.get("size") ?? "");
+
+  // Only show categories that have products
+  const activeCategories = ALL_CATEGORIES.filter(
+    (c) => c.value === "all" || availableCategories.includes(c.value),
+  );
 
   function applyFilters(overrides: Record<string, string> = {}) {
     const params = new URLSearchParams(searchParams.toString());
     const values = {
       category: overrides.category ?? category,
       sort: overrides.sort ?? sort,
-      minPrice: overrides.minPrice ?? priceMin,
-      maxPrice: overrides.maxPrice ?? priceMax,
-      inStock: overrides.inStock ?? (inStock ? "true" : ""),
+      minPrice: overrides.minPrice !== undefined ? overrides.minPrice : priceMin,
+      maxPrice: overrides.maxPrice !== undefined ? overrides.maxPrice : priceMax,
+      inStock: overrides.inStock !== undefined ? overrides.inStock : (inStock ? "true" : ""),
+      condition: overrides.condition !== undefined ? overrides.condition : condition,
+      brand: overrides.brand !== undefined ? overrides.brand : brand,
+      colour: overrides.colour !== undefined ? overrides.colour : colour,
+      size: overrides.size !== undefined ? overrides.size : size,
     };
-    if (values.category && values.category !== "all") {
-      params.set("category", values.category);
-    } else {
-      params.delete("category");
-    }
-    if (values.sort && values.sort !== "featured") {
-      params.set("sort", values.sort);
-    } else {
-      params.delete("sort");
-    }
+
+    if (values.category && values.category !== "all") params.set("category", values.category);
+    else params.delete("category");
+    if (values.sort && values.sort !== "featured") params.set("sort", values.sort);
+    else params.delete("sort");
     if (values.minPrice) params.set("minPrice", values.minPrice);
     else params.delete("minPrice");
     if (values.maxPrice) params.set("maxPrice", values.maxPrice);
     else params.delete("maxPrice");
     if (values.inStock === "true") params.set("inStock", "true");
     else params.delete("inStock");
+    if (values.condition) params.set("condition", values.condition);
+    else params.delete("condition");
+    if (values.brand) params.set("brand", values.brand);
+    else params.delete("brand");
+    if (values.colour) params.set("colour", values.colour);
+    else params.delete("colour");
+    if (values.size) params.set("size", values.size);
+    else params.delete("size");
+
     const qs = params.toString();
     router.push(qs ? `/shop?${qs}` : "/shop");
   }
@@ -73,62 +101,264 @@ export default function ShopFilters({
     setPriceMin("");
     setPriceMax("");
     setInStock(false);
+    setCondition("");
+    setBrand("");
+    setColour("");
+    setSize("");
     router.push("/shop");
   }
 
-  const hasFilters =
-    category !== "all" || sort !== "featured" || priceMin || priceMax || inStock;
+  const activeFilterCount = [
+    category !== "all",
+    sort !== "featured",
+    !!priceMin || !!priceMax,
+    inStock,
+    !!condition,
+    !!brand,
+    !!colour,
+    !!size,
+  ].filter(Boolean).length;
+
+  const hasFilters = activeFilterCount > 0;
 
   return (
-    <aside className="w-full shrink-0 lg:w-64">
-      <div className="sticky top-4 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
-        <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
-          <p className="text-sm font-bold text-zinc-900">Filters</p>
-          {hasFilters ? (
-            <button
-              type="button"
-              onClick={clearAll}
-              className="text-xs font-medium text-[#D4450A] hover:underline"
+    <aside className="w-full shrink-0 lg:w-56">
+      <div className="sticky top-4 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              className="text-zinc-400"
             >
+              <line x1="4" y1="6" x2="20" y2="6" />
+              <line x1="8" y1="12" x2="16" y2="12" />
+              <line x1="11" y1="18" x2="13" y2="18" />
+            </svg>
+            <p className="text-sm font-bold text-zinc-900">Filters</p>
+            {hasFilters ? (
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#D4450A] text-[9px] font-bold text-white">
+                {activeFilterCount}
+              </span>
+            ) : null}
+          </div>
+          {hasFilters ? (
+            <button type="button" onClick={clearAll} className="text-xs font-semibold text-[#D4450A] hover:underline">
               Clear all
             </button>
           ) : null}
         </div>
 
-        <div className="border-b border-zinc-100 px-5 py-4">
-          <p className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-500">Sort by</p>
-          <div className="flex flex-col gap-2">
-            {[
-              { value: "featured", label: "Featured" },
-              { value: "price_asc", label: "Price: Low to High" },
-              { value: "price_desc", label: "Price: High to Low" },
-              { value: "newest", label: "Newest" },
-              { value: "name", label: "Name A–Z" },
-            ].map((opt) => (
-              <label key={opt.value} className="group flex cursor-pointer items-center gap-2.5">
-                <div
-                  onClick={() => {
-                    setSort(opt.value);
-                    applyFilters({ sort: opt.value });
-                  }}
-                  className={`flex h-4 w-4 cursor-pointer items-center justify-center rounded-full border-2 transition-colors ${
-                    sort === opt.value
-                      ? "border-[#D4450A] bg-[#D4450A]"
-                      : "border-zinc-300 group-hover:border-[#D4450A]"
+        {/* Sort */}
+        <div className="border-b border-zinc-100 px-4 py-3">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Sort by</p>
+          <div className="flex flex-col gap-0.5">
+            {SORT_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  setSort(opt.value);
+                  applyFilters({ sort: opt.value });
+                }}
+                className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs font-medium transition-colors ${
+                  sort === opt.value ? "bg-[#D4450A]/10 font-semibold text-[#D4450A]" : "text-zinc-600 hover:bg-zinc-50"
+                }`}
+              >
+                <span
+                  className={`h-3 w-3 shrink-0 rounded-full border-2 transition-colors ${
+                    sort === opt.value ? "border-[#D4450A] bg-[#D4450A]" : "border-zinc-300"
                   }`}
-                >
-                  {sort === opt.value ? <div className="h-1.5 w-1.5 rounded-full bg-white" /> : null}
-                </div>
-                <span className="text-sm text-zinc-700">{opt.label}</span>
-              </label>
+                />
+                {opt.label}
+              </button>
             ))}
           </div>
         </div>
 
-        <div className="border-b border-zinc-100 px-5 py-4">
-          <p className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-500">Category</p>
-          <div className="flex flex-col gap-1">
-            {CATEGORIES.map((cat) => (
+        {/* Colour — only if variants exist */}
+        {availableColours.length > 0 ? (
+          <div className="border-b border-zinc-100 px-4 py-3">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Colour</p>
+            <div className="flex flex-wrap gap-2">
+              {availableColours.map((c) => {
+                const isSelected = colour === c.value;
+                return (
+                  <button
+                    key={c.value}
+                    type="button"
+                    title={c.value}
+                    onClick={() => {
+                      const next = isSelected ? "" : c.value;
+                      setColour(next);
+                      applyFilters({ colour: next });
+                    }}
+                    className={`relative h-8 w-8 rounded-full transition-all ${
+                      isSelected ? "scale-110 ring-2 ring-[#D4450A] ring-offset-2" : "ring-1 ring-zinc-200 hover:ring-zinc-400"
+                    }`}
+                    style={{ background: c.hex }}
+                  >
+                    {isSelected ? (
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+            {colour ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setColour("");
+                  applyFilters({ colour: "" });
+                }}
+                className="mt-1.5 text-[10px] font-medium text-zinc-400 hover:text-[#D4450A]"
+              >
+                Clear colour
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        {/* Size — only if variants exist */}
+        {availableSizes.length > 0 ? (
+          <div className="border-b border-zinc-100 px-4 py-3">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Size</p>
+            <div className="flex flex-wrap gap-1.5">
+              {availableSizes.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => {
+                    const next = size === s ? "" : s;
+                    setSize(next);
+                    applyFilters({ size: next });
+                  }}
+                  className={`min-w-[2.5rem] rounded-lg border-2 px-2.5 py-1 text-xs font-bold transition-all ${
+                    size === s
+                      ? "border-[#D4450A] bg-[#D4450A] text-white"
+                      : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {/* Condition */}
+        <div className="border-b border-zinc-100 px-4 py-3">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Condition</p>
+          <div className="flex flex-wrap gap-1.5">
+            {CONDITIONS.map((c) => (
+              <button
+                key={c.value}
+                type="button"
+                onClick={() => {
+                  const next = condition === c.value ? "" : c.value;
+                  setCondition(next);
+                  applyFilters({ condition: next });
+                }}
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition-all ${
+                  condition === c.value
+                    ? "bg-[#D4450A] text-white shadow-sm"
+                    : "border border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300"
+                }`}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Brand — dropdown, only used brands */}
+        {availableBrands.length > 0 ? (
+          <div className="border-b border-zinc-100 px-4 py-3">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Brand</p>
+            <select
+              value={brand}
+              onChange={(e) => {
+                setBrand(e.target.value);
+                applyFilters({ brand: e.target.value });
+              }}
+              className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-xs font-medium text-zinc-700 focus:border-[#D4450A] focus:outline-none"
+            >
+              <option value="">All brands</option>
+              {availableBrands.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
+
+        {/* Price */}
+        <div className="border-b border-zinc-100 px-4 py-3">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Price (TTD)</p>
+          <div className="mb-2 flex items-center gap-1.5">
+            <input
+              type="number"
+              value={priceMin}
+              onChange={(e) => setPriceMin(e.target.value)}
+              placeholder="Min"
+              className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-xs focus:border-[#D4450A] focus:outline-none"
+            />
+            <span className="shrink-0 text-xs text-zinc-400">–</span>
+            <input
+              type="number"
+              value={priceMax}
+              onChange={(e) => setPriceMax(e.target.value)}
+              placeholder="Max"
+              className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-xs focus:border-[#D4450A] focus:outline-none"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => applyFilters()}
+            className="w-full rounded-lg bg-zinc-900 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-zinc-700"
+          >
+            Apply
+          </button>
+        </div>
+
+        {/* In stock */}
+        <div className="border-b border-zinc-100 px-4 py-3">
+          <button
+            type="button"
+            onClick={() => {
+              const next = !inStock;
+              setInStock(next);
+              applyFilters({ inStock: next ? "true" : "" });
+            }}
+            className="flex w-full items-center justify-between"
+          >
+            <span className="text-xs font-semibold text-zinc-700">In stock only</span>
+            <div className={`relative h-5 w-9 rounded-full transition-colors ${inStock ? "bg-[#D4450A]" : "bg-zinc-200"}`}>
+              <div
+                className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                  inStock ? "translate-x-4" : "translate-x-0.5"
+                }`}
+              />
+            </div>
+          </button>
+        </div>
+
+        {/* Category — only show categories that have products */}
+        <div className="px-4 py-3">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Category</p>
+          <div className="flex flex-col gap-0.5">
+            {activeCategories.map((cat) => (
               <button
                 key={cat.value}
                 type="button"
@@ -136,15 +366,13 @@ export default function ShopFilters({
                   setCategory(cat.value);
                   applyFilters({ category: cat.value });
                 }}
-                className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-colors ${
-                  category === cat.value
-                    ? "bg-[#D4450A]/10 font-semibold text-[#D4450A]"
-                    : "text-zinc-600 hover:bg-zinc-50"
+                className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors ${
+                  category === cat.value ? "bg-[#D4450A]/10 font-semibold text-[#D4450A]" : "text-zinc-600 hover:bg-zinc-50"
                 }`}
               >
-                <span>{cat.label}</span>
+                <span className="truncate">{cat.label}</span>
                 {category === cat.value ? (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                 ) : null}
@@ -153,60 +381,11 @@ export default function ShopFilters({
           </div>
         </div>
 
-        <div className="border-b border-zinc-100 px-5 py-4">
-          <p className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-500">Price range (TTD)</p>
-          <div className="mb-3 flex items-center gap-2">
-            <input
-              type="number"
-              value={priceMin}
-              onChange={(e) => setPriceMin(e.target.value)}
-              placeholder="Min"
-              className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm focus:border-[#D4450A] focus:outline-none"
-            />
-            <span className="shrink-0 text-zinc-400">–</span>
-            <input
-              type="number"
-              value={priceMax}
-              onChange={(e) => setPriceMax(e.target.value)}
-              placeholder="Max"
-              className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm focus:border-[#D4450A] focus:outline-none"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => applyFilters()}
-            className="w-full rounded-xl bg-zinc-900 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
-          >
-            Apply price
-          </button>
-        </div>
-
-        <div className="px-5 py-4">
-          <p className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-500">Availability</p>
-          <label className="flex cursor-pointer items-center gap-2.5">
-            <div
-              onClick={() => {
-                setInStock((v) => !v);
-                applyFilters({ inStock: !inStock ? "true" : "" });
-              }}
-              className={`relative h-5 w-10 cursor-pointer rounded-full transition-colors ${
-                inStock ? "bg-[#D4450A]" : "bg-zinc-200"
-              }`}
-            >
-              <div
-                className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                  inStock ? "translate-x-5" : "translate-x-0.5"
-                }`}
-              />
-            </div>
-            <span className="text-sm text-zinc-700">In stock only</span>
-          </label>
-        </div>
-
+        {/* Results count */}
         {hasFilters ? (
-          <div className="px-5 pb-4">
+          <div className="border-t border-zinc-100 px-4 py-2.5">
             <p className="text-center text-xs text-zinc-400">
-              {productCount} product{productCount !== 1 ? "s" : ""} found
+              {productCount} result{productCount !== 1 ? "s" : ""}
             </p>
           </div>
         ) : null}

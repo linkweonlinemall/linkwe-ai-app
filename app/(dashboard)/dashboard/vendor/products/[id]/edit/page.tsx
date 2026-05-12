@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getProductVariants } from "@/app/actions/product-variants";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/prisma";
 import { getStoreByOwnerId } from "@/lib/store/get-vendor-store";
@@ -25,11 +26,45 @@ export default async function EditVendorProductPage({ params }: Props) {
 
   const row = await prisma.product.findFirst({
     where: { id, storeId: store.id },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      shortDescription: true,
+      category: true,
+      brand: true,
+      tags: true,
+      condition: true,
+      price: true,
+      compareAtPrice: true,
+      sku: true,
+      stock: true,
+      images: true,
+      weight: true,
+      weightUnit: true,
+      length: true,
+      width: true,
+      height: true,
+      allowDelivery: true,
+      allowPickup: true,
+      returnPolicy: true,
+      address: true,
+      latitude: true,
+      longitude: true,
+      isPublished: true,
+      isFeatured: true,
+      metaTitle: true,
+      metaDescription: true,
+      hasVariants: true,
+    },
   });
 
   if (!row) {
     redirect("/dashboard/vendor/products");
   }
+
+  const variants = await getProductVariants(row.id);
 
   const product: VendorProductEditPayload = {
     id: row.id,
@@ -61,6 +96,7 @@ export default async function EditVendorProductPage({ params }: Props) {
     isFeatured: row.isFeatured,
     metaTitle: row.metaTitle,
     metaDescription: row.metaDescription,
+    hasVariants: row.hasVariants,
   };
 
   return (
@@ -77,7 +113,18 @@ export default async function EditVendorProductPage({ params }: Props) {
         <h1 className="text-2xl font-bold text-zinc-900">Edit product</h1>
         <p className="mt-1 text-sm text-zinc-600">{product.name}</p>
         <div className="mt-8">
-          <ProductEditForm product={product} />
+          <ProductEditForm
+            product={product}
+            variants={variants.map((v) => ({
+              id: v.id,
+              name: v.name,
+              attributes: v.attributes,
+              price: v.price,
+              stock: v.stock,
+              sku: v.sku,
+              images: v.images,
+            }))}
+          />
         </div>
       </div>
     </div>
