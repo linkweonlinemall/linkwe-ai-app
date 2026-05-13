@@ -92,8 +92,9 @@ export async function getSlotsForDate(serviceId: string, dateStr: string) {
 
   if (!service) return [];
 
-  const anchor = utcAnchorFromYmd(dateStr);
-  const dow = anchor.getUTCDay();
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0));
+  const dow = date.getUTCDay();
   const daySchedule = service.availabilitySchedule.find(
     (s) => s.dayOfWeek === dow && s.isActive,
   );
@@ -122,9 +123,10 @@ export async function createBooking(input: {
   const session = await getSession();
   if (!session) return { error: "not_logged_in" };
 
-  const bookingDate = utcMidnightFromYmd(input.date);
-  const dayStart = bookingDate;
+  const dayStart = utcMidnightFromYmd(input.date);
   const dayEnd = new Date(dayStart.getTime() + 86400000);
+  const [by, bm, bd] = input.date.split("-").map(Number);
+  const bookingDate = new Date(Date.UTC(by, bm - 1, bd, 12, 0, 0, 0));
 
   const service = await prisma.product.findUnique({
     where: { id: input.serviceId },

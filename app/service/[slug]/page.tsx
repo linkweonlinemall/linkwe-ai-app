@@ -102,34 +102,76 @@ export default async function ServiceDetailPage({ params }: Props) {
       requiresApproval: true,
       bookingPaymentMode: true,
       isFeatured: true,
+      storeId: true,
       store: { select: { name: true, slug: true, logoUrl: true, region: true } },
     },
   });
 
   if (!service || !service.isPublished || !service.isService || service.isArchived) notFound();
 
-  const slugKey = slug.trim().toLowerCase();
-
   const bookingData =
     service.serviceType === "BOOKABLE" || service.serviceType === "VIRTUAL"
-      ? await prisma.product.findUnique({
-          where: { slug: slugKey },
-          select: {
-            id: true,
-            advanceBookingDays: true,
-            bookingPaymentMode: true,
-            requiresDeposit: true,
-            depositAmount: true,
-            requiresApproval: true,
-            availabilitySchedule: true,
-            availabilityOverrides: {
-              where: { date: { gte: new Date() } },
+      ? await (async () => {
+          // Get the store for this service
+          const store = await prisma.store.findFirst({
+            where: { id: service.storeId },
+            select: { id: true, staffMode: true },
+          });
+
+          // Get staff members who offer this service
+          const staffWithService = await prisma.staffMember.findMany({
+            where: {
+              storeId: service.storeId,
+              isActive: true,
+              services: { some: { serviceId: service.id } },
             },
-            bookingSlots: {
-              where: { date: { gte: new Date() }, isAvailable: true },
+            select: {
+              id: true,
+              name: true,
+              photoUrl: true,
+              availability: {
+                where: { isActive: true },
+                orderBy: { dayOfWeek: "asc" },
+              },
+              overrides: {
+                where: { date: { gte: new Date() } },
+              },
             },
-          },
-        })
+          });
+
+          // Get existing booking slots for this service
+          const bookingSlots = await prisma.productBookingSlot.findMany({
+            where: {
+              productId: service.id,
+              date: { gte: new Date() },
+              isAvailable: true,
+            },
+          });
+
+          // Get service settings
+          const serviceSettings = await prisma.product.findUnique({
+            where: { id: service.id },
+            select: {
+              advanceBookingDays: true,
+              bookingPaymentMode: true,
+              requiresDeposit: true,
+              depositAmount: true,
+              requiresApproval: true,
+            },
+          });
+
+          if (!serviceSettings) return null;
+
+          return {
+            ...serviceSettings,
+            staffMode: store?.staffMode ?? "SOLO",
+            staff: staffWithService,
+            bookingSlots,
+            // Keep legacy fields empty — booking engine now uses staff
+            availabilitySchedule: [],
+            availabilityOverrides: [],
+          };
+        })()
       : null;
 
   const typeInfo = serviceTypeDisplay(service.serviceType);
@@ -142,7 +184,7 @@ export default async function ServiceDetailPage({ params }: Props) {
         dashboardHref={continueHref ?? undefined}
       />
 
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-screen-xl px-4 py-8 sm:px-6">
         <nav className="mb-6 flex items-center gap-2 text-sm text-zinc-400">
           <Link href="/" className="hover:text-zinc-700">
             Home
@@ -162,9 +204,9 @@ export default async function ServiceDetailPage({ params }: Props) {
           <span className="max-w-48 truncate text-zinc-600">{service.name}</span>
         </nav>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="flex flex-col gap-5 lg:col-span-2">
-            <div className="aspect-video overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-200 to-zinc-300">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+          <div className="flex flex-col gap-6 lg:col-span-7">
+            <div className="aspect-[4/3] overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-100 to-zinc-200">
               {service.images[0] ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={service.images[0]} alt={service.name} className="h-full w-full object-cover" />
@@ -251,16 +293,23 @@ export default async function ServiceDetailPage({ params }: Props) {
             ) : null}
           </div>
 
-          <div className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
-            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-              <p className="text-3xl font-black" style={{ color: "#D4450A" }}>
-                TTD {service.price.toFixed(2)}
-              </p>
-              {service.serviceDuration ? (
-                <p className="mt-0.5 text-xs text-zinc-400">
-                  per session · {service.serviceDuration} min
+          <div className="flex flex-col gap-4 lg:col-span-5 lg:sticky lg:top-6 lg:self-start">
+            <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+              <div className="mb-4 border-b border-zinc-100 pb-4">
+                <p className="text-4xl font-black tracking-tight" style={{ color: "#D4450A" }}>
+                  TTD {service.price.toFixed(2)}
                 </p>
-              ) : null}
+                {service.serviceDuration ? (
+                  <p className="mt-1 text-xs text-zinc-400">
+                    per session ·{" "}
+                    {service.serviceDuration >= 60
+                      ? `${Math.floor(service.serviceDuration / 60)}h${
+                          service.serviceDuration % 60 > 0 ? ` ${service.serviceDuration % 60}m` : ""
+                        }`
+                      : `${service.serviceDuration} min`}
+                  </p>
+                ) : null}
+              </div>
 
               {service.requiresDeposit && service.depositAmount ? (
                 <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2.5">
@@ -278,15 +327,13 @@ export default async function ServiceDetailPage({ params }: Props) {
                   serviceName={service.name}
                   price={service.price}
                   serviceDuration={service.serviceDuration ?? 60}
-                  requiresDeposit={service.requiresDeposit}
-                  depositAmount={service.depositAmount}
-                  requiresApproval={service.requiresApproval ?? false}
-                  bookingPaymentMode={
-                    bookingData.bookingPaymentMode ?? "CUSTOMER_CHOOSES"
-                  }
+                  requiresDeposit={bookingData.requiresDeposit ?? false}
+                  depositAmount={bookingData.depositAmount ?? null}
+                  requiresApproval={bookingData.requiresApproval ?? false}
+                  bookingPaymentMode={bookingData.bookingPaymentMode ?? "CUSTOMER_CHOOSES"}
                   advanceBookingDays={bookingData.advanceBookingDays ?? 30}
-                  availabilitySchedule={bookingData.availabilitySchedule}
-                  availabilityOverrides={bookingData.availabilityOverrides}
+                  staffMode={bookingData.staffMode ?? "SOLO"}
+                  staff={bookingData.staff ?? []}
                   existingSlots={bookingData.bookingSlots}
                 />
               ) : service.serviceType === "QUOTE" ? (

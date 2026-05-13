@@ -76,7 +76,7 @@ export default function VendorServicesPage() {
 
   if (loading) {
     return (
-      <div className="px-6 py-8">
+      <div className="px-6 py-8 max-w-full">
         <div className="flex items-center justify-center py-20">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-200 border-t-[#D4450A]" />
         </div>
@@ -202,9 +202,9 @@ export default function VendorServicesPage() {
                       : ""}
                   </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
                   <Link
-                    href={`/dashboard/vendor/services/${service.id}/availability`}
+                    href="/dashboard/vendor/staff"
                     className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50"
                   >
                     Availability

@@ -39,10 +39,8 @@ function formatTime(t: string): string {
 function formatDate(d: Date | string): string {
   const date = new Date(d);
   return date.toLocaleDateString("en-TT", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
+    weekday: "short", month: "short", day: "numeric", year: "numeric",
+    timeZone: "UTC",
   });
 }
 

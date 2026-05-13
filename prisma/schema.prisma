@@ -151,6 +151,8 @@ model Store {
   longitude        Float?
   address          String?
   socialLinks      Json?       @map("social_links")
+  staffMode        StaffMode   @default(SOLO)
+  staffMembers     StaffMember[]
   createdAt        DateTime    @default(now()) @map("created_at")
   updatedAt        DateTime    @updatedAt @map("updated_at")
   listings         Listing[]
@@ -1177,6 +1179,11 @@ enum BookingPaymentMode {
   CUSTOMER_CHOOSES
 }
 
+enum StaffMode {
+  SOLO
+  TEAM
+}
+
 model Product {
   id                    String            @id @default(cuid())
   storeId               String
@@ -1257,6 +1264,7 @@ model Product {
   digitalDownloads      DigitalDownload[]
   cartItems             ProductCartItem[]
   orderItems            OrderItem[]
+  staffServices         StaffService[]
 
   @@index([storeId])
   @@index([isPublished])
@@ -1368,6 +1376,8 @@ model ProductBooking {
   cancelledAt        DateTime?
   vendorNotes        String?
   customerNotes      String?
+  staffMemberId      String?
+  staffMember        StaffMember? @relation(fields: [staffMemberId], references: [id], onDelete: SetNull)
   reminderSentAt     DateTime?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
@@ -1816,4 +1826,68 @@ model VendorChatMessage {
   createdAt DateTime   @default(now())
 
   @@index([chatId])
+}
+
+model StaffMember {
+  id           String    @id @default(cuid())
+  storeId      String
+  store        Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name         String
+  bio          String?
+  photoUrl     String?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  availability StaffAvailability[]
+  overrides    StaffAvailabilityOverride[]
+  services     StaffService[]
+  bookings     ProductBooking[]
+
+  @@index([storeId])
+}
+
+model StaffAvailability {
+  id               String      @id @default(cuid())
+  staffId          String
+  staff            StaffMember @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  dayOfWeek        Int
+  startTime        String
+  endTime          String
+  slotDurationMins Int
+  slotBufferMins   Int         @default(0)
+  isActive         Boolean     @default(true)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([staffId])
+}
+
+model StaffAvailabilityOverride {
+  id              String      @id @default(cuid())
+  staffId         String
+  staff           StaffMember @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  date            DateTime
+  isBlocked       Boolean     @default(false)
+  customStartTime String?
+  customEndTime   String?
+  reason          String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([staffId, date])
+}
+
+model StaffService {
+  id        String      @id @default(cuid())
+  staffId   String
+  staff     StaffMember @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  serviceId String
+  service   Product     @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([staffId, serviceId])
+  @@index([staffId])
+  @@index([serviceId])
 }

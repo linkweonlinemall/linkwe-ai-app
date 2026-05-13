@@ -146,7 +146,8 @@ export async function addDateOverride(
   });
   if (!service) return { error: "Service not found" };
 
-  const dateObj = new Date(override.date);
+  const [y, m, d] = override.date.split("-").map(Number);
+  const dateObj = new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0));
 
   // Check if override already exists for this date
   const existing = await prisma.productAvailabilityOverride.findFirst({

@@ -2,17 +2,33 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { DayPicker } from "react-day-picker";
-import "react-day-picker/style.css";
-import type {
-  BookingPaymentMode,
-  ProductAvailabilityOverride,
-  ProductAvailabilitySchedule,
-  ProductBookingSlot,
-} from "@prisma/client";
+import type { ProductBookingSlot } from "@prisma/client";
 
-import { createBooking, getSlotsForDate } from "@/app/actions/booking";
-import { formatTime, getAvailableDates } from "@/lib/booking/slots";
+import { createBooking } from "@/app/actions/booking";
+import { formatTime, generateSlotsFromStaff, getAvailableDatesFromStaff } from "@/lib/booking/slots";
+
+type StaffMemberProp = {
+  id: string;
+  name: string;
+  photoUrl: string | null;
+  availability: {
+    id: string;
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    slotDurationMins: number;
+    slotBufferMins: number;
+    isActive: boolean;
+  }[];
+  overrides: {
+    id: string;
+    date: Date | string;
+    isBlocked: boolean;
+    customStartTime: string | null;
+    customEndTime: string | null;
+    reason: string | null;
+  }[];
+};
 
 type Props = {
   serviceId: string;
@@ -23,31 +39,175 @@ type Props = {
   requiresDeposit: boolean;
   depositAmount: number | null;
   requiresApproval: boolean;
-  bookingPaymentMode: BookingPaymentMode;
+  bookingPaymentMode: string;
   advanceBookingDays: number;
-  availabilitySchedule: ProductAvailabilitySchedule[];
-  availabilityOverrides: ProductAvailabilityOverride[];
+  staffMode: string;
+  staff: StaffMemberProp[];
   existingSlots: ProductBookingSlot[];
 };
 
-type TimeSlot = { startTime: string; endTime: string; available: boolean };
+type TimeSlot = {
+  startTime: string;
+  endTime: string;
+  available: boolean;
+  availableStaff?: string[];
+};
 
 function formatDateDisplay(dateStr: string): string {
-  const date = new Date(`${dateStr}T12:00:00`);
+  const date = new Date(dateStr + "T00:00:00");
   return date.toLocaleDateString("en-TT", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
+    weekday: "long", month: "long", day: "numeric",
+    timeZone: "UTC",
   });
 }
 
 function formatDateShort(dateStr: string): string {
-  const date = new Date(`${dateStr}T12:00:00`);
+  const date = new Date(dateStr + "T00:00:00");
   return date.toLocaleDateString("en-TT", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
+    weekday: "short", month: "short", day: "numeric",
+    timeZone: "UTC",
   });
+}
+
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+const DAY_NAMES = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+function CustomCalendar({
+  availableDates,
+  selectedDate,
+  onSelectDate,
+}: {
+  availableDates: string[];
+  selectedDate: string | null;
+  onSelectDate: (date: string) => void;
+}) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const [viewYear, setViewYear] = useState(today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(today.getMonth());
+
+  const availableSet = new Set(availableDates);
+
+  // Get first day of month and total days
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+  function prevMonth() {
+    if (viewMonth === 0) {
+      setViewMonth(11);
+      setViewYear((v) => v - 1);
+    } else setViewMonth((v) => v - 1);
+  }
+
+  function nextMonth() {
+    if (viewMonth === 11) {
+      setViewMonth(0);
+      setViewYear((v) => v + 1);
+    } else setViewMonth((v) => v + 1);
+  }
+
+  const cells: (number | null)[] = [
+    ...Array(firstDay).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+
+  // Pad to complete last row
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  return (
+    <div className="w-full select-none">
+      {/* Header */}
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-sm font-bold text-zinc-900">
+          {MONTH_NAMES[viewMonth]} {viewYear}
+        </p>
+        <div className="flex gap-1">
+          <button
+            type="button"
+            onClick={prevMonth}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-900"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={nextMonth}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-900"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Day headers */}
+      <div className="mb-1 grid grid-cols-7">
+        {DAY_NAMES.map((d) => (
+          <div key={d} className="py-1 text-center text-[10px] font-bold uppercase tracking-wide text-zinc-400">
+            {d}
+          </div>
+        ))}
+      </div>
+
+      {/* Day cells */}
+      <div className="grid grid-cols-7 gap-1">
+        {cells.map((day, i) => {
+          if (!day) return <div key={i} />;
+
+          const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          const cellDate = new Date(viewYear, viewMonth, day);
+          const isPast = cellDate < today;
+          const isAvailable = availableSet.has(dateStr);
+          const isSelected = selectedDate === dateStr;
+          const isToday = cellDate.toDateString() === today.toDateString();
+
+          return (
+            <button
+              key={i}
+              type="button"
+              disabled={isPast || !isAvailable}
+              onClick={() => onSelectDate(dateStr)}
+              className={`
+                relative flex h-9 w-full items-center justify-center rounded-lg text-sm font-medium transition-all
+                ${
+                  isSelected
+                    ? "bg-[#D4450A] text-white font-bold shadow-sm"
+                    : isAvailable && !isPast
+                      ? "bg-[#D4450A]/8 text-[#D4450A] font-semibold hover:bg-[#D4450A] hover:text-white cursor-pointer"
+                      : isPast
+                        ? "text-zinc-200 cursor-not-allowed"
+                        : "text-zinc-300 cursor-not-allowed"
+                }
+                ${isToday && !isSelected ? "ring-1 ring-[#D4450A]/30" : ""}
+              `}
+            >
+              {day}
+              {isAvailable && !isPast && !isSelected ? (
+                <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-[#D4450A]" />
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 export default function BookingWidget({
@@ -59,15 +219,16 @@ export default function BookingWidget({
   requiresApproval,
   bookingPaymentMode,
   advanceBookingDays,
-  availabilitySchedule,
-  availabilityOverrides,
+  staff,
+  existingSlots,
 }: Props) {
   const router = useRouter();
 
-  const availableDates = getAvailableDates(
-    availabilitySchedule,
-    availabilityOverrides,
+  const availableDates = getAvailableDatesFromStaff(
+    staff,
+    existingSlots,
     advanceBookingDays,
+    serviceDuration,
   );
 
   const [step, setStep] = useState<"date" | "time" | "confirm">("date");
@@ -93,11 +254,11 @@ export default function BookingWidget({
     setLoadingSlots(true);
     setSlots([]);
     setSelectedSlot(null);
-    void getSlotsForDate(serviceId, selectedDate).then((s) => {
-      setSlots(s);
-      setLoadingSlots(false);
-    });
-  }, [selectedDate, serviceId]);
+    const date = new Date(`${selectedDate}T12:00:00Z`);
+    const staffSlots = generateSlotsFromStaff(date, staff, existingSlots, serviceDuration);
+    setSlots(staffSlots);
+    setLoadingSlots(false);
+  }, [selectedDate, staff, existingSlots, serviceDuration]);
 
   async function handleBook() {
     if (!selectedDate || !selectedSlot) return;
@@ -198,7 +359,7 @@ export default function BookingWidget({
 
       {step === "date" ? (
         <div>
-          <p className="mb-2.5 text-xs font-bold uppercase tracking-widest text-zinc-400">
+          <p className="mb-3 text-xs font-bold uppercase tracking-widest text-zinc-400">
             Select a date
           </p>
           {availableDates.length === 0 ? (
@@ -209,83 +370,14 @@ export default function BookingWidget({
               </p>
             </div>
           ) : (
-            <div className="booking-calendar">
-              <style>{`
-  .booking-calendar .rdp-root {
-    --rdp-accent-color: #D4450A;
-    --rdp-accent-background-color: #fff5f0;
-    --rdp-selected-border: 2px solid #D4450A;
-    width: 100%;
-    margin: 0;
-  }
-  .booking-calendar .rdp-month_grid {
-    width: 100%;
-  }
-  .booking-calendar .rdp-day_button {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    font-size: 0.8rem;
-  }
-  .booking-calendar .rdp-selected .rdp-day_button {
-    background-color: #D4450A !important;
-    color: white !important;
-    border: none !important;
-  }
-  .booking-calendar .rdp-day_button:hover:not(.rdp-disabled) {
-    background-color: #fff5f0 !important;
-    color: #D4450A !important;
-  }
-  .booking-calendar .rdp-disabled .rdp-day_button {
-    opacity: 0.25;
-    cursor: not-allowed;
-  }
-  .booking-calendar .rdp-month_caption {
-    font-size: 0.875rem;
-    font-weight: 700;
-    color: #18181b;
-    margin-bottom: 8px;
-  }
-  .booking-calendar .rdp-weekday {
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: #a1a1aa;
-  }
-  .booking-calendar .rdp-nav button:hover {
-    background-color: #fff5f0 !important;
-    color: #D4450A !important;
-  }
-`}</style>
-              <DayPicker
-                mode="single"
-                selected={selectedDate ? new Date(selectedDate + "T00:00:00") : undefined}
-                onSelect={(day: Date | undefined) => {
-                  if (!day) return;
-                  const dateStr = day.toISOString().split("T")[0];
-                  if (!availableDates.includes(dateStr)) return;
-                  setSelectedDate(dateStr);
-                  setStep("time");
-                }}
-                disabled={(day: Date) => {
-                  const dateStr = day.toISOString().split("T")[0];
-                  const today = new Date();
-                  today.setHours(0, 0, 0, 0);
-                  if (day < today) return true;
-                  return !availableDates.includes(dateStr);
-                }}
-                startMonth={new Date()}
-                endMonth={(() => {
-                  const d = new Date();
-                  d.setDate(d.getDate() + (advanceBookingDays ?? 30));
-                  return d;
-                })()}
-                classNames={{
-                  root: "w-full",
-                  month: "w-full",
-                  month_grid: "w-full",
-                }}
-              />
-            </div>
+            <CustomCalendar
+              availableDates={availableDates}
+              selectedDate={selectedDate}
+              onSelectDate={(date) => {
+                setSelectedDate(date);
+                setStep("time");
+              }}
+            />
           )}
         </div>
       ) : null}
