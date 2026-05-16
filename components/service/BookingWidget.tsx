@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ProductBookingSlot } from "@prisma/client";
 
@@ -212,6 +212,7 @@ function CustomCalendar({
 
 export default function BookingWidget({
   serviceId,
+  serviceName,
   price,
   serviceDuration,
   requiresDeposit,
@@ -223,13 +224,6 @@ export default function BookingWidget({
   existingSlots,
 }: Props) {
   const router = useRouter();
-
-  const availableDates = getAvailableDatesFromStaff(
-    staff,
-    existingSlots,
-    advanceBookingDays,
-    serviceDuration,
-  );
 
   const [step, setStep] = useState<"date" | "time" | "confirm">("date");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -248,6 +242,33 @@ export default function BookingWidget({
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [bookingStatus, setBookingStatus] = useState<string | null>(null);
+  const [confirmedDate, setConfirmedDate] = useState<string | null>(null);
+  const [confirmedSlot, setConfirmedSlot] = useState<TimeSlot | null>(null);
+  const [bookedSlots, setBookedSlots] = useState<{ date: string; startTime: string }[]>([]);
+
+  const localBookedAsSlots = useMemo(
+    () =>
+      bookedSlots.map((b) => ({
+        date: b.date,
+        startTime: b.startTime,
+        endTime: b.startTime,
+        isAvailable: false,
+        maxBookings: 1,
+        currentBookings: 1,
+        productId: serviceId,
+        id: "local",
+        updatedAt: new Date(),
+        createdAt: new Date(),
+      })),
+    [bookedSlots, serviceId],
+  );
+
+  const availableDates = getAvailableDatesFromStaff(
+    staff,
+    [...existingSlots, ...localBookedAsSlots],
+    advanceBookingDays,
+    serviceDuration,
+  );
 
   useEffect(() => {
     if (!selectedDate) return;
@@ -255,13 +276,17 @@ export default function BookingWidget({
     setSlots([]);
     setSelectedSlot(null);
     const date = new Date(`${selectedDate}T12:00:00Z`);
-    const staffSlots = generateSlotsFromStaff(date, staff, existingSlots, serviceDuration);
+    const allBookedSlots = [...existingSlots, ...localBookedAsSlots];
+    const staffSlots = generateSlotsFromStaff(date, staff, allBookedSlots, serviceDuration);
     setSlots(staffSlots);
     setLoadingSlots(false);
-  }, [selectedDate, staff, existingSlots, serviceDuration]);
+  }, [selectedDate, staff, existingSlots, serviceDuration, localBookedAsSlots]);
 
   async function handleBook() {
-    if (!selectedDate || !selectedSlot) return;
+    if (!selectedDate || !selectedSlot) {
+      setBookingError("Please select a date and time before confirming.");
+      return;
+    }
     setBooking(true);
     setBookingError(null);
 
@@ -288,6 +313,36 @@ export default function BookingWidget({
       return;
     }
 
+    // If paying online, redirect to Stripe checkout
+    if (paymentMethod === "online" && result.ok) {
+      try {
+        const stripeRes = await fetch("/api/booking-checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            bookingId: result.bookingId,
+            serviceId,
+            serviceName,
+            price: requiresDeposit && depositAmount ? depositAmount : price,
+            successUrl: `${window.location.origin}/booking-confirmation?bookingId=${result.bookingId}`,
+            cancelUrl: window.location.href,
+          }),
+        });
+        const stripeData = await stripeRes.json();
+        if (stripeData.url) {
+          window.location.href = stripeData.url;
+          return;
+        }
+      } catch {
+        setBookingError("Could not start payment. Please try again.");
+        setBooking(false);
+        return;
+      }
+    }
+
+    setBookedSlots((prev) => [...prev, { date: selectedDate!, startTime: selectedSlot!.startTime }]);
+    setConfirmedDate(selectedDate);
+    setConfirmedSlot(selectedSlot);
     setConfirmed(true);
     setBookingStatus(result.status ?? null);
     setBooking(false);
@@ -303,8 +358,8 @@ export default function BookingWidget({
           </p>
           <p className="mt-1.5 text-xs leading-relaxed text-emerald-700">
             {bookingStatus === "CONFIRMED"
-              ? `You are booked for ${formatDateDisplay(selectedDate!)} at ${formatTime(selectedSlot!.startTime)}.`
-              : `Your request for ${formatDateDisplay(selectedDate!)} at ${formatTime(selectedSlot!.startTime)} has been sent. The provider will confirm shortly.`}
+              ? `You are booked for ${formatDateDisplay(confirmedDate ?? "")} at ${confirmedSlot ? formatTime(confirmedSlot.startTime) : ""}.`
+              : `Your request for ${formatDateDisplay(confirmedDate ?? "")} at ${confirmedSlot ? formatTime(confirmedSlot.startTime) : ""} has been sent. The provider will confirm shortly.`}
           </p>
           {paymentMethod === "arrival" ? (
             <p className="mt-2 text-xs font-semibold text-emerald-800">
@@ -319,6 +374,8 @@ export default function BookingWidget({
             setStep("date");
             setSelectedDate(null);
             setSelectedSlot(null);
+            setConfirmedDate(null);
+            setConfirmedSlot(null);
             setNotes("");
           }}
           className="text-center text-xs font-medium text-zinc-500 hover:text-zinc-900"
@@ -363,11 +420,18 @@ export default function BookingWidget({
             Select a date
           </p>
           {availableDates.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-zinc-200 py-8 text-center">
-              <p className="text-sm text-zinc-500">No available dates</p>
-              <p className="mt-1 text-xs text-zinc-400">
-                This provider has not set up their schedule yet.
+            <div className="rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center">
+              <span className="mb-3 block text-3xl">📅</span>
+              <p className="text-sm font-semibold text-zinc-700">No available dates</p>
+              <p className="mt-1 text-xs leading-relaxed text-zinc-400">
+                This provider has not set their availability yet. Contact them directly to arrange a session.
               </p>
+              <a
+                href="mailto:?subject=Booking enquiry"
+                className="mt-3 inline-block rounded-xl border border-zinc-200 px-4 py-2 text-xs font-semibold text-zinc-600 transition-colors hover:bg-zinc-50"
+              >
+                Contact provider →
+              </a>
             </div>
           ) : (
             <CustomCalendar
@@ -472,7 +536,9 @@ export default function BookingWidget({
               <div className="flex justify-between">
                 <span className="text-zinc-500">Time</span>
                 <span className="font-semibold text-zinc-900">
-                  {formatTime(selectedSlot.startTime)} – {formatTime(selectedSlot.endTime)}
+                  {selectedSlot
+                    ? `${formatTime(selectedSlot.startTime)} – ${formatTime(selectedSlot.endTime)}`
+                    : ""}
                 </span>
               </div>
               <div className="flex justify-between">

@@ -409,17 +409,54 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                     {vendor.idDocumentUrl ? (
                       <div className="mt-4">
                         <p className="mb-2 text-xs font-medium text-zinc-500">Submitted document:</p>
-                        <a href={vendor.idDocumentUrl} rel="noopener noreferrer" target="_blank">
-                          {/* eslint-disable-next-line @next/next/no-img-element -- admin reviews arbitrary upload URLs */}
-                          <img
-                            alt="ID Document"
-                            className="
-                              max-h-48 rounded-xl border border-zinc-200 object-contain
-                              transition-opacity hover:opacity-90
-                            "
-                            src={vendor.idDocumentUrl}
-                          />
-                        </a>
+                        {vendor.idDocumentUrl.startsWith("http") ? (
+                          vendor.idDocumentUrl.endsWith(".pdf") ? (
+                            <a
+                              className="
+                                flex items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3
+                                text-sm font-medium text-[#1A7FB5] transition-colors hover:bg-zinc-100
+                              "
+                              href={vendor.idDocumentUrl}
+                              rel="noopener noreferrer"
+                              target="_blank"
+                            >
+                              <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                              </svg>
+                              View PDF document →
+                            </a>
+                          ) : (
+                            <a href={vendor.idDocumentUrl} rel="noopener noreferrer" target="_blank">
+                              {/* eslint-disable-next-line @next/next/no-img-element -- admin reviews arbitrary upload URLs */}
+                              <img
+                                alt="ID Document"
+                                className="
+                                  max-h-64 w-full rounded-xl border border-zinc-200 object-contain
+                                  transition-opacity hover:opacity-90
+                                "
+                                src={vendor.idDocumentUrl}
+                              />
+                            </a>
+                          )
+                        ) : (
+                          <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
+                            <p className="text-xs font-semibold text-amber-700">
+                              ⚠️ Document uploaded with old system — file may not be accessible.
+                            </p>
+                            <p className="mt-1 text-xs text-amber-600">Path: {vendor.idDocumentUrl}</p>
+                            <p className="mt-1 text-xs text-amber-600">
+                              Ask vendor to re-upload their ID document.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     ) : null}
 

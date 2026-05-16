@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import type { Prisma, ProductCondition, WeightUnit } from "@prisma/client";
+import type { Prisma, ProductCondition, WeightUnit, LicenceType } from "@prisma/client";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { uploadFile } from "@/lib/uploads/upload";
@@ -105,8 +105,6 @@ export async function createProduct(
   const compareRaw = String(formData.get("compareAtPrice") ?? "");
   const sku = String(formData.get("sku") ?? "").trim() || null;
   const stockRaw = String(formData.get("stock") ?? "");
-  const allowDelivery = formData.get("allowDelivery") === "true";
-  const allowPickup = formData.get("allowPickup") === "on";
   const weightRaw = String(formData.get("weight") ?? "");
   const weightUnitRaw = String(formData.get("weightUnit") ?? "").trim();
   const lengthRaw = String(formData.get("length") ?? "");
@@ -122,6 +120,33 @@ export async function createProduct(
   const isFeatured = formData.get("isFeatured") === "on";
   const metaTitle = String(formData.get("metaTitle") ?? "").trim() || null;
   const metaDescription = String(formData.get("metaDescription") ?? "").trim() || null;
+
+  const isDigital = formData.get("isDigital") === "true";
+  const digitalFileUrl = isDigital ? (String(formData.get("digitalFileUrl") ?? "").trim() || null) : null;
+  const previewUrl = isDigital ? (String(formData.get("previewUrl") ?? "").trim() || null) : null;
+  const fileType = isDigital ? (String(formData.get("fileType") ?? "").trim() || null) : null;
+  const fileSizeKbRaw =
+    isDigital && formData.get("fileSizeKb") ? parseInt(String(formData.get("fileSizeKb")), 10) : null;
+  const fileSizeKb =
+    fileSizeKbRaw !== null && !Number.isNaN(fileSizeKbRaw) ? fileSizeKbRaw : null;
+  const downloadLimitRaw =
+    isDigital && formData.get("downloadLimit") ? parseInt(String(formData.get("downloadLimit")), 10) : null;
+  const downloadLimit =
+    downloadLimitRaw !== null && !Number.isNaN(downloadLimitRaw) ? downloadLimitRaw : null;
+  const downloadExpiryRaw =
+    isDigital && formData.get("downloadExpiryDays")
+      ? parseInt(String(formData.get("downloadExpiryDays")), 10)
+      : null;
+  const downloadExpiryDays =
+    downloadExpiryRaw !== null && !Number.isNaN(downloadExpiryRaw) ? downloadExpiryRaw : null;
+  const licenceTypeRaw = isDigital ? (String(formData.get("licenceType") ?? "").trim() || null) : null;
+  const licenceType: LicenceType | null =
+    licenceTypeRaw === "PERSONAL" || licenceTypeRaw === "COMMERCIAL" || licenceTypeRaw === "EXTENDED"
+      ? (licenceTypeRaw as LicenceType)
+      : null;
+
+  const allowDelivery = isDigital ? false : formData.get("allowDelivery") === "true";
+  const allowPickup = isDigital ? false : formData.get("allowPickup") === "on";
 
   const fieldErr = validatePhysicalProductFields({ name, slugRaw, priceRaw, conditionRaw });
   if (fieldErr) return { ok: false, errors: fieldErr };
@@ -193,7 +218,14 @@ export async function createProduct(
     isFeatured,
     metaTitle,
     metaDescription,
-    isDigital: false,
+    isDigital,
+    digitalFileUrl,
+    previewUrl,
+    fileType,
+    fileSizeKb,
+    downloadLimit,
+    downloadExpiryDays,
+    licenceType,
     isBookable: false,
   };
 
@@ -286,8 +318,6 @@ export async function updateProduct(
   const compareRaw = String(formData.get("compareAtPrice") ?? "");
   const sku = String(formData.get("sku") ?? "").trim() || null;
   const stockRaw = String(formData.get("stock") ?? "");
-  const allowDelivery = formData.get("allowDelivery") === "true";
-  const allowPickup = formData.get("allowPickup") === "on";
   const weightRaw = String(formData.get("weight") ?? "");
   const weightUnitRaw = String(formData.get("weightUnit") ?? "").trim();
   const lengthRaw = String(formData.get("length") ?? "");
@@ -303,6 +333,33 @@ export async function updateProduct(
   const isFeatured = formData.get("isFeatured") === "on";
   const metaTitle = String(formData.get("metaTitle") ?? "").trim() || null;
   const metaDescription = String(formData.get("metaDescription") ?? "").trim() || null;
+
+  const isDigital = formData.get("isDigital") === "true";
+  const digitalFileUrl = isDigital ? (String(formData.get("digitalFileUrl") ?? "").trim() || null) : null;
+  const previewUrl = isDigital ? (String(formData.get("previewUrl") ?? "").trim() || null) : null;
+  const fileType = isDigital ? (String(formData.get("fileType") ?? "").trim() || null) : null;
+  const fileSizeKbRaw =
+    isDigital && formData.get("fileSizeKb") ? parseInt(String(formData.get("fileSizeKb")), 10) : null;
+  const fileSizeKb =
+    fileSizeKbRaw !== null && !Number.isNaN(fileSizeKbRaw) ? fileSizeKbRaw : null;
+  const downloadLimitRaw =
+    isDigital && formData.get("downloadLimit") ? parseInt(String(formData.get("downloadLimit")), 10) : null;
+  const downloadLimit =
+    downloadLimitRaw !== null && !Number.isNaN(downloadLimitRaw) ? downloadLimitRaw : null;
+  const downloadExpiryRaw =
+    isDigital && formData.get("downloadExpiryDays")
+      ? parseInt(String(formData.get("downloadExpiryDays")), 10)
+      : null;
+  const downloadExpiryDays =
+    downloadExpiryRaw !== null && !Number.isNaN(downloadExpiryRaw) ? downloadExpiryRaw : null;
+  const licenceTypeRaw = isDigital ? (String(formData.get("licenceType") ?? "").trim() || null) : null;
+  const licenceType: LicenceType | null =
+    licenceTypeRaw === "PERSONAL" || licenceTypeRaw === "COMMERCIAL" || licenceTypeRaw === "EXTENDED"
+      ? (licenceTypeRaw as LicenceType)
+      : null;
+
+  const allowDelivery = isDigital ? false : formData.get("allowDelivery") === "true";
+  const allowPickup = isDigital ? false : formData.get("allowPickup") === "on";
 
   const existingImagesJson = String(formData.get("existingImages") ?? "[]");
   let existingUrls: string[] = [];
@@ -397,8 +454,16 @@ export async function updateProduct(
         isFeatured,
         metaTitle,
         metaDescription,
-        isDigital: false,
+        isDigital,
+        digitalFileUrl,
+        previewUrl,
+        fileType,
+        fileSizeKb,
+        downloadLimit,
+        downloadExpiryDays,
+        licenceType,
         isBookable: false,
+        hasVariants: formData.get("hasVariants") === "true",
       },
     });
   } catch (e) {

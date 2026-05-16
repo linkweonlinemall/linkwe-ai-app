@@ -15,6 +15,30 @@ type StoreTabProduct = StorefrontProductRow & {
   hasVariants: boolean;
 };
 
+type StoreTabServiceRow = {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  images: string[];
+  category: string | null;
+  serviceType: string | null;
+  serviceDuration: number | null;
+  serviceLocation: string | null;
+  isFeatured: boolean;
+};
+
+type RelatedStore = {
+  id: string;
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+  coverPhotoUrl: string | null;
+  tagline: string | null;
+  region: string;
+  categoryId: string;
+};
+
 function StoreTabProductCard({ product }: { product: StoreTabProduct }) {
   const [hovered, setHovered] = useState(false);
   const img = product.images[0];
@@ -157,11 +181,13 @@ export type StorefrontTabsStore = {
   owner: { fullName: string };
 };
 
-type TabId = "about" | "store" | "bookings" | "reviews";
+type TabId = "about" | "store" | "services" | "bookings" | "reviews";
 
 type Props = {
   store: StorefrontTabsStore;
   products: StoreTabProduct[];
+  services?: StoreTabServiceRow[];
+  relatedStores?: RelatedStore[];
   openingHours: WeekSchedule | null;
   socialLinks: Record<string, string>;
   hasSocialLinks: boolean;
@@ -171,6 +197,8 @@ type Props = {
 export default function StorefrontTabs({
   store,
   products,
+  services,
+  relatedStores,
   openingHours,
   socialLinks,
   hasSocialLinks,
@@ -187,6 +215,12 @@ export default function StorefrontTabs({
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [zoom, setZoom] = useState(1);
   const [showAll, setShowAll] = useState(false);
+  const [serviceSearch, setServiceSearch] = useState("");
+  const [serviceType, setServiceType] = useState("All");
+  const [serviceSort, setServiceSort] = useState("default");
+  const [servicePriceMin, setServicePriceMin] = useState("");
+  const [servicePriceMax, setServicePriceMax] = useState("");
+  const [storeAboutExpanded, setStoreAboutExpanded] = useState(false);
 
   function openLightbox(url: string) {
     const index = store.images.findIndex((img) => img.url === url);
@@ -252,6 +286,35 @@ export default function StorefrontTabs({
     if (sortBy === "name") result = [...result].sort((a, b) => a.name.localeCompare(b.name));
     return result;
   }, [products, search, category, priceMin, priceMax, sortBy, inStockOnly]);
+
+  const serviceCategories = [
+    "All",
+    ...Array.from(new Set((services ?? []).map((s) => s.category).filter(Boolean) as string[])),
+  ];
+
+  const serviceTypeOptions = [
+    "All",
+    ...Array.from(new Set((services ?? []).map((s) => s.serviceType).filter(Boolean) as string[])),
+  ];
+
+  const filteredServices = (services ?? [])
+    .filter((s) => {
+      if (serviceSearch && !s.name.toLowerCase().includes(serviceSearch.toLowerCase())) return false;
+      if (serviceType !== "All" && s.serviceType !== serviceType) return false;
+      const min = servicePriceMin ? parseFloat(servicePriceMin) : null;
+      const max = servicePriceMax ? parseFloat(servicePriceMax) : null;
+      if (min !== null && !Number.isNaN(min) && s.price < min) return false;
+      if (max !== null && !Number.isNaN(max) && s.price > max) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (serviceSort === "price_asc") return a.price - b.price;
+      if (serviceSort === "price_desc") return b.price - a.price;
+      if (serviceSort === "name") return a.name.localeCompare(b.name);
+      return (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
+    });
+
+  void serviceCategories;
 
   return (
     <>
@@ -480,7 +543,7 @@ export default function StorefrontTabs({
               msOverflowStyle: "none",
             }}
           >
-            {(["About", "Store", "Bookings", "Reviews"] as const).map((label) => {
+            {(["About", "Store", "Services", "Bookings", "Reviews"] as const).map((label) => {
               const id = label.toLowerCase() as TabId;
               const isActive = activeTab === id;
               return (
@@ -506,6 +569,17 @@ export default function StorefrontTabs({
                       }}
                     >
                       {products.length}
+                    </span>
+                  ) : null}
+                  {label === "Services" && (services?.length ?? 0) > 0 ? (
+                    <span
+                      className="ml-1.5 rounded-full px-1.5 py-0.5 text-[11px]"
+                      style={{
+                        backgroundColor: isActive ? "var(--scarlet-light)" : "#F7F7F6",
+                        color: isActive ? "var(--scarlet)" : "var(--text-faint)",
+                      }}
+                    >
+                      {services!.length}
                     </span>
                   ) : null}
                   {isActive ? (
@@ -631,7 +705,21 @@ export default function StorefrontTabs({
             {store.description ? (
               <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">About</p>
-                <p className="text-sm leading-7 text-zinc-600">{store.description}</p>
+                <div
+                  className={`tiptap-content overflow-hidden text-sm transition-all ${
+                    !storeAboutExpanded && store.description.length > 600 ? "max-h-48" : "max-h-none"
+                  }`}
+                  dangerouslySetInnerHTML={{ __html: store.description }}
+                />
+                {store.description.length > 600 ? (
+                  <button
+                    type="button"
+                    onClick={() => setStoreAboutExpanded((v) => !v)}
+                    className="mt-3 text-xs font-semibold text-[#D4450A] hover:underline"
+                  >
+                    {storeAboutExpanded ? "Show less ↑" : "Read more ↓"}
+                  </button>
+                ) : null}
               </div>
             ) : null}
 
@@ -1048,6 +1136,250 @@ export default function StorefrontTabs({
         </div>
       ) : null}
 
+      {activeTab === "services" ? (
+        !services || services.length === 0 ? (
+          <div className="mt-6 rounded-2xl border border-dashed border-zinc-200 bg-white py-16 text-center">
+            <span className="mb-3 block text-4xl">🛎️</span>
+            <p className="text-sm font-semibold text-zinc-700">No services yet</p>
+            <p className="mt-1 text-xs text-zinc-400">This store has not added any services.</p>
+          </div>
+        ) : (
+          <div className="mt-6 flex flex-col gap-6 lg:flex-row">
+            {/* Filter sidebar */}
+            <aside className="shrink-0 lg:w-64">
+              <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
+                <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
+                  <p className="text-sm font-bold text-zinc-900">Filters</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setServiceSearch("");
+                      setServiceType("All");
+                      setServiceSort("default");
+                      setServicePriceMin("");
+                      setServicePriceMax("");
+                    }}
+                    className="text-xs font-medium text-[#D4450A] hover:underline"
+                  >
+                    Clear all
+                  </button>
+                </div>
+
+                {/* Search */}
+                <div className="border-b border-zinc-100 px-5 py-4">
+                  <p className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-500">Search</p>
+                  <input
+                    type="search"
+                    value={serviceSearch}
+                    onChange={(e) => setServiceSearch(e.target.value)}
+                    placeholder="Search services…"
+                    className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-[#D4450A]"
+                  />
+                </div>
+
+                {/* Sort */}
+                <div className="border-b border-zinc-100 px-5 py-4">
+                  <p className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-500">Sort by</p>
+                  <div className="flex flex-col gap-2">
+                    {[
+                      { value: "default", label: "Featured" },
+                      { value: "price_asc", label: "Price: Low to High" },
+                      { value: "price_desc", label: "Price: High to Low" },
+                      { value: "name", label: "Name A–Z" },
+                    ].map((opt) => (
+                      <label
+                        key={opt.value}
+                        className="group flex cursor-pointer items-center gap-2.5"
+                        onClick={() => setServiceSort(opt.value)}
+                      >
+                        <div
+                          className={`flex h-4 w-4 items-center justify-center rounded-full border-2 transition-colors ${
+                            serviceSort === opt.value
+                              ? "border-[#D4450A] bg-[#D4450A]"
+                              : "border-zinc-300 group-hover:border-[#D4450A]"
+                          }`}
+                        >
+                          {serviceSort === opt.value ? (
+                            <div className="h-1.5 w-1.5 rounded-full bg-white" />
+                          ) : null}
+                        </div>
+                        <span className="text-sm text-zinc-700">{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Service type */}
+                {serviceTypeOptions.length > 1 ? (
+                  <div className="border-b border-zinc-100 px-5 py-4">
+                    <p className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-500">Service type</p>
+                    <div className="flex flex-col gap-1.5">
+                      {serviceTypeOptions.map((t) => {
+                        const typeLabels: Record<string, string> = {
+                          BOOKABLE: "📅 Bookable",
+                          QUOTE: "💬 Quote",
+                          SUBSCRIPTION: "🔄 Subscription",
+                          ON_DEMAND: "⚡ On Demand",
+                          VIRTUAL: "💻 Virtual",
+                        };
+                        return (
+                          <button
+                            key={t}
+                            type="button"
+                            onClick={() => setServiceType(t)}
+                            className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-colors ${
+                              serviceType === t
+                                ? "bg-[#D4450A]/10 font-semibold text-[#D4450A]"
+                                : "text-zinc-600 hover:bg-zinc-50"
+                            }`}
+                          >
+                            <span>{t === "All" ? "All types" : typeLabels[t] ?? t}</span>
+                            {serviceType === t ? (
+                              <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="3"
+                              >
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                            ) : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Price range */}
+                <div className="px-5 py-4">
+                  <p className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-500">Price range (TTD)</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={servicePriceMin}
+                      onChange={(e) => setServicePriceMin(e.target.value)}
+                      placeholder="Min"
+                      className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm focus:border-[#D4450A] focus:outline-none"
+                    />
+                    <span className="shrink-0 text-sm text-zinc-400">–</span>
+                    <input
+                      type="number"
+                      value={servicePriceMax}
+                      onChange={(e) => setServicePriceMax(e.target.value)}
+                      placeholder="Max"
+                      className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm focus:border-[#D4450A] focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {serviceType !== "All" ||
+              serviceSearch ||
+              servicePriceMin ||
+              servicePriceMax ||
+              serviceSort !== "default" ? (
+                <p className="mt-3 text-center text-xs text-zinc-500">
+                  {filteredServices.length} service{filteredServices.length !== 1 ? "s" : ""} found
+                </p>
+              ) : null}
+            </aside>
+
+            {/* Services grid */}
+            <div className="min-w-0 flex-1">
+              {filteredServices.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-zinc-200 bg-white py-16 text-center">
+                  <span className="mb-3 block text-4xl">🛎️</span>
+                  <p className="text-sm font-semibold text-zinc-700">No services found</p>
+                  <p className="mt-1 text-xs text-zinc-400">Try adjusting your filters.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {filteredServices.map((service) => {
+                    const typeConfig: Record<string, { label: string; color: string; icon: string }> = {
+                      BOOKABLE: { label: "Bookable", color: "bg-blue-50 text-blue-700", icon: "📅" },
+                      QUOTE: { label: "Get Quote", color: "bg-amber-50 text-amber-700", icon: "💬" },
+                      SUBSCRIPTION: { label: "Subscribe", color: "bg-purple-50 text-purple-700", icon: "🔄" },
+                      ON_DEMAND: { label: "On Demand", color: "bg-emerald-50 text-emerald-700", icon: "⚡" },
+                      VIRTUAL: { label: "Virtual", color: "bg-zinc-100 text-zinc-700", icon: "💻" },
+                    };
+                    const type = service.serviceType
+                      ? (typeConfig[service.serviceType] ?? {
+                          label: "Service",
+                          color: "bg-zinc-100 text-zinc-700",
+                          icon: "🛎️",
+                        })
+                      : { label: "Service", color: "bg-zinc-100 text-zinc-700", icon: "🛎️" };
+
+                    return (
+                      <Link
+                        key={service.id}
+                        href={`/service/${service.slug}`}
+                        className="group flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+                      >
+                        <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-zinc-100 to-zinc-200">
+                          {service.images[0] ? (
+                            <img
+                              src={service.images[0]}
+                              alt={service.name}
+                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-3xl">🛎️</div>
+                          )}
+                          <div className="absolute left-2.5 top-2.5">
+                            <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${type.color}`}>
+                              {type.icon} {type.label}
+                            </span>
+                          </div>
+                          {service.isFeatured ? (
+                            <div className="absolute right-2.5 top-2.5">
+                              <span className="rounded-full bg-[#D4450A] px-2.5 py-1 text-[10px] font-bold text-white">
+                                Featured
+                              </span>
+                            </div>
+                          ) : null}
+                        </div>
+                        <div className="flex flex-1 flex-col gap-2 p-4">
+                          <p className="text-sm font-bold leading-snug text-zinc-900 transition-colors group-hover:text-[#D4450A]">
+                            {service.name}
+                          </p>
+                          <div className="mt-auto flex items-center justify-between border-t border-zinc-100 pt-2">
+                            <div>
+                              <p className="text-sm font-black text-[#D4450A]">
+                                TTD {service.price.toFixed(2)}
+                              </p>
+                              {service.serviceDuration ? (
+                                <p className="text-[10px] text-zinc-400">
+                                  {service.serviceDuration >= 60
+                                    ? `${Math.floor(service.serviceDuration / 60)}h${
+                                        service.serviceDuration % 60 > 0
+                                          ? ` ${service.serviceDuration % 60}m`
+                                          : ""
+                                      }`
+                                    : `${service.serviceDuration} min`}
+                                </p>
+                              ) : null}
+                            </div>
+                            {service.serviceLocation ? (
+                              <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[10px] font-medium capitalize text-zinc-500">
+                                {service.serviceLocation.replace("_", " ").toLowerCase()}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      ) : null}
+
       {activeTab === "bookings" ? (
         <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
           <p className="text-sm font-medium text-zinc-500">Bookings coming soon</p>
@@ -1057,6 +1389,62 @@ export default function StorefrontTabs({
       {activeTab === "reviews" ? (
         <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
           <p className="text-sm font-medium text-zinc-500">Reviews coming soon</p>
+        </div>
+      ) : null}
+
+      {relatedStores && relatedStores.length > 0 ? (
+        <div className="mt-12 border-t border-zinc-200 pt-8">
+          <h2 className="mb-4 text-lg font-bold text-zinc-900">Similar stores</h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {relatedStores.map((s) => (
+              <Link
+                key={s.id}
+                href={`/store/${s.slug}`}
+                className="group flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+              >
+                {/* Cover / logo area */}
+                <div className="relative h-20 overflow-hidden bg-gradient-to-br from-zinc-100 to-zinc-200">
+                  {s.coverPhotoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={s.coverPhotoUrl}
+                      alt=""
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div
+                      className="h-full w-full"
+                      style={{ background: "linear-gradient(135deg, #1C1C1A 0%, #45443F 100%)" }}
+                    />
+                  )}
+                  {/* Logo overlay */}
+                  <div className="absolute -bottom-4 left-3">
+                    <div className="h-10 w-10 overflow-hidden rounded-xl border-2 border-white shadow-sm">
+                      {s.logoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={s.logoUrl} alt={s.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-[#D4450A] text-xs font-bold text-white">
+                          {s.name[0]?.toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {/* Info */}
+                <div className="px-3 pb-3 pt-6">
+                  <p className="truncate text-xs font-bold text-zinc-900 transition-colors group-hover:text-[#D4450A]">
+                    {s.name}
+                  </p>
+                  {s.tagline ? (
+                    <p className="mt-0.5 truncate text-[10px] text-zinc-400">{s.tagline}</p>
+                  ) : (
+                    <p className="mt-0.5 text-[10px] capitalize text-zinc-400">{s.region}</p>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       ) : null}
       </main>

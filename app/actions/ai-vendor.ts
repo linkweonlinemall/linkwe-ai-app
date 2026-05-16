@@ -58,6 +58,7 @@ export type CreateProductFromAIInput = {
   metaTitle?: string
   metaDescription?: string
   compareAtPrice?: number
+  isDigital?: boolean
 }
 
 export async function createProductFromAI(
@@ -178,6 +179,8 @@ export async function createProductFromAIRaw(
     })
   )
 
+  const isDigital = input.isDigital === true
+
   const product = await prisma.product.create({
     data: {
       store: { connect: { id: storeId } },
@@ -193,11 +196,13 @@ export async function createProductFromAIRaw(
         ? input.tags.map((t) => String(t).trim()).filter(Boolean)
         : [],
       stock:
-        input.stock != null && Number.isFinite(Number(input.stock))
-          ? Math.floor(Number(input.stock))
-          : null,
-      allowDelivery: Boolean(input.allowDelivery),
-      allowPickup: Boolean(input.allowPickup),
+        isDigital
+          ? null
+          : input.stock != null && Number.isFinite(Number(input.stock))
+            ? Math.floor(Number(input.stock))
+            : null,
+      allowDelivery: isDigital ? false : Boolean(input.allowDelivery),
+      allowPickup: isDigital ? false : Boolean(input.allowPickup),
       address: typeof input.address === "string" && input.address.trim() ? input.address.trim() : null,
       sku: typeof input.sku === "string" && input.sku.trim() ? input.sku.trim() : null,
       weight: input.weight != null && Number.isFinite(Number(input.weight)) ? Number(input.weight) : null,
@@ -212,7 +217,7 @@ export async function createProductFromAIRaw(
       compareAtPrice: input.compareAtPrice != null && Number.isFinite(Number(input.compareAtPrice)) ? Number(input.compareAtPrice) : null,
       images: [],
       isPublished: false,
-      isDigital: false,
+      isDigital,
       isBookable: false,
     },
     select: { id: true, slug: true },

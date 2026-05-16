@@ -74,7 +74,7 @@ export default async function OrdersPage() {
               Your orders will appear here once you make a purchase
             </p>
             <Link
-              href="/"
+              href="/shop"
               className="inline-flex rounded-xl px-5 py-2.5 text-sm font-semibold text-white"
               style={{ backgroundColor: "var(--scarlet)" }}
             >

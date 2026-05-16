@@ -5,6 +5,8 @@ import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import PublicNav from "@/components/layout/PublicNav";
 import BookingWidget from "@/components/service/BookingWidget";
+import ServiceGallery from "@/components/service/ServiceGallery";
+import ExpandableDescription from "@/components/ui/ExpandableDescription";
 import { getServiceCategoryLabel } from "@/lib/categories";
 import { prisma } from "@/lib/prisma";
 
@@ -101,8 +103,25 @@ export default async function ServiceDetailPage({ params }: Props) {
       depositAmount: true,
       requiresApproval: true,
       bookingPaymentMode: true,
+      quotePriceType: true,
       isFeatured: true,
       storeId: true,
+      responseTime: true,
+      minimumQuoteAmount: true,
+      siteVisitRequired: true,
+      subscriptionInterval: true,
+      sessionsIncluded: true,
+      subscriptionCancellationDays: true,
+      subscriptionTrialPeriod: true,
+      subscriptionTrialPrice: true,
+      subscriptionCanPause: true,
+      subscriptionPauseMaxWeeks: true,
+      travelFee: true,
+      serviceRadius: true,
+      estimatedResponseMins: true,
+      virtualPlatform: true,
+      virtualMeetingInfo: true,
+      maxGroupSize: true,
       store: { select: { name: true, slug: true, logoUrl: true, region: true } },
     },
   });
@@ -206,14 +225,7 @@ export default async function ServiceDetailPage({ params }: Props) {
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
           <div className="flex flex-col gap-6 lg:col-span-7">
-            <div className="aspect-[4/3] overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-100 to-zinc-200">
-              {service.images[0] ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={service.images[0]} alt={service.name} className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-6xl">🛎️</div>
-              )}
-            </div>
+            <ServiceGallery images={service.images} name={service.name} />
 
             <div>
               <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -235,12 +247,7 @@ export default async function ServiceDetailPage({ params }: Props) {
             </div>
 
             {service.description ? (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5">
-                <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-zinc-900">
-                  About this service
-                </h2>
-                <p className="whitespace-pre-wrap text-sm leading-7 text-zinc-600">{service.description}</p>
-              </div>
+              <ExpandableDescription title="About this service" description={service.description} />
             ) : null}
 
             <div className="rounded-2xl border border-zinc-200 bg-white p-5">
@@ -270,7 +277,7 @@ export default async function ServiceDetailPage({ params }: Props) {
                     </div>
                   </div>
                 ) : null}
-                {location ? (
+                {location && service.serviceType !== "VIRTUAL" ? (
                   <div className="flex items-center gap-3 rounded-xl bg-zinc-50 p-3">
                     <span className="text-xl">📍</span>
                     <div>
@@ -278,6 +285,233 @@ export default async function ServiceDetailPage({ params }: Props) {
                       <p className="text-xs text-zinc-500">Service location</p>
                     </div>
                   </div>
+                ) : null}
+                {service.serviceType === "QUOTE" ? (
+                  <>
+                    {service.responseTime ? (
+                      <div className="flex items-center gap-3 rounded-xl bg-zinc-50 p-3">
+                        <span className="text-xl">⏱️</span>
+                        <div>
+                          <p className="text-sm font-semibold text-zinc-900">
+                            {service.responseTime.replace(/_/g, " ").replace("within", "Within")}
+                          </p>
+                          <p className="text-xs text-zinc-500">Response time</p>
+                        </div>
+                      </div>
+                    ) : null}
+                    {service.quotePriceType === "FREE_QUOTE" && service.minimumQuoteAmount ? (
+                      <div className="flex items-center gap-3 rounded-xl bg-zinc-50 p-3">
+                        <span className="text-xl">💰</span>
+                        <div>
+                          <p className="text-sm font-semibold text-zinc-900">
+                            TTD {service.minimumQuoteAmount.toFixed(2)} minimum
+                          </p>
+                          <p className="text-xs text-zinc-500">Minimum quote amount</p>
+                        </div>
+                      </div>
+                    ) : null}
+                  </>
+                ) : null}
+                {service.serviceType === "SUBSCRIPTION" ? (
+                  <>
+                    {service.subscriptionInterval ? (
+                      <div className="flex items-center gap-3 rounded-xl bg-zinc-50 p-3">
+                        <span className="text-xl">🔄</span>
+                        <div>
+                          <p className="text-sm font-semibold text-zinc-900 capitalize">
+                            {service.subscriptionInterval} billing
+                          </p>
+                          <p className="text-xs text-zinc-500">Billing interval</p>
+                        </div>
+                      </div>
+                    ) : null}
+                    {service.sessionsIncluded ? (
+                      <div className="flex items-center gap-3 rounded-xl bg-zinc-50 p-3">
+                        <span className="text-xl">📋</span>
+                        <div>
+                          <p className="text-sm font-semibold text-zinc-900">
+                            {service.sessionsIncluded} sessions per cycle
+                          </p>
+                          <p className="text-xs text-zinc-500">Included sessions</p>
+                        </div>
+                      </div>
+                    ) : null}
+                    {service.subscriptionCancellationDays ? (
+                      <div className="flex items-center gap-3 rounded-xl bg-zinc-50 p-3">
+                        <span className="text-xl">📅</span>
+                        <div>
+                          <p className="text-sm font-semibold text-zinc-900">
+                            {service.subscriptionCancellationDays} days notice
+                          </p>
+                          <p className="text-xs text-zinc-500">Required to cancel</p>
+                        </div>
+                      </div>
+                    ) : null}
+                    {service.subscriptionCanPause ? (
+                      <div className="flex items-center gap-3 rounded-xl bg-zinc-50 p-3">
+                        <span className="text-xl">⏸️</span>
+                        <div>
+                          <p className="text-sm font-semibold text-zinc-900">
+                            Pause allowed
+                            {service.subscriptionPauseMaxWeeks
+                              ? ` — up to ${service.subscriptionPauseMaxWeeks} weeks`
+                              : ""}
+                          </p>
+                          <p className="text-xs text-zinc-500">
+                            You can pause and resume your subscription
+                          </p>
+                        </div>
+                      </div>
+                    ) : null}
+                    {service.subscriptionTrialPeriod ? (
+                      <div className="flex items-center gap-3 rounded-xl bg-emerald-50 p-3">
+                        <span className="text-xl">🎁</span>
+                        <div>
+                          <p className="text-sm font-semibold text-emerald-900">
+                            {service.subscriptionTrialPeriod}-day trial
+                            {service.subscriptionTrialPrice === 0 || !service.subscriptionTrialPrice
+                              ? " — free"
+                              : ` — TTD ${service.subscriptionTrialPrice.toFixed(2)}`}
+                          </p>
+                          <p className="text-xs text-emerald-700">
+                            Trial period before full subscription begins
+                          </p>
+                        </div>
+                      </div>
+                    ) : null}
+                  </>
+                ) : null}
+                {service.serviceType === "ON_DEMAND" ? (
+                  <>
+                    {service.estimatedResponseMins ? (
+                      <div className="flex items-center gap-3 rounded-xl bg-zinc-50 p-3">
+                        <span className="text-xl">⚡</span>
+                        <div>
+                          <p className="text-sm font-semibold text-zinc-900">
+                            {service.estimatedResponseMins >= 60
+                              ? `Within ${Math.floor(service.estimatedResponseMins / 60)} hour${Math.floor(service.estimatedResponseMins / 60) > 1 ? "s" : ""}`
+                              : `Within ${service.estimatedResponseMins} minutes`}
+                          </p>
+                          <p className="text-xs text-zinc-500">Estimated response time</p>
+                        </div>
+                      </div>
+                    ) : null}
+                    {service.travelFee && service.travelFee > 0 ? (
+                      <div className="flex items-center gap-3 rounded-xl bg-zinc-50 p-3">
+                        <span className="text-xl">🚗</span>
+                        <div>
+                          <p className="text-sm font-semibold text-zinc-900">
+                            TTD {service.travelFee.toFixed(2)}
+                          </p>
+                          <p className="text-xs text-zinc-500">Travel fee</p>
+                        </div>
+                      </div>
+                    ) : null}
+                    {service.serviceRadius ? (
+                      <div className="flex items-center gap-3 rounded-xl bg-zinc-50 p-3">
+                        <span className="text-xl">📍</span>
+                        <div>
+                          <p className="text-sm font-semibold text-zinc-900">
+                            {service.serviceRadius} km radius
+                          </p>
+                          <p className="text-xs text-zinc-500">Service area</p>
+                        </div>
+                      </div>
+                    ) : null}
+                  </>
+                ) : null}
+                {service.serviceType === "VIRTUAL" ? (
+                  <>
+                    {service.virtualPlatform
+                      ? (() => {
+                          const platformConfig: Record<
+                            string,
+                            { label: string; color: string; icon: string }
+                          > = {
+                            zoom: {
+                              label: "Zoom",
+                              color: "bg-blue-50 text-blue-700",
+                              icon: "🎥",
+                            },
+                            google_meet: {
+                              label: "Google Meet",
+                              color: "bg-green-50 text-green-700",
+                              icon: "📹",
+                            },
+                            whatsapp: {
+                              label: "WhatsApp Video",
+                              color: "bg-emerald-50 text-emerald-700",
+                              icon: "📱",
+                            },
+                            teams: {
+                              label: "Microsoft Teams",
+                              color: "bg-purple-50 text-purple-700",
+                              icon: "💼",
+                            },
+                            facetime: {
+                              label: "FaceTime",
+                              color: "bg-zinc-50 text-zinc-700",
+                              icon: "📞",
+                            },
+                            other: {
+                              label: "Online session",
+                              color: "bg-zinc-50 text-zinc-700",
+                              icon: "💻",
+                            },
+                          };
+                          const platform =
+                            platformConfig[service.virtualPlatform ?? ""] ?? {
+                              label: service.virtualPlatform ?? "Online session",
+                              color: "bg-zinc-50 text-zinc-700",
+                              icon: "💻",
+                            };
+                          return (
+                            <div
+                              className={`flex items-center gap-3 rounded-xl p-3 ${platform.color}`}
+                            >
+                              <span className="text-xl">{platform.icon}</span>
+                              <div>
+                                <p className="text-sm font-semibold">{platform.label}</p>
+                                <p className="text-xs opacity-70">Session platform</p>
+                              </div>
+                            </div>
+                          );
+                        })()
+                      : null}
+                    {service.virtualMeetingInfo ? (
+                      <div className="flex items-start gap-3 rounded-xl bg-blue-50 p-3">
+                        <span className="text-xl">ℹ️</span>
+                        <div>
+                          <p className="text-sm font-semibold text-blue-900">How it works</p>
+                          <p className="mt-0.5 text-xs leading-relaxed text-blue-700">
+                            {service.virtualMeetingInfo}
+                          </p>
+                        </div>
+                      </div>
+                    ) : null}
+                    <div className="flex items-center gap-3 rounded-xl bg-zinc-50 p-3">
+                      <span className="text-xl">🌐</span>
+                      <div>
+                        <p className="text-sm font-semibold text-zinc-900">
+                          Trinidad & Tobago Time (AST)
+                        </p>
+                        <p className="text-xs text-zinc-500">
+                          All session times shown in vendor local time
+                        </p>
+                      </div>
+                    </div>
+                    {service.maxGroupSize && service.maxGroupSize > 1 ? (
+                      <div className="flex items-center gap-3 rounded-xl bg-zinc-50 p-3">
+                        <span className="text-xl">👥</span>
+                        <div>
+                          <p className="text-sm font-semibold text-zinc-900">
+                            Up to {service.maxGroupSize} participants
+                          </p>
+                          <p className="text-xs text-zinc-500">Group session</p>
+                        </div>
+                      </div>
+                    ) : null}
+                  </>
                 ) : null}
               </div>
             </div>
@@ -296,19 +530,55 @@ export default async function ServiceDetailPage({ params }: Props) {
           <div className="flex flex-col gap-4 lg:col-span-5 lg:sticky lg:top-6 lg:self-start">
             <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
               <div className="mb-4 border-b border-zinc-100 pb-4">
-                <p className="text-4xl font-black tracking-tight" style={{ color: "#D4450A" }}>
-                  TTD {service.price.toFixed(2)}
-                </p>
-                {service.serviceDuration ? (
-                  <p className="mt-1 text-xs text-zinc-400">
-                    per session ·{" "}
-                    {service.serviceDuration >= 60
-                      ? `${Math.floor(service.serviceDuration / 60)}h${
-                          service.serviceDuration % 60 > 0 ? ` ${service.serviceDuration % 60}m` : ""
-                        }`
-                      : `${service.serviceDuration} min`}
-                  </p>
-                ) : null}
+                {service.serviceType === "QUOTE" ? (
+                  <div>
+                    {service.quotePriceType === "FREE_QUOTE" ? (
+                      <p className="text-2xl font-black tracking-tight text-[#D4450A]">
+                        Free quote
+                      </p>
+                    ) : service.quotePriceType === "CALLOUT_FEE" ? (
+                      <div>
+                        <p className="text-3xl font-black tracking-tight text-[#D4450A]">
+                          TTD {service.price.toFixed(2)}
+                        </p>
+                        <p className="mt-0.5 text-xs text-zinc-500">
+                          call-out fee · final price after assessment
+                        </p>
+                      </div>
+                    ) : service.quotePriceType === "STARTING_FROM" ? (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">
+                          From
+                        </p>
+                        <p className="text-3xl font-black tracking-tight text-[#D4450A]">
+                          TTD {service.price.toFixed(2)}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-3xl font-black tracking-tight text-[#D4450A]">
+                        TTD {service.price.toFixed(2)}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-4xl font-black tracking-tight" style={{ color: "#D4450A" }}>
+                      TTD {service.price.toFixed(2)}
+                    </p>
+                    {service.serviceDuration ? (
+                      <p className="mt-1 text-xs text-zinc-400">
+                        per session ·{" "}
+                        {service.serviceDuration >= 60
+                          ? `${Math.floor(service.serviceDuration / 60)}h${
+                              service.serviceDuration % 60 > 0
+                                ? ` ${service.serviceDuration % 60}m`
+                                : ""
+                            }`
+                          : `${service.serviceDuration} min`}
+                      </p>
+                    ) : null}
+                  </div>
+                )}
               </div>
 
               {service.requiresDeposit && service.depositAmount ? (
@@ -337,19 +607,93 @@ export default async function ServiceDetailPage({ params }: Props) {
                   existingSlots={bookingData.bookingSlots}
                 />
               ) : service.serviceType === "QUOTE" ? (
-                <div className="rounded-xl border border-dashed border-amber-200 bg-amber-50 px-4 py-5 text-center">
-                  <p className="mb-2 text-2xl">💬</p>
-                  <p className="text-sm font-bold text-amber-900">Request a quote</p>
-                  <p className="mt-1 text-xs leading-relaxed text-amber-700">
-                    Contact the provider to get a custom quote for this service.
-                  </p>
+                <div className="flex flex-col gap-3">
+                  <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-4">
+                    <p className="text-sm font-bold text-amber-900">
+                      {service.quotePriceType === "FREE_QUOTE"
+                        ? "💬 Request a free quote"
+                        : service.quotePriceType === "CALLOUT_FEE"
+                          ? "🚗 Book a site visit"
+                          : "💬 Request a quote"}
+                    </p>
+                    <p className="mt-1 text-xs leading-relaxed text-amber-700">
+                      {service.quotePriceType === "FREE_QUOTE"
+                        ? "Send your details and the provider will get back to you with a custom price."
+                        : service.quotePriceType === "CALLOUT_FEE"
+                          ? "Book a visit and the provider will assess the job and provide a final quote."
+                          : "Describe your requirements and get a custom quote from this provider."}
+                    </p>
+                  </div>
+                  <a
+                    href={`/store/${service.store.slug}`}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
+                    style={{ backgroundColor: "#D4450A" }}
+                  >
+                    Contact provider →
+                  </a>
                 </div>
               ) : service.serviceType === "SUBSCRIPTION" ? (
-                <div className="rounded-xl border border-dashed border-purple-200 bg-purple-50 px-4 py-5 text-center">
-                  <p className="mb-2 text-2xl">🔄</p>
-                  <p className="text-sm font-bold text-purple-900">Subscribe</p>
-                  <p className="mt-1 text-xs leading-relaxed text-purple-700">
-                    Recurring service — contact the provider to set up your subscription.
+                <div className="flex flex-col gap-3">
+                  <div className="rounded-xl border border-purple-100 bg-purple-50 p-4">
+                    <p className="mb-2 text-sm font-bold text-purple-900">🔄 Subscription</p>
+                    <div className="flex flex-col gap-1.5 text-xs text-purple-800">
+                      {service.subscriptionInterval ? (
+                        <p>
+                          <span className="font-semibold">Billing: </span>
+                          <span className="capitalize">{service.subscriptionInterval}</span>
+                        </p>
+                      ) : null}
+                      {service.sessionsIncluded ? (
+                        <p>
+                          <span className="font-semibold">Sessions: </span>
+                          {service.sessionsIncluded} per{" "}
+                          {service.subscriptionInterval?.replace("ly", "") ?? "cycle"}
+                        </p>
+                      ) : null}
+                      {service.subscriptionCancellationDays !== null &&
+                      service.subscriptionCancellationDays !== undefined ? (
+                        <p>
+                          <span className="font-semibold">Cancel: </span>
+                          {service.subscriptionCancellationDays === 0
+                            ? "Anytime"
+                            : `${service.subscriptionCancellationDays} days notice required`}
+                        </p>
+                      ) : null}
+                      {service.subscriptionCanPause ? (
+                        <p>
+                          <span className="font-semibold">Pause: </span>
+                          {service.subscriptionPauseMaxWeeks
+                            ? `Up to ${service.subscriptionPauseMaxWeeks} weeks`
+                            : "Allowed anytime"}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {service.subscriptionTrialPeriod ? (
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                      <p className="text-sm font-bold text-emerald-900">
+                        🎁{" "}
+                        {service.subscriptionTrialPrice === 0 || !service.subscriptionTrialPrice
+                          ? `${service.subscriptionTrialPeriod}-day free trial`
+                          : `${service.subscriptionTrialPeriod}-day trial for TTD ${service.subscriptionTrialPrice.toFixed(2)}`}
+                      </p>
+                      <p className="mt-0.5 text-xs text-emerald-700">
+                        Try before you commit to a full subscription
+                      </p>
+                    </div>
+                  ) : null}
+
+                  <a
+                    href={`/store/${service.store.slug}`}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
+                    style={{ backgroundColor: "#D4450A" }}
+                  >
+                    Contact to subscribe →
+                  </a>
+
+                  <p className="text-center text-xs text-zinc-400">
+                    TTD {service.price.toFixed(2)} per {service.subscriptionInterval ?? "cycle"}
                   </p>
                 </div>
               ) : service.serviceType === "ON_DEMAND" ? (

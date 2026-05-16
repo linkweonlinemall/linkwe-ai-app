@@ -57,6 +57,14 @@ export default async function EditVendorProductPage({ params }: Props) {
       metaTitle: true,
       metaDescription: true,
       hasVariants: true,
+      isDigital: true,
+      digitalFileUrl: true,
+      previewUrl: true,
+      fileType: true,
+      fileSizeKb: true,
+      downloadLimit: true,
+      downloadExpiryDays: true,
+      licenceType: true,
     },
   });
 
@@ -97,6 +105,14 @@ export default async function EditVendorProductPage({ params }: Props) {
     metaTitle: row.metaTitle,
     metaDescription: row.metaDescription,
     hasVariants: row.hasVariants,
+    isDigital: row.isDigital,
+    digitalFileUrl: row.digitalFileUrl,
+    previewUrl: row.previewUrl,
+    fileType: row.fileType,
+    fileSizeKb: row.fileSizeKb,
+    downloadLimit: row.downloadLimit,
+    downloadExpiryDays: row.downloadExpiryDays,
+    licenceType: row.licenceType,
   };
 
   return (

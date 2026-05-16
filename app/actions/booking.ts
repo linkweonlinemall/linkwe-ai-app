@@ -140,40 +140,66 @@ export async function createBooking(input: {
       requiresApproval: true,
       bookingPaymentMode: true,
       serviceDuration: true,
-      availabilitySchedule: true,
-      availabilityOverrides: { where: { date: { gte: new Date() } } },
-      bookingSlots: {
+      storeId: true,
+      store: { select: { id: true } },
+    },
+  });
+
+  if (!service) return { error: "Service not found" };
+
+  // Get staff for this service using storeId from the product
+  const staffForService = await prisma.staffMember.findMany({
+    where: {
+      storeId: service.storeId,
+      isActive: true,
+      OR: [
+        { services: { some: { serviceId: input.serviceId } } },
+        { services: { none: {} } },
+      ],
+    },
+    select: {
+      id: true,
+      availability: { where: { isActive: true } },
+      overrides: {
         where: {
           date: {
-            gte: dayStart,
-            lt: dayEnd,
+            gte: new Date(`${input.date}T00:00:00Z`),
+            lt: new Date(`${input.date}T23:59:59Z`),
           },
         },
       },
     },
   });
 
-  if (!service) return { error: "Service not found" };
+  // If no staff found at all, allow booking (service has no staff requirement)
+  if (staffForService.length === 0) {
+    // No staff configured — skip availability check
+  } else {
+    const bookingDateCheck = new Date(Date.UTC(by, bm - 1, bd, 12, 0, 0, 0));
+    const dayOfWeek = bookingDateCheck.getUTCDay();
 
-  const dow = utcAnchorFromYmd(input.date).getUTCDay();
-  const daySchedule = service.availabilitySchedule.find(
-    (s) => s.dayOfWeek === dow && s.isActive,
-  );
-  const slotMinutes =
-    daySchedule?.slotDurationMins ?? service.serviceDuration ?? 60;
+    const anyStaffAvailable = staffForService.some((member) => {
+      const override = member.overrides.find((o) => {
+        const od = new Date(o.date);
+        const oStr = `${od.getUTCFullYear()}-${String(od.getUTCMonth() + 1).padStart(2, "0")}-${String(od.getUTCDate()).padStart(2, "0")}`;
+        return oStr === input.date;
+      });
+      if (override?.isBlocked) return false;
+      const daySchedule = member.availability.find((a) => a.dayOfWeek === dayOfWeek && a.isActive);
+      if (!daySchedule && !override?.customStartTime) return false;
+      const startTime = override?.customStartTime ?? daySchedule!.startTime;
+      const endTime = override?.customEndTime ?? daySchedule!.endTime;
+      const [sh, sm] = startTime.split(":").map(Number);
+      const [eh, em] = endTime.split(":").map(Number);
+      const [rh, rm] = input.startTime.split(":").map(Number);
+      const requestedMins = rh * 60 + rm;
+      const startMins = sh * 60 + sm;
+      const endMins = eh * 60 + em;
+      return requestedMins >= startMins && requestedMins + (service.serviceDuration ?? 60) <= endMins;
+    });
 
-  const slots = generateSlotsForDate(
-    input.date,
-    service.availabilitySchedule,
-    service.availabilityOverrides,
-    service.bookingSlots,
-    slotMinutes,
-  );
-
-  const requestedSlot = slots.find(
-    (s) => s.startTime === input.startTime && s.available,
-  );
-  if (!requestedSlot) return { error: "slot_unavailable" };
+    if (!anyStaffAvailable) return { error: "slot_unavailable" };
+  }
 
   const totalPrice = service.price;
 
@@ -318,13 +344,17 @@ export async function getVendorBookings(
       guestCount: true,
       customerNotes: true,
       vendorNotes: true,
+      meetingLink: true,
       createdAt: true,
       customerId: true,
       product: {
         select: {
           name: true,
           slug: true,
+          serviceType: true,
           serviceDuration: true,
+          requiresDeposit: true,
+          depositAmount: true,
         },
       },
       slot: {
@@ -409,6 +439,39 @@ export async function updateBookingStatus(
 
   revalidatePath("/dashboard/vendor/bookings");
   return { ok: true as const };
+}
+
+export async function updateBookingMeetingLink(
+  bookingId: string,
+  meetingLink: string,
+): Promise<{ ok: true } | { error: string }> {
+  const session = await getSession();
+  if (!session) return { error: "Not authenticated" };
+
+  const booking = await prisma.productBooking.findFirst({
+    where: { id: bookingId },
+    select: {
+      id: true,
+      product: {
+        select: {
+          store: { select: { ownerId: true } },
+        },
+      },
+    },
+  });
+
+  if (!booking) return { error: "Booking not found" };
+  if (booking.product.store.ownerId !== session.userId) {
+    return { error: "Not authorized" };
+  }
+
+  await prisma.productBooking.update({
+    where: { id: bookingId },
+    data: { meetingLink: meetingLink.trim() || null },
+  });
+
+  revalidatePath("/dashboard/vendor/bookings");
+  return { ok: true };
 }
 
 // Get booking counts for vendor dashboard stats

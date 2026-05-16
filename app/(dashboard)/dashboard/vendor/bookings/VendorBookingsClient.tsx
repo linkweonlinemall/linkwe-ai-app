@@ -5,7 +5,7 @@ import { useState } from "react";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
 
-import { updateBookingStatus } from "@/app/actions/booking";
+import { updateBookingMeetingLink, updateBookingStatus } from "@/app/actions/booking";
 
 type Booking = {
   id: string;
@@ -17,11 +17,15 @@ type Booking = {
   guestCount: number;
   customerNotes: string | null;
   vendorNotes: string | null;
+  meetingLink: string | null;
   createdAt: Date | string;
   product: {
     name: string;
     slug: string;
+    serviceType: string | null;
     serviceDuration: number | null;
+    requiresDeposit: boolean;
+    depositAmount: number | null;
   };
   customerId?: string;
   customer?: {
@@ -108,6 +112,9 @@ export default function VendorBookingsClient({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
+  const [editingMeetingLink, setEditingMeetingLink] = useState<string | null>(null);
+  const [meetingLinkValue, setMeetingLinkValue] = useState<Record<string, string>>({});
+  const [savingLink, setSavingLink] = useState<string | null>(null);
 
   const filtered =
     filter === "all" ? localBookings : localBookings.filter((b) => b.status === filter);
@@ -161,6 +168,23 @@ export default function VendorBookingsClient({
       }
     }
     return dates;
+  }
+
+  async function handleSaveMeetingLink(bookingId: string) {
+    setSavingLink(bookingId);
+    const result = await updateBookingMeetingLink(
+      bookingId,
+      meetingLinkValue[bookingId] ?? "",
+    );
+    setSavingLink(null);
+    if ("ok" in result && result.ok) {
+      const raw = meetingLinkValue[bookingId] ?? "";
+      const nextLink = raw.trim() || null;
+      setLocalBookings((prev) =>
+        prev.map((b) => (b.id === bookingId ? { ...b, meetingLink: nextLink } : b)),
+      );
+    }
+    setEditingMeetingLink(null);
   }
 
   async function handleStatusUpdate(
@@ -580,6 +604,73 @@ export default function VendorBookingsClient({
                         className="w-full resize-none rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs focus:border-[#D4450A] focus:outline-none"
                       />
                     </div>
+
+                    {booking.product.serviceType === "VIRTUAL" ? (
+                      <div className="mt-2 rounded-xl border border-blue-100 bg-blue-50 p-3">
+                        <div className="mb-1.5 flex items-center justify-between">
+                          <p className="text-xs font-bold text-blue-900">💻 Meeting link</p>
+                          {editingMeetingLink !== booking.id ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingMeetingLink(booking.id);
+                                setMeetingLinkValue((prev) => ({
+                                  ...prev,
+                                  [booking.id]: booking.meetingLink ?? "",
+                                }));
+                              }}
+                              className="text-xs font-medium text-blue-700 hover:underline"
+                            >
+                              {booking.meetingLink ? "Edit" : "Add link"}
+                            </button>
+                          ) : null}
+                        </div>
+                        {editingMeetingLink === booking.id ? (
+                          <div className="flex flex-col gap-2">
+                            <input
+                              type="url"
+                              value={meetingLinkValue[booking.id] ?? ""}
+                              onChange={(e) =>
+                                setMeetingLinkValue((prev) => ({
+                                  ...prev,
+                                  [booking.id]: e.target.value,
+                                }))
+                              }
+                              placeholder="https://zoom.us/j/..."
+                              className="w-full rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs focus:border-blue-400 focus:outline-none"
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => void handleSaveMeetingLink(booking.id)}
+                                disabled={savingLink === booking.id}
+                                className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                              >
+                                {savingLink === booking.id ? "Saving..." : "Save"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingMeetingLink(null)}
+                                className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : booking.meetingLink ? (
+                          <a
+                            href={booking.meetingLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="truncate text-xs font-medium text-blue-700 hover:underline"
+                          >
+                            {booking.meetingLink}
+                          </a>
+                        ) : (
+                          <p className="text-xs text-blue-600">No meeting link added yet</p>
+                        )}
+                      </div>
+                    ) : null}
 
                     <div className="flex flex-wrap gap-2">
                       {booking.status === "PENDING" ? (

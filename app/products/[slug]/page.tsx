@@ -3,9 +3,10 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import type { ProductCondition } from "@prisma/client";
 
-import PublicNav from "@/components/layout/PublicNav";
-import { ProductGallery } from "@/components/product/ProductGallery";
 import ProductBuyBox from "@/components/product/ProductBuyBox";
+import PublicNav from "@/components/layout/PublicNav";
+import ExpandableDescription from "@/components/ui/ExpandableDescription";
+import { ProductGallery } from "@/components/product/ProductGallery";
 import { getSession } from "@/lib/auth/session";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { prisma } from "@/lib/prisma";
@@ -100,6 +101,14 @@ export default async function PublicProductPage({ params }: Props) {
       createdAt: true,
       storeId: true,
       hasVariants: true,
+      isDigital: true,
+      digitalFileUrl: true,
+      fileType: true,
+      fileSizeKb: true,
+      downloadLimit: true,
+      downloadExpiryDays: true,
+      previewUrl: true,
+      licenceType: true,
       store: { select: { name: true, slug: true, logoUrl: true, region: true } },
     },
   });
@@ -140,6 +149,30 @@ export default async function PublicProductPage({ params }: Props) {
     take: 4,
     orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
   });
+
+  const categoryRelatedProducts = product.category
+    ? await prisma.product.findMany({
+        where: {
+          isPublished: true,
+          isService: false,
+          category: product.category,
+          NOT: { storeId: product.storeId },
+        },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          price: true,
+          compareAtPrice: true,
+          images: true,
+          category: true,
+          isFeatured: true,
+          store: { select: { name: true, slug: true } },
+        },
+        take: 4,
+        orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+      })
+    : [];
 
   const store = product.store;
   const cond = product.condition ? conditionDisplay(product.condition) : null;
@@ -228,12 +261,7 @@ export default async function PublicProductPage({ params }: Props) {
 
             {/* Description */}
             {product.description ? (
-              <div>
-                <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-zinc-900">
-                  About this product
-                </h2>
-                <p className="whitespace-pre-wrap text-sm leading-7 text-zinc-600">{product.description}</p>
-              </div>
+              <ExpandableDescription title="About this product" description={product.description} />
             ) : null}
 
             {/* Tags */}
@@ -244,6 +272,25 @@ export default async function PublicProductPage({ params }: Props) {
                     {tag}
                   </span>
                 ))}
+              </div>
+            ) : null}
+
+            {product.previewUrl ? (
+              <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+                <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-zinc-900">Preview</h2>
+                <a
+                  href={product.previewUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 rounded-xl border-2 border-[#D4450A]/30 bg-[#D4450A]/5 px-4 py-3 text-sm font-semibold text-[#D4450A] transition-colors hover:bg-[#D4450A]/10"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                  Download free preview
+                </a>
               </div>
             ) : null}
 
@@ -338,38 +385,107 @@ export default async function PublicProductPage({ params }: Props) {
               />
             </div>
 
-            <div className="rounded-xl bg-zinc-50 border border-zinc-100 px-4 py-3">
-              <div className="flex flex-col gap-2.5">
-                {product.allowDelivery ? (
+            <div className="rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-3">
+              {product.isDigital ? (
+                <div className="flex flex-col gap-2.5">
                   <div className="flex items-center gap-2 text-xs text-zinc-600">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="1" y="3" width="15" height="13" />
-                      <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-                      <circle cx="5.5" cy="18.5" r="2.5" />
-                      <circle cx="18.5" cy="18.5" r="2.5" />
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="17 8 12 3 7 8"/>
+                      <line x1="12" y1="3" x2="12" y2="15"/>
                     </svg>
-                    <span>
-                      Delivery available
-                      {product.deliveryFee != null ? ` — TTD ${product.deliveryFee.toFixed(2)}` : ""}
-                    </span>
+                    <span>Instant digital download</span>
                   </div>
-                ) : null}
-                {product.allowPickup ? (
+                  {product.fileType ? (
+                    <div className="flex items-center gap-2 text-xs text-zinc-600">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                      </svg>
+                      <span>
+                        {product.fileType.toUpperCase()} file
+                        {product.fileSizeKb
+                          ? ` · ${
+                              product.fileSizeKb >= 1024
+                                ? `${(product.fileSizeKb / 1024).toFixed(1)} MB`
+                                : `${product.fileSizeKb} KB`
+                            }`
+                          : ""}
+                      </span>
+                    </div>
+                  ) : null}
+                  {product.downloadLimit ? (
+                    <div className="flex items-center gap-2 text-xs text-zinc-600">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                      </svg>
+                      <span>
+                        {product.downloadLimit} download{product.downloadLimit > 1 ? "s" : ""} included
+                      </span>
+                    </div>
+                  ) : null}
+                  {product.licenceType ? (
+                    <div className="flex items-center gap-2 text-xs text-zinc-600">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                      </svg>
+                      <span>
+                        {product.licenceType === "PERSONAL"
+                          ? "Personal use licence"
+                          : product.licenceType === "COMMERCIAL"
+                            ? "Commercial use licence"
+                            : "Extended commercial licence"}
+                      </span>
+                    </div>
+                  ) : null}
                   <div className="flex items-center gap-2 text-xs text-zinc-600">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-                      <circle cx="12" cy="10" r="3" />
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                     </svg>
-                    <span>Local pickup available</span>
+                    <span>Secure checkout via Stripe</span>
                   </div>
-                ) : null}
-                <div className="flex items-center gap-2 text-xs text-zinc-600">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                  </svg>
-                  <span>Secure checkout via Stripe</span>
                 </div>
-              </div>
+              ) : (
+                <div className="flex flex-col gap-2.5">
+                  {product.allowDelivery ? (
+                    <div className="flex items-center gap-2 text-xs text-zinc-600">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="1" y="3" width="15" height="13" />
+                        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                        <circle cx="5.5" cy="18.5" r="2.5" />
+                        <circle cx="18.5" cy="18.5" r="2.5" />
+                      </svg>
+                      <span>
+                        Delivery available
+                        {product.deliveryFee != null ? ` — TTD ${product.deliveryFee.toFixed(2)}` : ""}
+                      </span>
+                    </div>
+                  ) : null}
+                  {product.allowPickup ? (
+                    <div className="flex items-center gap-2 text-xs text-zinc-600">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                        <circle cx="12" cy="10" r="3" />
+                      </svg>
+                      <span>Local pickup available</span>
+                    </div>
+                  ) : null}
+                  {!product.allowDelivery && !product.allowPickup ? (
+                    <div className="flex items-center gap-2 text-xs text-zinc-500">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                      </svg>
+                      <span>No delivery or pickup — contact store for details</span>
+                    </div>
+                  ) : null}
+                  <div className="flex items-center gap-2 text-xs text-zinc-600">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                    <span>Secure checkout via Stripe</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Sold by */}
@@ -447,6 +563,60 @@ export default async function PublicProductPage({ params }: Props) {
                       </p>
                       {p.compareAtPrice && p.compareAtPrice > p.price ? (
                         <p className="text-xs text-zinc-400 line-through">TTD {p.compareAtPrice.toFixed(2)}</p>
+                      ) : null}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {categoryRelatedProducts.length > 0 ? (
+          <div className="mt-12">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-zinc-900">
+                More in {formatLabel(product.category ?? "")}
+              </h2>
+              <Link
+                href={`/shop?category=${product.category}`}
+                className="text-sm text-[#D4450A] hover:underline"
+              >
+                View all →
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              {categoryRelatedProducts.map((p) => (
+                <Link
+                  key={p.id}
+                  href={`/products/${p.slug}`}
+                  className="group overflow-hidden rounded-2xl bg-white shadow-sm transition-all hover:shadow-md"
+                >
+                  <div className="aspect-square overflow-hidden bg-zinc-100">
+                    {p.images[0] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={p.images[0]}
+                        alt={p.name}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <span className="text-3xl text-zinc-300">📦</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <p className="mb-0.5 truncate text-[10px] uppercase tracking-wide text-zinc-400">
+                      {p.store.name}
+                    </p>
+                    <p className="truncate text-sm font-semibold text-zinc-900">{p.name}</p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <p className="text-sm font-bold text-[#D4450A]">TTD {p.price.toFixed(2)}</p>
+                      {p.compareAtPrice && p.compareAtPrice > p.price ? (
+                        <p className="text-xs text-zinc-400 line-through">
+                          TTD {p.compareAtPrice.toFixed(2)}
+                        </p>
                       ) : null}
                     </div>
                   </div>

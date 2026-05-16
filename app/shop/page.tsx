@@ -104,6 +104,7 @@ export default async function ShopPage({ searchParams }: Props) {
   const products = await prisma.product.findMany({
     where: {
       isPublished: true,
+      isService: false,
       ...(category ? { category } : {}),
       ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
       ...(region ? { store: { region } } : {}),
@@ -130,6 +131,7 @@ export default async function ShopPage({ searchParams }: Props) {
       category: true,
       isFeatured: true,
       hasVariants: true,
+      isDigital: true,
       store: { select: { name: true, slug: true, region: true } },
     },
     orderBy,
@@ -287,6 +289,11 @@ export default async function ShopPage({ searchParams }: Props) {
                               </span>
                             ) : null}
                           </div>
+                          {product.isDigital ? (
+                            <span className="absolute bottom-2 left-2 rounded-full bg-[#1A7FB5] px-2 py-0.5 text-[9px] font-bold text-white">
+                              ⬇️ Digital
+                            </span>
+                          ) : null}
                         </div>
                       </Link>
 
@@ -311,6 +318,7 @@ export default async function ShopPage({ searchParams }: Props) {
                         </Link>
                         <ShopProductCardActions
                           hasVariants={product.hasVariants}
+                          isDigital={product.isDigital}
                           slug={product.slug}
                           productId={product.id}
                         />

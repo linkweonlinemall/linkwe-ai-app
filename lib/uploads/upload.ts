@@ -12,7 +12,8 @@ export type UploadFolder =
   | "food-outlets"
   | "accommodations"
   | "services"
-  | "avatars";
+  | "avatars"
+  | "digital";
 
 export async function uploadFile(file: File, folder: UploadFolder): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();

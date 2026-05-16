@@ -1,12 +1,14 @@
 "use client";
 
-import { useActionState, useCallback, useState } from "react";
+import { useActionState, useCallback, useRef, useState } from "react";
 
 import type { ProductFieldErrors } from "@/app/actions/product";
 import { createProduct } from "@/app/actions/product";
+import { uploadDigitalFile } from "@/app/actions/digital-upload";
 import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
 import ProductVariantEditor, { type VariantRow } from "@/components/vendor/ProductVariantEditor";
 import Input from "@/components/ui/Input";
+import RichTextEditor from "@/components/ui/RichTextEditor";
 import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
 
@@ -63,9 +65,16 @@ export function ProductForm() {
   const [slugManual, setSlugManual] = useState(false);
   const [allowDelivery, setAllowDelivery] = useState(false);
   const [previews, setPreviews] = useState<{ url: string; name: string }[]>([]);
-  const [productType, setProductType] = useState<"simple" | "variable">("simple");
+  const [productType, setProductType] = useState<"simple" | "variable" | "digital">("simple");
   const [variants, setVariants] = useState<VariantRow[]>([]);
   const [priceInput, setPriceInput] = useState("");
+  const [digitalFileUrl, setDigitalFileUrl] = useState("");
+  const [digitalFileName, setDigitalFileName] = useState("");
+  const [digitalFileType, setDigitalFileType] = useState("");
+  const [digitalFileSizeKb, setDigitalFileSizeKb] = useState<number | null>(null);
+  const [uploadingDigital, setUploadingDigital] = useState(false);
+  const [digitalUploadError, setDigitalUploadError] = useState<string | null>(null);
+  const digitalFileRef = useRef<HTMLInputElement>(null);
 
   const onNameChange = useCallback(
     (v: string) => {
@@ -95,6 +104,26 @@ export function ProductForm() {
 
   function fieldError(name: string): string | undefined {
     return errors?.[name];
+  }
+
+  async function handleDigitalUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingDigital(true);
+    setDigitalUploadError(null);
+    setDigitalFileName(file.name);
+    const formData = new FormData();
+    formData.append("file", file);
+    const result = await uploadDigitalFile(formData);
+    if (result.ok) {
+      setDigitalFileUrl(result.url);
+      setDigitalFileType(result.fileType);
+      setDigitalFileSizeKb(result.fileSizeKb);
+    } else {
+      setDigitalUploadError(result.error);
+      setDigitalFileName("");
+    }
+    setUploadingDigital(false);
   }
 
   return (
@@ -132,6 +161,7 @@ export function ProductForm() {
           </p>
         ) : null}
 
+        <input type="hidden" name="isDigital" value={productType === "digital" ? "true" : "false"} />
         <input type="hidden" name="hasVariants" value={productType === "variable" ? "true" : "false"} />
 
         <div
@@ -141,7 +171,7 @@ export function ProductForm() {
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Product Type
           </h2>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <button
               type="button"
               onClick={() => setProductType("simple")}
@@ -180,6 +210,29 @@ export function ProductForm() {
                 <p className="mt-0.5 text-xs text-zinc-500">Multiple sizes, colours, or other options.</p>
               </div>
             </button>
+            <button
+              type="button"
+              onClick={() => setProductType("digital")}
+              className={`flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all ${
+                productType === "digital"
+                  ? "border-[#D4450A] bg-[#D4450A]/5"
+                  : "border-zinc-200 hover:border-zinc-300"
+              }`}
+            >
+              <div
+                className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
+                  productType === "digital" ? "border-[#D4450A]" : "border-zinc-300"
+                }`}
+              >
+                {productType === "digital" ? <div className="h-2 w-2 rounded-full bg-[#D4450A]" /> : null}
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-zinc-900">Digital product</p>
+                <p className="mt-0.5 text-xs text-zinc-500">
+                  Downloadable file — music, software, ebook, template.
+                </p>
+              </div>
+            </button>
           </div>
         </div>
 
@@ -211,7 +264,14 @@ export function ProductForm() {
                 setSlug(e.target.value);
               }}
             />
-            <Textarea label="Description" name="description" rows={4} />
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-zinc-700">Description</label>
+              <RichTextEditor
+                name="description"
+                placeholder="Describe the product — materials, dimensions, what is included, care instructions..."
+                maxLength={2000}
+              />
+            </div>
             <Input
               helperText="Max 160 characters."
               label="Short description"
@@ -229,14 +289,17 @@ export function ProductForm() {
             </Select>
             <Input label="Brand" name="brand" />
             <Input label="Tags" name="tags" placeholder="sneakers, red, nike — comma separated" />
-            <Select required defaultValue="" error={fieldError("condition")} label="Condition" name="condition">
-              <option value="" disabled>
-                Select condition
-              </option>
-              <option value="NEW">New</option>
-              <option value="USED">Used</option>
-              <option value="REFURBISHED">Refurbished</option>
-            </Select>
+            {productType === "digital" ? <input type="hidden" name="condition" value="NEW" /> : null}
+            {productType !== "digital" ? (
+              <Select required defaultValue="" error={fieldError("condition")} label="Condition" name="condition">
+                <option value="" disabled>
+                  Select condition
+                </option>
+                <option value="NEW">New</option>
+                <option value="USED">Used</option>
+                <option value="REFURBISHED">Refurbished</option>
+              </Select>
+            ) : null}
             <label className="flex cursor-pointer items-center gap-3">
               <input type="checkbox" name="isFeatured" className="rounded border-zinc-300" />
               <span className="text-sm font-medium text-zinc-800">Feature this product</span>
@@ -268,15 +331,25 @@ export function ProductForm() {
                 value={priceInput}
                 onChange={(e) => setPriceInput(e.target.value)}
               />
-              <Input
-                helperText="Leave blank for unlimited stock"
-                label="Stock quantity"
-                min={0}
-                name="stock"
-                step={1}
-                type="number"
-              />
+              {productType !== "digital" ? (
+                <Input
+                  helperText="Leave blank for unlimited stock"
+                  label="Stock quantity"
+                  min={0}
+                  name="stock"
+                  step={1}
+                  type="number"
+                />
+              ) : (
+                <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+                  <p className="text-xs font-semibold text-zinc-700">Stock</p>
+                  <p className="mt-0.5 text-xs text-zinc-400">
+                    Digital products have unlimited stock automatically
+                  </p>
+                </div>
+              )}
             </div>
+            {productType === "digital" ? <input type="hidden" name="stock" value="" /> : null}
             <Input
               helperText="Show a crossed-out original price when this product is on sale"
               label="Original price (TTD)"
@@ -288,6 +361,142 @@ export function ProductForm() {
             <Input helperText="Your internal reference code" label="SKU" name="sku" />
           </div>
         </div>
+
+        {productType === "digital" ? (
+          <div
+            className="rounded-xl bg-white p-5 sm:p-6"
+            style={{ border: "1px solid var(--card-border)" }}
+          >
+            <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+              Digital file
+            </h2>
+            <div className="space-y-4">
+              <input type="hidden" name="digitalFileUrl" value={digitalFileUrl} />
+              <input type="hidden" name="fileType" value={digitalFileType} />
+              <input type="hidden" name="fileSizeKb" value={digitalFileSizeKb ?? ""} />
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
+                  Digital file <span className="text-[#D4450A]">*</span>
+                </label>
+                <input ref={digitalFileRef} type="file" className="hidden" onChange={handleDigitalUpload} />
+                {digitalFileUrl ? (
+                  <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                    </svg>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-emerald-900">{digitalFileName}</p>
+                      <p className="text-xs text-emerald-700">
+                        {digitalFileType.toUpperCase()}
+                        {digitalFileSizeKb
+                          ? ` · ${
+                              digitalFileSizeKb >= 1024
+                                ? `${(digitalFileSizeKb / 1024).toFixed(1)} MB`
+                                : `${digitalFileSizeKb} KB`
+                            }`
+                          : ""}
+                        · Uploaded successfully
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDigitalFileUrl("");
+                        setDigitalFileName("");
+                        setDigitalFileType("");
+                        setDigitalFileSizeKb(null);
+                        if (digitalFileRef.current) digitalFileRef.current.value = "";
+                      }}
+                      className="shrink-0 text-xs font-medium text-emerald-700 hover:text-red-600"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={uploadingDigital}
+                    onClick={() => digitalFileRef.current?.click()}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-200 px-4 py-6 text-sm font-medium text-zinc-500 transition-colors hover:border-zinc-300 hover:bg-zinc-50 disabled:opacity-50"
+                  >
+                    {uploadingDigital ? (
+                      <>
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="17 8 12 3 7 8" />
+                          <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                        Click to upload your digital file
+                      </>
+                    )}
+                  </button>
+                )}
+                <p className="mt-1.5 text-xs text-zinc-400">
+                  Supports PDF, MP3, MP4, ZIP, EPUB, PSD, AI, SVG, DOCX and more. Max 500MB.
+                </p>
+                {digitalUploadError ? (
+                  <p className="mt-1.5 text-xs text-red-600">{digitalUploadError}</p>
+                ) : null}
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-zinc-700">Preview URL (optional)</label>
+                <input
+                  name="previewUrl"
+                  type="url"
+                  placeholder="https://..."
+                  className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-sm focus:border-[#D4450A] focus:outline-none focus:bg-white"
+                />
+                <p className="mt-1 text-xs text-zinc-400">A free sample customers can access before buying</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-zinc-700">Download limit</label>
+                  <input
+                    name="downloadLimit"
+                    type="number"
+                    min={1}
+                    placeholder="e.g. 3 (blank = unlimited)"
+                    className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-sm focus:border-[#D4450A] focus:bg-white focus:outline-none"
+                  />
+                  <p className="mt-1 text-xs text-zinc-400">Max downloads per purchase</p>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
+                    Download expiry (days)
+                  </label>
+                  <input
+                    name="downloadExpiryDays"
+                    type="number"
+                    min={1}
+                    placeholder="e.g. 30 (blank = never)"
+                    className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-sm focus:border-[#D4450A] focus:bg-white focus:outline-none"
+                  />
+                  <p className="mt-1 text-xs text-zinc-400">Days before download link expires</p>
+                </div>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-zinc-700">Licence type</label>
+                <select
+                  name="licenceType"
+                  className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-sm focus:border-[#D4450A] focus:outline-none"
+                >
+                  <option value="">Select licence</option>
+                  <option value="PERSONAL">Personal use only</option>
+                  <option value="COMMERCIAL">Commercial use</option>
+                  <option value="EXTENDED">Extended commercial use</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {productType === "variable" ? (
           <div
@@ -337,66 +546,70 @@ export function ProductForm() {
           </div>
         </div>
 
-        <div
-          className="rounded-xl bg-white p-5 sm:p-6"
-          style={{ border: "1px solid var(--card-border)" }}
-        >
-          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-            Shipping
-          </h2>
-          <div className="space-y-4">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={allowDelivery}
-                onChange={(e) => setAllowDelivery(e.target.checked)}
-                className="rounded border-zinc-300"
+        {productType !== "digital" ? (
+          <div
+            className="rounded-xl bg-white p-5 sm:p-6"
+            style={{ border: "1px solid var(--card-border)" }}
+          >
+            <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+              Shipping
+            </h2>
+            <div className="space-y-4">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={allowDelivery}
+                  onChange={(e) => setAllowDelivery(e.target.checked)}
+                  className="rounded border-zinc-300"
+                />
+                <span className="text-sm font-medium text-zinc-800">Offer delivery for this product</span>
+              </label>
+              <input type="hidden" name="allowDelivery" value={allowDelivery ? "true" : "false"} />
+              {!allowDelivery ? (
+                <p className="text-xs text-zinc-500">Toggle on to enter weight and dimensions.</p>
+              ) : (
+                <div className="space-y-4 border-l-2 border-[#E8820C] pl-4">
+                  <Input label="Weight" name="weight" step={0.01} type="number" />
+                  <Select className="text-base" defaultValue="" label="Weight unit" name="weightUnit">
+                    <option value="">Select</option>
+                    <option value="KG">KG</option>
+                    <option value="LB">LB</option>
+                  </Select>
+                  <Input label="Length (cm)" name="length" step={0.01} type="number" />
+                  <Input label="Width (cm)" name="width" step={0.01} type="number" />
+                  <Input label="Height (cm)" name="height" step={0.01} type="number" />
+                </div>
+              )}
+              <label className="flex items-center gap-2">
+                <input type="checkbox" name="allowPickup" className="rounded border-zinc-300" />
+                <span className="text-sm font-medium text-zinc-800">Allow local pickup</span>
+              </label>
+              <Textarea
+                label="Return policy"
+                name="returnPolicy"
+                placeholder="e.g. Returns accepted within 14 days in original condition"
+                rows={3}
               />
-              <span className="text-sm font-medium text-zinc-800">Offer delivery for this product</span>
-            </label>
-            <input type="hidden" name="allowDelivery" value={allowDelivery ? "true" : "false"} />
-            {!allowDelivery ? (
-              <p className="text-xs text-zinc-500">Toggle on to enter weight and dimensions.</p>
-            ) : (
-              <div className="space-y-4 border-l-2 border-[#E8820C] pl-4">
-                <Input label="Weight" name="weight" step={0.01} type="number" />
-                <Select className="text-base" defaultValue="" label="Weight unit" name="weightUnit">
-                  <option value="">Select</option>
-                  <option value="KG">KG</option>
-                  <option value="LB">LB</option>
-                </Select>
-                <Input label="Length (cm)" name="length" step={0.01} type="number" />
-                <Input label="Width (cm)" name="width" step={0.01} type="number" />
-                <Input label="Height (cm)" name="height" step={0.01} type="number" />
-              </div>
-            )}
-            <label className="flex items-center gap-2">
-              <input type="checkbox" name="allowPickup" className="rounded border-zinc-300" />
-              <span className="text-sm font-medium text-zinc-800">Allow local pickup</span>
-            </label>
-            <Textarea
-              label="Return policy"
-              name="returnPolicy"
-              placeholder="e.g. Returns accepted within 14 days in original condition"
-              rows={3}
-            />
+            </div>
           </div>
-        </div>
+        ) : null}
 
-        <div
-          className="rounded-xl bg-white p-5 sm:p-6"
-          style={{ border: "1px solid var(--card-border)" }}
-        >
-          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-            Location
-          </h2>
-          <div className="space-y-4">
-            <p className="text-sm text-zinc-600">
-              Search for your address then drag the pin to fine-tune the exact pickup or origin location.
-            </p>
-            <StoreLocationPicker initialAddress="" initialLat={null} initialLng={null} />
+        {productType !== "digital" ? (
+          <div
+            className="rounded-xl bg-white p-5 sm:p-6"
+            style={{ border: "1px solid var(--card-border)" }}
+          >
+            <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+              Location
+            </h2>
+            <div className="space-y-4">
+              <p className="text-sm text-zinc-600">
+                Search for your address then drag the pin to fine-tune the exact pickup or origin location.
+              </p>
+              <StoreLocationPicker initialAddress="" initialLat={null} initialLng={null} />
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <div
           className="rounded-xl bg-white p-5 sm:p-6"

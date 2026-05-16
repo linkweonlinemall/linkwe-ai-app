@@ -1179,6 +1179,12 @@ enum BookingPaymentMode {
   CUSTOMER_CHOOSES
 }
 
+enum QuotePriceType {
+  STARTING_FROM
+  CALLOUT_FEE
+  FREE_QUOTE
+}
+
 enum StaffMode {
   SOLO
   TEAM
@@ -1195,7 +1201,7 @@ model Product {
   shortDescription      String?
   deliveryFee           Float?
   deliveryRegions       String[]          @default([])
-  price                 Float
+  price                 Float             @default(0)
   compareAtPrice        Float?
   sku                   String?
   stock                 Int?
@@ -1238,6 +1244,32 @@ model Product {
   maxGroupSize          Int?
   requiresApproval      Boolean           @default(false)
   bookingPaymentMode    BookingPaymentMode? @default(CUSTOMER_CHOOSES)
+  quotePriceType        QuotePriceType?
+
+  // Quote-based service fields
+  responseTime          String?
+  minimumQuoteAmount    Float?
+  siteVisitRequired     Boolean           @default(false)
+
+  // Subscription service fields
+  subscriptionInterval  String?
+  sessionsIncluded      Int?
+  subscriptionCancellationDays Int?
+
+  // Subscription trial + pause
+  subscriptionTrialPeriod       Int?
+  subscriptionTrialPrice        Float?
+  subscriptionCanPause          Boolean   @default(false)
+  subscriptionPauseMaxWeeks     Int?
+
+  // On-demand service fields
+  travelFee             Float?
+  serviceRadius         Int?
+  estimatedResponseMins Int?
+
+  // Virtual service fields
+  virtualPlatform       String?
+  virtualMeetingInfo    String?
 
   latitude              Float?
   longitude             Float?
@@ -1375,6 +1407,7 @@ model ProductBooking {
   cancelledBy        CancelledBy?
   cancelledAt        DateTime?
   vendorNotes        String?
+  meetingLink        String?
   customerNotes      String?
   staffMemberId      String?
   staffMember        StaffMember? @relation(fields: [staffMemberId], references: [id], onDelete: SetNull)

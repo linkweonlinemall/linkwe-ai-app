@@ -498,6 +498,7 @@ export default function VendorAIAssistantPage() {
     return (
       content.includes("Simple product") &&
       content.includes("Variable product") &&
+      content.includes("Digital product") &&
       content.includes("Service")
     )
   }
@@ -511,6 +512,11 @@ export default function VendorAIAssistantPage() {
       label: "🎨 Variable product",
       value:
         "Variable product — different sizes, colours, or options",
+    },
+    {
+      label: "📥 Digital product",
+      value:
+        "Digital product — downloadable file, ebook, music, or software",
     },
     {
       label: "🛎️ Service",
@@ -775,6 +781,12 @@ export default function VendorAIAssistantPage() {
                       "Different sizes, colours, or options",
                     message:
                       "I want to create a variable product with different sizes or colours",
+                  },
+                  {
+                    label: "📥 Digital product",
+                    description: "Downloadable file, ebook, music, software",
+                    message:
+                      "I want to create a digital product — downloadable file, ebook, music, or software",
                   },
                   {
                     label: "🛎️ Service",

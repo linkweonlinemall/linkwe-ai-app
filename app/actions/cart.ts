@@ -22,6 +22,7 @@ export async function getCart() {
           price: true,
           images: true,
           stock: true,
+          isDigital: true,
           store: {
             select: { name: true, slug: true },
           },

@@ -133,7 +133,7 @@ export default function CartDrawer() {
               <p className="mt-4 text-sm text-zinc-500">Your cart is empty</p>
               <p className="mt-1 text-xs text-zinc-400">Browse stores to find products</p>
               <Link
-                href="/"
+                href="/shop"
                 className="mt-4 text-sm font-medium"
                 style={{ color: "#D4450A" }}
                 onClick={closeDrawer}

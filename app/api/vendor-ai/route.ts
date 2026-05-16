@@ -50,6 +50,7 @@ const CREATE_PRODUCT_TOOL: Anthropic.Tool = {
       metaTitle: { type: "string" },
       metaDescription: { type: "string" },
       hasVariants: { type: "boolean" },
+      isDigital: { type: "boolean" },
       variants: {
         type: "array",
         description: "Array of variant objects for variable products",
@@ -389,6 +390,7 @@ export async function POST(req: NextRequest) {
                 : undefined,
             compareAtPrice:
               raw.compareAtPrice != null ? Number(raw.compareAtPrice) : undefined,
+            isDigital: raw.isDigital === true,
           }
           console.log("route input address:", raw.address, "->", input.address)
 
@@ -423,11 +425,11 @@ export async function POST(req: NextRequest) {
                 )
               }
 
-              // Handle variable product variants
+              // Handle variable product variants (not for digital listings)
               const hasVariants = raw.hasVariants === true
               const variantsRaw = Array.isArray(raw.variants) ? raw.variants : []
 
-              if (hasVariants && variantsRaw.length > 0) {
+              if (hasVariants && variantsRaw.length > 0 && raw.isDigital !== true) {
                 try {
                   // Update product to mark as variable
                   await prisma.product.update({

@@ -74,6 +74,7 @@ function isListingTypeMessage(content: string): boolean {
   return (
     content.includes("Simple product") &&
     content.includes("Variable product") &&
+    content.includes("Digital product") &&
     content.includes("Service")
   )
 }
@@ -87,6 +88,11 @@ const LISTING_TYPE_OPTIONS = [
     label: "🎨 Variable product",
     value:
       "Variable product — different sizes, colours, or options",
+  },
+  {
+    label: "📥 Digital product",
+    value:
+      "Digital product — downloadable file, ebook, music, or software",
   },
   {
     label: "🛎️ Service",
@@ -438,6 +444,11 @@ export default function FloatingAIChat() {
                       label: "🎨 Variable product",
                       message:
                         "I want to create a variable product with different sizes or colours",
+                    },
+                    {
+                      label: "📥 Digital product",
+                      message:
+                        "I want to create a digital product — downloadable file, ebook, music, or software",
                     },
                     {
                       label: "🛎️ Service",

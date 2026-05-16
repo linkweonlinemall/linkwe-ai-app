@@ -12,6 +12,13 @@ import {
 } from "@/lib/orders/order-status";
 import { generateOrderQRCodeDataURL, getOrderUrl } from "@/lib/orders/qr-code";
 import { prisma } from "@/lib/prisma";
+
+const DIGITAL_PROGRESS_STEPS = [
+  "Order Placed",
+  "Payment Confirmed",
+  "Ready to Download",
+];
+
 type Props = { params: Promise<{ orderId: string }> };
 
 function getOrderStatusBadge(status: string) {
@@ -70,6 +77,24 @@ function getSplitOrderStatusLabel(status: string): { label: string; className: s
   }
 }
 
+function forceDownloadUrl(url: string, filename?: string): string {
+  if (!url) return url;
+
+  // For Cloudinary URLs, insert fl_attachment transformation
+  if (url.includes("res.cloudinary.com")) {
+    // Insert fl_attachment into the transformation chain
+    // URL format: https://res.cloudinary.com/cloud/image/upload/v123/folder/file.ext
+    // or: https://res.cloudinary.com/cloud/raw/upload/v123/folder/file.ext
+    const attachmentParam = filename
+      ? `fl_attachment:${filename.replace(/[^a-zA-Z0-9._-]/g, "_")}`
+      : "fl_attachment";
+    return url.replace("/upload/", `/upload/${attachmentParam}/`);
+  }
+
+  // For other URLs, return as-is (browser will handle)
+  return url;
+}
+
 export default async function OrderDetailPage({ params }: Props) {
   const { orderId } = await params;
   if (!orderId?.trim()) {
@@ -101,6 +126,8 @@ export default async function OrderDetailPage({ params }: Props) {
               name: true,
               slug: true,
               images: true,
+              isDigital: true,
+              digitalFileUrl: true,
               store: { select: { name: true, slug: true } },
             },
           },
@@ -138,6 +165,14 @@ export default async function OrderDetailPage({ params }: Props) {
   if (!isBuyer && !isAdmin) {
     notFound();
   }
+
+  const allDigital = order.items.every(
+    (item) => item.product != null && item.product.isDigital,
+  );
+  const paid =
+    order.status === "PAID" ||
+    order.status === "COMPLETED" ||
+    order.status === "PROCESSING";
 
   const dashboardHref = session ? getRoleDashboardPath(session.role) : null;
 
@@ -217,6 +252,103 @@ export default async function OrderDetailPage({ params }: Props) {
             <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">
               Order Refunded
             </div>
+          ) : allDigital ? (
+            <div className="mt-6">
+              <div className="flex items-center overflow-x-auto pb-2">
+                {DIGITAL_PROGRESS_STEPS.map((label, idx) => {
+                  const lastIdx = DIGITAL_PROGRESS_STEPS.length - 1;
+                  const completed =
+                    idx === 0 || (idx === 1 && paid) || (idx === 2 && paid);
+                  const current = !completed && idx === (paid ? 2 : 1);
+                  return (
+                    <Fragment key={label}>
+                      <div className="flex min-w-[4.5rem] flex-col items-center">
+                        <div
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                            completed
+                              ? "bg-[#D4450A] text-white"
+                              : current
+                                ? "border-2 border-[#D4450A] bg-white text-[#D4450A]"
+                                : "border border-zinc-200 bg-zinc-100 text-zinc-400"
+                          }`}
+                        >
+                          {completed ? (
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="3"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          ) : (
+                            idx + 1
+                          )}
+                        </div>
+                        <span className="mt-2 hidden max-w-[5.5rem] text-center text-[10px] leading-tight text-zinc-500 sm:block">
+                          {label}
+                        </span>
+                      </div>
+                      {idx < lastIdx ? (
+                        <div
+                          className={`mx-1 h-0.5 min-w-[12px] flex-1 ${
+                            idx < (paid ? 3 : 1) ? "bg-[#D4450A]" : "bg-zinc-200"
+                          }`}
+                          aria-hidden
+                        />
+                      ) : null}
+                    </Fragment>
+                  );
+                })}
+              </div>
+
+              {paid ? (
+                <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                  <p className="mb-3 text-sm font-bold text-emerald-900">Your downloads are ready</p>
+                  <div className="flex flex-col gap-2">
+                    {order.items.map((item) =>
+                      item.product && item.product.digitalFileUrl ? (
+                        <a
+                          key={item.id}
+                          href={forceDownloadUrl(
+                            item.product.digitalFileUrl,
+                            item.product.name,
+                          )}
+                          download
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-50"
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                          </svg>
+                          Download {item.product.name}
+                        </a>
+                      ) : null,
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-3">
+                  <p className="text-sm text-zinc-600">
+                    Your download link will appear here once payment is confirmed.
+                  </p>
+                </div>
+              )}
+            </div>
           ) : (
             <div className="mt-6">
               <div className="flex items-center overflow-x-auto pb-2">
@@ -228,7 +360,6 @@ export default async function OrderDetailPage({ params }: Props) {
                     order.status === "CUSTOMER_RECEIVED";
                   const completed = idx < currentStep || (delivered && idx === lastIdx);
                   const current = !completed && idx === currentStep;
-
                   return (
                     <Fragment key={label}>
                       <div className="flex min-w-[4.5rem] flex-col items-center">
@@ -473,10 +604,19 @@ export default async function OrderDetailPage({ params }: Props) {
                   <span>Subtotal</span>
                   <span>TTD {(order.subtotalMinor / 100).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-zinc-600">
-                  <span>Shipping</span>
-                  <span>TTD {(order.shippingMinor / 100).toFixed(2)}</span>
-                </div>
+                {allDigital ? (
+                  <div className="flex justify-between text-zinc-600">
+                    <span>Delivery</span>
+                    <span className="font-semibold text-emerald-600">
+                      Free — instant download
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex justify-between text-zinc-600">
+                    <span>Shipping</span>
+                    <span>TTD {(order.shippingMinor / 100).toFixed(2)}</span>
+                  </div>
+                )}
                 <div
                   className="flex justify-between border-t border-zinc-100 pt-2 text-base font-bold"
                   style={{ color: "var(--scarlet)" }}

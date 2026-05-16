@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { BookingPaymentMode } from "@prisma/client";
+import { BookingPaymentMode, QuotePriceType } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth/session";
@@ -34,6 +34,23 @@ export async function getVendorServices() {
       category: true,
       images: true,
       createdAt: true,
+      responseTime: true,
+      minimumQuoteAmount: true,
+      siteVisitRequired: true,
+      subscriptionInterval: true,
+      sessionsIncluded: true,
+      subscriptionCancellationDays: true,
+      subscriptionTrialPeriod: true,
+      subscriptionTrialPrice: true,
+      subscriptionCanPause: true,
+      subscriptionPauseMaxWeeks: true,
+      travelFee: true,
+      serviceRadius: true,
+      estimatedResponseMins: true,
+      virtualPlatform: true,
+      virtualMeetingInfo: true,
+      maxGroupSize: true,
+      quotePriceType: true,
     },
     orderBy: { createdAt: "desc" },
   });
@@ -52,7 +69,19 @@ export async function createService(formData: FormData) {
   const category = categoryRaw.trim() || null;
   const serviceType = formData.get("serviceType") as string;
   const serviceLocationRaw = (formData.get("serviceLocation") as string) || "";
-  const price = parseFloat(formData.get("price") as string);
+  const quotePriceTypeRaw = formData.get("quotePriceType") as string | null;
+  const quotePriceType =
+    quotePriceTypeRaw === "STARTING_FROM" ||
+    quotePriceTypeRaw === "CALLOUT_FEE" ||
+    quotePriceTypeRaw === "FREE_QUOTE"
+      ? quotePriceTypeRaw
+      : null;
+
+  const priceRaw = formData.get("price") as string;
+  const price =
+    serviceType === "QUOTE" && quotePriceType === "FREE_QUOTE"
+      ? 0
+      : parseFloat(priceRaw) || 0;
   const serviceDuration = formData.get("serviceDuration")
     ? parseInt(formData.get("serviceDuration") as string, 10)
     : null;
@@ -62,6 +91,8 @@ export async function createService(formData: FormData) {
     : null;
   const isPublished = formData.get("isPublished") === "true";
   const tagsRaw = formData.get("tags") as string;
+  const imagesRaw = formData.get("images") as string;
+  const images = imagesRaw ? imagesRaw.split(",").map((u) => u.trim()).filter(Boolean) : [];
   const tags = tagsRaw ? tagsRaw.split(",").map((t) => t.trim()).filter(Boolean) : [];
 
   const bookingPaymentModeRaw =
@@ -76,6 +107,50 @@ export async function createService(formData: FormData) {
   )
     ? (bookingPaymentModeRaw as BookingPaymentMode)
     : BookingPaymentMode.CUSTOMER_CHOOSES;
+
+  // Quote fields
+  const responseTime = (formData.get("responseTime") as string) || null;
+  const minimumQuoteAmount = formData.get("minimumQuoteAmount")
+    ? parseFloat(formData.get("minimumQuoteAmount") as string)
+    : null;
+  const siteVisitRequired = formData.getAll("siteVisitRequired").includes("true");
+
+  // Subscription fields
+  const subscriptionInterval = (formData.get("subscriptionInterval") as string) || null;
+  const sessionsIncluded = formData.get("sessionsIncluded")
+    ? parseInt(formData.get("sessionsIncluded") as string, 10)
+    : null;
+  const subscriptionCancellationDays = formData.get("subscriptionCancellationDays")
+    ? parseInt(formData.get("subscriptionCancellationDays") as string, 10)
+    : null;
+  const subscriptionTrialPeriod = formData.get("subscriptionTrialPeriod")
+    ? parseInt(formData.get("subscriptionTrialPeriod") as string, 10)
+    : null;
+  const subscriptionTrialPrice = formData.get("subscriptionTrialPrice")
+    ? parseFloat(formData.get("subscriptionTrialPrice") as string)
+    : null;
+  const subscriptionCanPause = formData.get("subscriptionCanPause") === "true";
+  const subscriptionPauseMaxWeeks = formData.get("subscriptionPauseMaxWeeks")
+    ? parseInt(formData.get("subscriptionPauseMaxWeeks") as string, 10)
+    : null;
+
+  // On-demand fields
+  const travelFee = formData.get("travelFee")
+    ? parseFloat(formData.get("travelFee") as string)
+    : null;
+  const serviceRadius = formData.get("serviceRadius")
+    ? parseInt(formData.get("serviceRadius") as string, 10)
+    : null;
+  const estimatedResponseMins = formData.get("estimatedResponseMins")
+    ? parseInt(formData.get("estimatedResponseMins") as string, 10)
+    : null;
+
+  // Virtual fields
+  const virtualPlatform = (formData.get("virtualPlatform") as string) || null;
+  const virtualMeetingInfo = (formData.get("virtualMeetingInfo") as string) || null;
+  const maxGroupSize = formData.get("maxGroupSize")
+    ? parseInt(formData.get("maxGroupSize") as string, 10)
+    : null;
 
   if (!name || !serviceType || Number.isNaN(price)) return { error: "Missing required fields" };
 
@@ -101,9 +176,47 @@ export async function createService(formData: FormData) {
         depositAmount !== null && !Number.isNaN(depositAmount) ? depositAmount : null,
       isPublished,
       tags,
-      images: [],
+      images,
       isBookable: serviceType === "BOOKABLE" || serviceType === "VIRTUAL",
       bookingPaymentMode,
+      quotePriceType:
+        serviceType === "QUOTE" && quotePriceType
+          ? (quotePriceType as QuotePriceType)
+          : null,
+      responseTime,
+      minimumQuoteAmount:
+        minimumQuoteAmount !== null && !Number.isNaN(minimumQuoteAmount) ? minimumQuoteAmount : null,
+      siteVisitRequired,
+      subscriptionInterval,
+      sessionsIncluded:
+        sessionsIncluded !== null && !Number.isNaN(sessionsIncluded) ? sessionsIncluded : null,
+      subscriptionCancellationDays:
+        subscriptionCancellationDays !== null && !Number.isNaN(subscriptionCancellationDays)
+          ? subscriptionCancellationDays
+          : null,
+      subscriptionTrialPeriod:
+        subscriptionTrialPeriod !== null && !Number.isNaN(subscriptionTrialPeriod)
+          ? subscriptionTrialPeriod
+          : null,
+      subscriptionTrialPrice:
+        subscriptionTrialPrice !== null && !Number.isNaN(subscriptionTrialPrice)
+          ? subscriptionTrialPrice
+          : null,
+      subscriptionCanPause,
+      subscriptionPauseMaxWeeks:
+        subscriptionPauseMaxWeeks !== null && !Number.isNaN(subscriptionPauseMaxWeeks)
+          ? subscriptionPauseMaxWeeks
+          : null,
+      travelFee: travelFee !== null && !Number.isNaN(travelFee) ? travelFee : null,
+      serviceRadius:
+        serviceRadius !== null && !Number.isNaN(serviceRadius) ? serviceRadius : null,
+      estimatedResponseMins:
+        estimatedResponseMins !== null && !Number.isNaN(estimatedResponseMins)
+          ? estimatedResponseMins
+          : null,
+      virtualPlatform,
+      virtualMeetingInfo,
+      maxGroupSize: maxGroupSize && !Number.isNaN(maxGroupSize) ? maxGroupSize : null,
     },
   });
 
@@ -130,7 +243,19 @@ export async function updateService(id: string, formData: FormData) {
   const category = categoryRaw.trim() || null;
   const serviceType = formData.get("serviceType") as string;
   const serviceLocationRaw = (formData.get("serviceLocation") as string) || "";
-  const price = parseFloat(formData.get("price") as string);
+  const quotePriceTypeRaw = formData.get("quotePriceType") as string | null;
+  const quotePriceType =
+    quotePriceTypeRaw === "STARTING_FROM" ||
+    quotePriceTypeRaw === "CALLOUT_FEE" ||
+    quotePriceTypeRaw === "FREE_QUOTE"
+      ? quotePriceTypeRaw
+      : null;
+
+  const priceRaw = formData.get("price") as string;
+  const price =
+    serviceType === "QUOTE" && quotePriceType === "FREE_QUOTE"
+      ? 0
+      : parseFloat(priceRaw) || 0;
   const serviceDuration = formData.get("serviceDuration")
     ? parseInt(formData.get("serviceDuration") as string, 10)
     : null;
@@ -155,6 +280,50 @@ export async function updateService(id: string, formData: FormData) {
     ? (bookingPaymentModeRaw as BookingPaymentMode)
     : BookingPaymentMode.CUSTOMER_CHOOSES;
 
+  // Quote fields
+  const responseTime = (formData.get("responseTime") as string) || null;
+  const minimumQuoteAmount = formData.get("minimumQuoteAmount")
+    ? parseFloat(formData.get("minimumQuoteAmount") as string)
+    : null;
+  const siteVisitRequired = formData.getAll("siteVisitRequired").includes("true");
+
+  // Subscription fields
+  const subscriptionInterval = (formData.get("subscriptionInterval") as string) || null;
+  const sessionsIncluded = formData.get("sessionsIncluded")
+    ? parseInt(formData.get("sessionsIncluded") as string, 10)
+    : null;
+  const subscriptionCancellationDays = formData.get("subscriptionCancellationDays")
+    ? parseInt(formData.get("subscriptionCancellationDays") as string, 10)
+    : null;
+  const subscriptionTrialPeriod = formData.get("subscriptionTrialPeriod")
+    ? parseInt(formData.get("subscriptionTrialPeriod") as string, 10)
+    : null;
+  const subscriptionTrialPrice = formData.get("subscriptionTrialPrice")
+    ? parseFloat(formData.get("subscriptionTrialPrice") as string)
+    : null;
+  const subscriptionCanPause = formData.get("subscriptionCanPause") === "true";
+  const subscriptionPauseMaxWeeks = formData.get("subscriptionPauseMaxWeeks")
+    ? parseInt(formData.get("subscriptionPauseMaxWeeks") as string, 10)
+    : null;
+
+  // On-demand fields
+  const travelFee = formData.get("travelFee")
+    ? parseFloat(formData.get("travelFee") as string)
+    : null;
+  const serviceRadius = formData.get("serviceRadius")
+    ? parseInt(formData.get("serviceRadius") as string, 10)
+    : null;
+  const estimatedResponseMins = formData.get("estimatedResponseMins")
+    ? parseInt(formData.get("estimatedResponseMins") as string, 10)
+    : null;
+
+  // Virtual fields
+  const virtualPlatform = (formData.get("virtualPlatform") as string) || null;
+  const virtualMeetingInfo = (formData.get("virtualMeetingInfo") as string) || null;
+  const maxGroupSize = formData.get("maxGroupSize")
+    ? parseInt(formData.get("maxGroupSize") as string, 10)
+    : null;
+
   if (!name || !serviceType || Number.isNaN(price)) return { error: "Missing required fields" };
 
   await prisma.product.update({
@@ -174,8 +343,55 @@ export async function updateService(id: string, formData: FormData) {
         depositAmount !== null && !Number.isNaN(depositAmount) ? depositAmount : null,
       isPublished,
       tags,
+      // Update images if provided
+      ...(formData.get("images")
+        ? {
+            images: (formData.get("images") as string)
+              .split(",")
+              .map((u) => u.trim())
+              .filter(Boolean),
+          }
+        : {}),
       bookingPaymentMode,
       isBookable: serviceType === "BOOKABLE" || serviceType === "VIRTUAL",
+      quotePriceType:
+        serviceType === "QUOTE" && quotePriceType
+          ? (quotePriceType as QuotePriceType)
+          : null,
+      responseTime,
+      minimumQuoteAmount:
+        minimumQuoteAmount !== null && !Number.isNaN(minimumQuoteAmount) ? minimumQuoteAmount : null,
+      siteVisitRequired,
+      subscriptionInterval,
+      sessionsIncluded:
+        sessionsIncluded !== null && !Number.isNaN(sessionsIncluded) ? sessionsIncluded : null,
+      subscriptionCancellationDays:
+        subscriptionCancellationDays !== null && !Number.isNaN(subscriptionCancellationDays)
+          ? subscriptionCancellationDays
+          : null,
+      subscriptionTrialPeriod:
+        subscriptionTrialPeriod !== null && !Number.isNaN(subscriptionTrialPeriod)
+          ? subscriptionTrialPeriod
+          : null,
+      subscriptionTrialPrice:
+        subscriptionTrialPrice !== null && !Number.isNaN(subscriptionTrialPrice)
+          ? subscriptionTrialPrice
+          : null,
+      subscriptionCanPause,
+      subscriptionPauseMaxWeeks:
+        subscriptionPauseMaxWeeks !== null && !Number.isNaN(subscriptionPauseMaxWeeks)
+          ? subscriptionPauseMaxWeeks
+          : null,
+      travelFee: travelFee !== null && !Number.isNaN(travelFee) ? travelFee : null,
+      serviceRadius:
+        serviceRadius !== null && !Number.isNaN(serviceRadius) ? serviceRadius : null,
+      estimatedResponseMins:
+        estimatedResponseMins !== null && !Number.isNaN(estimatedResponseMins)
+          ? estimatedResponseMins
+          : null,
+      virtualPlatform,
+      virtualMeetingInfo,
+      maxGroupSize: maxGroupSize && !Number.isNaN(maxGroupSize) ? maxGroupSize : null,
     },
   });
 

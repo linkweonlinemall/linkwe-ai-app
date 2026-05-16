@@ -120,6 +120,7 @@ export default async function PublicStorePage({ params }: Props) {
     where: {
       storeId: store.id,
       isPublished: true,
+      isService: false,
     },
     orderBy: { createdAt: "desc" },
     select: {
@@ -133,6 +134,47 @@ export default async function PublicStorePage({ params }: Props) {
       stock: true,
       hasVariants: true,
     },
+  });
+
+  const services = await prisma.product.findMany({
+    where: {
+      storeId: store.id,
+      isPublished: true,
+      isService: true,
+    },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      price: true,
+      images: true,
+      category: true,
+      serviceType: true,
+      serviceDuration: true,
+      serviceLocation: true,
+      isFeatured: true,
+    },
+    orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+  });
+
+  const relatedStores = await prisma.store.findMany({
+    where: {
+      categoryId: store.categoryId,
+      slug: { not: store.slug },
+      status: "ACTIVE",
+    },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      logoUrl: true,
+      coverPhotoUrl: true,
+      tagline: true,
+      region: true,
+      categoryId: true,
+    },
+    take: 6,
+    orderBy: { createdAt: "desc" },
   });
 
   const initials = store.name
@@ -243,6 +285,8 @@ export default async function PublicStorePage({ params }: Props) {
       <StorefrontTabs
         store={store}
         products={products}
+        services={services}
+        relatedStores={relatedStores}
         openingHours={openingHours}
         socialLinks={socialLinks}
         hasSocialLinks={hasSocialLinks}

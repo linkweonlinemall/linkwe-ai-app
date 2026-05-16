@@ -29,6 +29,7 @@ export default async function CheckoutPage() {
           allowPickup: true,
           deliveryFee: true,
           storeId: true,
+          isDigital: true,
           store: { select: { name: true, slug: true } },
         },
       },
