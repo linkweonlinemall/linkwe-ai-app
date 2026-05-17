@@ -5,8 +5,10 @@ import type { ProductCondition } from "@prisma/client";
 
 import ProductBuyBox from "@/components/product/ProductBuyBox";
 import PublicNav from "@/components/layout/PublicNav";
+import WishlistButton from "@/components/ui/WishlistButton";
 import ExpandableDescription from "@/components/ui/ExpandableDescription";
 import { ProductGallery } from "@/components/product/ProductGallery";
+import { getWishlistProductIds } from "@/app/actions/wishlist";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { getSession } from "@/lib/auth/session";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
@@ -115,6 +117,9 @@ export default async function PublicProductPage({ params }: Props) {
   });
 
   if (!product?.isPublished) notFound();
+
+  const wishlistIds = await getWishlistProductIds();
+  const isWishlisted = wishlistIds.includes(product.id);
 
   const variants = product.hasVariants
     ? await prisma.productVariant.findMany({
@@ -384,6 +389,10 @@ export default async function PublicProductPage({ params }: Props) {
                 hasVariants={product.hasVariants}
                 variants={buyBoxVariants}
               />
+              <div className="mt-4 flex items-center gap-3 border-t border-zinc-100 pt-4">
+                <WishlistButton productId={product.id} initialWishlisted={isWishlisted} size="md" />
+                <span className="text-xs text-zinc-400">Save for later</span>
+              </div>
             </div>
 
             <div className="rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-3">

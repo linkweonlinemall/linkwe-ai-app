@@ -3,10 +3,12 @@ import { Suspense } from "react";
 
 import { Prisma } from "@prisma/client";
 
+import { getWishlistProductIds } from "@/app/actions/wishlist";
 import ProductSearchBar from "@/components/shop/ProductSearchBar";
 import ShopProductCardActions from "@/components/shop/ShopProductCardActions";
 import ShopFilters from "@/components/shop/ShopFilters";
 import PublicNav from "@/components/layout/PublicNav";
+import WishlistButton from "@/components/ui/WishlistButton";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -138,6 +140,8 @@ export default async function ShopPage({ searchParams }: Props) {
     orderBy,
     take: 60,
   });
+
+  const wishlistIds = await getWishlistProductIds();
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] pb-16 sm:pb-0">
@@ -277,6 +281,13 @@ export default async function ShopPage({ searchParams }: Props) {
                               <span className="text-4xl text-zinc-300">📦</span>
                             </div>
                           )}
+                          <div className="absolute right-2 top-2 z-10">
+                            <WishlistButton
+                              productId={product.id}
+                              initialWishlisted={wishlistIds.includes(product.id)}
+                              size="sm"
+                            />
+                          </div>
                           {/* Badges */}
                           <div className="absolute left-2 top-2 flex flex-col gap-1">
                             {product.isFeatured ? (

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import AddToCartButton from "@/components/product/AddToCartButton";
 import ProductCardChooseOptionsLink from "@/components/shop/ProductCardChooseOptionsLink";
+import SaveStoreButton from "@/components/ui/SaveStoreButton";
 import { StorefrontMapAndProducts, type StorefrontProductRow } from "@/components/storefront/StorefrontMapAndProducts";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 
@@ -238,6 +239,8 @@ type TabId = "about" | "store" | "services" | "bookings" | "reviews";
 
 type Props = {
   store: StorefrontTabsStore;
+  storeId: string;
+  initialSaved: boolean;
   products: StoreTabProduct[];
   services?: StoreTabServiceRow[];
   relatedStores?: RelatedStore[];
@@ -249,6 +252,8 @@ type Props = {
 
 export default function StorefrontTabs({
   store,
+  storeId,
+  initialSaved,
   products,
   services,
   relatedStores,
@@ -398,6 +403,10 @@ export default function StorefrontTabs({
             </Link>
           ) : null}
 
+          {!canEditStore ? (
+            <SaveStoreButton storeId={storeId} initialSaved={initialSaved} />
+          ) : null}
+
           <div className="relative">
             <button
               type="button"
@@ -530,26 +539,6 @@ export default function StorefrontTabs({
               strokeLinejoin="round"
             >
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
-          </button>
-
-          <button
-            type="button"
-            className="inline-flex items-center justify-center h-9 w-9 rounded-xl border border-zinc-200 bg-white shadow-[0_4px_24px_rgba(0,0,0,0.08)] hover:shadow-md hover:border-zinc-300 transition-all text-zinc-600"
-            title="Save store"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
             </svg>
           </button>
 

@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { getSavedStoreIds, getWishlistProductIds } from "@/app/actions/wishlist";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import HeroSlider from "@/components/layout/HeroSlider";
 import PublicNav from "@/components/layout/PublicNav";
+import WishlistButton from "@/components/ui/WishlistButton";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { PRODUCT_CATEGORIES } from "@/lib/categories";
 import { SERVICE_CATEGORIES } from "@/lib/categories";
@@ -38,6 +40,8 @@ export default async function Home() {
     orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
     take: 8,
   });
+
+  const wishlistIds = await getWishlistProductIds();
 
   // Featured services
   const featuredServices = await prisma.product.findMany({
@@ -79,6 +83,8 @@ export default async function Home() {
     orderBy: { createdAt: "desc" },
     take: 6,
   });
+
+  const savedStoreIds = await getSavedStoreIds();
 
   // Stats
   const [storeCount, productCount] = await Promise.all([
@@ -233,6 +239,13 @@ export default async function Home() {
                         ⬇ Digital
                       </div>
                     )}
+                    <div className="absolute right-2 top-2 z-10">
+                      <WishlistButton
+                        productId={product.id}
+                        initialWishlisted={wishlistIds.includes(product.id)}
+                        size="sm"
+                      />
+                    </div>
                   </div>
                   <div className={`p-3 ${isHero ? "sm:p-5" : ""}`}>
                     <p className="mb-0.5 truncate text-[10px] font-bold uppercase tracking-wider text-zinc-400">
@@ -526,8 +539,21 @@ export default async function Home() {
                         )}
                       </div>
                     </div>
-                    <div className="absolute right-2 top-2 rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
-                      {store._count.products}
+                    <div className="pointer-events-none absolute right-2 top-2 z-10 flex flex-col items-end gap-1.5">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm">
+                        {savedStoreIds.includes(store.id) ? (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="#D4450A" stroke="#D4450A" strokeWidth="2">
+                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                          </svg>
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#71717a" strokeWidth="2">
+                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                          </svg>
+                        )}
+                      </div>
+                      <div className="rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+                        {store._count.products}
+                      </div>
                     </div>
                   </div>
                   <div className="p-3">

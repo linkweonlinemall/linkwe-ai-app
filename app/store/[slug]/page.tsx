@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import PublicNav from "@/components/layout/PublicNav";
 import StorefrontTabs from "@/components/storefront/StorefrontTabs";
+import { getSavedStoreIds } from "@/app/actions/wishlist";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 
 type TimeSlot = { from: string; to: string };
@@ -89,6 +90,9 @@ export default async function PublicStorePage({ params }: Props) {
   const isOwner = session != null && store.ownerId === session.userId;
   const isAdmin = session?.role === "ADMIN";
   const canEditStore = isOwner || isAdmin;
+
+  const savedStoreIds = await getSavedStoreIds();
+  const isSaved = savedStoreIds.includes(store.id);
 
   const socialLinks = (store.socialLinks as Record<string, string> | null) ?? {};
   const hasSocialLinks = Object.keys(socialLinks).length > 0;
@@ -285,6 +289,8 @@ export default async function PublicStorePage({ params }: Props) {
 
       <StorefrontTabs
         store={store}
+        storeId={store.id}
+        initialSaved={isSaved}
         products={products}
         services={services}
         relatedStores={relatedStores}

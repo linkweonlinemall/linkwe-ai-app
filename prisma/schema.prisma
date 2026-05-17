@@ -52,6 +52,8 @@ model User {
   courierLocation       CourierLocation?       @relation("CourierLocation")
   productCartItems      ProductCartItem[]
   vendorChats           VendorChat[]
+  wishlist              Wishlist?
+  savedStores           SavedStore[]
 
   @@index([email])
   @@index([createdAt])
@@ -174,6 +176,7 @@ model Store {
   payoutThreshold  VendorThreshold?
   warehouses       Warehouse[]
   images           StoreImage[]
+  savedBy          SavedStore[]
 
   @@index([slug])
   @@map("stores")
@@ -1297,6 +1300,7 @@ model Product {
   cartItems             ProductCartItem[]
   orderItems            OrderItem[]
   staffServices         StaffService[]
+  wishlistItems         WishlistItem[]
 
   @@index([storeId])
   @@index([isPublished])
@@ -1419,6 +1423,45 @@ model ProductBooking {
   @@index([customerId])
   @@index([slotId])
   @@index([status])
+}
+
+model Wishlist {
+  id        String         @id @default(cuid())
+  userId    String         @unique
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     WishlistItem[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@map("wishlists")
+}
+
+model WishlistItem {
+  id         String   @id @default(cuid())
+  wishlistId String
+  wishlist   Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([wishlistId, productId])
+  @@index([wishlistId])
+  @@index([productId])
+  @@map("wishlist_items")
+}
+
+model SavedStore {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, storeId])
+  @@index([userId])
+  @@index([storeId])
+  @@map("saved_stores")
 }
 
 model DigitalDownload {
