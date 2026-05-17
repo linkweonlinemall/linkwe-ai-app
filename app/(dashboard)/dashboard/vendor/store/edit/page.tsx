@@ -7,11 +7,11 @@ import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
 import OpeningHoursEditor from "@/components/vendor/OpeningHoursEditor";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
+import RegionSelect from "@/components/ui/RegionSelect";
 import Textarea from "@/components/ui/Textarea";
 import GalleryUploadWrapper from "./gallery-upload-wrapper";
 import { getSession } from "@/lib/auth/session";
 import { STORE_CATEGORIES } from "@/lib/categories";
-import { TRINIDAD_ONBOARDING_REGION_OPTIONS } from "@/lib/onboarding/tt-region-options";
 import { prisma } from "@/lib/prisma";
 
 type TimeSlot = { from: string; to: string };
@@ -49,6 +49,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   slug_taken: "This slug is already taken",
   slug_invalid: "Use a valid slug: lowercase letters, numbers, and single hyphens (3–64 characters).",
   region_required: "Please select an operating region.",
+  region_invalid: "Please select a valid operating region from the list.",
   category_required: "Please select a category.",
   upload_failed: "Upload failed. Check the file type and size, then try again.",
   gallery_full: "The store gallery can hold at most 10 photos. Remove one to add another.",
@@ -216,14 +217,12 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
             Details
           </h2>
           <div className="flex flex-col gap-4">
-            <Select required className="text-base" defaultValue={store.region} label="Operating region" name="region">
-              <option value="">Select…</option>
-              {TRINIDAD_ONBOARDING_REGION_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </Select>
+            <RegionSelect
+              name="region"
+              defaultValue={store.region}
+              required
+              label="Operating region"
+            />
             <Select required className="text-base" defaultValue={store.categoryId} label="Category" name="categoryId">
               <option value="">Select…</option>
               {!STORE_CATEGORIES.some((c) => c.value === store.categoryId) ? (

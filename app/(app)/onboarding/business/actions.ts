@@ -8,6 +8,7 @@ import { getStoreByOwnerId } from "@/lib/store/get-vendor-store";
 import { saveKycDocumentUpload } from "@/lib/onboarding/save-kyc-upload";
 import { normalizeStoreSlug, validateStoreSlug } from "@/lib/store/slug";
 import { logPrismaError } from "@/lib/log-prisma-error";
+import { isValidRegion, normalizeRegion } from "@/lib/regions/tt-regions";
 
 export type BusinessOnboardingState = { error?: string };
 
@@ -32,6 +33,10 @@ export async function saveBusinessOnboardingStep1(
   if (!fullName) return { error: "Full name is required." };
   if (fullName.length > 120) return { error: "Full name is too long." };
   if (!region) return { error: "Select your region." };
+  const normalizedRegion = normalizeRegion(region);
+  if (!isValidRegion(normalizedRegion)) {
+    return { error: "Please select a valid region." };
+  }
 
   const phone = phoneRaw.length > 0 ? phoneRaw : null;
   if (phone) {
@@ -49,7 +54,7 @@ export async function saveBusinessOnboardingStep1(
       where: { id: user!.id },
       data: {
         fullName,
-        region,
+        region: normalizedRegion,
         phone,
       },
     });
@@ -131,6 +136,10 @@ export async function saveBusinessOnboardingStep3(
 
   if (!categoryId) return { error: "Select a store category." };
   if (!region) return { error: "Select your store region." };
+  const normalizedRegion = normalizeRegion(region);
+  if (!isValidRegion(normalizedRegion)) {
+    return { error: "Please select a valid store region." };
+  }
 
   const tagErr = validateTagline(tagline);
   if (tagErr) return { error: tagErr };
@@ -163,7 +172,7 @@ export async function saveBusinessOnboardingStep3(
           name: name.trim(),
           slug,
           categoryId,
-          region,
+          region: normalizedRegion,
           tagline: tagline.trim(),
           logoUrl: logoUrl ?? existing?.logoUrl ?? null,
           onboardingStep: 3,
@@ -177,7 +186,7 @@ export async function saveBusinessOnboardingStep3(
           name: name.trim(),
           slug,
           categoryId,
-          region,
+          region: normalizedRegion,
           tagline: tagline.trim(),
           logoUrl,
           onboardingStep: 3,

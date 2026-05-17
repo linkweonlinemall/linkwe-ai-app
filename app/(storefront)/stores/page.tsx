@@ -4,12 +4,12 @@ import type { Metadata } from "next";
 import {
   getPublicStorePopularTags,
   getPublicStores,
-  getPublicStoreRegions,
   type PublicStoresFilters,
   type PublicStoreSort,
 } from "@/app/actions/public-stores";
 import PublicNav from "@/components/layout/PublicNav";
 import PublicStoreCard from "@/components/storefront/PublicStoreCard";
+import RegionSelect from "@/components/ui/RegionSelect";
 import StoreSearchBar from "@/components/storefront/StoreSearchBar";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
@@ -113,15 +113,10 @@ export default async function StoresDiscoveryPage({
     userLng,
   };
 
-  const [regionsFromDb, tags, result] = await Promise.all([
-    getPublicStoreRegions(),
+  const [tags, result] = await Promise.all([
     getPublicStorePopularTags(32),
     getPublicStores(qRaw.trim() || undefined, filters, page),
   ]);
-
-  const mergedRegions = Array.from(new Set([...regionsFromDb].filter(Boolean))).sort((a, b) =>
-    a.localeCompare(b)
-  );
 
   const queryState = {
     q: qRaw,
@@ -166,19 +161,7 @@ export default async function StoresDiscoveryPage({
               <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Filters</p>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-600">Region</label>
-                <select
-                  name="region"
-                  defaultValue={region}
-                  className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
-                >
-                  <option value="">All regions</option>
-                  {mergedRegions.map((r) => (
-                    <option key={r} value={r}>
-                      {r.replace(/_/g, " ")}
-                    </option>
-                  ))}
-                </select>
+                <RegionSelect name="region" defaultValue={region} label="Region" />
               </div>
 
               <div>

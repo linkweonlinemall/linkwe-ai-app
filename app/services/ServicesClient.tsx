@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { SERVICE_CATEGORIES } from "@/lib/categories";
+import { getRegionLabel } from "@/lib/regions/tt-regions";
 
 const ALL_CATEGORIES = [{ value: "all", label: "All Services" }, ...SERVICE_CATEGORIES];
 
@@ -375,6 +376,9 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                       <div className="flex flex-1 flex-col gap-2 p-4">
                         <div>
                           <p className="text-xs font-medium text-zinc-400">{service.store.name}</p>
+                          {service.store.region ? (
+                            <p className="text-[10px] text-zinc-400">{getRegionLabel(service.store.region)}</p>
+                          ) : null}
                           <p className="mt-0.5 text-sm font-bold leading-snug text-zinc-900 transition-colors group-hover:text-[#D4450A]">
                             {service.name}
                           </p>

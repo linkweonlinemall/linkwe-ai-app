@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import HeroSlider from "@/components/layout/HeroSlider";
 import PublicNav from "@/components/layout/PublicNav";
+import { getRegionLabel } from "@/lib/regions/tt-regions";
 
 export default async function Home() {
   const session = await getSession();
@@ -196,7 +197,9 @@ export default async function Home() {
                     )}
                   </div>
                   <p className="truncate text-xs font-semibold text-zinc-900">{store.name}</p>
-                  <p className="mt-0.5 text-[10px] capitalize text-zinc-400">{store.region ?? ""}</p>
+                  <p className="mt-0.5 text-[10px] text-zinc-400">
+                    {store.region ? getRegionLabel(store.region) : ""}
+                  </p>
                 </Link>
               ))}
             </div>

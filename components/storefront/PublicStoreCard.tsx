@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { PublicStoreCard as PublicStoreCardType } from "@/app/actions/public-stores";
+import { getRegionLabel } from "@/lib/regions/tt-regions";
 
 function formatCategoryLabel(categoryId: string): string {
   return categoryId.replace(/_/g, " ");
@@ -83,7 +84,7 @@ export default function PublicStoreCard({ store }: { store: PublicStoreCardType 
             {formatCategoryLabel(store.categoryId)}
           </span>
           <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600 ring-1 ring-zinc-200/80">
-            {store.region.replace(/_/g, " ")}
+            {getRegionLabel(store.region)}
           </span>
           {store.tags.slice(0, 3).map((tag) => (
             <span

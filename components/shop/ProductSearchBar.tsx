@@ -3,6 +3,8 @@
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
 
+import { getRegionLabel } from "@/lib/regions/tt-regions"
+
 type ProductResult = {
   id: string
   name: string
@@ -135,7 +137,7 @@ export default function ProductSearchBar({ defaultValue = "", category = "" }: P
                 <p className="truncate text-sm font-semibold text-zinc-900">{product.name}</p>
                 <p className="mt-0.5 truncate text-xs text-zinc-400">
                   {product.store.name}
-                  {product.store.region ? ` · ${product.store.region}` : ""}
+                  {product.store.region ? ` · ${getRegionLabel(product.store.region)}` : ""}
                 </p>
                 <div className="mt-1.5 flex flex-wrap items-center gap-2">
                   <span className="text-sm font-bold text-[#D4450A]">

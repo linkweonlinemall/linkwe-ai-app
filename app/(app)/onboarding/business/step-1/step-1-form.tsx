@@ -5,8 +5,7 @@ import Link from "next/link";
 
 import Input from "@/components/ui/Input";
 import Label from "@/components/ui/Label";
-import Select from "@/components/ui/Select";
-import { TRINIDAD_ONBOARDING_REGION_OPTIONS } from "@/lib/onboarding/tt-region-options";
+import RegionSelect from "@/components/ui/RegionSelect";
 import { saveBusinessOnboardingStep1, type BusinessOnboardingState } from "../actions";
 
 type Props = {
@@ -95,14 +94,7 @@ export function BusinessStep1Form({ defaultFullName, defaultPhone, defaultRegion
           </div>
           <p className="text-xs text-zinc-500">Trinidad & Tobago number. Enter your 7-digit number.</p>
         </div>
-        <Select required className="text-base" defaultValue={defaultRegion} label="Region" name="region">
-          <option value="">Select region…</option>
-          {TRINIDAD_ONBOARDING_REGION_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </Select>
+        <RegionSelect name="region" defaultValue={defaultRegion} required label="Region" />
 
         {state.error ? (
           <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">

@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import PublicNav from "@/components/layout/PublicNav";
 import StorefrontTabs from "@/components/storefront/StorefrontTabs";
+import { getRegionLabel } from "@/lib/regions/tt-regions";
 
 type TimeSlot = { from: string; to: string };
 type DaySchedule = { closed: boolean; allDay: boolean; slots: TimeSlot[] };
@@ -261,7 +262,7 @@ export default async function PublicStorePage({ params }: Props) {
               <div className="mt-2 flex flex-wrap items-center gap-3">
                 {store.region ? (
                   <span className="flex items-center gap-1 text-xs" style={{ color: "var(--text-muted)" }}>
-                    📍 {store.region.replace(/_/g, " ")}
+                    📍 {getRegionLabel(store.region)}
                   </span>
                 ) : null}
                 {store.categoryId ? (

@@ -8,6 +8,7 @@ import { saveKycDocumentUpload } from "@/lib/onboarding/save-kyc-upload";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { saveGalleryUpload } from "@/lib/uploads/save-gallery-upload";
+import { isValidRegion, normalizeRegion } from "@/lib/regions/tt-regions";
 import { validateStoreSlug } from "@/lib/store/slug";
 
 type TimeSlot = { from: string; to: string };
@@ -99,6 +100,10 @@ export async function updateStore(formData: FormData): Promise<void> {
   if (!region) {
     editRedirect("error=region_required");
   }
+  const normalizedRegion = normalizeRegion(region);
+  if (!isValidRegion(normalizedRegion)) {
+    editRedirect("error=region_invalid");
+  }
 
   if (!categoryId) {
     editRedirect("error=category_required");
@@ -168,7 +173,7 @@ export async function updateStore(formData: FormData): Promise<void> {
     slug,
     tagline,
     description,
-    region,
+    region: normalizedRegion,
     categoryId,
     logoUrl,
     tags,

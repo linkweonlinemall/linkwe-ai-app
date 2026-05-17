@@ -11,6 +11,7 @@ import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { PRODUCT_CATEGORIES } from "@/lib/categories";
+import { getRegionLabel } from "@/lib/regions/tt-regions";
 
 const CATEGORIES = [{ value: "all", label: "All" }, ...PRODUCT_CATEGORIES];
 
@@ -302,7 +303,7 @@ export default async function ShopPage({ searchParams }: Props) {
                         <Link href={`/products/${product.slug}`} className="block flex min-h-0 flex-1 flex-col gap-1">
                           <p className="truncate text-[10px] font-medium text-zinc-400">
                             {product.store.name}
-                            {product.store.region ? ` · ${product.store.region}` : ""}
+                            {product.store.region ? ` · ${getRegionLabel(product.store.region)}` : ""}
                           </p>
                           <p className="line-clamp-2 text-sm font-semibold leading-snug text-zinc-900">
                             {product.name}

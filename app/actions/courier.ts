@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getSession } from "@/lib/auth/session";
+import { isValidRegion, normalizeRegion } from "@/lib/regions/tt-regions";
 
 export type CourierOnboardingFormState = { error?: string };
 
@@ -76,12 +77,16 @@ export async function saveCourierOnboardingStep(
     if (!region) {
       return { error: "Please choose an operating region." };
     }
+    const normalizedRegion = normalizeRegion(region);
+    if (!isValidRegion(normalizedRegion)) {
+      return { error: "Please choose a valid operating region." };
+    }
     const vehicleType = String(formData.get("vehicleType") ?? "").trim() || null;
 
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        region,
+        region: normalizedRegion,
         vehicleType,
         courierOnboardingStep: 1,
       },

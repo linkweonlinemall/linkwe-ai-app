@@ -7,6 +7,7 @@ import PublicNav from "@/components/layout/PublicNav";
 import BookingWidget from "@/components/service/BookingWidget";
 import ServiceGallery from "@/components/service/ServiceGallery";
 import ExpandableDescription from "@/components/ui/ExpandableDescription";
+import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { getServiceCategoryLabel } from "@/lib/categories";
 import { prisma } from "@/lib/prisma";
 
@@ -732,7 +733,7 @@ export default async function ServiceDetailPage({ params }: Props) {
                 <div>
                   <p className="text-sm font-semibold text-zinc-900">{service.store.name}</p>
                   {service.store.region ? (
-                    <p className="text-xs capitalize text-zinc-400">{service.store.region}</p>
+                    <p className="text-xs text-zinc-400">{getRegionLabel(service.store.region)}</p>
                   ) : null}
                 </div>
               </div>

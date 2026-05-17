@@ -3,8 +3,8 @@
 import { useActionState } from "react";
 
 import Input from "@/components/ui/Input";
+import RegionSelect from "@/components/ui/RegionSelect";
 import Select from "@/components/ui/Select";
-import { TRINIDAD_ONBOARDING_REGION_OPTIONS } from "@/lib/onboarding/tt-region-options";
 import { STORE_CATEGORY_OPTIONS } from "@/lib/onboarding/store-categories";
 import { saveBusinessOnboardingStep3, type BusinessOnboardingState } from "../actions";
 
@@ -92,14 +92,7 @@ export function BusinessStep3Form({
           </option>
         ))}
       </Select>
-      <Select required className="text-base" defaultValue={defaultRegion} label="Store region" name="region">
-        <option value="">Select region…</option>
-        {TRINIDAD_ONBOARDING_REGION_OPTIONS.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </Select>
+      <RegionSelect name="region" defaultValue={defaultRegion} required label="Store region" />
       <Input
         required
         className="text-base"

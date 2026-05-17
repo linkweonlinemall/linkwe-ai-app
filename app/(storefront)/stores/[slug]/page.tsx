@@ -11,6 +11,7 @@ import PublicNav from "@/components/layout/PublicNav";
 import ProductCardChooseOptionsLink from "@/components/shop/ProductCardChooseOptionsLink";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
+import { getRegionLabel } from "@/lib/regions/tt-regions";
 
 type WeekSchedule = Record<
   string,
@@ -220,7 +221,7 @@ export default async function PublicStoreSlugPage({ params, searchParams }: Prop
                 </p>
               ) : null}
               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs" style={{ color: "var(--text-muted)" }}>
-                <span>{store.region.replace(/_/g, " ")}</span>
+                <span>{getRegionLabel(store.region)}</span>
                 <span
                   className="rounded-full px-2 py-0.5"
                   style={{

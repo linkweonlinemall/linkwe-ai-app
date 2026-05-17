@@ -7,6 +7,7 @@ import ProductBuyBox from "@/components/product/ProductBuyBox";
 import PublicNav from "@/components/layout/PublicNav";
 import ExpandableDescription from "@/components/ui/ExpandableDescription";
 import { ProductGallery } from "@/components/product/ProductGallery";
+import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { getSession } from "@/lib/auth/session";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { prisma } from "@/lib/prisma";
@@ -506,7 +507,7 @@ export default async function PublicProductPage({ params }: Props) {
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-zinc-900">{store.name}</p>
-                  <p className="truncate text-xs capitalize text-zinc-400">{store.region}</p>
+                  <p className="truncate text-xs text-zinc-400">{getRegionLabel(store.region)}</p>
                 </div>
               </div>
               <Link

@@ -10,7 +10,7 @@ import {
   type CourierOnboardingFormState,
 } from "@/app/actions/courier";
 import Button from "@/components/ui/Button";
-import { TRINIDAD_ONBOARDING_REGION_OPTIONS } from "@/lib/onboarding/tt-region-options";
+import RegionSelect from "@/components/ui/RegionSelect";
 
 const VEHICLE_TYPES = ["Car", "Motorcycle", "Van", "Truck"] as const;
 
@@ -117,23 +117,13 @@ export default function CourierDashboardOnboardingPage() {
                 </div>
               </div>
 
-              <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800">
-                Operating region
-                <select
-                  required
-                  className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2"
-                  defaultValue={bootstrap.region ?? ""}
-                  key={bootstrap.region ?? "empty"}
-                  name="region"
-                >
-                  <option value="">Select…</option>
-                  {TRINIDAD_ONBOARDING_REGION_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <RegionSelect
+                key={bootstrap.region ?? "courier-region"}
+                name="region"
+                defaultValue={bootstrap.region ?? ""}
+                required
+                label="Operating region"
+              />
 
               {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
 

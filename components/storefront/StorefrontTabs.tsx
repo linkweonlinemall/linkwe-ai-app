@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import AddToCartButton from "@/components/product/AddToCartButton";
 import ProductCardChooseOptionsLink from "@/components/shop/ProductCardChooseOptionsLink";
 import { StorefrontMapAndProducts, type StorefrontProductRow } from "@/components/storefront/StorefrontMapAndProducts";
+import { getRegionLabel } from "@/lib/regions/tt-regions";
 
 const PLACEHOLDER_COLORS = ["#E8820C", "#1A7FB5", "#D4450A", "#15803D", "#7C3AED"] as const;
 
@@ -1439,7 +1440,7 @@ export default function StorefrontTabs({
                   {s.tagline ? (
                     <p className="mt-0.5 truncate text-[10px] text-zinc-400">{s.tagline}</p>
                   ) : (
-                    <p className="mt-0.5 text-[10px] capitalize text-zinc-400">{s.region}</p>
+                    <p className="mt-0.5 text-[10px] text-zinc-400">{getRegionLabel(s.region)}</p>
                   )}
                 </div>
               </Link>
