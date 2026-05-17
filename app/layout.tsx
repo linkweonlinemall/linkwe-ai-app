@@ -1,14 +1,21 @@
 import type { Metadata } from "next";
-import { Sora } from "next/font/google";
+import { Playfair_Display, Sora } from "next/font/google";
 
 import CartProvider from "@/components/cart/CartProvider";
 
 import "./globals.css";
 
 const sora = Sora({
-  variable: "--font-sora",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-sora",
+  display: "swap",
+});
+
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-playfair",
+  display: "swap",
+  style: ["normal", "italic"],
 });
 
 export const metadata: Metadata = {
@@ -22,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${sora.variable} ${sora.className} h-full antialiased`}>
+    <html lang="en" className={`${sora.variable} ${playfair.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <CartProvider>{children}</CartProvider>
       </body>

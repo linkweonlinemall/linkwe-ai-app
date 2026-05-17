@@ -34,6 +34,10 @@ export default async function CustomerDashboardPage() {
     where: { userId: session.userId },
   });
 
+  const bookingsCount = await prisma.productBooking.count({
+    where: { customerId: session.userId },
+  });
+
   const thumb = (o: (typeof orders)[0]) => o.items[0]?.product?.images?.[0];
 
   return (
@@ -62,6 +66,12 @@ export default async function CustomerDashboardPage() {
               href: "/orders",
               icon: "📦",
               desc: `${orders.length} order${orders.length !== 1 ? "s" : ""}`,
+            },
+            {
+              label: "My bookings",
+              href: "/orders?tab=bookings",
+              icon: "📅",
+              desc: `${bookingsCount} booking${bookingsCount !== 1 ? "s" : ""}`,
             },
           ].map((item) => (
             <Link

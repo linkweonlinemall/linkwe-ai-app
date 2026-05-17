@@ -26,7 +26,7 @@ const SLIDES = [
     headingHighlight: 2,
     sub: "From Port of Spain to San Fernando, Chaguanas to Tobago — fast delivery from verified local vendors.",
     primaryBtn: { label: "Start shopping →", href: "/shop" },
-    secondaryBtn: { label: "Find a store", href: "/shop" },
+    secondaryBtn: { label: "Find a store", href: "/stores" },
     showDashboard: false,
     pan: "from-right" as const,
   },

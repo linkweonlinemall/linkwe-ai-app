@@ -33,6 +33,11 @@ html {
   --text-disabled: #c4c3c0;
   --success-bg: #dcfce7;
   --success-text: #15803d;
+  --font-display: var(--font-playfair), Georgia, serif;
+}
+
+.font-display {
+  font-family: var(--font-display);
 }
 
 .hide-scrollbar::-webkit-scrollbar {

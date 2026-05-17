@@ -245,7 +245,7 @@ export default function PublicNav({ transparent = false, user = null, dashboardH
                         { label: "My dashboard", href: dashboardHref ?? user.href, icon: "⚡" },
                         { label: "My orders", href: "/orders", icon: "📦" },
                         { label: "My cart", href: "/cart", icon: "🛒" },
-                        { label: "Settings", href: user.href + "/settings", icon: "⚙️" },
+                        { label: "Settings", href: `${user.href}/settings`, icon: "⚙️" },
                       ] as const
                     ).map((item) => (
                       <Link
