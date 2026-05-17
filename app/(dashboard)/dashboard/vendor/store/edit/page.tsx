@@ -10,6 +10,7 @@ import Select from "@/components/ui/Select";
 import RegionSelect from "@/components/ui/RegionSelect";
 import Textarea from "@/components/ui/Textarea";
 import GalleryUploadWrapper from "./gallery-upload-wrapper";
+import StoreAmenitiesPicker from "./store-amenities-picker";
 import { getSession } from "@/lib/auth/session";
 import { STORE_CATEGORIES } from "@/lib/categories";
 import { prisma } from "@/lib/prisma";
@@ -27,21 +28,6 @@ const DEFAULT_HOURS: WeekSchedule = {
   saturday: { closed: true, allDay: false, slots: [] },
   sunday: { closed: true, allDay: false, slots: [] },
 };
-
-const AMENITY_OPTIONS = [
-  "Free WiFi",
-  "Parking available",
-  "Wheelchair accessible",
-  "Air conditioned",
-  "Outdoor seating",
-  "Indoor seating",
-  "Delivery available",
-  "Pickup available",
-  "Card payments accepted",
-  "Cash only",
-  "Pet friendly",
-  "Family friendly",
-] as const;
 
 const ERROR_MESSAGES: Record<string, string> = {
   name_required: "Store name is required",
@@ -326,25 +312,8 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
                 type="text"
               />
             </div>
-            <div>
-              <p className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                Amenities
-              </p>
-              <p className="mb-4 text-sm text-zinc-600">Select the features available at your store.</p>
-              <div className="mb-4 grid grid-cols-2 gap-3">
-                {AMENITY_OPTIONS.map((option) => (
-                  <label key={option} className="flex cursor-pointer items-center gap-2 text-sm text-zinc-800">
-                    <input
-                      className="rounded border border-zinc-300 text-zinc-900"
-                      defaultChecked={store.amenities.includes(option)}
-                      name="amenities"
-                      type="checkbox"
-                      value={option}
-                    />
-                    <span>{option}</span>
-                  </label>
-                ))}
-              </div>
+            <div className="mb-4">
+              <StoreAmenitiesPicker initialAmenities={store.amenities ?? []} />
             </div>
             <div>
               <p className="mb-4 text-sm text-zinc-600">

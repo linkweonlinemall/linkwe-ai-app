@@ -10,6 +10,58 @@ import { getRegionLabel } from "@/lib/regions/tt-regions";
 
 const PLACEHOLDER_COLORS = ["#E8820C", "#1A7FB5", "#D4450A", "#15803D", "#7C3AED"] as const;
 
+const AMENITY_ICON_MAP: Record<string, string> = {
+  free_wifi: "📶",
+  parking_available: "🅿️",
+  wheelchair_accessible: "♿",
+  air_conditioned: "❄️",
+  outdoor_seating: "🌿",
+  indoor_seating: "🪑",
+  waiting_area: "🛋️",
+  private_rooms: "🚪",
+  card_payments: "💳",
+  cash_accepted: "💵",
+  linx_accepted: "🏦",
+  online_payment: "📱",
+  free_consultation: "💬",
+  payment_plans: "📋",
+  deposits_required: "💰",
+  home_visits: "🏠",
+  mobile_service: "🚗",
+  virtual_sessions: "💻",
+  same_day_service: "⚡",
+  emergency_service: "🚨",
+  weekend_available: "📅",
+  evening_available: "🌙",
+  walk_ins_welcome: "🚶",
+  by_appointment_only: "📌",
+  sanitized_equipment: "🧼",
+  gloves_used: "🧤",
+  masks_available: "😷",
+  vaccinated_staff: "💉",
+  insured: "🛡️",
+  certified_staff: "🎓",
+  pet_friendly: "🐾",
+  family_friendly: "👨‍👩‍👧",
+  child_friendly: "👶",
+  refreshments: "☕",
+  loyalty_program: "⭐",
+  delivery_available: "🚚",
+  pickup_available: "📦",
+  free_delivery: "🎁",
+  express_delivery: "⚡",
+  installation_included: "🔧",
+  removal_service: "🗑️",
+};
+
+function formatAmenityLabel(value: string): string {
+  if (value.includes(" ")) return value;
+  return value
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
 type StoreTabProduct = StorefrontProductRow & {
   stock: number | null;
   compareAtPrice?: number | null;
@@ -793,12 +845,13 @@ export default function StorefrontTabs({
 
             {store.amenities && store.amenities.length > 0 ? (
               <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">Amenities</p>
-                <div className="flex flex-col gap-2">
+                <p className="mb-4 text-xs font-bold uppercase tracking-widest text-zinc-400">Amenities</p>
+                <div className="grid grid-cols-2 gap-2">
                   {store.amenities.map((a) => (
-                    <span key={a} className="text-sm text-zinc-600">
-                      ✓ {a}
-                    </span>
+                    <div key={a} className="flex items-center gap-2 rounded-xl bg-zinc-50 px-3 py-2">
+                      <span className="text-sm">{AMENITY_ICON_MAP[a] ?? "✓"}</span>
+                      <span className="text-xs font-medium text-zinc-700">{formatAmenityLabel(a)}</span>
+                    </div>
                   ))}
                 </div>
               </div>
