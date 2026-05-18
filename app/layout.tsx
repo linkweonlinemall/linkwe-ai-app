@@ -32,6 +32,26 @@ export default function RootLayout({
     <html lang="en" className={`${sora.variable} ${playfair.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <CartProvider>{children}</CartProvider>
+        <footer className="border-t border-zinc-200 bg-white py-8">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+            <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+              <p className="text-xs text-zinc-400">
+                © {new Date().getFullYear()} LinkWe Online Directory. All rights reserved.
+              </p>
+              <div className="flex items-center gap-6">
+                <a href="/privacy" className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
+                  Privacy Policy
+                </a>
+                <a href="/terms" className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
+                  Terms of Service
+                </a>
+                <a href="/contact" className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
+                  Contact
+                </a>
+              </div>
+            </div>
+          </div>
+        </footer>
       </body>
     </html>
   );

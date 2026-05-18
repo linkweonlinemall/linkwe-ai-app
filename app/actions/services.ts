@@ -514,7 +514,7 @@ export async function getPublicServices(
           ? [{ createdAt: "desc" as const }]
           : [{ isFeatured: "desc" as const }, { createdAt: "desc" as const }];
 
-  return prisma.product.findMany({
+  const services = await prisma.product.findMany({
     where: {
       isPublished: true,
       isService: true,
@@ -547,8 +547,32 @@ export async function getPublicServices(
       requiresDeposit: true,
       depositAmount: true,
       store: { select: { name: true, slug: true, region: true, logoUrl: true } },
+      _count: {
+        select: { reviews: true },
+      },
     },
     orderBy,
     take: 60,
   });
+
+  const ids = services.map((s) => s.id);
+  const reviewAggs =
+    ids.length > 0
+      ? await prisma.review.groupBy({
+          by: ["productId"],
+          where: { productId: { in: ids } },
+          _avg: { rating: true },
+          _count: { rating: true },
+        })
+      : [];
+
+  const reviewMap = new Map(
+    reviewAggs.map((r) => [r.productId!, { avg: r._avg.rating ?? 0, count: r._count.rating }]),
+  );
+
+  return services.map((s) => ({
+    ...s,
+    reviewAvg: reviewMap.get(s.id)?.avg ?? 0,
+    reviewCount: reviewMap.get(s.id)?.count ?? 0,
+  }));
 }

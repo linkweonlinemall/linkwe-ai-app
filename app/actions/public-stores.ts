@@ -167,18 +167,42 @@ async function reviewStatsForStores(
   const map = new Map<string, { sum: number; count: number }>();
   if (storeIds.length === 0) return new Map();
 
-  const rows = await prisma.review.findMany({
-    where: {
-      listing: { storeId: { in: storeIds } },
-    },
-    select: {
-      rating: true,
-      listing: { select: { storeId: true } },
-    },
-  });
+  // Fetch both old listing-based reviews and new direct storeId reviews in parallel
+  const [listingRows, directRows] = await Promise.all([
+    prisma.review.findMany({
+      where: {
+        listing: { storeId: { in: storeIds } },
+      },
+      select: {
+        rating: true,
+        listing: { select: { storeId: true } },
+      },
+    }),
+    prisma.review.findMany({
+      where: {
+        storeId: { in: storeIds },
+      },
+      select: {
+        rating: true,
+        storeId: true,
+      },
+    }),
+  ]);
 
-  for (const r of rows) {
-    const sid = r.listing.storeId;
+  // Process listing-based reviews
+  for (const r of listingRows) {
+    const sid = r.listing?.storeId;
+    if (!sid) continue;
+    const cur = map.get(sid) ?? { sum: 0, count: 0 };
+    cur.sum += r.rating;
+    cur.count += 1;
+    map.set(sid, cur);
+  }
+
+  // Process direct storeId reviews
+  for (const r of directRows) {
+    const sid = r.storeId;
+    if (!sid) continue;
     const cur = map.get(sid) ?? { sum: 0, count: 0 };
     cur.sum += r.rating;
     cur.count += 1;
@@ -524,16 +548,18 @@ export async function getStoreReviews(
     },
   });
 
-  return reviews.map((r) => ({
-    id: r.id,
-    rating: r.rating,
-    title: r.title,
-    body: r.body,
-    createdAt: r.createdAt.toISOString(),
-    authorName: r.user.fullName,
-    listingTitle: r.listing.title,
-    listingSlug: r.listing.slug,
-  }));
+  return reviews
+    .filter((r): r is typeof r & { listing: NonNullable<(typeof r)["listing"]> } => r.listing != null)
+    .map((r) => ({
+      id: r.id,
+      rating: r.rating,
+      title: r.title,
+      body: r.body,
+      createdAt: r.createdAt.toISOString(),
+      authorName: r.user.fullName,
+      listingTitle: r.listing.title,
+      listingSlug: r.listing.slug,
+    }));
 }
 
 export async function getPublicStoreRegions(): Promise<string[]> {

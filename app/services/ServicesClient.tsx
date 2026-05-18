@@ -55,6 +55,8 @@ type Service = {
   requiresDeposit: boolean;
   depositAmount: number | null;
   store: { name: string; slug: string; region: string | null; logoUrl: string | null };
+  reviewAvg: number;
+  reviewCount: number;
 };
 
 export default function ServicesClient({ initialServices }: { initialServices: Service[] }) {
@@ -591,6 +593,22 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                             <p className="text-sm font-black text-[#D4450A]">
                               TTD {service.price.toFixed(2)}
                             </p>
+                            {service.reviewCount > 0 ? (
+                              <div className="mt-1 flex items-center gap-1">
+                                <div className="flex items-center gap-0.5">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <svg
+                                      key={star}
+                                      viewBox="0 0 24 24"
+                                      className={`h-2.5 w-2.5 ${star <= Math.round(service.reviewAvg) ? "fill-[#E8820C]" : "fill-zinc-200"}`}
+                                    >
+                                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                    </svg>
+                                  ))}
+                                </div>
+                                <span className="text-[10px] text-zinc-400">({service.reviewCount})</span>
+                              </div>
+                            ) : null}
                             {service.serviceDuration ? (
                               <p className="text-[10px] text-zinc-400">
                                 {service.serviceDuration >= 60

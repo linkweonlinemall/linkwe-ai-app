@@ -136,10 +136,28 @@ export default async function ShopPage({ searchParams }: Props) {
       hasVariants: true,
       isDigital: true,
       store: { select: { name: true, slug: true, region: true } },
+      _count: {
+        select: { reviews: true },
+      },
     },
     orderBy,
     take: 60,
   });
+
+  const productIds = products.map((p) => p.id);
+  const reviewAggs =
+    productIds.length > 0
+      ? await prisma.review.groupBy({
+          by: ["productId"],
+          where: { productId: { in: productIds } },
+          _avg: { rating: true },
+          _count: { rating: true },
+        })
+      : [];
+
+  const reviewMap = new Map(
+    reviewAggs.map((r) => [r.productId!, { avg: r._avg.rating ?? 0, count: r._count.rating }]),
+  );
 
   const wishlistIds = await getWishlistProductIds();
 
@@ -327,6 +345,26 @@ export default async function ShopPage({ searchParams }: Props) {
                                 TTD {product.compareAtPrice.toFixed(2)}
                               </p>
                             ) : null}
+                            {(() => {
+                              const rv = reviewMap.get(product.id);
+                              if (!rv || rv.count === 0) return null;
+                              return (
+                                <div className="mt-1 flex items-center gap-1">
+                                  <div className="flex items-center gap-0.5">
+                                    {[1, 2, 3, 4, 5].map((s) => (
+                                      <svg
+                                        key={s}
+                                        viewBox="0 0 24 24"
+                                        className={`h-2.5 w-2.5 ${s <= Math.round(rv.avg) ? "fill-[#E8820C]" : "fill-zinc-200"}`}
+                                      >
+                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                      </svg>
+                                    ))}
+                                  </div>
+                                  <span className="text-[10px] text-zinc-400">({rv.count})</span>
+                                </div>
+                              );
+                            })()}
                           </div>
                         </Link>
                         <ShopProductCardActions

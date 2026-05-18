@@ -51,6 +51,7 @@ export function RegisterForm({
   embedded?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(registerAction, {} as AuthFormState);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const c = copy[signupKind];
 
   const formInner = (
@@ -110,7 +111,36 @@ export function RegisterForm({
           </p>
         ) : null}
 
-        <Button className="mt-2" fullWidth loading={pending} size="lg" type="submit" variant="primary">
+        <div className="flex items-start gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+          <input
+            type="checkbox"
+            id="terms"
+            checked={termsAccepted}
+            onChange={(e) => setTermsAccepted(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-[#D4450A]"
+          />
+          <label htmlFor="terms" className="text-xs leading-relaxed text-zinc-600">
+            I agree to the{" "}
+            <a href="/terms" target="_blank" className="font-semibold text-[#D4450A] hover:underline">
+              Terms of Service
+            </a>{" "}
+            and{" "}
+            <a href="/privacy" target="_blank" className="font-semibold text-[#D4450A] hover:underline">
+              Privacy Policy
+            </a>
+            . I confirm I am at least 18 years old.
+          </label>
+        </div>
+
+        <Button
+          className="mt-2"
+          fullWidth
+          loading={pending}
+          size="lg"
+          type="submit"
+          variant="primary"
+          disabled={!termsAccepted}
+        >
           {c.submitLabel}
         </Button>
       </form>

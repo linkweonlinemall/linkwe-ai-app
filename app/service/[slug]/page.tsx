@@ -1,12 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { getProductReviews, getUserProductReview } from "@/app/actions/reviews";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import PublicNav from "@/components/layout/PublicNav";
 import BookingWidget from "@/components/service/BookingWidget";
 import ServiceGallery from "@/components/service/ServiceGallery";
 import OnDemandRequestWidget from "@/components/service/OnDemandRequestWidget";
+import ReviewForm from "@/components/ui/ReviewForm";
+import ReviewsList from "@/components/ui/ReviewsList";
+import StarRating from "@/components/ui/StarRating";
 import ExpandableDescription from "@/components/ui/ExpandableDescription";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { getServiceCategoryLabel } from "@/lib/categories";
@@ -203,6 +207,11 @@ export default async function ServiceDetailPage({ params }: Props) {
         })()
       : null;
 
+  const [reviewData, userReview] = await Promise.all([
+    getProductReviews(service.id),
+    getUserProductReview(service.id),
+  ]);
+
   const typeInfo = serviceTypeDisplay(service.serviceType);
   const location = locationDisplay(service.serviceLocation);
 
@@ -254,6 +263,25 @@ export default async function ServiceDetailPage({ params }: Props) {
                 ) : null}
               </div>
               <h1 className="text-3xl font-black text-zinc-900">{service.name}</h1>
+              {reviewData.count > 0 ? (
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <svg
+                        key={s}
+                        viewBox="0 0 24 24"
+                        className={`h-4 w-4 ${s <= Math.round(reviewData.average) ? "fill-[#E8820C]" : "fill-zinc-200"}`}
+                      >
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                      </svg>
+                    ))}
+                  </div>
+                  <span className="text-sm font-semibold text-zinc-700">{reviewData.average.toFixed(1)}</span>
+                  <span className="text-sm text-zinc-400">
+                    ({reviewData.count} review{reviewData.count !== 1 ? "s" : ""})
+                  </span>
+                </div>
+              ) : null}
             </div>
 
             {service.description ? (
@@ -523,6 +551,41 @@ export default async function ServiceDetailPage({ params }: Props) {
                     ) : null}
                   </>
                 ) : null}
+              </div>
+            </div>
+
+            <div className="mt-2">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="font-display text-2xl font-bold text-zinc-900">
+                  Reviews
+                  {reviewData.count > 0 ? (
+                    <span className="ml-2 text-base font-normal text-zinc-400">
+                      ({reviewData.count})
+                    </span>
+                  ) : null}
+                </h2>
+              </div>
+              <div className="flex flex-col gap-6">
+                <ReviewsList
+                  reviews={reviewData.reviews as any}
+                  count={reviewData.count}
+                  average={reviewData.average}
+                />
+                {!userReview ? (
+                  <ReviewForm
+                    type="product"
+                    targetId={service.id}
+                    targetName={service.name}
+                  />
+                ) : (
+                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
+                    <p className="mb-3 text-sm font-bold text-zinc-700">Your review</p>
+                    <StarRating value={userReview.rating} readonly size="md" />
+                    {userReview.body ? (
+                      <p className="mt-2 text-sm text-zinc-600">{userReview.body}</p>
+                    ) : null}
+                  </div>
+                )}
               </div>
             </div>
 

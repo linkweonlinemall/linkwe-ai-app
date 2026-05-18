@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import PublicNav from "@/components/layout/PublicNav";
 import StorefrontTabs from "@/components/storefront/StorefrontTabs";
 import { getSavedStoreIds } from "@/app/actions/wishlist";
+import { getStoreReviewsNew, getUserStoreReview } from "@/app/actions/reviews";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 
 type TimeSlot = { from: string; to: string };
@@ -93,6 +94,11 @@ export default async function PublicStorePage({ params }: Props) {
 
   const savedStoreIds = await getSavedStoreIds();
   const isSaved = savedStoreIds.includes(store.id);
+
+  const [reviewData, userReview] = await Promise.all([
+    getStoreReviewsNew(store.id),
+    getUserStoreReview(store.id),
+  ]);
 
   const socialLinks = (store.socialLinks as Record<string, string> | null) ?? {};
   const hasSocialLinks = Object.keys(socialLinks).length > 0;
@@ -298,6 +304,8 @@ export default async function PublicStorePage({ params }: Props) {
         socialLinks={socialLinks}
         hasSocialLinks={hasSocialLinks}
         canEditStore={canEditStore}
+        reviewData={reviewData as any}
+        userReview={userReview}
       />
 
       <footer

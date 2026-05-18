@@ -180,6 +180,7 @@ model Store {
   images           StoreImage[]
   savedBy          SavedStore[]
   onDemandRequests OnDemandRequest[]
+  storeReviews     Review[]   @relation("StoreReviews")
 
   @@index([slug])
   @@map("stores")
@@ -771,20 +772,30 @@ model PayoutRequest {
 model Review {
   id                 String     @id @default(cuid())
   userId             String     @map("user_id")
-  listingId          String     @map("listing_id")
+  listingId          String?    @map("listing_id")
+  productId          String?    @map("product_id")
+  storeId            String?    @map("store_id")
   mainOrderId        String?    @map("main_order_id")
+  bookingId          String?    @unique @map("booking_id")
   rating             Int
   title              String?
   body               String?
+  photos             String[]   @default([])
   isVerifiedPurchase Boolean    @default(false) @map("is_verified_purchase")
+  helpfulCount       Int        @default(0) @map("helpful_count")
   createdAt          DateTime   @default(now()) @map("created_at")
   updatedAt          DateTime   @updatedAt @map("updated_at")
-  listing            Listing    @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listing            Listing?   @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  product            Product?   @relation("ProductReviews", fields: [productId], references: [id], onDelete: Cascade)
+  store              Store?     @relation("StoreReviews", fields: [storeId], references: [id], onDelete: Cascade)
   mainOrder          MainOrder? @relation(fields: [mainOrderId], references: [id])
+  booking            ProductBooking? @relation(fields: [bookingId], references: [id])
   user               User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, listingId])
   @@index([listingId])
+  @@index([productId])
+  @@index([storeId])
+  @@index([userId])
   @@map("reviews")
 }
 
@@ -1314,6 +1325,7 @@ model Product {
   staffServices         StaffService[]
   wishlistItems         WishlistItem[]
   onDemandRequests      OnDemandRequest[]
+  reviews               Review[]   @relation("ProductReviews")
 
   @@index([storeId])
   @@index([isPublished])
@@ -1431,6 +1443,8 @@ model ProductBooking {
   reminderSentAt     DateTime?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
+
+  review             Review?
 
   @@index([productId])
   @@index([customerId])

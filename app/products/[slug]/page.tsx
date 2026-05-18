@@ -6,8 +6,12 @@ import type { ProductCondition } from "@prisma/client";
 import ProductBuyBox from "@/components/product/ProductBuyBox";
 import PublicNav from "@/components/layout/PublicNav";
 import WishlistButton from "@/components/ui/WishlistButton";
+import ReviewForm from "@/components/ui/ReviewForm";
+import ReviewsList from "@/components/ui/ReviewsList";
+import StarRating from "@/components/ui/StarRating";
 import ExpandableDescription from "@/components/ui/ExpandableDescription";
 import { ProductGallery } from "@/components/product/ProductGallery";
+import { getProductReviews, getUserProductReview } from "@/app/actions/reviews";
 import { getWishlistProductIds } from "@/app/actions/wishlist";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { getSession } from "@/lib/auth/session";
@@ -117,6 +121,11 @@ export default async function PublicProductPage({ params }: Props) {
   });
 
   if (!product?.isPublished) notFound();
+
+  const [reviewData, userReview] = await Promise.all([
+    getProductReviews(product.id),
+    getUserProductReview(product.id),
+  ]);
 
   const wishlistIds = await getWishlistProductIds();
   const isWishlisted = wishlistIds.includes(product.id);
@@ -255,6 +264,28 @@ export default async function PublicProductPage({ params }: Props) {
               <h1 className="text-3xl font-black leading-tight text-zinc-900 sm:text-4xl">{product.name}</h1>
               {product.brand ? <p className="mt-1 text-sm text-zinc-400">by {product.brand}</p> : null}
             </div>
+
+            {reviewData.count > 0 ? (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-0.5">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <svg
+                      key={s}
+                      viewBox="0 0 24 24"
+                      className={`h-4 w-4 ${s <= Math.round(reviewData.average) ? "fill-[#E8820C]" : "fill-zinc-200"}`}
+                    >
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                  ))}
+                </div>
+                <span className="text-sm font-semibold text-zinc-700">{reviewData.average.toFixed(1)}</span>
+                <span className="text-sm text-zinc-400">
+                  ({reviewData.count} review{reviewData.count !== 1 ? "s" : ""})
+                </span>
+              </div>
+            ) : (
+              <p className="text-xs text-zinc-400">No reviews yet</p>
+            )}
 
             {/* Short description */}
             {product.shortDescription ? (
@@ -528,6 +559,49 @@ export default async function PublicProductPage({ params }: Props) {
                   <polyline points="9 18 15 12 9 6" />
                 </svg>
               </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Reviews */}
+        <div className="mt-12">
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="text-xl font-bold text-zinc-900">
+              Reviews
+              {reviewData.count > 0 ? (
+                <span className="ml-2 text-base font-normal text-zinc-400">
+                  ({reviewData.count})
+                </span>
+              ) : null}
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <ReviewsList
+                reviews={reviewData.reviews as any}
+                count={reviewData.count}
+                average={reviewData.average}
+              />
+            </div>
+            <div>
+              {userReview ? (
+                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
+                  <p className="mb-3 text-sm font-bold text-zinc-700">Your review</p>
+                  <StarRating value={userReview.rating} readonly size="md" />
+                  {userReview.title ? (
+                    <p className="mt-2 text-sm font-semibold text-zinc-900">{userReview.title}</p>
+                  ) : null}
+                  {userReview.body ? (
+                    <p className="mt-1 text-sm text-zinc-600">{userReview.body}</p>
+                  ) : null}
+                </div>
+              ) : (
+                <ReviewForm
+                  type="product"
+                  targetId={product.id}
+                  targetName={product.name}
+                />
+              )}
             </div>
           </div>
         </div>

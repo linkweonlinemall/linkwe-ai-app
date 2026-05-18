@@ -6,6 +6,9 @@ import { useEffect, useMemo, useState } from "react";
 import AddToCartButton from "@/components/product/AddToCartButton";
 import ProductCardChooseOptionsLink from "@/components/shop/ProductCardChooseOptionsLink";
 import SaveStoreButton from "@/components/ui/SaveStoreButton";
+import ReviewForm from "@/components/ui/ReviewForm";
+import ReviewsList from "@/components/ui/ReviewsList";
+import StarRating from "@/components/ui/StarRating";
 import { StorefrontMapAndProducts, type StorefrontProductRow } from "@/components/storefront/StorefrontMapAndProducts";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 
@@ -248,6 +251,17 @@ type Props = {
   socialLinks: Record<string, string>;
   hasSocialLinks: boolean;
   canEditStore?: boolean;
+  reviewData?: {
+    reviews: unknown[];
+    count: number;
+    average: number;
+  };
+  userReview?: {
+    id: string;
+    rating: number;
+    title: string | null;
+    body: string | null;
+  } | null;
 };
 
 export default function StorefrontTabs({
@@ -261,6 +275,8 @@ export default function StorefrontTabs({
   socialLinks,
   hasSocialLinks,
   canEditStore,
+  reviewData,
+  userReview,
 }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>("about");
   const [search, setSearch] = useState("");
@@ -1430,8 +1446,31 @@ export default function StorefrontTabs({
       ) : null}
 
       {activeTab === "reviews" ? (
-        <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
-          <p className="text-sm font-medium text-zinc-500">Reviews coming soon</p>
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <ReviewsList
+              reviews={(reviewData?.reviews ?? []) as any}
+              count={reviewData?.count ?? 0}
+              average={reviewData?.average ?? 0}
+              showProductName
+            />
+          </div>
+          <div>
+            {userReview ? (
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
+                <p className="mb-3 text-sm font-bold text-zinc-700">Your review</p>
+                <StarRating value={userReview.rating} readonly size="md" />
+                {userReview.title ? (
+                  <p className="mt-2 text-sm font-semibold text-zinc-900">{userReview.title}</p>
+                ) : null}
+                {userReview.body ? (
+                  <p className="mt-1 text-sm text-zinc-600">{userReview.body}</p>
+                ) : null}
+              </div>
+            ) : (
+              <ReviewForm type="store" targetId={storeId} targetName={store.name} />
+            )}
+          </div>
         </div>
       ) : null}
 
