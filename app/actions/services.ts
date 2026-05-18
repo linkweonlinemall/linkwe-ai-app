@@ -420,6 +420,82 @@ export async function deleteService(id: string) {
   return { ok: true };
 }
 
+export async function toggleServicePublished(
+  serviceId: string,
+): Promise<{ ok: true; isPublished: boolean } | { error: string }> {
+  const session = await getSession();
+  if (!session) return { error: "Not authenticated" };
+
+  const store = await prisma.store.findFirst({
+    where: { ownerId: session.userId },
+    select: { id: true },
+  });
+  if (!store) return { error: "No store found" };
+
+  const service = await prisma.product.findFirst({
+    where: { id: serviceId, storeId: store.id, isService: true },
+    select: { id: true, isPublished: true },
+  });
+  if (!service) return { error: "Service not found" };
+
+  const updated = await prisma.product.update({
+    where: { id: serviceId },
+    data: { isPublished: !service.isPublished },
+    select: { isPublished: true },
+  });
+
+  revalidatePath("/dashboard/vendor/services");
+  return { ok: true, isPublished: updated.isPublished };
+}
+
+export async function permanentlyDeleteService(serviceId: string): Promise<{ ok: true } | { error: string }> {
+  const session = await getSession();
+  if (!session) return { error: "Not authenticated" };
+
+  const store = await prisma.store.findFirst({
+    where: { ownerId: session.userId },
+    select: { id: true },
+  });
+  if (!store) return { error: "No store found" };
+
+  const service = await prisma.product.findFirst({
+    where: { id: serviceId, storeId: store.id, isService: true },
+    select: { id: true },
+  });
+  if (!service) return { error: "Service not found" };
+
+  await prisma.product.delete({ where: { id: serviceId } });
+
+  revalidatePath("/dashboard/vendor/services");
+  return { ok: true };
+}
+
+export async function bulkToggleServicesPublished(
+  serviceIds: string[],
+  publish: boolean,
+): Promise<{ ok: true } | { error: string }> {
+  const session = await getSession();
+  if (!session) return { error: "Not authenticated" };
+
+  const store = await prisma.store.findFirst({
+    where: { ownerId: session.userId },
+    select: { id: true },
+  });
+  if (!store) return { error: "No store found" };
+
+  await prisma.product.updateMany({
+    where: {
+      id: { in: serviceIds },
+      storeId: store.id,
+      isService: true,
+    },
+    data: { isPublished: publish },
+  });
+
+  revalidatePath("/dashboard/vendor/services");
+  return { ok: true };
+}
+
 export async function getPublicServices(
   filters: {
     category?: string;

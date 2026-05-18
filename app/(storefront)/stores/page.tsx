@@ -9,21 +9,11 @@ import {
 } from "@/app/actions/public-stores";
 import PublicNav from "@/components/layout/PublicNav";
 import PublicStoreCard from "@/components/storefront/PublicStoreCard";
-import RegionSelect from "@/components/ui/RegionSelect";
+import StoreFiltersDrawer from "@/components/storefront/StoreFiltersDrawer";
 import StoreSearchBar from "@/components/storefront/StoreSearchBar";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { STORE_CATEGORIES } from "@/lib/categories";
-
-const CATEGORIES = [{ value: "all", label: "All categories" }, ...STORE_CATEGORIES];
-
-const SORTS: { value: PublicStoreSort; label: string }[] = [
-  { value: "newest", label: "Newest" },
-  { value: "popular", label: "Most products" },
-  { value: "rating", label: "Highest rated" },
-  { value: "nearest", label: "Nearest to you" },
-];
 
 export const metadata: Metadata = {
   title: "Discover stores · LinkWe",
@@ -155,113 +145,22 @@ export default async function StoresDiscoveryPage({
         </section>
 
         <div className="mt-10 flex flex-col gap-10 lg:flex-row">
-          <aside className="w-full shrink-0 lg:w-64">
-            <form method="GET" className="space-y-6 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-              <input type="hidden" name="q" value={qRaw} />
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Filters</p>
-
-              <div>
-                <RegionSelect name="region" defaultValue={region} label="Region" />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-zinc-600">Category</label>
-                <select
-                  name="category"
-                  defaultValue={category}
-                  className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c.value} value={c.value}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-zinc-600">Tag</label>
-                <select
-                  name="tag"
-                  defaultValue={tag}
-                  className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
-                >
-                  <option value="">Any tag</option>
-                  {tags.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-zinc-600">Sort</label>
-                <select
-                  name="sort"
-                  defaultValue={sort}
-                  className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
-                >
-                  {SORTS.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <details className="rounded-lg bg-zinc-50 p-2 text-xs text-zinc-600">
-                <summary className="cursor-pointer select-none font-medium">
-                  Location for “nearest”
-                </summary>
-                <p className="mt-2 text-[11px] leading-relaxed">
-                  Optional decimals (WGS-84). Example: latitude <code>10.65</code>, longitude{" "}
-                  <code>-61.52</code> for Trinidad.
-                </p>
-                <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                  <div>
-                    <label className="sr-only" htmlFor="lat">
-                      Latitude
-                    </label>
-                    <input
-                      id="lat"
-                      name="lat"
-                      defaultValue={latRaw}
-                      inputMode="decimal"
-                      placeholder="Latitude"
-                      className="w-full rounded border border-zinc-200 px-2 py-1.5"
-                    />
-                  </div>
-                  <div>
-                    <label className="sr-only" htmlFor="lng">
-                      Longitude
-                    </label>
-                    <input
-                      id="lng"
-                      name="lng"
-                      defaultValue={lngRaw}
-                      inputMode="decimal"
-                      placeholder="Longitude"
-                      className="w-full rounded border border-zinc-200 px-2 py-1.5"
-                    />
-                  </div>
-                </div>
-              </details>
-
-              <button
-                type="submit"
-                className="w-full rounded-lg bg-[#1C1C1A] py-2.5 text-sm font-medium text-white hover:bg-zinc-800"
-              >
-                Apply filters
-              </button>
-              <Link
-                href="/stores"
-                className="block w-full rounded-lg border border-zinc-200 bg-white py-2 text-center text-sm text-zinc-700 hover:bg-zinc-50"
-              >
-                Clear filters
-              </Link>
-            </form>
-          </aside>
+          <StoreFiltersDrawer
+            qRaw={qRaw}
+            region={region}
+            category={category}
+            tag={tag}
+            sort={sort}
+            latRaw={latRaw}
+            lngRaw={lngRaw}
+            tags={tags}
+            hasFilters={!!(
+              region ||
+              (category && category !== "all") ||
+              tag ||
+              (sort && sort !== "newest")
+            )}
+          />
 
           <div className="min-w-0 flex-1">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -294,7 +193,7 @@ export default async function StoresDiscoveryPage({
                 </Link>
               </div>
             ) : (
-              <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {result.items.map((s) => (
                   <PublicStoreCard key={s.id} store={s} />
                 ))}

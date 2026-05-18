@@ -82,6 +82,13 @@ type Props = { initialAmenities: string[] };
 
 export default function StoreAmenitiesPicker({ initialAmenities }: Props) {
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>(initialAmenities ?? []);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
+    new Set(
+      AMENITY_GROUPS.filter((group) =>
+        group.amenities.some((a) => selectedAmenities.includes(a.value)),
+      ).map((group) => group.label),
+    ),
+  );
 
   return (
     <div>
@@ -94,49 +101,99 @@ export default function StoreAmenitiesPicker({ initialAmenities }: Props) {
       <p className="mb-5 text-xs text-zinc-500">
         Select everything that applies to your business. These show on your public store page.
       </p>
-      <div className="flex flex-col gap-6">
-        {AMENITY_GROUPS.map((group) => (
-          <div key={group.label}>
-            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-zinc-400">{group.label}</p>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {group.amenities.map((amenity) => {
-                const isSelected = selectedAmenities.includes(amenity.value);
-                return (
-                  <button
-                    key={amenity.value}
-                    type="button"
-                    onClick={() =>
-                      setSelectedAmenities((prev) =>
-                        isSelected ? prev.filter((x) => x !== amenity.value) : [...prev, amenity.value]
-                      )
-                    }
-                    className={`flex w-full items-center gap-3 rounded-xl border-2 px-3 py-2.5 text-left transition-all ${
-                      isSelected
-                        ? "border-[#D4450A] bg-[#D4450A]/5"
-                        : "border-zinc-100 bg-white hover:border-zinc-200"
-                    }`}
-                  >
-                    <span className="text-base">{amenity.icon}</span>
-                    <span className="text-sm font-medium text-zinc-700">{amenity.label}</span>
-                    {isSelected ? (
-                      <svg
-                        className="ml-auto shrink-0 text-[#D4450A]"
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="3"
+      <div className="flex flex-col gap-2">
+        {AMENITY_GROUPS.map((group) => {
+          const isExpanded = expandedGroups.has(group.label);
+          const selectedInGroup = group.amenities.filter((a) =>
+            selectedAmenities.includes(a.value),
+          ).length;
+
+          return (
+            <div
+              key={group.label}
+              className="overflow-hidden rounded-xl border border-zinc-200"
+            >
+              {/* Group header — clickable to expand/collapse */}
+              <button
+                type="button"
+                onClick={() => {
+                  setExpandedGroups((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(group.label)) next.delete(group.label);
+                    else next.add(group.label);
+                    return next;
+                  });
+                }}
+                className="flex w-full items-center justify-between bg-zinc-50 px-4 py-3 text-left transition-colors hover:bg-zinc-100"
+              >
+                <div className="flex items-center gap-3">
+                  <p className="text-sm font-semibold text-zinc-800">{group.label}</p>
+                  {selectedInGroup > 0 ? (
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#D4450A] text-[10px] font-black text-white">
+                      {selectedInGroup}
+                    </span>
+                  ) : null}
+                </div>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  className={`shrink-0 text-zinc-400 transition-transform duration-200 ${
+                    isExpanded ? "rotate-180" : ""
+                  }`}
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+
+              {/* Group content — collapsible */}
+              {isExpanded ? (
+                <div className="grid grid-cols-1 gap-2 p-3 sm:grid-cols-2">
+                  {group.amenities.map((amenity) => {
+                    const isSelected = selectedAmenities.includes(amenity.value);
+                    return (
+                      <button
+                        key={amenity.value}
+                        type="button"
+                        onClick={() =>
+                          setSelectedAmenities((prev) =>
+                            isSelected
+                              ? prev.filter((a) => a !== amenity.value)
+                              : [...prev, amenity.value]
+                          )
+                        }
+                        className={`flex w-full items-center gap-3 rounded-xl border-2 px-3 py-2.5 text-left transition-all ${
+                          isSelected
+                            ? "border-[#D4450A] bg-[#D4450A]/5"
+                            : "border-zinc-100 bg-white hover:border-zinc-200"
+                        }`}
                       >
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    ) : null}
-                  </button>
-                );
-              })}
+                        <span className="text-base">{amenity.icon}</span>
+                        <span className="text-sm font-medium text-zinc-700">{amenity.label}</span>
+                        {isSelected ? (
+                          <svg
+                            className="ml-auto shrink-0 text-[#D4450A]"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                          >
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth/session";
 import PublicNav from "@/components/layout/PublicNav";
 import BookingWidget from "@/components/service/BookingWidget";
 import ServiceGallery from "@/components/service/ServiceGallery";
+import OnDemandRequestWidget from "@/components/service/OnDemandRequestWidget";
 import ExpandableDescription from "@/components/ui/ExpandableDescription";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { getServiceCategoryLabel } from "@/lib/categories";
@@ -95,7 +96,6 @@ export default async function ServiceDetailPage({ params }: Props) {
       category: true,
       tags: true,
       isPublished: true,
-      isArchived: true,
       isService: true,
       serviceType: true,
       serviceLocation: true,
@@ -123,11 +123,20 @@ export default async function ServiceDetailPage({ params }: Props) {
       virtualPlatform: true,
       virtualMeetingInfo: true,
       maxGroupSize: true,
-      store: { select: { name: true, slug: true, logoUrl: true, region: true } },
+      store: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          region: true,
+          logoUrl: true,
+          isAvailableNow: true,
+        },
+      },
     },
   });
 
-  if (!service || !service.isPublished || !service.isService || service.isArchived) notFound();
+  if (!service || !service.isPublished || !service.isService) notFound();
 
   const bookingData =
     service.serviceType === "BOOKABLE" || service.serviceType === "VIRTUAL"
@@ -698,13 +707,15 @@ export default async function ServiceDetailPage({ params }: Props) {
                   </p>
                 </div>
               ) : service.serviceType === "ON_DEMAND" ? (
-                <div className="rounded-xl border border-dashed border-emerald-200 bg-emerald-50 px-4 py-5 text-center">
-                  <p className="mb-2 text-2xl">⚡</p>
-                  <p className="text-sm font-bold text-emerald-900">Request now</p>
-                  <p className="mt-1 text-xs leading-relaxed text-emerald-700">
-                    On-demand service — contact the provider to request immediately.
-                  </p>
-                </div>
+                <OnDemandRequestWidget
+                  serviceId={service.id}
+                  storeId={service.store.id}
+                  serviceName={service.name}
+                  estimatedResponseMins={service.estimatedResponseMins ?? null}
+                  travelFee={service.travelFee ?? null}
+                  serviceRadius={service.serviceRadius ?? null}
+                  isAvailableNow={service.store.isAvailableNow ?? false}
+                />
               ) : (
                 <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50 px-4 py-5 text-center">
                   <p className="text-sm font-bold text-zinc-900">Contact provider</p>

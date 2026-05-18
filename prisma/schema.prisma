@@ -54,6 +54,7 @@ model User {
   vendorChats           VendorChat[]
   wishlist              Wishlist?
   savedStores           SavedStore[]
+  customerRequests      OnDemandRequest[]     @relation("CustomerRequests")
 
   @@index([email])
   @@index([createdAt])
@@ -154,6 +155,7 @@ model Store {
   address          String?
   socialLinks      Json?       @map("social_links")
   staffMode        StaffMode   @default(SOLO)
+  isAvailableNow   Boolean     @default(false)
   staffMembers     StaffMember[]
   createdAt        DateTime    @default(now()) @map("created_at")
   updatedAt        DateTime    @updatedAt @map("updated_at")
@@ -177,6 +179,7 @@ model Store {
   warehouses       Warehouse[]
   images           StoreImage[]
   savedBy          SavedStore[]
+  onDemandRequests OnDemandRequest[]
 
   @@index([slug])
   @@map("stores")
@@ -1193,6 +1196,15 @@ enum StaffMode {
   TEAM
 }
 
+enum OnDemandRequestStatus {
+  PENDING
+  ACCEPTED
+  CONFIRMED
+  DECLINED
+  COMPLETED
+  CANCELLED
+}
+
 model Product {
   id                    String            @id @default(cuid())
   storeId               String
@@ -1301,6 +1313,7 @@ model Product {
   orderItems            OrderItem[]
   staffServices         StaffService[]
   wishlistItems         WishlistItem[]
+  onDemandRequests      OnDemandRequest[]
 
   @@index([storeId])
   @@index([isPublished])
@@ -1462,6 +1475,36 @@ model SavedStore {
   @@index([userId])
   @@index([storeId])
   @@map("saved_stores")
+}
+
+model OnDemandRequest {
+  id               String                @id @default(cuid())
+  serviceId        String
+  service          Product               @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  customerId       String
+  customer         User                  @relation("CustomerRequests", fields: [customerId], references: [id], onDelete: Cascade)
+  storeId          String
+  store            Store                 @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  description      String
+  photos           String[]              @default([])
+  customerLat      Float?
+  customerLng      Float?
+  customerAddress  String?
+  status           OnDemandRequestStatus @default(PENDING)
+  vendorNotes      String?
+  quotedPrice      Float?
+  estimatedArrival String?
+  declineReason    String?
+  respondedAt      DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  @@index([serviceId])
+  @@index([customerId])
+  @@index([storeId])
+  @@index([status])
+  @@map("on_demand_requests")
 }
 
 model DigitalDownload {

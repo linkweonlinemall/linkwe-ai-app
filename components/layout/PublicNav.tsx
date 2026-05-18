@@ -243,6 +243,7 @@ export default function PublicNav({ transparent = false, user = null, dashboardH
                       [
                         { label: "Home", href: "/", icon: "🏠" },
                         { label: "My dashboard", href: dashboardHref ?? user.href, icon: "⚡" },
+                        { label: "My requests", href: "/my-requests", icon: "⚡" },
                         { label: "My orders", href: "/orders", icon: "📦" },
                         { label: "My wishlist", href: "/wishlist", icon: "🤍" },
                         { label: "Saved stores", href: "/saved-stores", icon: "🔖" },

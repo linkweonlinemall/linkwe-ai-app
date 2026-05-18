@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/vendor/products", label: "Products", icon: "📦", exact: false },
   { href: "/dashboard/vendor/services", label: "My Services", icon: "🛎️", exact: false },
   { href: "/dashboard/vendor/bookings", label: "Bookings", icon: "🗓️", exact: false },
+  { href: "/dashboard/vendor/requests", label: "Requests", icon: "⚡", exact: false },
   { href: "/dashboard/vendor/staff", label: "Staff", icon: "👥", exact: false },
   { href: "/dashboard/vendor?tab=store", label: "Store", icon: "🏪", exact: false },
   { href: "/dashboard/vendor?tab=listings", label: "Listings", icon: "📋", exact: false },

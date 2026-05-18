@@ -201,6 +201,7 @@ export default async function CustomerDashboardPage() {
             { label: "Shop with AI", href: "/chat", icon: "🤖" },
             { label: "Browse shop", href: "/shop", icon: "🛍️" },
             { label: "Services", href: "/services", icon: "🛎️" },
+            { label: "My requests", href: "/my-requests", icon: "⚡" },
             { label: "My orders", href: "/orders", icon: "📦" },
             { label: "Wishlist", href: "/wishlist", icon: "🤍" },
             { label: "Saved stores", href: "/saved-stores", icon: "🔖" },

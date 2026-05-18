@@ -52,6 +52,7 @@ export default function ShopFilters({
   const [brand, setBrand] = useState(searchParams.get("brand") ?? "");
   const [colour, setColour] = useState(searchParams.get("colour") ?? "");
   const [size, setSize] = useState(searchParams.get("size") ?? "");
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Only show categories that have products
   const activeCategories = ALL_CATEGORIES.filter(
@@ -121,9 +122,8 @@ export default function ShopFilters({
 
   const hasFilters = activeFilterCount > 0;
 
-  return (
-    <aside className="w-full shrink-0 lg:w-56">
-      <div className="sticky top-4 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+  const filterBody = (
+    <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
           <div className="flex items-center gap-2">
@@ -389,7 +389,109 @@ export default function ShopFilters({
             </p>
           </div>
         ) : null}
+    </div>
+  );
+
+  return (
+    <>
+      {/* Mobile filter trigger button — only shows on mobile */}
+      <div className="mb-4 flex items-center gap-2 lg:hidden">
+        <button
+          type="button"
+          onClick={() => setDrawerOpen(true)}
+          className="flex items-center gap-2 rounded-xl border-2 border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 shadow-sm transition-all hover:border-[#D4450A] hover:text-[#D4450A]"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="4" y1="6" x2="20" y2="6" />
+            <line x1="4" y1="12" x2="20" y2="12" />
+            <line x1="4" y1="18" x2="20" y2="18" />
+          </svg>
+          Filters
+          {hasFilters ? (
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#D4450A] text-[10px] font-black text-white">
+              {activeFilterCount}
+            </span>
+          ) : null}
+        </button>
+        {hasFilters ? (
+          <button
+            type="button"
+            onClick={clearAll}
+            className="text-xs font-semibold text-zinc-400 transition-colors hover:text-[#D4450A]"
+          >
+            Clear all
+          </button>
+        ) : null}
+        <p className="ml-auto text-xs text-zinc-400">
+          {productCount} product{productCount !== 1 ? "s" : ""}
+        </p>
       </div>
-    </aside>
+
+      {/* Mobile drawer overlay */}
+      {drawerOpen ? (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setDrawerOpen(false)}
+          />
+          {/* Drawer panel — slides in from left */}
+          <div className="absolute inset-y-0 left-0 flex w-80 max-w-[85vw] flex-col bg-white shadow-2xl">
+            {/* Drawer header */}
+            <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-bold text-zinc-900">Filters</p>
+                {hasFilters ? (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#D4450A] text-[10px] font-black text-white">
+                    {activeFilterCount}
+                  </span>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 transition-colors hover:bg-zinc-200"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Drawer content — scrollable */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-4">{filterBody}</div>
+            </div>
+
+            {/* Drawer footer */}
+            <div className="flex gap-3 border-t border-zinc-100 p-4">
+              <button
+                type="button"
+                onClick={() => {
+                  clearAll();
+                  setDrawerOpen(false);
+                }}
+                className="flex-1 rounded-xl border-2 border-zinc-200 py-3 text-sm font-bold text-zinc-700 transition-colors hover:border-zinc-300"
+              >
+                Clear all
+              </button>
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(false)}
+                className="flex-1 rounded-xl py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
+                style={{ background: "linear-gradient(135deg, #D4450A, #E8820C)" }}
+              >
+                Show results
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Desktop sidebar — hidden on mobile */}
+      <aside className="hidden w-full shrink-0 lg:block lg:w-56">
+        <div className="sticky top-4">{filterBody}</div>
+      </aside>
+    </>
   );
 }

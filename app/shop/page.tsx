@@ -160,7 +160,7 @@ export default async function ShopPage({ searchParams }: Props) {
       {/* Category horizontal scroll strip */}
       <div className="border-b border-zinc-200 bg-white shadow-sm">
         <div className="mx-auto max-w-screen-xl px-4 sm:px-6">
-          <div className="flex gap-1 overflow-x-auto py-2.5 scrollbar-hide">
+          <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 py-2.5 scrollbar-hide sm:mx-0 sm:px-0">
             {CATEGORIES.map((cat) => (
               <Link
                 key={cat.value}
@@ -204,16 +204,17 @@ export default async function ShopPage({ searchParams }: Props) {
           )}
         </div>
 
-        <div className="flex gap-6">
+        <div className="flex flex-col gap-6 lg:flex-row">
           {/* Sidebar */}
           <Suspense
             fallback={
-              <aside className="hidden lg:block w-56 shrink-0">
+              <aside className="w-full shrink-0 lg:w-56">
+                <div className="mb-4 h-11 animate-pulse rounded-xl bg-zinc-200 lg:mb-0 lg:hidden" />
                 <div className="h-96 animate-pulse rounded-2xl border border-zinc-200 bg-zinc-100" />
               </aside>
             }
           >
-            <div className="hidden lg:block w-56 shrink-0">
+            <div className="w-full shrink-0 lg:w-56">
               <ShopFilters
                 key={shopFiltersKey}
                 defaultCategory={category ?? "all"}
@@ -311,12 +312,12 @@ export default async function ShopPage({ searchParams }: Props) {
 
                       {/* Info */}
                       <div className="flex flex-1 flex-col gap-1 p-3">
-                        <Link href={`/products/${product.slug}`} className="block flex min-h-0 flex-1 flex-col gap-1">
+                        <Link href={`/products/${product.slug}`} className="block flex min-h-0 min-w-0 flex-1 flex-col gap-1">
                           <p className="truncate text-[10px] font-medium text-zinc-400">
                             {product.store.name}
                             {product.store.region ? ` · ${getRegionLabel(product.store.region)}` : ""}
                           </p>
-                          <p className="line-clamp-2 text-sm font-semibold leading-snug text-zinc-900">
+                          <p className="line-clamp-2 min-w-0 text-sm font-semibold leading-snug text-zinc-900">
                             {product.name}
                           </p>
                           <div className="mt-auto pt-2">

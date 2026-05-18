@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import AvailabilityToggle from "@/components/vendor/AvailabilityToggle";
 import VendorDashboardTabs from "@/app/(dashboard)/dashboard/vendor/components/vendor-dashboard-tabs";
 import VendorVerificationChecklist from "@/components/vendor/VendorVerificationChecklist";
 import { getSession } from "@/lib/auth/session";
@@ -57,6 +58,7 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
       tags: true,
       amenities: true,
       policies: true,
+      isAvailableNow: true,
       socialLinks: true,
       latitude: true,
       longitude: true,
@@ -151,7 +153,11 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
   const completionPercent = Math.round((completedCount / totalCount) * 100);
 
   return (
-    <div className="flex min-h-screen flex-col md:flex-row">
+    <>
+      <div className="border-b border-zinc-100 bg-white px-4 py-4 md:px-8">
+        <AvailabilityToggle initialAvailable={store.isAvailableNow} />
+      </div>
+      <div className="flex min-h-screen flex-col md:flex-row">
       <VendorDashboardTabs
         store={store}
         listings={listings}
@@ -191,6 +197,7 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
           />
         }
       />
-    </div>
+      </div>
+    </>
   );
 }

@@ -3,7 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-import { deleteService, getVendorServices } from "@/app/actions/services";
+import {
+  bulkToggleServicesPublished,
+  getVendorServices,
+  permanentlyDeleteService,
+  toggleServicePublished,
+} from "@/app/actions/services";
 
 function serviceTypeLabel(type: string | null) {
   switch (type) {
@@ -29,6 +34,8 @@ export default function VendorServicesPage() {
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     getVendorServices()
@@ -56,18 +63,53 @@ export default function VendorServicesPage() {
     }
   }
 
+  async function handleTogglePublish(serviceId: string, _currentlyPublished: boolean) {
+    setTogglingId(serviceId);
+    const result = await toggleServicePublished(serviceId);
+    if ("ok" in result) {
+      setServices((prev) =>
+        prev.map((s) => (s.id === serviceId ? { ...s, isPublished: result.isPublished } : s)),
+      );
+    }
+    setTogglingId(null);
+  }
+
+  async function handleDelete(serviceId: string, serviceName: string) {
+    if (!confirm(`Permanently delete "${serviceName}"? This cannot be undone.`)) return;
+    setDeletingId(serviceId);
+    await permanentlyDeleteService(serviceId);
+    setServices((prev) => prev.filter((s) => s.id !== serviceId));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(serviceId);
+      return next;
+    });
+    setDeletingId(null);
+  }
+
+  async function handleBulkPublish(publish: boolean) {
+    const ids = [...selectedIds];
+    setBulkLoading(true);
+    await bulkToggleServicesPublished(ids, publish);
+    setServices((prev) =>
+      prev.map((s) => (selectedIds.has(s.id) ? { ...s, isPublished: publish } : s)),
+    );
+    setSelectedIds(new Set());
+    setBulkLoading(false);
+  }
+
   async function handleBulkDelete() {
     if (selectedIds.size === 0) return;
     if (
       !confirm(
-        `Archive ${selectedIds.size} service${selectedIds.size > 1 ? "s" : ""}? They will be hidden from customers.`,
+        `Permanently delete ${selectedIds.size} service${selectedIds.size > 1 ? "s" : ""}? This cannot be undone.`,
       )
     )
       return;
     const ids = [...selectedIds];
     setBulkLoading(true);
     for (const id of ids) {
-      await deleteService(id);
+      await permanentlyDeleteService(id);
     }
     setServices((prev) => prev.filter((s) => !ids.includes(s.id)));
     setSelectedIds(new Set());
@@ -104,17 +146,31 @@ export default function VendorServicesPage() {
 
       {selectedIds.size > 0 ? (
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[#D4450A]/20 bg-[#D4450A]/5 px-4 py-3">
-          <span className="text-xs font-semibold text-[#D4450A]">
-            {selectedIds.size} selected
-          </span>
-          <div className="ml-auto flex gap-2">
+          <span className="text-xs font-semibold text-[#D4450A]">{selectedIds.size} selected</span>
+          <div className="ml-auto flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={bulkLoading}
+              onClick={() => void handleBulkPublish(true)}
+              className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+            >
+              Publish all
+            </button>
+            <button
+              type="button"
+              disabled={bulkLoading}
+              onClick={() => void handleBulkPublish(false)}
+              className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-bold text-zinc-600 hover:bg-zinc-100 disabled:opacity-50"
+            >
+              Unpublish all
+            </button>
             <button
               type="button"
               disabled={bulkLoading}
               onClick={() => void handleBulkDelete()}
               className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100 disabled:opacity-50"
             >
-              Archive selected
+              Delete selected
             </button>
             <button
               type="button"
@@ -203,12 +259,30 @@ export default function VendorServicesPage() {
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={togglingId === service.id}
+                    onClick={() => void handleTogglePublish(service.id, service.isPublished)}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition-all disabled:opacity-50 ${
+                      service.isPublished
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                        : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100"
+                    }`}
+                  >
+                    {togglingId === service.id
+                      ? "..."
+                      : service.isPublished
+                        ? "Unpublish"
+                        : "Publish"}
+                  </button>
+
                   <Link
                     href="/dashboard/vendor/staff"
                     className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50"
                   >
                     Availability
                   </Link>
+
                   <Link
                     href={`/service/${service.slug}`}
                     target="_blank"
@@ -216,6 +290,7 @@ export default function VendorServicesPage() {
                   >
                     View
                   </Link>
+
                   <Link
                     href={`/dashboard/vendor/services/${service.id}/edit`}
                     className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white"
@@ -223,6 +298,15 @@ export default function VendorServicesPage() {
                   >
                     Edit
                   </Link>
+
+                  <button
+                    type="button"
+                    disabled={deletingId === service.id}
+                    onClick={() => void handleDelete(service.id, service.name)}
+                    className="rounded-lg border border-red-100 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-500 hover:bg-red-100 disabled:opacity-50"
+                  >
+                    {deletingId === service.id ? "..." : "Delete"}
+                  </button>
                 </div>
               </div>
             );
