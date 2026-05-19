@@ -13,6 +13,7 @@ import StoreFiltersDrawer from "@/components/storefront/StoreFiltersDrawer";
 import StoreSearchBar from "@/components/storefront/StoreSearchBar";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
+import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
@@ -76,6 +77,8 @@ export default async function StoresDiscoveryPage({
     : null;
   const continueHref = navUser ? getRoleDashboardPath(navUser.role) : null;
 
+  const unreadCount = await getNavUnreadCount();
+
   const sp = await searchParams;
 
   const qRaw = (pickString(sp, "q") ?? "").trim();
@@ -126,6 +129,7 @@ export default async function StoresDiscoveryPage({
           navUser ? { name: navUser.fullName ?? "Account", href: continueHref! } : null
         }
         dashboardHref={continueHref ?? undefined}
+        unreadCount={unreadCount}
       />
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">

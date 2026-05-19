@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { UserRole } from "@prisma/client";
-import { getSession } from "@/lib/auth/session";
 import { logoutAction } from "@/app/(auth)/auth-actions";
+import NotificationBell from "@/components/ui/NotificationBell";
+import { getSession } from "@/lib/auth/session";
+import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 
 const ROLE_LABEL: Record<UserRole, string> = {
   CUSTOMER: "CUSTOMER",
@@ -18,6 +20,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   const roleLabel = ROLE_LABEL[session.role] ?? session.role;
+
+  const unreadCount = await getNavUnreadCount();
 
   return (
     <div className="flex min-h-screen flex-col bg-[#F5F5F5]">
@@ -36,6 +40,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <span className="ml-2 text-xs font-semibold uppercase tracking-wide text-[#D4450A]">{roleLabel}</span>
         </div>
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <NotificationBell initialUnreadCount={unreadCount} variant="dark" />
           <span className="max-w-[10rem] truncate text-sm text-zinc-300 sm:max-w-[14rem] md:max-w-xs">
             {session.fullName}
           </span>

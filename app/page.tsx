@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getSavedStoreIds, getWishlistProductIds } from "@/app/actions/wishlist";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
+import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { prisma } from "@/lib/prisma";
 import HeroSlider from "@/components/layout/HeroSlider";
 import PublicNav from "@/components/layout/PublicNav";
@@ -16,6 +17,8 @@ export default async function Home() {
     ? await prisma.user.findUnique({ where: { id: session.userId } })
     : null;
   const continueHref = user ? getRoleDashboardPath(user.role) : null;
+
+  const unreadCount = await getNavUnreadCount();
 
   // Featured products
   const featuredProducts = await prisma.product.findMany({
@@ -117,6 +120,7 @@ export default async function Home() {
         transparent
         user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null}
         dashboardHref={continueHref ?? undefined}
+        unreadCount={unreadCount}
       />
 
       {/* Hero */}

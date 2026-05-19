@@ -7,6 +7,7 @@ import SaveStoreButton from "@/components/ui/SaveStoreButton";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { getSession } from "@/lib/auth/session";
+import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { prisma } from "@/lib/prisma";
 
 export default async function SavedStoresPage() {
@@ -15,6 +16,7 @@ export default async function SavedStoresPage() {
 
   const user = await prisma.user.findUnique({ where: { id: session.userId } });
   const continueHref = user ? getRoleDashboardPath(user.role) : null;
+  const unreadCount = await getNavUnreadCount();
   const saved = await getSavedStores();
 
   return (
@@ -22,6 +24,7 @@ export default async function SavedStoresPage() {
       <PublicNav
         user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null}
         dashboardHref={continueHref ?? undefined}
+        unreadCount={unreadCount}
       />
       <div className="mx-auto max-w-screen-xl px-4 py-10 sm:px-6">
         <div className="mb-8 flex items-center justify-between">

@@ -2,6 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 
+import { NotificationType } from "@prisma/client";
+
+import { createNotification } from "@/app/actions/notifications";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email/send";
@@ -92,6 +95,20 @@ export async function submitProductReview(input: {
         body: reviewForEmail.body,
         dashboardUrl: `${BASE_URL}/dashboard/vendor/reviews`,
       }),
+    });
+  }
+
+  const vendorStore = await prisma.store.findFirst({
+    where: { id: product.storeId },
+    select: { ownerId: true },
+  });
+  if (vendorStore) {
+    await createNotification({
+      userId: vendorStore.ownerId,
+      type: NotificationType.REVIEW_RECEIVED,
+      title: `New ${input.rating}-star review`,
+      body: `On ${reviewForEmail?.product?.name ?? "your product"}`,
+      linkUrl: `/dashboard/vendor/reviews`,
     });
   }
 

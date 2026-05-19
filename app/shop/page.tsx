@@ -11,6 +11,7 @@ import PublicNav from "@/components/layout/PublicNav";
 import WishlistButton from "@/components/ui/WishlistButton";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
+import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { prisma } from "@/lib/prisma";
 import { PRODUCT_CATEGORIES } from "@/lib/categories";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
@@ -45,6 +46,8 @@ export default async function ShopPage({ searchParams }: Props) {
     ? await prisma.user.findUnique({ where: { id: session.userId } })
     : null;
   const continueHref = user ? getRoleDashboardPath(user.role) : null;
+
+  const unreadCount = await getNavUnreadCount();
 
   const params = await searchParams;
   const category = params.category && params.category !== "all" ? params.category : undefined;
@@ -166,6 +169,7 @@ export default async function ShopPage({ searchParams }: Props) {
       <PublicNav
         user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null}
         dashboardHref={continueHref ?? undefined}
+        unreadCount={unreadCount}
       />
 
       {/* Amazon-style search hero bar */}

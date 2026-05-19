@@ -16,6 +16,7 @@ import { getWishlistProductIds } from "@/app/actions/wishlist";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { getSession } from "@/lib/auth/session";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
+import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { prisma } from "@/lib/prisma";
 
 function formatLabel(value: string): string {
@@ -72,6 +73,8 @@ export default async function PublicProductPage({ params }: Props) {
 
   const session = await getSession();
   const dashboardHref = session ? getRoleDashboardPath(session.role) : null;
+
+  const unreadCount = await getNavUnreadCount();
 
   const product = await prisma.product.findUnique({
     where: { slug: normalized },
@@ -206,6 +209,7 @@ export default async function PublicProductPage({ params }: Props) {
       <PublicNav
         user={session ? { name: session.fullName ?? "Account", href: dashboardHref! } : null}
         dashboardHref={dashboardHref ?? undefined}
+        unreadCount={unreadCount}
       />
 
       <div className="mx-auto max-w-screen-2xl px-4 py-6 sm:px-6">

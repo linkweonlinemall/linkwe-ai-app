@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
+import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { prisma } from "@/lib/prisma";
 import PublicNav from "@/components/layout/PublicNav";
 import StorefrontTabs from "@/components/storefront/StorefrontTabs";
@@ -44,6 +45,8 @@ export default async function PublicStorePage({ params }: Props) {
     ? await prisma.user.findUnique({ where: { id: session.userId } })
     : null;
   const continueHref = navUser ? getRoleDashboardPath(navUser.role) : null;
+
+  const unreadCount = await getNavUnreadCount();
 
   const { slug } = await params;
   const normalized = slug.trim().toLowerCase();
@@ -206,6 +209,7 @@ export default async function PublicStorePage({ params }: Props) {
             : null
         }
         dashboardHref={continueHref ?? undefined}
+        unreadCount={unreadCount}
       />
 
       <section className="relative w-full" style={{ height: "clamp(240px, 38vw, 480px)" }}>

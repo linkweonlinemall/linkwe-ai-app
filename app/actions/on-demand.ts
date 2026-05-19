@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 
 import type { OnDemandRequestStatus } from "@prisma/client";
+import { NotificationType } from "@prisma/client";
 
+import { createNotification } from "@/app/actions/notifications";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { uploadFile } from "@/lib/uploads/upload";
@@ -138,6 +140,21 @@ export async function submitOnDemandRequest(input: {
     });
   }
 
+  const vendorStore = await prisma.store.findFirst({
+    where: { id: input.storeId },
+    select: { ownerId: true },
+  });
+  if (vendorStore) {
+    const desc = request.description.trim();
+    await createNotification({
+      userId: vendorStore.ownerId,
+      type: NotificationType.ON_DEMAND_REQUEST_RECEIVED,
+      title: "New on-demand request",
+      body: desc.slice(0, 80) + (desc.length > 80 ? "..." : ""),
+      linkUrl: `/dashboard/vendor/requests`,
+    });
+  }
+
   revalidatePath("/dashboard/vendor/requests");
   return { ok: true, requestId: request.id };
 }
@@ -193,6 +210,7 @@ export async function acceptOnDemandRequest(
 
   const request = await prisma.onDemandRequest.findFirst({
     where: { id: requestId, storeId: store.id },
+    select: { id: true, customerId: true },
   });
   if (!request) return { error: "Request not found" };
 
@@ -232,6 +250,16 @@ export async function acceptOnDemandRequest(
     });
   }
 
+  if (acceptedForEmail && request.customerId) {
+    await createNotification({
+      userId: request.customerId,
+      type: NotificationType.ON_DEMAND_REQUEST_ACCEPTED,
+      title: "Your request was accepted",
+      body: `${acceptedForEmail.store.name} accepted your request${acceptedForEmail.estimatedArrival ? ` — arriving ${acceptedForEmail.estimatedArrival}` : ""}`,
+      linkUrl: `/my-requests`,
+    });
+  }
+
   revalidatePath("/dashboard/vendor/requests");
   return { ok: true };
 }
@@ -251,7 +279,7 @@ export async function declineOnDemandRequest(
 
   const found = await prisma.onDemandRequest.findFirst({
     where: { id: requestId, storeId: store.id },
-    select: { id: true },
+    select: { id: true, customerId: true },
   });
   if (!found) return { error: "Request not found" };
 
@@ -284,6 +312,16 @@ export async function declineOnDemandRequest(
         reason: declinedForEmail.declineReason,
         servicesUrl: `${BASE_URL}/services`,
       }),
+    });
+  }
+
+  if (declinedForEmail && found.customerId) {
+    await createNotification({
+      userId: found.customerId,
+      type: NotificationType.ON_DEMAND_REQUEST_DECLINED,
+      title: "Request declined",
+      body: `Unfortunately your request could not be fulfilled${declinedForEmail.declineReason ? ` — ${declinedForEmail.declineReason}` : ""}`,
+      linkUrl: `/my-requests`,
     });
   }
 

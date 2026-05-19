@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getProductReviews, getUserProductReview } from "@/app/actions/reviews";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
+import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import PublicNav from "@/components/layout/PublicNav";
 import BookingWidget from "@/components/service/BookingWidget";
 import ServiceGallery from "@/components/service/ServiceGallery";
@@ -85,6 +86,8 @@ export default async function ServiceDetailPage({ params }: Props) {
   const session = await getSession();
   const user = session ? await prisma.user.findUnique({ where: { id: session.userId } }) : null;
   const continueHref = user ? getRoleDashboardPath(user.role) : null;
+
+  const unreadCount = await getNavUnreadCount();
 
   const service = await prisma.product.findUnique({
     where: { slug: slug.trim().toLowerCase() },
@@ -220,6 +223,7 @@ export default async function ServiceDetailPage({ params }: Props) {
       <PublicNav
         user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null}
         dashboardHref={continueHref ?? undefined}
+        unreadCount={unreadCount}
       />
 
       <div className="mx-auto max-w-screen-xl px-4 py-8 sm:px-6">

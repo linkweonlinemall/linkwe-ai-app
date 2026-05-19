@@ -55,6 +55,7 @@ model User {
   wishlist              Wishlist?
   savedStores           SavedStore[]
   customerRequests      OnDemandRequest[]     @relation("CustomerRequests")
+  notifications         Notification[]
 
   @@index([email])
   @@index([createdAt])
@@ -799,6 +800,22 @@ model Review {
   @@map("reviews")
 }
 
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String           @map("user_id")
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType @default(GENERAL)
+  title     String
+  body      String?
+  linkUrl   String?          @map("link_url")
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
 model AIChatSession {
   id        String            @id @default(cuid())
   userId    String            @map("user_id")
@@ -829,6 +846,20 @@ model AIMessage {
 
   @@index([sessionId, createdAt])
   @@map("ai_messages")
+}
+
+enum NotificationType {
+  ORDER_PLACED
+  ORDER_STATUS_UPDATED
+  BOOKING_CONFIRMED
+  BOOKING_CANCELLED
+  ON_DEMAND_REQUEST_RECEIVED
+  ON_DEMAND_REQUEST_ACCEPTED
+  ON_DEMAND_REQUEST_DECLINED
+  ON_DEMAND_REQUEST_COMPLETED
+  REVIEW_RECEIVED
+  PAYOUT_PROCESSED
+  GENERAL
 }
 
 enum UserRole {

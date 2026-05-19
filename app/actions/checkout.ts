@@ -12,6 +12,8 @@ import { stripe } from "@/lib/stripe/stripe";
 import { sendEmail } from "@/lib/email/send";
 import { newOrderVendorEmail, orderConfirmedCustomerEmail } from "@/lib/email/templates";
 import { BASE_URL } from "@/lib/email/resend";
+import { createNotification } from "@/app/actions/notifications";
+import { NotificationType } from "@prisma/client";
 
 export type CheckoutItem = {
   productId: string;
@@ -205,6 +207,7 @@ export async function confirmOrderPaid(orderId: string): Promise<void> {
           titleSnapshot: true,
           store: {
             select: {
+              ownerId: true,
               owner: { select: { email: true, fullName: true } },
             },
           },
@@ -212,6 +215,7 @@ export async function confirmOrderPaid(orderId: string): Promise<void> {
             select: {
               store: {
                 select: {
+                  ownerId: true,
                   owner: { select: { email: true, fullName: true } },
                 },
               },
@@ -255,6 +259,29 @@ export async function confirmOrderPaid(orderId: string): Promise<void> {
         dashboardUrl: `${BASE_URL}/dashboard/vendor/orders`,
       });
       await sendEmail({ to: vendor.email, ...vendorTemplate });
+    }
+
+    await createNotification({
+      userId: session.userId,
+      type: NotificationType.ORDER_PLACED,
+      title: "Order placed successfully",
+      body: `Order #${orderForEmail.referenceNumber} has been confirmed.`,
+      linkUrl: `/orders/${orderId}`,
+    });
+
+    const notifiedOwnerIds = new Set<string>();
+    for (const item of orderForEmail.items) {
+      const ownerId = item.product?.store?.ownerId ?? item.store.ownerId;
+      if (ownerId && !notifiedOwnerIds.has(ownerId)) {
+        notifiedOwnerIds.add(ownerId);
+        await createNotification({
+          userId: ownerId,
+          type: NotificationType.ORDER_PLACED,
+          title: `New order #${orderForEmail.referenceNumber}`,
+          body: `${orderForEmail.items.length} item${orderForEmail.items.length !== 1 ? "s" : ""} · TTD ${(orderForEmail.totalMinor / 100).toFixed(2)}`,
+          linkUrl: `/dashboard/vendor/orders`,
+        });
+      }
     }
   }
 

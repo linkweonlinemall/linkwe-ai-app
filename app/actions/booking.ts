@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import {
   BookingStatus,
   CancelledBy,
+  NotificationType,
   type Prisma,
 } from "@prisma/client";
 
@@ -12,6 +13,7 @@ import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email/send";
 import { bookingConfirmedCustomerEmail, newBookingVendorEmail } from "@/lib/email/templates";
 import { BASE_URL } from "@/lib/email/resend";
+import { createNotification } from "@/app/actions/notifications";
 import {
   generateSlotsForDate,
   getAvailableDates,
@@ -272,6 +274,7 @@ export async function createBooking(input: {
           store: {
             select: {
               name: true,
+              ownerId: true,
               owner: { select: { email: true, fullName: true } },
             },
           },
@@ -322,6 +325,30 @@ export async function createBooking(input: {
           dashboardUrl: `${BASE_URL}/dashboard/vendor/bookings`,
         }),
       });
+
+      await createNotification({
+        userId: session.userId,
+        type: NotificationType.BOOKING_CONFIRMED,
+        title: `Booking confirmed — ${bookingForEmail.product.name}`,
+        body: new Date(bookingForEmail.bookingDate).toLocaleDateString("en-TT", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          timeZone: "UTC",
+        }),
+        linkUrl: `/orders?tab=bookings`,
+      });
+
+      const vendorOwnerId = bookingForEmail.product.store.ownerId;
+      if (vendorOwnerId) {
+        await createNotification({
+          userId: vendorOwnerId,
+          type: NotificationType.BOOKING_CONFIRMED,
+          title: `New booking — ${bookingForEmail.product.name}`,
+          body: `From ${customerUser.fullName ?? "a customer"}`,
+          linkUrl: `/dashboard/vendor/bookings`,
+        });
+      }
     }
   }
 

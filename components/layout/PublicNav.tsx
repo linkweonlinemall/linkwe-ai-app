@@ -4,15 +4,22 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import { logoutAction } from "@/app/(auth)/auth-actions";
+import NotificationBell from "@/components/ui/NotificationBell";
 import { useCartStore } from "@/lib/cart/cart-store";
 
 type Props = {
   transparent?: boolean;
   user?: { name: string; href: string } | null;
   dashboardHref?: string;
+  unreadCount?: number;
 };
 
-export default function PublicNav({ transparent = false, user = null, dashboardHref }: Props) {
+export default function PublicNav({
+  transparent = false,
+  user = null,
+  dashboardHref,
+  unreadCount = 0,
+}: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const toggleDrawer = useCartStore((s) => s.toggleDrawer);
@@ -181,6 +188,12 @@ export default function PublicNav({ transparent = false, user = null, dashboardH
               </span>
             </Link>
           </div>
+          {user ? (
+            <NotificationBell
+              initialUnreadCount={unreadCount}
+              variant={transparent ? "dark" : "light"}
+            />
+          ) : null}
           <button
             type="button"
             onClick={toggleDrawer}
