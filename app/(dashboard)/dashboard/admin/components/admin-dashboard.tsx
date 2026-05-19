@@ -146,6 +146,7 @@ export default function AdminDashboard({ adminName: _adminName }: Props) {
   const productsNavActive = pathname?.startsWith("/dashboard/admin/products") ?? false;
   const storesNavActive = pathname?.startsWith("/dashboard/admin/stores") ?? false;
   const verificationNavActive = pathname?.startsWith("/dashboard/admin/verification") ?? false;
+  const adminSettingsNavActive = pathname?.startsWith("/dashboard/admin/settings") ?? false;
   const [activeTab, setActiveTab] = useState<TabId>("overview");
 
   useEffect(() => {
@@ -283,6 +284,21 @@ export default function AdminDashboard({ adminName: _adminName }: Props) {
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
             Verification
+          </Link>
+          <Link
+            href="/dashboard/admin/settings"
+            style={{
+              color: adminSettingsNavActive ? "var(--scarlet)" : "var(--text-muted)",
+              borderBottom: adminSettingsNavActive
+                ? "2px solid var(--scarlet)"
+                : "2px solid transparent",
+            }}
+            className="flex shrink-0 items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-150 relative"
+          >
+            <span aria-hidden className="shrink-0 text-base leading-none">
+              ⚙️
+            </span>
+            Settings
           </Link>
         </div>
       </nav>
