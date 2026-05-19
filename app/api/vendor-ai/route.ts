@@ -322,9 +322,6 @@ export async function POST(req: NextRequest) {
       )
     : []
 
-  console.log("Vendor AI called, messages:", messages.length)
-  console.log("API key present:", !!process.env.ANTHROPIC_API_KEY)
-
   const encoder = new TextEncoder()
 
   const stream = new ReadableStream({
@@ -392,7 +389,6 @@ export async function POST(req: NextRequest) {
               raw.compareAtPrice != null ? Number(raw.compareAtPrice) : undefined,
             isDigital: raw.isDigital === true,
           }
-          console.log("route input address:", raw.address, "->", input.address)
 
           if (!input.name.trim()) {
             return {
@@ -402,17 +398,12 @@ export async function POST(req: NextRequest) {
               }),
             }
           }
-          console.log(
-            "create_product tool input:",
-            JSON.stringify(toolBlock.input, null, 2)
-          )
           try {
             const result = await createProductFromAIRaw(
               input,
               session.userId,
               store.id
             )
-            console.log("createProductFromAIRaw result:", JSON.stringify(result))
             if (result.ok) {
               // If vendor uploaded images before creating the product,
               // attach them now with the initial upload images first

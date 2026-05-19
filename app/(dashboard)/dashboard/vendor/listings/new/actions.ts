@@ -36,7 +36,12 @@ export async function createListingAction(_prev: ListingFormState, formData: For
 
   const slugErr = validateListingSlug(slugRaw);
   if (slugErr) return { error: slugErr };
-  const slug = normalizeListingSlug(slugRaw);
+  let slug = normalizeListingSlug(slugRaw);
+
+  const existingListing = await prisma.listing.findUnique({ where: { slug } });
+  if (existingListing) {
+    slug = `${slug}-${Date.now()}`;
+  }
 
   const descErr = validateListingShortDescription(shortDescription);
   if (descErr) return { error: descErr };
@@ -52,9 +57,6 @@ export async function createListingAction(_prev: ListingFormState, formData: For
 
   const parsedPrice = parsePriceToMinor(priceRaw);
   if (!parsedPrice.ok) return { error: parsedPrice.error };
-
-  // TODO: restore duplicate slug check via prisma.listing.findUnique({ where: { slug } })
-  // after listings.slug exists in the database (Supabase migration).
 
   try {
     await prisma.listing.create({

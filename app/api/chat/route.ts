@@ -50,9 +50,6 @@ export async function POST(req: NextRequest) {
   const body = await req.json() as { messages?: IncomingMessage[] }
   const messages: IncomingMessage[] = body.messages ?? []
 
-  console.log("Chat API called, messages:", messages.length)
-  console.log("API key present:", !!process.env.ANTHROPIC_API_KEY)
-
   const encoder = new TextEncoder()
 
   const stream = new ReadableStream({

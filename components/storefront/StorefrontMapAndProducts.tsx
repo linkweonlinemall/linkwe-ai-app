@@ -37,7 +37,6 @@ function StoreMapBox({
 
   useEffect(() => {
     let cancelled = false;
-    // @ts-expect-error Mapbox CSS has no bundled TypeScript module declaration
     void import("mapbox-gl/dist/mapbox-gl.css");
     void import("react-map-gl/mapbox").then((mod) => {
       if (!cancelled) {

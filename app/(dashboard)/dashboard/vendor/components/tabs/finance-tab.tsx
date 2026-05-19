@@ -225,7 +225,10 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
                 type="button"
                 className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:opacity-90"
                 style={{ backgroundColor: "#D4450A" }}
-                onClick={() => alert("Subscription upgrades coming soon in Phase E.")}
+                onClick={() => {
+                  window.location.href =
+                    "mailto:admin@linkwemall.com?subject=Subscription Upgrade Enquiry";
+                }}
               >
                 Upgrade Plan
               </button>

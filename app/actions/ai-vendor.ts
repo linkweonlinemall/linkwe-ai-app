@@ -168,17 +168,6 @@ export async function createProductFromAIRaw(
   const baseSlug = sanitizeSlug(name) || "product"
   const slug = await uniqueProductSlug(baseSlug)
 
-  console.log(
-    "createProductFromAIRaw saving:",
-    JSON.stringify({
-      sku: input.sku,
-      weight: input.weight,
-      metaTitle: input.metaTitle,
-      isFeatured: input.isFeatured,
-      address: input.address,
-    })
-  )
-
   const isDigital = input.isDigital === true
 
   const product = await prisma.product.create({

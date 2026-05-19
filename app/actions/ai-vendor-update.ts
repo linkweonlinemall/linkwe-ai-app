@@ -195,11 +195,6 @@ export async function updateProductFromAI(
     return { ok: false, error: "No fields to update" }
   }
 
-  console.log(
-    "updateProductFromAI saving:",
-    JSON.stringify({ productId: input.productId, fields: Object.keys(data) })
-  )
-
   await prisma.product.update({
     where: { id: input.productId },
     data,

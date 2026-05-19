@@ -11,7 +11,7 @@ export default function ServiceWorkerRegistration() {
             console.log("SW registered:", registration.scope);
           })
           .catch((error) => {
-            console.log("SW registration failed:", error);
+            console.error("SW registration failed:", error);
           });
       });
     }

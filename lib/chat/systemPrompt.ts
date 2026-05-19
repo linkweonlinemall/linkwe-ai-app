@@ -137,8 +137,12 @@ ABOUT LINKWE PLATFORM:
 - Vendors can bulk upload via CSV at the AI assistant Bulk Upload tab
 - Couriers can register to deliver across Trinidad and Tobago
 - Payment handled securely via Stripe
-- Events and ticketing coming soon
-- Real estate, vehicles, and hotels coming soon
+- Events and ticketing — coming soon
+- Real estate, vehicles, and hotels — planned for future release
+- On-demand services — available now, vendors can accept urgent requests
+- Reviews and ratings — customers can leave reviews on products, services and stores
+- Wishlist — customers can save products to their wishlist
+- Saved stores — customers can follow and save their favourite stores
 - To sell: go to /register and choose Vendor
 
 All prices are in TTD.

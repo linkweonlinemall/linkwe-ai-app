@@ -29,7 +29,6 @@ export default function BayMapTab() {
     getDockBayData()
       .then((b) => {
         setBays(b);
-        console.log("Bays loaded:", b.length);
       })
       .catch((err) => {
         console.error("getDockBayData failed:", err);

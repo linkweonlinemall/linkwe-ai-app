@@ -1179,7 +1179,7 @@ export default function StorefrontTabs({
           <div className="flex-1 min-w-0">
             {products.length === 0 ? (
               <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-[0_4px_24px_rgba(0,0,0,0.08)] text-center">
-                <p className="text-sm font-medium text-zinc-500">Products coming soon</p>
+                <p className="text-sm text-zinc-500">No products available yet.</p>
                 <p className="mt-1 text-xs text-zinc-400">This store has not listed any products yet.</p>
               </div>
             ) : filteredProducts.length === 0 ? (
@@ -1441,7 +1441,7 @@ export default function StorefrontTabs({
 
       {activeTab === "bookings" ? (
         <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
-          <p className="text-sm font-medium text-zinc-500">Bookings coming soon</p>
+          <p className="text-sm text-zinc-500">No bookings available for this store yet.</p>
         </div>
       ) : null}
 
