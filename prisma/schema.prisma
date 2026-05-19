@@ -816,6 +816,19 @@ model Notification {
   @@map("notifications")
 }
 
+model RateLimit {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  count     Int      @default(0)
+  resetAt   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+  @@index([resetAt])
+  @@map("rate_limits")
+}
+
 model AIChatSession {
   id        String            @id @default(cuid())
   userId    String            @map("user_id")

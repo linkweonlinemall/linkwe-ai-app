@@ -53,7 +53,7 @@ export async function registerAction(
     "unknown";
 
   const rateLimitKey = `register:${ip}`;
-  const rateLimit = checkRateLimit(rateLimitKey, 3, 60 * 60 * 1000); // 3 attempts per hour
+  const rateLimit = await checkRateLimit(rateLimitKey, 3, 60 * 60 * 1000); // 3 attempts per hour
 
   if (!rateLimit.allowed) {
     const minutesLeft = Math.ceil((rateLimit.resetAt - Date.now()) / 60000);
@@ -139,7 +139,7 @@ export async function loginAction(_prev: AuthFormState, formData: FormData): Pro
     "unknown";
 
   const rateLimitKey = `login:${ip}`;
-  const rateLimit = checkRateLimit(rateLimitKey, 5, 15 * 60 * 1000);
+  const rateLimit = await checkRateLimit(rateLimitKey, 5, 15 * 60 * 1000);
 
   if (!rateLimit.allowed) {
     const minutesLeft = Math.ceil((rateLimit.resetAt - Date.now()) / 60000);

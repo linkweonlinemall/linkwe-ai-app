@@ -1,36 +1,53 @@
-const attempts = new Map<string, { count: number; resetAt: number }>();
+import { prisma } from "@/lib/prisma";
 
-export function checkRateLimit(
+export async function checkRateLimit(
   key: string,
   maxAttempts: number = 5,
-  windowMs: number = 15 * 60 * 1000, // 15 minutes
-): { allowed: boolean; remainingAttempts: number; resetAt: number } {
-  const now = Date.now();
-  const record = attempts.get(key);
+  windowMs: number = 15 * 60 * 1000
+): Promise<{ allowed: boolean; remainingAttempts: number; resetAt: number }> {
+  const now = new Date();
+  const resetAt = new Date(now.getTime() + windowMs);
 
-  if (!record || now > record.resetAt) {
-    attempts.set(key, { count: 1, resetAt: now + windowMs });
-    return { allowed: true, remainingAttempts: maxAttempts - 1, resetAt: now + windowMs };
-  }
+  try {
+    const record = await prisma.rateLimit.findUnique({ where: { key } });
 
-  if (record.count >= maxAttempts) {
-    return { allowed: false, remainingAttempts: 0, resetAt: record.resetAt };
-  }
-
-  record.count += 1;
-  return { allowed: true, remainingAttempts: maxAttempts - record.count, resetAt: record.resetAt };
-}
-
-export function resetRateLimit(key: string): void {
-  attempts.delete(key);
-}
-
-// Clean up expired entries every 30 minutes
-if (typeof setInterval !== "undefined") {
-  setInterval(() => {
-    const now = Date.now();
-    for (const [key, record] of attempts.entries()) {
-      if (now > record.resetAt) attempts.delete(key);
+    if (!record || now > record.resetAt) {
+      await prisma.rateLimit.upsert({
+        where: { key },
+        create: { key, count: 1, resetAt },
+        update: { count: 1, resetAt },
+      });
+      return { allowed: true, remainingAttempts: maxAttempts - 1, resetAt: resetAt.getTime() };
     }
-  }, 30 * 60 * 1000);
+
+    if (record.count >= maxAttempts) {
+      return {
+        allowed: false,
+        remainingAttempts: 0,
+        resetAt: record.resetAt.getTime(),
+      };
+    }
+
+    await prisma.rateLimit.update({
+      where: { key },
+      data: { count: { increment: 1 } },
+    });
+
+    return {
+      allowed: true,
+      remainingAttempts: maxAttempts - record.count - 1,
+      resetAt: record.resetAt.getTime(),
+    };
+  } catch {
+    // If rate limit check fails, allow the request
+    return { allowed: true, remainingAttempts: maxAttempts, resetAt: resetAt.getTime() };
+  }
+}
+
+export async function resetRateLimit(key: string): Promise<void> {
+  try {
+    await prisma.rateLimit.delete({ where: { key } });
+  } catch {
+    // ignore if not found
+  }
 }
