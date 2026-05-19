@@ -7,6 +7,13 @@ import type { OnDemandRequestStatus } from "@prisma/client";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { uploadFile } from "@/lib/uploads/upload";
+import { sendEmail } from "@/lib/email/send";
+import {
+  newOnDemandRequestVendorEmail,
+  onDemandAcceptedCustomerEmail,
+  onDemandDeclinedCustomerEmail,
+} from "@/lib/email/templates";
+import { BASE_URL } from "@/lib/email/resend";
 
 const ALLOWED_PHOTO_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -106,6 +113,31 @@ export async function submitOnDemandRequest(input: {
     },
   });
 
+  const requestForEmail = await prisma.onDemandRequest.findUnique({
+    where: { id: request.id },
+    select: {
+      description: true,
+      customerAddress: true,
+      service: { select: { name: true } },
+      customer: { select: { fullName: true } },
+      store: { select: { owner: { select: { email: true, fullName: true } } } },
+    },
+  });
+
+  if (requestForEmail) {
+    await sendEmail({
+      to: requestForEmail.store.owner.email,
+      ...newOnDemandRequestVendorEmail({
+        vendorName: requestForEmail.store.owner.fullName ?? "Vendor",
+        serviceName: requestForEmail.service.name,
+        customerName: requestForEmail.customer.fullName ?? "Customer",
+        description: requestForEmail.description,
+        address: requestForEmail.customerAddress,
+        dashboardUrl: `${BASE_URL}/dashboard/vendor/requests`,
+      }),
+    });
+  }
+
   revalidatePath("/dashboard/vendor/requests");
   return { ok: true, requestId: request.id };
 }
@@ -175,6 +207,31 @@ export async function acceptOnDemandRequest(
     },
   });
 
+  const acceptedForEmail = await prisma.onDemandRequest.findUnique({
+    where: { id: requestId },
+    select: {
+      quotedPrice: true,
+      estimatedArrival: true,
+      service: { select: { name: true } },
+      store: { select: { name: true } },
+      customer: { select: { email: true, fullName: true } },
+    },
+  });
+
+  if (acceptedForEmail) {
+    await sendEmail({
+      to: acceptedForEmail.customer.email,
+      ...onDemandAcceptedCustomerEmail({
+        customerName: acceptedForEmail.customer.fullName ?? "Customer",
+        serviceName: acceptedForEmail.service.name,
+        storeName: acceptedForEmail.store.name,
+        quotedPrice: acceptedForEmail.quotedPrice,
+        estimatedArrival: acceptedForEmail.estimatedArrival,
+        requestsUrl: `${BASE_URL}/my-requests`,
+      }),
+    });
+  }
+
   revalidatePath("/dashboard/vendor/requests");
   return { ok: true };
 }
@@ -206,6 +263,29 @@ export async function declineOnDemandRequest(
       respondedAt: new Date(),
     },
   });
+
+  const declinedForEmail = await prisma.onDemandRequest.findUnique({
+    where: { id: requestId },
+    select: {
+      declineReason: true,
+      service: { select: { name: true } },
+      store: { select: { name: true } },
+      customer: { select: { email: true, fullName: true } },
+    },
+  });
+
+  if (declinedForEmail) {
+    await sendEmail({
+      to: declinedForEmail.customer.email,
+      ...onDemandDeclinedCustomerEmail({
+        customerName: declinedForEmail.customer.fullName ?? "Customer",
+        serviceName: declinedForEmail.service.name,
+        storeName: declinedForEmail.store.name,
+        reason: declinedForEmail.declineReason,
+        servicesUrl: `${BASE_URL}/services`,
+      }),
+    });
+  }
 
   revalidatePath("/dashboard/vendor/requests");
   return { ok: true };

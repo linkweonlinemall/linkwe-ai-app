@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { sendEmail } from "@/lib/email/send";
+import { newReviewVendorEmail } from "@/lib/email/templates";
+import { BASE_URL } from "@/lib/email/resend";
 
 // Submit a product or service review
 export async function submitProductReview(input: {
@@ -62,6 +65,35 @@ export async function submitProductReview(input: {
       isVerifiedPurchase: isVerified,
     },
   });
+
+  const reviewForEmail = await prisma.review.findFirst({
+    where: { userId: session.userId, productId: input.productId },
+    select: {
+      rating: true,
+      body: true,
+      user: { select: { fullName: true } },
+      product: {
+        select: {
+          name: true,
+          store: { select: { owner: { select: { email: true, fullName: true } } } },
+        },
+      },
+    },
+  });
+
+  if (reviewForEmail?.product?.store?.owner) {
+    await sendEmail({
+      to: reviewForEmail.product.store.owner.email,
+      ...newReviewVendorEmail({
+        vendorName: reviewForEmail.product.store.owner.fullName ?? "Vendor",
+        reviewerName: reviewForEmail.user.fullName ?? "A customer",
+        productName: reviewForEmail.product.name,
+        rating: reviewForEmail.rating,
+        body: reviewForEmail.body,
+        dashboardUrl: `${BASE_URL}/dashboard/vendor/reviews`,
+      }),
+    });
+  }
 
   revalidatePath(`/products/${product.slug}`);
   revalidatePath(`/service/${product.slug}`);

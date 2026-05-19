@@ -9,6 +9,9 @@ import { prisma } from "@/lib/prisma";
 import { getShippingZone } from "@/lib/shipping/trinidad-zoning";
 import { createSplitOrdersFromMainOrder } from "@/lib/fulfillment/split-orders";
 import { stripe } from "@/lib/stripe/stripe";
+import { sendEmail } from "@/lib/email/send";
+import { newOrderVendorEmail, orderConfirmedCustomerEmail } from "@/lib/email/templates";
+import { BASE_URL } from "@/lib/email/resend";
 
 export type CheckoutItem = {
   productId: string;
@@ -190,6 +193,70 @@ export async function confirmOrderPaid(orderId: string): Promise<void> {
   await prisma.productCartItem.deleteMany({
     where: { userId: session.userId },
   });
+
+  const orderForEmail = await prisma.mainOrder.findUnique({
+    where: { id: orderId },
+    select: {
+      referenceNumber: true,
+      totalMinor: true,
+      buyer: { select: { email: true, fullName: true } },
+      items: {
+        select: {
+          titleSnapshot: true,
+          store: {
+            select: {
+              owner: { select: { email: true, fullName: true } },
+            },
+          },
+          product: {
+            select: {
+              store: {
+                select: {
+                  owner: { select: { email: true, fullName: true } },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (orderForEmail && orderForEmail.referenceNumber) {
+    const itemCount = orderForEmail.items.length;
+    const totalTTD = orderForEmail.totalMinor / 100;
+    const ref = orderForEmail.referenceNumber;
+
+    const customerTemplate = orderConfirmedCustomerEmail({
+      customerName: orderForEmail.buyer.fullName ?? "Customer",
+      orderRef: ref,
+      itemCount,
+      totalTTD,
+      orderUrl: `${BASE_URL}/orders/${orderId}`,
+    });
+    await sendEmail({
+      to: orderForEmail.buyer.email,
+      ...customerTemplate,
+    });
+
+    const vendorEmails = new Map<string, { email: string; name: string }>();
+    for (const item of orderForEmail.items) {
+      const vendor = item.product?.store?.owner ?? item.store.owner;
+      if (vendor && !vendorEmails.has(vendor.email)) {
+        vendorEmails.set(vendor.email, { email: vendor.email, name: vendor.fullName ?? "Vendor" });
+      }
+    }
+    for (const vendor of vendorEmails.values()) {
+      const vendorTemplate = newOrderVendorEmail({
+        vendorName: vendor.name,
+        orderRef: ref,
+        itemCount,
+        totalTTD,
+        dashboardUrl: `${BASE_URL}/dashboard/vendor/orders`,
+      });
+      await sendEmail({ to: vendor.email, ...vendorTemplate });
+    }
+  }
 
   revalidatePath("/cart");
   revalidatePath("/checkout");

@@ -9,6 +9,9 @@ import {
 
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { sendEmail } from "@/lib/email/send";
+import { bookingConfirmedCustomerEmail, newBookingVendorEmail } from "@/lib/email/templates";
+import { BASE_URL } from "@/lib/email/resend";
 import {
   generateSlotsForDate,
   getAvailableDates,
@@ -255,6 +258,72 @@ export async function createBooking(input: {
       isAvailable: nextCount < slot.maxBookings,
     },
   });
+
+  const bookingForEmail = await prisma.productBooking.findUnique({
+    where: { id: booking.id },
+    select: {
+      bookingDate: true,
+      startTime: true,
+      customerId: true,
+      product: {
+        select: {
+          name: true,
+          slug: true,
+          store: {
+            select: {
+              name: true,
+              owner: { select: { email: true, fullName: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (bookingForEmail) {
+    const customerUser = await prisma.user.findUnique({
+      where: { id: bookingForEmail.customerId },
+      select: { email: true, fullName: true },
+    });
+    if (customerUser) {
+      const dateStr = new Date(bookingForEmail.bookingDate).toLocaleDateString("en-TT", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        timeZone: "UTC",
+      });
+      const timeStr = (() => {
+        const [h, m] = bookingForEmail.startTime.split(":").map(Number);
+        const period = h >= 12 ? "PM" : "AM";
+        const hour = h % 12 === 0 ? 12 : h % 12;
+        return `${hour}:${m.toString().padStart(2, "0")} ${period}`;
+      })();
+
+      await sendEmail({
+        to: customerUser.email,
+        ...bookingConfirmedCustomerEmail({
+          customerName: customerUser.fullName ?? "Customer",
+          serviceName: bookingForEmail.product.name,
+          storeName: bookingForEmail.product.store.name,
+          bookingDate: dateStr,
+          startTime: timeStr,
+          orderUrl: `${BASE_URL}/orders?tab=bookings`,
+        }),
+      });
+
+      await sendEmail({
+        to: bookingForEmail.product.store.owner.email,
+        ...newBookingVendorEmail({
+          vendorName: bookingForEmail.product.store.owner.fullName ?? "Vendor",
+          serviceName: bookingForEmail.product.name,
+          customerName: customerUser.fullName ?? "Customer",
+          bookingDate: dateStr,
+          startTime: timeStr,
+          dashboardUrl: `${BASE_URL}/dashboard/vendor/bookings`,
+        }),
+      });
+    }
+  }
 
   revalidatePath(`/service/${service.slug}`);
 
