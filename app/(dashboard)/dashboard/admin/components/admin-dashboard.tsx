@@ -146,7 +146,6 @@ export default function AdminDashboard({ adminName: _adminName }: Props) {
   const productsNavActive = pathname?.startsWith("/dashboard/admin/products") ?? false;
   const storesNavActive = pathname?.startsWith("/dashboard/admin/stores") ?? false;
   const verificationNavActive = pathname?.startsWith("/dashboard/admin/verification") ?? false;
-  const adminSettingsNavActive = pathname?.startsWith("/dashboard/admin/settings") ?? false;
   const [activeTab, setActiveTab] = useState<TabId>("overview");
 
   useEffect(() => {
@@ -285,23 +284,18 @@ export default function AdminDashboard({ adminName: _adminName }: Props) {
             </svg>
             Verification
           </Link>
-          <Link
-            href="/dashboard/admin/settings"
-            style={{
-              color: adminSettingsNavActive ? "var(--scarlet)" : "var(--text-muted)",
-              borderBottom: adminSettingsNavActive
-                ? "2px solid var(--scarlet)"
-                : "2px solid transparent",
-            }}
-            className="flex shrink-0 items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-150 relative"
-          >
-            <span aria-hidden className="shrink-0 text-base leading-none">
-              ⚙️
-            </span>
-            Settings
-          </Link>
         </div>
       </nav>
+
+      <div className="flex justify-start border-b border-zinc-200 bg-white px-4 py-3 sm:justify-end sm:px-6">
+        <Link
+          href="/dashboard/admin/settings"
+          className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 hover:border-[#D4450A] hover:text-[#D4450A] transition-colors"
+        >
+          <span>⚙️</span>
+          Account & password
+        </Link>
+      </div>
 
       <div className="p-6" style={{ backgroundColor: "var(--surface)" }}>
         {activeTab === "overview" && <OverviewTab />}
