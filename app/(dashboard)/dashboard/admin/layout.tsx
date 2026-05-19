@@ -1,5 +1,12 @@
 import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
+import { getSession } from "@/lib/auth/session";
+
+export default async function AdminLayout({ children }: { children: ReactNode }) {
+  const session = await getSession();
+  if (!session) redirect("/login");
+  if (session.role !== "ADMIN") redirect("/");
+
   return <>{children}</>;
 }

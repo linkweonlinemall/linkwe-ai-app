@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { getAdminStores } from "@/app/actions/admin-stores";
+import { assertDashboardRole } from "@/lib/auth/assert-role";
 import { getSession } from "@/lib/auth/session";
 
 import AdminStoresClient from "./admin-stores-client";
@@ -22,7 +23,7 @@ export default async function AdminStoresPage({
 }) {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (session.role !== "ADMIN") redirect("/");
+  assertDashboardRole(session, "ADMIN");
 
   const sp = await searchParams;
   const q = pickString(sp, "q") ?? "";

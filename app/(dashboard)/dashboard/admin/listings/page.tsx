@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { getAdminListings } from "@/app/actions/admin-listings";
+import { assertDashboardRole } from "@/lib/auth/assert-role";
 import { getSession } from "@/lib/auth/session";
 
 import AdminListingsClient from "./admin-listings-client";
@@ -22,7 +23,7 @@ export default async function AdminListingsPage({
 }) {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (session.role !== "ADMIN") redirect("/");
+  assertDashboardRole(session, "ADMIN");
 
   const sp = await searchParams;
   const q = pickString(sp, "q") ?? "";

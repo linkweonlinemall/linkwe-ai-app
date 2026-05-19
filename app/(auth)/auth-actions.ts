@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -9,6 +10,7 @@ import { getAuthLandingPath } from "@/lib/auth/landing";
 import { safeInternalPath } from "@/lib/auth/redirects";
 import { roleForSignup, type SignupKind } from "@/lib/auth/signup-kinds";
 import { logPrismaError } from "@/lib/log-prisma-error";
+import { checkRateLimit, resetRateLimit } from "@/lib/security/rate-limit";
 
 export type AuthFormState = {
   error?: string;
@@ -44,6 +46,22 @@ export async function registerAction(
   _prev: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
+  const headersList = await headers();
+  const ip =
+    headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    headersList.get("x-real-ip") ??
+    "unknown";
+
+  const rateLimitKey = `register:${ip}`;
+  const rateLimit = checkRateLimit(rateLimitKey, 3, 60 * 60 * 1000); // 3 attempts per hour
+
+  if (!rateLimit.allowed) {
+    const minutesLeft = Math.ceil((rateLimit.resetAt - Date.now()) / 60000);
+    return {
+      error: `Too many registration attempts. Please try again in ${minutesLeft} minute${minutesLeft !== 1 ? "s" : ""}.`,
+    };
+  }
+
   const signupKind = parseSignupKind(formData.get("signupKind"));
   if (!signupKind) {
     return { error: "Invalid registration type." };
@@ -114,6 +132,22 @@ export async function registerAction(
 }
 
 export async function loginAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  const headersList = await headers();
+  const ip =
+    headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    headersList.get("x-real-ip") ??
+    "unknown";
+
+  const rateLimitKey = `login:${ip}`;
+  const rateLimit = checkRateLimit(rateLimitKey, 5, 15 * 60 * 1000);
+
+  if (!rateLimit.allowed) {
+    const minutesLeft = Math.ceil((rateLimit.resetAt - Date.now()) / 60000);
+    return {
+      error: `Too many login attempts. Please try again in ${minutesLeft} minute${minutesLeft !== 1 ? "s" : ""}.`,
+    };
+  }
+
   const emailRaw = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
   const callbackUrl = String(formData.get("callbackUrl") ?? "");
@@ -137,6 +171,7 @@ export async function loginAction(_prev: AuthFormState, formData: FormData): Pro
   if (!ok) return { error: "Invalid email or password." };
 
   await createSessionFromUser(user);
+  resetRateLimit(rateLimitKey);
 
   const store =
     user.role === "VENDOR"

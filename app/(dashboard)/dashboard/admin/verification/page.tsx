@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { assertDashboardRole } from "@/lib/auth/assert-role";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
@@ -8,7 +9,8 @@ import VerificationClient from "./verification-client";
 
 export default async function AdminVerificationPage() {
   const session = await getSession();
-  if (!session || session.role !== "ADMIN") redirect("/login");
+  if (!session) redirect("/login");
+  assertDashboardRole(session, "ADMIN");
 
   const vendors = await prisma.user.findMany({
     where: {

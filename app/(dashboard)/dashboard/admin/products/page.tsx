@@ -6,6 +6,7 @@ import {
   getAdminStoreOptions,
   type AdminProductFilters,
 } from "@/app/actions/admin-products";
+import { assertDashboardRole } from "@/lib/auth/assert-role";
 import { getSession } from "@/lib/auth/session";
 
 const SORTS = [
@@ -33,7 +34,7 @@ export default async function AdminProductsPage({
 }) {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (session.role !== "ADMIN") redirect("/");
+  assertDashboardRole(session, "ADMIN");
 
   const sp = await searchParams;
 
