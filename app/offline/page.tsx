@@ -1,8 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 
 export default function OfflinePage() {
+  useEffect(() => {
+    document.title = "You are offline · LinkWe";
+  }, []);
+
   return (
     <div
       className="flex min-h-screen flex-col items-center justify-center px-4 text-center"

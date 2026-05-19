@@ -1,10 +1,16 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 
 import { getCart, removeFromCart, updateCartQuantity } from "@/app/actions/cart";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import PublicNav from "@/components/layout/PublicNav";
+
+export const metadata: Metadata = {
+  title: "Your cart",
+  description: "Review your cart and proceed to checkout.",
+};
 
 export default async function CartPage() {
   const session = await getSession();

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { Prisma } from "@prisma/client";
@@ -15,6 +16,12 @@ import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { prisma } from "@/lib/prisma";
 import { PRODUCT_CATEGORIES } from "@/lib/categories";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
+
+export const metadata: Metadata = {
+  title: "Shop",
+  description:
+    "Browse products from local vendors across Trinidad & Tobago. Electronics, fashion, food, services and more.",
+};
 
 const CATEGORIES = [{ value: "all", label: "All" }, ...PRODUCT_CATEGORIES];
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
@@ -7,6 +8,11 @@ import { prisma } from "@/lib/prisma";
 import PublicNav from "@/components/layout/PublicNav";
 
 import OrdersClient from "./orders-client";
+
+export const metadata: Metadata = {
+  title: "My orders",
+  description: "Track and manage your LinkWe orders.",
+};
 
 export default async function OrdersPage() {
   const session = await getSession();

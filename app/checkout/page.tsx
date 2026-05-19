@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
@@ -6,6 +7,11 @@ import { prisma } from "@/lib/prisma";
 import PublicNav from "@/components/layout/PublicNav";
 
 import CheckoutClient from "./checkout-client";
+
+export const metadata: Metadata = {
+  title: "Checkout",
+  description: "Complete your purchase securely.",
+};
 
 export default async function CheckoutPage() {
   const session = await getSession();

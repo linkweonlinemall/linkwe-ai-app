@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getSavedStoreIds, getWishlistProductIds } from "@/app/actions/wishlist";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
@@ -10,6 +11,12 @@ import WishlistButton from "@/components/ui/WishlistButton";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { PRODUCT_CATEGORIES } from "@/lib/categories";
 import { SERVICE_CATEGORIES } from "@/lib/categories";
+
+export const metadata: Metadata = {
+  title: "LinkWe Online Mall — Shop Local Trinidad & Tobago",
+  description:
+    "Discover local vendors, book services, and shop products across Trinidad & Tobago. LinkWe connects you with the best local businesses.",
+};
 
 export default async function Home() {
   const session = await getSession();

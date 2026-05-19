@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 
 import { getCustomerOnDemandRequests } from "@/app/actions/on-demand";
 import PublicNav from "@/components/layout/PublicNav";
@@ -8,6 +9,11 @@ import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { prisma } from "@/lib/prisma";
 
 import CustomerRequestsClient from "./CustomerRequestsClient";
+
+export const metadata: Metadata = {
+  title: "My requests",
+  description: "Track your on-demand service requests.",
+};
 
 export default async function MyRequestsPage() {
   const session = await getSession();

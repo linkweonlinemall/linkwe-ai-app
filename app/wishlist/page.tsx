@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { getWishlistItems } from "@/app/actions/wishlist";
@@ -8,6 +9,11 @@ import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { prisma } from "@/lib/prisma";
+
+export const metadata: Metadata = {
+  title: "My wishlist",
+  description: "Products you have saved to buy later.",
+};
 
 export default async function WishlistPage() {
   const session = await getSession();

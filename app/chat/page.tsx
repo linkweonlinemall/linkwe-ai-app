@@ -1,12 +1,13 @@
 import ShoppingChat from "@/components/chat/ShoppingChat"
 import PublicNav from "@/components/layout/PublicNav"
+import type { Metadata } from "next"
 import { getVendorChats } from "@/app/actions/vendor-chat"
 import { getSession } from "@/lib/auth/session"
 import { getRoleDashboardPath } from "@/lib/auth/redirects"
 
-export const metadata = {
-  title: "Shop with AI — LinkWe",
-  description: "Find products from local vendors across Trinidad & Tobago",
+export const metadata: Metadata = {
+  title: "AI Shopping Assistant",
+  description: "Shop with AI — find products and services across LinkWe using natural language.",
 }
 
 export default async function ChatPage() {

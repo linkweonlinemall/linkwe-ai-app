@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { getSavedStores } from "@/app/actions/wishlist";
@@ -9,6 +10,11 @@ import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { getSession } from "@/lib/auth/session";
 import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { prisma } from "@/lib/prisma";
+
+export const metadata: Metadata = {
+  title: "Saved stores",
+  description: "Stores you follow on LinkWe.",
+};
 
 export default async function SavedStoresPage() {
   const session = await getSession();
