@@ -714,6 +714,67 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Get the app section */}
+      <section className="py-16 px-4 sm:px-6" style={{ background: "linear-gradient(135deg, #1C1C1A 0%, #2A1A0E 100%)" }}>
+        <div className="mx-auto max-w-screen-xl">
+          <div className="flex flex-col items-center gap-8 text-center lg:flex-row lg:text-left lg:gap-16">
+            <div className="flex-1">
+              <p className="text-xs font-bold uppercase tracking-widest text-[#E8820C]">Free download</p>
+              <h2 className="font-display mt-3 text-3xl font-black text-white sm:text-4xl">Take LinkWe everywhere</h2>
+              <p className="mt-4 text-sm leading-7 text-zinc-400 max-w-lg">
+                Install the LinkWe app on your phone or computer. Shop local vendors, book services, track orders — all from
+                your home screen. No app store required.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3 justify-center lg:justify-start">
+                <Link
+                  href="/get-app"
+                  className="flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
+                  style={{ background: "linear-gradient(135deg, #D4450A, #E8820C)" }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                  Get the app
+                </Link>
+                <Link
+                  href="/shop"
+                  className="rounded-xl border-2 border-white/20 px-6 py-3 text-sm font-bold text-white hover:border-white/40 transition-colors"
+                >
+                  Browse first
+                </Link>
+              </div>
+              <div className="mt-6 flex flex-wrap gap-4 justify-center lg:justify-start">
+                {[
+                  { icon: "📱", label: "iPhone & iPad" },
+                  { icon: "🤖", label: "Android" },
+                  { icon: "🖥️", label: "Desktop" },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center gap-2">
+                    <span className="text-base">{item.icon}</span>
+                    <span className="text-xs font-semibold text-zinc-400">{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="shrink-0">
+              <div className="relative">
+                <div
+                  className="absolute inset-0 rounded-3xl blur-3xl opacity-30"
+                  style={{ background: "radial-gradient(circle, #D4450A, transparent)" }}
+                />
+                <img
+                  src="/icon-192x192.png"
+                  alt="LinkWe app"
+                  className="relative h-40 w-40 rounded-3xl shadow-2xl ring-4 ring-white/10"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="bg-[#111110] px-4 py-16 sm:px-6">
         <div className="mx-auto max-w-screen-xl">

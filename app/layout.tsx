@@ -62,6 +62,9 @@ export default function RootLayout({
                 <a href="/contact" className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
                   Contact
                 </a>
+                <a href="/get-app" className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
+                  Get the app
+                </a>
               </div>
             </div>
           </div>
