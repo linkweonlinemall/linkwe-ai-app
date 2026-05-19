@@ -203,8 +203,10 @@ export default async function CustomerDashboardPage() {
             { label: "Services", href: "/services", icon: "🛎️" },
             { label: "My requests", href: "/my-requests", icon: "⚡" },
             { label: "My orders", href: "/orders", icon: "📦" },
+            { label: "Bookings", href: "/bookings", icon: "📅" },
             { label: "Wishlist", href: "/wishlist", icon: "🤍" },
             { label: "Saved stores", href: "/saved-stores", icon: "🔖" },
+            { label: "Settings", href: "/dashboard/customer/settings", icon: "⚙️" },
           ].map((item) => (
             <Link
               key={item.href}

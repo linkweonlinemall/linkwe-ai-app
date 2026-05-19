@@ -3,6 +3,8 @@ import { logoutAction } from "@/app/(auth)/auth-actions";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import ProfileForm from "@/components/settings/ProfileForm";
+import PasswordForm from "@/components/settings/PasswordForm";
 
 export default async function CustomerSettingsPage() {
   const session = await getSession();
@@ -28,30 +30,9 @@ export default async function CustomerSettingsPage() {
           <h1 className="text-2xl font-black text-zinc-900">Account settings</h1>
           <p className="mt-1 text-sm text-zinc-500">Manage your LinkWe account</p>
         </div>
-
         <div className="flex flex-col gap-4">
-          {/* Profile */}
-          <div className="rounded-2xl border border-zinc-200 bg-white p-6">
-            <h2 className="mb-4 text-sm font-bold text-zinc-900">Profile</h2>
-            <div className="flex flex-col gap-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-zinc-500">Name</span>
-                <span className="font-medium text-zinc-900">{user.fullName ?? "—"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-500">Email</span>
-                <span className="font-medium text-zinc-900">{user.email}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-500">Phone</span>
-                <span className="font-medium text-zinc-900">{user.phone ?? "Not set"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-500">Region</span>
-                <span className="font-medium text-zinc-900 capitalize">{user.region ?? "Not set"}</span>
-              </div>
-            </div>
-          </div>
+          <ProfileForm user={user} />
+          <PasswordForm />
 
           {/* Quick links */}
           <div className="rounded-2xl border border-zinc-200 bg-white p-6">
@@ -59,9 +40,10 @@ export default async function CustomerSettingsPage() {
             <div className="flex flex-col gap-2">
               {[
                 { label: "My orders", href: "/orders" },
-                { label: "My bookings", href: "/orders?tab=bookings" },
-                { label: "Browse shop", href: "/shop" },
-                { label: "Browse services", href: "/services" },
+                { label: "My bookings", href: "/bookings" },
+                { label: "My wishlist", href: "/wishlist" },
+                { label: "Saved stores", href: "/saved-stores" },
+                { label: "My requests", href: "/my-requests" },
               ].map((link) => (
                 <Link
                   key={link.href}
@@ -69,7 +51,14 @@ export default async function CustomerSettingsPage() {
                   className="flex items-center justify-between rounded-xl border border-zinc-100 px-4 py-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 transition-colors"
                 >
                   {link.label}
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <polyline points="9 18 15 12 9 6" />
                   </svg>
                 </Link>
@@ -80,7 +69,9 @@ export default async function CustomerSettingsPage() {
           {/* Danger zone */}
           <div className="rounded-2xl border border-red-100 bg-red-50 p-6">
             <h2 className="mb-2 text-sm font-bold text-red-900">Sign out</h2>
-            <p className="mb-4 text-xs text-red-700">You will be signed out of your account on this device.</p>
+            <p className="mb-4 text-xs text-red-700">
+              You will be signed out of your account on this device.
+            </p>
             <form action={logoutAction}>
               <button
                 type="submit"

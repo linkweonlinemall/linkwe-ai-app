@@ -20,7 +20,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/vendor?tab=finance", label: "Finance", icon: "💳", exact: false },
   { href: "/dashboard/vendor?tab=messages", label: "Messages", icon: "💬", exact: false },
   { href: "/dashboard/vendor?tab=reviews", label: "Reviews", icon: "⭐", exact: false },
-  { href: "/dashboard/vendor?tab=settings", label: "Settings", icon: "⚙️", exact: false },
+  { href: "/dashboard/vendor/settings", label: "Settings", icon: "⚙️", exact: false },
 ];
 
 export default function VendorSidebarWrapper() {
