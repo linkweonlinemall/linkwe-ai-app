@@ -71,6 +71,10 @@ function expandQuery(query: string): string[] {
     .filter((w) => w.length > 2)
     .forEach((w) => terms.add(w))
 
+  // The full original query is also searched as one phrase (not only split words):
+  // `terms` was initialized with `lower`, so e.g. "bad dawg" is always present as
+  // "bad dawg" for name/brand/description contains and tags array exact-match.
+
   return Array.from(terms)
 }
 
@@ -128,6 +132,8 @@ export async function searchProducts(input: SearchInput): Promise<ChatProduct[]>
           ],
         }
       : {}
+
+  console.log("[searchProducts] query:", query, "expandedTerms:", expandedTerms)
 
   // First try with expanded search
   let products = await prisma.product.findMany({

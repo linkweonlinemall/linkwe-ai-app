@@ -18,11 +18,33 @@ import { parseAssistantMessage } from "@/lib/chat/parseMessage"
 import type { ChatMessage, ChatProduct } from "@/lib/chat/types"
 import type { CartItem } from "@/lib/cart/cart-store"
 
+/** Minimal typings for Web Speech API (not always in TS DOM libs) */
+interface SpeechRecResultEvent {
+  results: ArrayLike<{ 0: { transcript: string } }>
+}
+
+type WebSpeechRecognitionCtor = new () => WebSpeechRecognitionInstance
+
+interface WebSpeechRecognitionInstance {
+  lang: string
+  interimResults: boolean
+  continuous: boolean
+  start: () => void
+  stop: () => void
+  abort: () => void
+  onstart: (() => void) | null
+  onend: (() => void) | null
+  onerror: ((ev: { error: string }) => void) | null
+  onresult: ((ev: SpeechRecResultEvent) => void) | null
+}
+
 const SUGGESTIONS = [
-  "Show me gifts under TTD 200",
-  "I need something for a birthday",
-  "What stores are in Port of Spain?",
-  "Show me clothing for women",
+  "Style me for a fete 🎉",
+  "Build me an outfit under TTD 500",
+  "I need a gift idea 🎁",
+  "Find me something for the beach 🌊",
+  "Shop by my vibe",
+  "What's trending on LinkWe?",
 ]
 
 const assistantMarkdownComponents: Partial<Components> = {
@@ -43,6 +65,54 @@ function linkifyText(text: string): string {
     /(https?:\/\/[^\s)]+)/g,
     (url) => `[${url}](${url})`
   )
+}
+
+function getSpeechRecognitionCtor(): WebSpeechRecognitionCtor | null {
+  if (typeof window === "undefined") return null
+  const w = window as Window & {
+    webkitSpeechRecognition?: WebSpeechRecognitionCtor
+    SpeechRecognition?: WebSpeechRecognitionCtor
+  }
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null
+}
+
+function isSpeechSynthesisAvailable(): boolean {
+  try {
+    return typeof window !== "undefined" && typeof window.speechSynthesis !== "undefined"
+  } catch {
+    return false
+  }
+}
+
+/** Plain text for TTS: strip markdown, emoji, and product code fences. */
+function cleanTextForSpeech(raw: string): string {
+  try {
+    let t = raw
+    t = t.replace(/```products\n[\s\S]*?```/g, " ")
+    t = t.replace(/```[\s\S]*?```/g, " ")
+    t = t.replace(/\*\*([^*]+)\*\*/g, "$1")
+    t = t.replace(/\*([^*]+)\*/g, "$1")
+    t = t.replace(/^#{1,6}\s+/gm, "")
+    t = t.replace(/`([^`]+)`/g, "$1")
+    t = t.replace(/~~([^~]+)~~/g, "$1")
+    t = t.replace(/\[([^\]]+)]\([^)]+\)/g, "$1")
+    t = t.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, " ")
+    t = t.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, " ")
+    t = t.replace(/[*#`~_]/g, " ")
+    return t.replace(/\s+/g, " ").trim()
+  } catch {
+    return raw
+  }
+}
+
+function formatChatDate(date: Date | string): string {
+  const d = new Date(date)
+  const day = d.getUTCDate()
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+  const month = months[d.getUTCMonth()]
+  const hours = String(d.getUTCHours()).padStart(2, "0")
+  const mins = String(d.getUTCMinutes()).padStart(2, "0")
+  return `${day} ${month}, ${hours}:${mins}`
 }
 
 function mapRows(rows: Awaited<ReturnType<typeof getCart>>): CartItem[] {
@@ -403,9 +473,174 @@ export default function ShoppingChat({
 
   const [input, setInput] = useState("")
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [voiceOutputEnabled, setVoiceOutputEnabled] = useState(false)
+  const [isListeningMic, setIsListeningMic] = useState(false)
+  const [recognitionSupported, setRecognitionSupported] = useState(false)
+  const [ttsSupported, setTtsSupported] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const recognitionRef = useRef<WebSpeechRecognitionInstance | null>(null)
+  const prevMessagesForSpeechRef = useRef<ChatMessage[]>([])
+  const recognitionRestartingRef = useRef(false)
+
+  useEffect(() => {
+    try {
+      setRecognitionSupported(getSpeechRecognitionCtor() !== null)
+      setTtsSupported(isSpeechSynthesisAvailable())
+    } catch {
+      setRecognitionSupported(false)
+      setTtsSupported(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    try {
+      if (!voiceOutputEnabled && isSpeechSynthesisAvailable()) {
+        window.speechSynthesis.cancel()
+      }
+    } catch {
+      /* silent */
+    }
+  }, [voiceOutputEnabled])
+
+  useEffect(() => {
+    try {
+      if (messages.some((m) => m.role === "assistant" && m.isStreaming)) {
+        window.speechSynthesis?.cancel()
+      }
+    } catch {
+      /* silent */
+    }
+  }, [messages])
+
+  useEffect(() => {
+    try {
+      if (!voiceOutputEnabled || !isSpeechSynthesisAvailable()) {
+        prevMessagesForSpeechRef.current = messages
+        return
+      }
+
+      const prev = prevMessagesForSpeechRef.current
+
+      for (const m of messages) {
+        if (m.role !== "assistant" || !m.content?.trim()) continue
+        const was = prev.find((p) => p.id === m.id)
+        if (was?.isStreaming === true && m.isStreaming === false) {
+          const cleaned = cleanTextForSpeech(m.content)
+          if (!cleaned.trim()) break
+          try {
+            window.speechSynthesis.cancel()
+            const u = new SpeechSynthesisUtterance(cleaned)
+            u.rate = 1.0
+            u.pitch = 1.05
+            u.volume = 1.0
+            u.lang = "en-TT"
+            window.speechSynthesis.speak(u)
+          } catch {
+            /* silent */
+          }
+          break
+        }
+      }
+      prevMessagesForSpeechRef.current = messages
+    } catch {
+      /* silent */
+    }
+  }, [messages, voiceOutputEnabled])
+
+  const toggleMic = useCallback(() => {
+    console.log("toggleMic called, isListeningMic:", isListeningMic)
+    const Ctor = getSpeechRecognitionCtor()
+    if (!Ctor) return
+
+    if (isListeningMic) {
+      try {
+        recognitionRef.current?.stop()
+      } catch {
+        /* silent */
+      }
+      return
+    }
+
+    try {
+      const rec = new Ctor()
+      let triedEnUsFallback = false
+
+      rec.lang = "en-TT"
+      rec.interimResults = false
+      rec.continuous = false
+
+      rec.onend = () => {
+        if (recognitionRestartingRef.current) {
+          recognitionRestartingRef.current = false
+          return
+        }
+        setIsListeningMic(false)
+        recognitionRef.current = null
+      }
+
+      rec.onerror = (ev: { error: string }) => {
+        console.log("Speech recognition error:", ev.error)
+        try {
+          if (!triedEnUsFallback && ev.error === "language-not-found") {
+            triedEnUsFallback = true
+            recognitionRestartingRef.current = true
+            const rec2 = new Ctor()
+            rec2.lang = "en-US"
+            rec2.interimResults = false
+            rec2.continuous = false
+            rec2.onstart = () => setIsListeningMic(true)
+            rec2.onend = () => {
+              setIsListeningMic(false)
+              recognitionRef.current = null
+            }
+            rec2.onerror = () => {
+              setIsListeningMic(false)
+              recognitionRef.current = null
+            }
+            rec2.onresult = (event: SpeechRecResultEvent) => {
+              const text = event.results[0][0].transcript
+              setInput((prev) => {
+                const t = prev.trim()
+                return t ? `${t} ${text}` : text
+              })
+            }
+            recognitionRef.current = rec2
+            rec2.start()
+            return
+          }
+        } catch {
+          /* silent */
+        }
+        setIsListeningMic(false)
+        recognitionRef.current = null
+      }
+
+      rec.onstart = () => {
+        console.log("Speech recognition started successfully")
+        setIsListeningMic(true)
+      }
+
+      rec.onresult = (event: SpeechRecResultEvent) => {
+        try {
+          const text = event.results[0][0].transcript
+          setInput((prev) => {
+            const t = prev.trim()
+            return t ? `${t} ${text}` : text
+          })
+        } catch {
+          /* silent */
+        }
+      }
+
+      recognitionRef.current = rec
+      console.log("Starting speech recognition with lang:", rec.lang)
+      rec.start()
+    } catch {
+      setIsListeningMic(false)
+    }
+  }, [isListeningMic])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -470,92 +705,178 @@ export default function ShoppingChat({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+@keyframes shopping-mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 69, 10, 0.55); }
+  50% { box-shadow: 0 0 0 10px rgba(212, 69, 10, 0); }
+}
+.shopping-mic-active {
+  animation: shopping-mic-pulse 1.2s ease-in-out infinite;
+  background-color: #D4450A;
+  color: white;
+  border-color: #D4450A;
+}
+`,
+        }}
+      />
       <div
-        className="flex shrink-0 items-center gap-2 border-b px-4 py-2"
-        style={{ borderColor: "var(--card-border)", backgroundColor: "var(--surface)" }}
+        className="flex w-full shrink-0 items-center justify-between border-b border-[#E5E5E5] px-3 py-2"
+        style={{ backgroundColor: "var(--surface)" }}
       >
-        {isLoggedIn ? (
-          <>
-            <button
-              type="button"
-              onClick={() => setShowHistory((s) => !s)}
-              className="rounded-lg border px-3 py-1.5 text-sm font-medium"
-              style={{ borderColor: "var(--card-border)", color: "var(--text-primary)" }}
-            >
-              {showHistory ? "Hide history" : "History"}
-            </button>
-            <button
-              type="button"
-              onClick={handleNewChat}
-              className="rounded-lg border px-3 py-1.5 text-sm font-medium"
-              style={{ borderColor: "var(--card-border)", color: "var(--text-primary)" }}
-            >
-              New chat
-            </button>
-          </>
+        <button
+          type="button"
+          aria-label="Open conversations"
+          onClick={() => setShowHistory(true)}
+          className="flex h-10 w-10 flex-shrink-0 items-center justify-center text-xl leading-none sm:hidden"
+          style={{ color: "#1C1C1A" }}
+        >
+          ☰
+        </button>
+        <div className="hidden flex-1 sm:block" aria-hidden />
+        {ttsSupported ? (
+          <button
+            type="button"
+            aria-label={voiceOutputEnabled ? "Turn off voice output" : "Turn on voice output"}
+            aria-pressed={voiceOutputEnabled}
+            onClick={() => setVoiceOutputEnabled((v) => !v)}
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-lg leading-none"
+            style={{
+              color: voiceOutputEnabled ? "#D4450A" : "#666",
+            }}
+          >
+            🔊
+          </button>
         ) : null}
       </div>
-      <div className="flex min-h-0 flex-1">
-        {showHistory && isLoggedIn ? (
+
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
+        {showHistory ? (
           <div
-            className="w-56 max-w-[40%] shrink-0 overflow-y-auto border-r p-2 sm:w-64"
-            style={{ borderColor: "var(--card-border)", backgroundColor: "white" }}
-          >
-            {chatList.length === 0 ? (
-              <p className="px-2 text-xs" style={{ color: "var(--text-muted)" }}>
-                No past conversations yet
-              </p>
-            ) : (
-              chatList.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => void openChat(c.id)}
-                  className={
-                    c.id === chatId
-                      ? "mb-1 w-full rounded-lg bg-amber-50 px-2 py-2 text-left text-sm transition-colors"
-                      : "mb-1 w-full rounded-lg px-2 py-2 text-left text-sm transition-colors hover:bg-zinc-100"
-                  }
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  <div className="line-clamp-2 font-medium">{c.title}</div>
-                  <div className="text-[10px] text-zinc-500">
-                    {new Date(c.createdAt).toLocaleString()}
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
+            className="absolute inset-0 z-40 bg-[rgba(0,0,0,0.4)] sm:hidden"
+            onClick={() => setShowHistory(false)}
+            aria-hidden
+          />
         ) : null}
+
+        <aside
+          className={`absolute inset-y-0 left-0 z-50 flex h-full min-h-0 w-[260px] flex-col overflow-y-auto border-r border-[#E5E5E5] bg-white shadow-xl transition-transform duration-300 ease-out sm:static sm:z-auto sm:h-full sm:shrink-0 sm:translate-x-0 sm:shadow-none sm:transition-none ${showHistory ? "translate-x-0" : "-translate-x-full"}`}
+        >
+          <button
+            type="button"
+            aria-label="Close conversations"
+            onClick={() => setShowHistory(false)}
+            className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center text-lg leading-none text-[#666] sm:hidden"
+          >
+            ✕
+          </button>
+
+          {isLoggedIn ? (
+            <>
+              <div className="mx-3 mt-12 shrink-0 sm:mt-3">
+                <button
+                  type="button"
+                  onClick={handleNewChat}
+                  className="w-full rounded-lg px-4 py-[10px] text-sm font-semibold text-white"
+                  style={{ backgroundColor: "#D4450A" }}
+                >
+                  + New Chat
+                </button>
+              </div>
+              <div className="px-4 py-2 text-[11px] uppercase tracking-[0.05em] text-[#999]">
+                Recent Chats
+              </div>
+              <div className="min-h-0 flex-1 px-3 pb-3">
+                {chatList.length === 0 ? (
+                  <p className="p-4 text-center text-xs text-[#999]">No past conversations yet</p>
+                ) : (
+                  <ul className="flex flex-col gap-0.5">
+                    {chatList.map((c) => {
+                      const active = c.id === chatId
+                      return (
+                        <li key={c.id}>
+                          <button
+                            type="button"
+                            onClick={() => void openChat(c.id)}
+                            className={`w-full rounded-lg border-l-[3px] py-[10px] pl-[11px] pr-[14px] text-left transition-colors ${
+                              active
+                                ? "border-[#D4450A] bg-[#FFF5F0]"
+                                : "border-transparent hover:bg-[#F5F5F5]"
+                            }`}
+                          >
+                            <div className="line-clamp-1 text-[13px] font-medium text-[#1C1C1A]">
+                              {c.title}
+                            </div>
+                            <div className="mt-0.5 text-[10px] text-[#999]">
+                              {formatChatDate(c.createdAt)}
+                            </div>
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-1 flex-col items-center justify-center p-4 text-center text-xs text-[#999]">
+              Sign in to save your conversations
+            </div>
+          )}
+        </aside>
+
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
         {/* Empty state */}
         {messages.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-6 text-center">
-            <div>
-              <div className="mb-3 text-5xl">🛍️</div>
+          <div className="flex h-full flex-col items-center justify-center gap-8 px-3 text-center">
+            <style
+              dangerouslySetInnerHTML={{
+                __html: `
+@keyframes zara-avatar-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(212, 69, 10, 0.4), 0 0 24px rgba(212, 69, 10, 0.18);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(212, 69, 10, 0.12), 0 0 40px rgba(232, 130, 12, 0.28);
+  }
+}
+.zara-avatar-pulse {
+  animation: zara-avatar-glow 2.75s ease-in-out infinite;
+}
+`,
+              }}
+            />
+            <div className="flex flex-col items-center gap-4">
+              <div className="zara-avatar-pulse flex h-[5.5rem] w-[5.5rem] shrink-0 items-center justify-center rounded-full bg-[#D4450A] text-5xl leading-none text-white shadow-lg">
+                <span aria-hidden>🛍</span>
+              </div>
               <h2
-                className="mb-1 text-lg font-bold"
-                style={{ color: "var(--text-primary)" }}
+                className="text-2xl font-bold leading-tight sm:text-3xl"
+                style={{ fontFamily: "var(--font-sora), sans-serif", color: "var(--text-primary)" }}
               >
-                Shop with AI
+                Hi, I&apos;m Zara ✨
               </h2>
-              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                Tell me what you&apos;re looking for and I&apos;ll find it from
-                local vendors across Trinidad & Tobago
+              <p
+                className="max-w-[400px] text-sm leading-relaxed sm:text-[15px]"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Your personal shopping expert for Trinidad & Tobago. I can build outfits, find ingredients, style you for any occasion, and shop the whole platform for you.
               </p>
             </div>
-            <div className="flex max-w-sm flex-wrap justify-center gap-2">
+            <div className="grid w-full max-w-lg grid-cols-2 gap-2.5 sm:max-w-2xl md:flex md:max-w-none md:flex-wrap md:justify-center md:gap-3">
               {SUGGESTIONS.map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => void sendMessage(s)}
-                  className="rounded-full px-4 py-2 text-sm font-medium transition-colors hover:opacity-90"
+                  className="rounded-full border px-3 py-2.5 text-center text-xs font-medium shadow-md transition-shadow hover:shadow-lg sm:text-sm"
                   style={{
-                    backgroundColor: "var(--scarlet)",
-                    color: "white",
+                    backgroundColor: "#ffffff",
+                    borderColor: "#E8820C",
+                    color: "#D4450A",
                   }}
                 >
                   {s}
@@ -724,7 +1045,7 @@ export default function ShoppingChat({
             placeholder={
               imagePreview
                 ? "Describe what you want or send the photo..."
-                : "Ask me anything — gifts, clothing, food..."
+                : "Ask Zara anything — outfits, gifts, food, style..."
             }
             disabled={isLoading}
             className="flex-1 rounded-xl border px-4 py-2.5 text-sm outline-none transition-colors"
@@ -733,6 +1054,25 @@ export default function ShoppingChat({
               color: "var(--text-primary)",
             }}
           />
+
+          {recognitionSupported ? (
+            <button
+              type="button"
+              aria-label={isListeningMic ? "Stop listening" : "Speak to Zara"}
+              onClick={toggleMic}
+              disabled={isLoading}
+              className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-lg transition-opacity disabled:opacity-40 ${
+                isListeningMic ? "shopping-mic-active" : "hover:bg-zinc-100"
+              }`}
+              style={
+                isListeningMic
+                  ? undefined
+                  : { border: "1px solid var(--card-border)", color: "var(--text-muted)" }
+              }
+            >
+              🎤
+            </button>
+          ) : null}
 
           {/* Send button */}
           <button

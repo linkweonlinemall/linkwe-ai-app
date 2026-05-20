@@ -812,6 +812,15 @@ export async function POST(req: NextRequest) {
       }
 
       try {
+        if (!process.env.ANTHROPIC_API_KEY?.trim()) {
+          console.error(
+            "Vendor AI: ANTHROPIC_API_KEY is missing or empty — set it in .env.local",
+          )
+          send(JSON.stringify({ error: "Something went wrong" }))
+          controller.close()
+          return
+        }
+
         let systemPrompt = VENDOR_SYSTEM_PROMPT
         if (uploadedImageUrlsPayload.length > 0) {
           const n = uploadedImageUrlsPayload.length
@@ -978,10 +987,40 @@ If SYSTEM notes further down report an issue with attaching to a product gallery
         send("[DONE]")
         controller.close()
       } catch (error) {
-        console.error("Vendor AI error:", {
-          message: error instanceof Error ? error.message : String(error),
-          status: (error as { status?: number })?.status,
-        })
+        console.error("Vendor AI error:", error)
+        if (error instanceof Error) {
+          console.error("Vendor AI error.message:", error.message)
+          console.error("Vendor AI error.stack:", error.stack)
+        }
+        const errObj = error as {
+          status?: number
+          error?: unknown
+          requestID?: string
+          cause?: unknown
+        }
+        if (typeof errObj.status === "number") {
+          console.error("Vendor AI Anthropic HTTP status:", errObj.status)
+        }
+        if (errObj.error !== undefined) {
+          try {
+            console.error(
+              "Vendor AI Anthropic error.body:",
+              JSON.stringify(errObj.error),
+            )
+          } catch {
+            console.error(
+              "Vendor AI Anthropic error.body (non-JSON-serializable):",
+              errObj.error,
+            )
+          }
+        }
+        if (errObj.requestID) {
+          console.error("Vendor AI Anthropic request-id:", errObj.requestID)
+        }
+        if (errObj.cause !== undefined) {
+          console.error("Vendor AI error.cause:", errObj.cause)
+        }
+
         send(JSON.stringify({ error: "Something went wrong" }))
         controller.close()
       }

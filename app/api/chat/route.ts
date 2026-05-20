@@ -2,14 +2,91 @@ import { NextRequest } from "next/server"
 import Anthropic from "@anthropic-ai/sdk"
 import { addToCart } from "@/app/actions/cart"
 import { searchProducts } from "@/app/actions/searchProducts"
+import type { ChatProduct } from "@/lib/chat/types"
 import { LINKWE_SYSTEM_PROMPT } from "@/lib/chat/systemPrompt"
 
 const client = new Anthropic()
 
+/** Outfit / clothing intent: run multi-part searches (tops, bottoms, shoes). */
+const OUTFIT_KEYWORD_RE =
+  /outfit|wear|dress|fete|wedding|church|beach|work|casual|style|clothes|shoes|shirt|pants/i
+
+function isOutfitRelatedQuery(text: string): boolean {
+  return OUTFIT_KEYWORD_RE.test(text)
+}
+
+/** Shorter / alternate queries to surface brand + partial-name matches (e.g. "Bad Dawg shirt" → "Bad Dawg"). */
+function buildProductSearchQueries(raw: string): string[] {
+  const q = raw.trim()
+  if (!q) return []
+  const parts = q.split(/\s+/).filter(Boolean)
+  const ordered: string[] = []
+  const add = (s: string) => {
+    const t = s.trim()
+    if (t.length === 0) return
+    if (!ordered.includes(t)) ordered.push(t)
+  }
+
+  add(q)
+
+  if (parts.length >= 2) {
+    add(parts.slice(0, -1).join(" "))
+  }
+  if (parts.length >= 3) {
+    add(parts.slice(0, 2).join(" "))
+  }
+  if (parts.length >= 2) {
+    add(parts[0]!)
+  }
+
+  if (/\bshirts?\b/i.test(q)) {
+    add(q.replace(/\bshirts?\b/gi, "tee").replace(/\s+/g, " ").trim())
+    add(q.replace(/\bshirts?\b/gi, "t-shirt").replace(/\s+/g, " ").trim())
+  }
+
+  return ordered
+}
+
+async function searchProductsWithQueryFallbacks(
+  coreQuery: string,
+): Promise<ChatProduct[]> {
+  const queries = buildProductSearchQueries(coreQuery)
+  const byId = new Map<string, ChatProduct>()
+  for (const query of queries) {
+    const batch = await searchProducts({ query, limit: 8 })
+    for (const p of batch) {
+      if (!byId.has(p.id)) byId.set(p.id, p)
+    }
+  }
+  return Array.from(byId.values())
+}
+
+function summarizeProductsForContext(results: ChatProduct[]): string {
+  if (results.length === 0) {
+    return "(no products found for this part)"
+  }
+  return results
+    .map(
+      (p) =>
+        `- ${p.name} | TTD ${p.price} | Store: ${p.storeName} | ID: ${p.id} | Slug: ${p.slug} | Images: ${p.images.slice(0, 1).join("")} | Category: ${p.category ?? ""} | Stock: ${p.stock ?? "unlimited"} | Region: ${p.storeRegion}`,
+    )
+    .join("\n")
+}
+
+function productCodeBlockHint(): string {
+  return `
+
+To display these products use the products code block with this exact structure:
+\`\`\`products
+[{"id":"PRODUCT_ID","name":"PRODUCT_NAME","slug":"PRODUCT_SLUG","price":PRICE,"images":["IMAGE_URL"],"category":"CATEGORY","stock":STOCK,"storeName":"STORE_NAME","storeSlug":"STORE_SLUG","storeRegion":"REGION"}]
+\`\`\`
+Fill in the values from the products listed above.`
+}
+
 const ADD_TO_CART_TOOL: Anthropic.Tool = {
   name: "add_to_cart",
   description:
-    "Adds a product to the user's cart. Use this when the user asks to add a product to their cart.",
+    "Adds a product to the user's cart. Use this when the user asks to add a product to their cart. For variable products with sizes or variants, if the cart action returns a variant_required error, respond to the user asking which size or variant they want, then try again with the correct variant.",
   input_schema: {
     type: "object",
     properties: {
@@ -21,8 +98,41 @@ const ADD_TO_CART_TOOL: Anthropic.Tool = {
         type: "number",
         description: "Number of units to add (default 1)",
       },
+      variant_id: {
+        type: "string",
+        description:
+          "When the product has variants (sizes/colours), pass the chosen ProductVariant id. Omit for simple products.",
+      },
     },
     required: ["product_id"],
+  },
+}
+
+const ADD_MULTIPLE_TO_CART_TOOL: Anthropic.Tool = {
+  name: "add_multiple_to_cart",
+  description:
+    "Adds multiple products to the cart at once. Use this when the customer wants to add a full outfit or multiple items together. For variable products, include variant_id per item when required; if you get variant_required on an item, ask the customer for size/variant and retry that item with variant_id.",
+  input_schema: {
+    type: "object",
+    properties: {
+      items: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            product_id: { type: "string" },
+            quantity: { type: "number" },
+            variant_id: {
+              type: "string",
+              description:
+                "Required when that product has variants — the ProductVariant id for the chosen size/option.",
+            },
+          },
+          required: ["product_id"],
+        },
+      },
+    },
+    required: ["items"],
   },
 }
 
@@ -32,17 +142,26 @@ type IncomingMessage = {
 }
 
 function mapCartError(
-  error: string | undefined
-): { ok: false; error: string } {
+  error: string | undefined,
+): { ok: false; error: string; code?: string } {
   const safe: Record<string, string> = {
     not_logged_in: "You need to be signed in to add items to your cart.",
     invalid_quantity: "Invalid quantity for this product.",
     product_not_found: "That product could not be found.",
     out_of_stock: "This product is not available in that quantity.",
+    variant_required:
+      "This product has sizes or variants — ask the customer which size or variant they want, then call add_to_cart again with variant_id set to the chosen variant.",
+    variant_not_found:
+      "That variant does not match this product. Ask the customer to pick a valid size or variant, then retry with the correct variant_id.",
   }
+  const message =
+    error && error in safe
+      ? safe[error]!
+      : "Could not add this item to your cart."
   return {
     ok: false,
-    error: error && error in safe ? safe[error]! : "Could not add this item to your cart.",
+    error: message,
+    ...(error ? { code: error } : {}),
   }
 }
 
@@ -59,6 +178,15 @@ export async function POST(req: NextRequest) {
       }
 
       try {
+        if (!process.env.ANTHROPIC_API_KEY?.trim()) {
+          console.error(
+            "Chat API: ANTHROPIC_API_KEY is missing or empty — set it in .env.local",
+          )
+          send(JSON.stringify({ error: "Something went wrong" }))
+          controller.close()
+          return
+        }
+
         const lastUserMessage = [...messages]
           .reverse()
           .find((m) => m.role === "user")
@@ -81,29 +209,54 @@ export async function POST(req: NextRequest) {
 
         if (searchQuery) {
           try {
-            const results = await searchProducts({
-              query: searchQuery,
-              limit: 6,
-            })
+            const base = searchQuery.trim()
 
-            if (results.length > 0) {
-              const productSummary = results
-                .map(
-                  (p) =>
-                    `- ${p.name} | TTD ${p.price} | Store: ${p.storeName} | ID: ${p.id} | Slug: ${p.slug} | Images: ${p.images.slice(0, 1).join("")} | Category: ${p.category ?? ""} | Stock: ${p.stock ?? "unlimited"} | Region: ${p.storeRegion}`
-                )
-                .join("\n")
+            if (isOutfitRelatedQuery(base)) {
+              const [topsResults, bottomsResults, shoesResults] =
+                await Promise.all([
+                  searchProducts({
+                    query: `${base} top blouse shirt t-shirt`,
+                    limit: 8,
+                  }),
+                  searchProducts({
+                    query: `${base} pants jeans skirt shorts bottom`,
+                    limit: 8,
+                  }),
+                  searchProducts({
+                    query: `${base} shoes sneakers sandals heels footwear`,
+                    limit: 8,
+                  }),
+                ])
+
+              const topsBlock = summarizeProductsForContext(topsResults)
+              const bottomsBlock = summarizeProductsForContext(bottomsResults)
+              const shoesBlock = summarizeProductsForContext(shoesResults)
 
               productContext = `
 
+OUTFIT-AWARE SEARCH (tops, bottoms, shoes — use to build a complete look):
+
+TOPS FOUND:
+${topsBlock}
+
+BOTTOMS FOUND:
+${bottomsBlock}
+
+SHOES FOUND:
+${shoesBlock}
+${productCodeBlockHint()}`
+            } else {
+              const results = await searchProductsWithQueryFallbacks(base)
+
+              if (results.length > 0) {
+                const productSummary = summarizeProductsForContext(results)
+
+                productContext = `
+
 PRODUCTS FOUND FOR THIS QUERY:
 ${productSummary}
-
-To display these products use the products code block with this exact structure:
-\`\`\`products
-[{"id":"PRODUCT_ID","name":"PRODUCT_NAME","slug":"PRODUCT_SLUG","price":PRICE,"images":["IMAGE_URL"],"category":"CATEGORY","stock":STOCK,"storeName":"STORE_NAME","storeSlug":"STORE_SLUG","storeRegion":"REGION"}]
-\`\`\`
-Fill in the values from the products listed above.`
+${productCodeBlockHint()}`
+              }
             }
           } catch (searchErr) {
             console.error("Search error:", searchErr)
@@ -132,7 +285,7 @@ Fill in the values from the products listed above.`
             model: "claude-sonnet-4-5",
             max_tokens: 1024,
             system: systemWithContext,
-            tools: [ADD_TO_CART_TOOL],
+            tools: [ADD_TO_CART_TOOL, ADD_MULTIPLE_TO_CART_TOOL],
             tool_choice: { type: "auto" },
             messages: currentMessages,
           })
@@ -153,6 +306,7 @@ Fill in the values from the products listed above.`
                 const input = toolBlock.input as {
                   product_id?: string
                   quantity?: number
+                  variant_id?: string
                 }
                 let toolResultContent: string
                 if (!input?.product_id || typeof input.product_id !== "string") {
@@ -162,11 +316,17 @@ Fill in the values from the products listed above.`
                   })
                 } else {
                   try {
+                    const variantId =
+                      typeof input.variant_id === "string" &&
+                      input.variant_id.trim() !== ""
+                        ? input.variant_id.trim()
+                        : null
                     const result = await addToCart(
                       input.product_id,
                       input.quantity != null && Number.isFinite(input.quantity)
                         ? input.quantity
-                        : 1
+                        : 1,
+                      variantId,
                     )
                     toolResultContent = result.ok
                       ? JSON.stringify({ ok: true })
@@ -178,6 +338,80 @@ Fill in the values from the products listed above.`
                     })
                   }
                 }
+                toolResultBlocks.push({
+                  type: "tool_result" as const,
+                  tool_use_id: toolBlock.id,
+                  content: toolResultContent,
+                })
+              } else if (toolBlock.name === "add_multiple_to_cart") {
+                const input = toolBlock.input as { items?: unknown }
+                const rawItems = Array.isArray(input?.items)
+                  ? input.items
+                  : []
+                const succeeded: {
+                  product_id: string
+                  quantity: number
+                }[] = []
+                const failed: {
+                  product_id: string
+                  error: string
+                }[] = []
+
+                for (const raw of rawItems) {
+                  const row = raw as {
+                    product_id?: unknown
+                    quantity?: unknown
+                    variant_id?: unknown
+                  }
+                  const pid =
+                    typeof row.product_id === "string" ? row.product_id : ""
+                  const qtyRaw = row.quantity
+                  const qty =
+                    qtyRaw != null &&
+                    Number.isFinite(Number(qtyRaw)) &&
+                    Number(qtyRaw) > 0
+                      ? Math.floor(Number(qtyRaw))
+                      : 1
+                  const variantId =
+                    typeof row.variant_id === "string" &&
+                    row.variant_id.trim() !== ""
+                      ? row.variant_id.trim()
+                      : null
+
+                  if (!pid) {
+                    failed.push({
+                      product_id: "",
+                      error: "product_id is required for each item",
+                    })
+                    continue
+                  }
+
+                  try {
+                    const result = await addToCart(pid, qty, variantId)
+                    if (result.ok) {
+                      succeeded.push({ product_id: pid, quantity: qty })
+                    } else {
+                      const mapped = mapCartError(result.error)
+                      failed.push({
+                        product_id: pid,
+                        error: mapped.error,
+                      })
+                    }
+                  } catch {
+                    failed.push({
+                      product_id: pid,
+                      error: "Could not add this item to your cart.",
+                    })
+                  }
+                }
+
+                const toolResultContent = JSON.stringify({
+                  succeeded,
+                  failed,
+                  partial:
+                    succeeded.length > 0 &&
+                    failed.length > 0,
+                })
                 toolResultBlocks.push({
                   type: "tool_result" as const,
                   tool_use_id: toolBlock.id,
@@ -216,11 +450,40 @@ Fill in the values from the products listed above.`
         send("[DONE]")
         controller.close()
       } catch (error) {
-        console.error("Chat API error:", {
-          message:
-            error instanceof Error ? error.message : String(error),
-          status: (error as { status?: number })?.status,
-        })
+        console.error("Chat API error:", error)
+        if (error instanceof Error) {
+          console.error("Chat API error.message:", error.message)
+          console.error("Chat API error.stack:", error.stack)
+        }
+        const errObj = error as {
+          status?: number
+          error?: unknown
+          requestID?: string
+          cause?: unknown
+        }
+        if (typeof errObj.status === "number") {
+          console.error("Chat API Anthropic HTTP status:", errObj.status)
+        }
+        if (errObj.error !== undefined) {
+          try {
+            console.error(
+              "Chat API Anthropic error.body:",
+              JSON.stringify(errObj.error),
+            )
+          } catch {
+            console.error(
+              "Chat API Anthropic error.body (non-JSON-serializable):",
+              errObj.error,
+            )
+          }
+        }
+        if (errObj.requestID) {
+          console.error("Chat API Anthropic request-id:", errObj.requestID)
+        }
+        if (errObj.cause !== undefined) {
+          console.error("Chat API error.cause:", errObj.cause)
+        }
+
         send(JSON.stringify({ error: "Something went wrong" }))
         controller.close()
       }
