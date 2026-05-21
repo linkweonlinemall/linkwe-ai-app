@@ -120,7 +120,7 @@ export default function FloatingAIChat() {
 
   useEffect(() => {
     if (open) {
-      getVendorChats().then(setChatList)
+      getVendorChats("vendor").then(setChatList)
       setTimeout(() => inputRef.current?.focus(), 100)
     }
   }, [open])
@@ -218,7 +218,7 @@ export default function FloatingAIChat() {
         const firstTitle =
           text ||
           (userMsg.images && userMsg.images.length > 0 ? "Image message" : "")
-        const chat = await createVendorChat(firstTitle)
+        const chat = await createVendorChat(firstTitle, "vendor")
         currentChatId = chat.id
         setChatId(currentChatId)
         setChatList((prev) => [

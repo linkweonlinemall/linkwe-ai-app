@@ -121,7 +121,8 @@ function usePersistedChat(
   chatId: string | null,
   setChatId: (id: string | null) => void,
   setChatList: Dispatch<SetStateAction<{ id: string; title: string; createdAt: Date | string }[]>>,
-  setItems: (items: CartItem[]) => void
+  setItems: (items: CartItem[]) => void,
+  chatType: "customer" | "vendor"
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -131,10 +132,10 @@ function usePersistedChat(
       let resolvedChatId: string | null = chatId
       if (isLoggedIn) {
         if (!resolvedChatId) {
-          const { id } = await createVendorChat(content)
+          const { id } = await createVendorChat(content, chatType)
           resolvedChatId = id
           setChatId(id)
-          const list = await getVendorChats()
+          const list = await getVendorChats(chatType)
           setChatList(list)
         }
         await saveVendorChatMessage(resolvedChatId, "user", content)
@@ -258,7 +259,7 @@ function usePersistedChat(
         setIsLoading(false)
       }
     },
-    [messages, isLoggedIn, chatId, setChatId, setChatList, setItems]
+    [messages, isLoggedIn, chatId, setChatId, setChatList, setItems, chatType]
   )
 
   return { messages, isLoading, sendMessage, setMessages }
@@ -389,11 +390,13 @@ function TypingIndicator() {
 type ShoppingChatProps = {
   initialChatList?: { id: string; title: string; createdAt: Date | string }[]
   isLoggedIn?: boolean
+  chatType?: "customer" | "vendor"
 }
 
 export default function ShoppingChat({
   initialChatList = [],
   isLoggedIn = false,
+  chatType = "customer",
 }: ShoppingChatProps) {
   const [chatId, setChatId] = useState<string | null>(null)
   const [chatList, setChatList] = useState(initialChatList)
@@ -410,7 +413,8 @@ export default function ShoppingChat({
     chatId,
     setChatId,
     setChatList,
-    setItems
+    setItems,
+    chatType
   )
 
   const [input, setInput] = useState("")

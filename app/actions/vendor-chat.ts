@@ -2,12 +2,15 @@
 import { getSession } from "@/lib/auth/session"
 import { prisma } from "@/lib/prisma"
 
-export async function createVendorChat(firstMessage: string): Promise<{ id: string }> {
+export async function createVendorChat(
+  firstMessage: string,
+  type: "customer" | "vendor" = "customer"
+): Promise<{ id: string }> {
   const session = await getSession()
   if (!session) throw new Error("Unauthorized")
   const title = firstMessage.slice(0, 50) + (firstMessage.length > 50 ? "..." : "")
   const chat = await prisma.vendorChat.create({
-    data: { userId: session.userId, title },
+    data: { userId: session.userId, title, type },
     select: { id: true }
   })
   return { id: chat.id }
@@ -25,11 +28,13 @@ export async function saveVendorChatMessage(
   })
 }
 
-export async function getVendorChats(): Promise<{ id: string; title: string; createdAt: Date }[]> {
+export async function getVendorChats(
+  type: "customer" | "vendor" = "customer"
+): Promise<{ id: string; title: string; createdAt: Date }[]> {
   const session = await getSession()
   if (!session) return []
   return prisma.vendorChat.findMany({
-    where: { userId: session.userId },
+    where: { userId: session.userId, type },
     select: { id: true, title: true, createdAt: true },
     orderBy: { createdAt: "desc" },
     take: 50

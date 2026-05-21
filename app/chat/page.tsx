@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default async function ChatPage() {
   const session = await getSession()
   const dashboardHref = session ? getRoleDashboardPath(session.role) : null
-  const chatList = session ? await getVendorChats() : []
+  const chatList = session ? await getVendorChats("customer") : []
 
   return (
     <div className="flex flex-col pb-16 sm:pb-0" style={{ height: "100dvh" }}>
@@ -25,7 +25,7 @@ export default async function ChatPage() {
         className="flex-1 overflow-hidden"
         style={{ backgroundColor: "var(--surface)" }}
       >
-        <ShoppingChat initialChatList={chatList} isLoggedIn={!!session} />
+        <ShoppingChat initialChatList={chatList} isLoggedIn={!!session} chatType="customer" />
       </div>
     </div>
   )

@@ -1987,11 +1987,13 @@ model VendorChat {
   userId    String
   user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String              @default("New conversation")
+  type      String              @default("customer")
   createdAt DateTime            @default(now())
   updatedAt DateTime            @updatedAt
   messages  VendorChatMessage[]
 
   @@index([userId])
+  @@index([userId, type])
 }
 
 model VendorChatMessage {

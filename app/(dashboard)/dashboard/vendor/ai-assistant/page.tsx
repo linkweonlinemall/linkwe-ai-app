@@ -163,7 +163,7 @@ export default function VendorAIAssistantPage() {
   useEffect(() => {
     if (!allowed) return
     setLoadingChats(true)
-    void getVendorChats()
+    void getVendorChats("vendor")
       .then(setChatList)
       .finally(() => setLoadingChats(false))
   }, [allowed])
@@ -326,7 +326,7 @@ export default function VendorAIAssistantPage() {
 
       let saveChatId = chatId
       if (!saveChatId) {
-        const { id } = await createVendorChat(displayText)
+        const { id } = await createVendorChat(displayText, "vendor")
         saveChatId = id
         setChatId(id)
         const listTitle =
