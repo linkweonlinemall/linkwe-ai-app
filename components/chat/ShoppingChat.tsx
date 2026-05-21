@@ -18,26 +18,6 @@ import { parseAssistantMessage } from "@/lib/chat/parseMessage"
 import type { ChatMessage, ChatProduct } from "@/lib/chat/types"
 import type { CartItem } from "@/lib/cart/cart-store"
 
-/** Minimal typings for Web Speech API (not always in TS DOM libs) */
-interface SpeechRecResultEvent {
-  results: ArrayLike<{ 0: { transcript: string } }>
-}
-
-type WebSpeechRecognitionCtor = new () => WebSpeechRecognitionInstance
-
-interface WebSpeechRecognitionInstance {
-  lang: string
-  interimResults: boolean
-  continuous: boolean
-  start: () => void
-  stop: () => void
-  abort: () => void
-  onstart: (() => void) | null
-  onend: (() => void) | null
-  onerror: ((ev: { error: string }) => void) | null
-  onresult: ((ev: SpeechRecResultEvent) => void) | null
-}
-
 const SUGGESTIONS = [
   "Style me for a fete 🎉",
   "Build me an outfit under TTD 500",
@@ -65,44 +45,6 @@ function linkifyText(text: string): string {
     /(https?:\/\/[^\s)]+)/g,
     (url) => `[${url}](${url})`
   )
-}
-
-function getSpeechRecognitionCtor(): WebSpeechRecognitionCtor | null {
-  if (typeof window === "undefined") return null
-  const w = window as Window & {
-    webkitSpeechRecognition?: WebSpeechRecognitionCtor
-    SpeechRecognition?: WebSpeechRecognitionCtor
-  }
-  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null
-}
-
-function isSpeechSynthesisAvailable(): boolean {
-  try {
-    return typeof window !== "undefined" && typeof window.speechSynthesis !== "undefined"
-  } catch {
-    return false
-  }
-}
-
-/** Plain text for TTS: strip markdown, emoji, and product code fences. */
-function cleanTextForSpeech(raw: string): string {
-  try {
-    let t = raw
-    t = t.replace(/```products\n[\s\S]*?```/g, " ")
-    t = t.replace(/```[\s\S]*?```/g, " ")
-    t = t.replace(/\*\*([^*]+)\*\*/g, "$1")
-    t = t.replace(/\*([^*]+)\*/g, "$1")
-    t = t.replace(/^#{1,6}\s+/gm, "")
-    t = t.replace(/`([^`]+)`/g, "$1")
-    t = t.replace(/~~([^~]+)~~/g, "$1")
-    t = t.replace(/\[([^\]]+)]\([^)]+\)/g, "$1")
-    t = t.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, " ")
-    t = t.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, " ")
-    t = t.replace(/[*#`~_]/g, " ")
-    return t.replace(/\s+/g, " ").trim()
-  } catch {
-    return raw
-  }
 }
 
 function formatChatDate(date: Date | string): string {
@@ -473,174 +415,9 @@ export default function ShoppingChat({
 
   const [input, setInput] = useState("")
   const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [voiceOutputEnabled, setVoiceOutputEnabled] = useState(false)
-  const [isListeningMic, setIsListeningMic] = useState(false)
-  const [recognitionSupported, setRecognitionSupported] = useState(false)
-  const [ttsSupported, setTtsSupported] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const recognitionRef = useRef<WebSpeechRecognitionInstance | null>(null)
-  const prevMessagesForSpeechRef = useRef<ChatMessage[]>([])
-  const recognitionRestartingRef = useRef(false)
-
-  useEffect(() => {
-    try {
-      setRecognitionSupported(getSpeechRecognitionCtor() !== null)
-      setTtsSupported(isSpeechSynthesisAvailable())
-    } catch {
-      setRecognitionSupported(false)
-      setTtsSupported(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    try {
-      if (!voiceOutputEnabled && isSpeechSynthesisAvailable()) {
-        window.speechSynthesis.cancel()
-      }
-    } catch {
-      /* silent */
-    }
-  }, [voiceOutputEnabled])
-
-  useEffect(() => {
-    try {
-      if (messages.some((m) => m.role === "assistant" && m.isStreaming)) {
-        window.speechSynthesis?.cancel()
-      }
-    } catch {
-      /* silent */
-    }
-  }, [messages])
-
-  useEffect(() => {
-    try {
-      if (!voiceOutputEnabled || !isSpeechSynthesisAvailable()) {
-        prevMessagesForSpeechRef.current = messages
-        return
-      }
-
-      const prev = prevMessagesForSpeechRef.current
-
-      for (const m of messages) {
-        if (m.role !== "assistant" || !m.content?.trim()) continue
-        const was = prev.find((p) => p.id === m.id)
-        if (was?.isStreaming === true && m.isStreaming === false) {
-          const cleaned = cleanTextForSpeech(m.content)
-          if (!cleaned.trim()) break
-          try {
-            window.speechSynthesis.cancel()
-            const u = new SpeechSynthesisUtterance(cleaned)
-            u.rate = 1.0
-            u.pitch = 1.05
-            u.volume = 1.0
-            u.lang = "en-TT"
-            window.speechSynthesis.speak(u)
-          } catch {
-            /* silent */
-          }
-          break
-        }
-      }
-      prevMessagesForSpeechRef.current = messages
-    } catch {
-      /* silent */
-    }
-  }, [messages, voiceOutputEnabled])
-
-  const toggleMic = useCallback(() => {
-    console.log("toggleMic called, isListeningMic:", isListeningMic)
-    const Ctor = getSpeechRecognitionCtor()
-    if (!Ctor) return
-
-    if (isListeningMic) {
-      try {
-        recognitionRef.current?.stop()
-      } catch {
-        /* silent */
-      }
-      return
-    }
-
-    try {
-      const rec = new Ctor()
-      let triedEnUsFallback = false
-
-      rec.lang = "en-TT"
-      rec.interimResults = false
-      rec.continuous = false
-
-      rec.onend = () => {
-        if (recognitionRestartingRef.current) {
-          recognitionRestartingRef.current = false
-          return
-        }
-        setIsListeningMic(false)
-        recognitionRef.current = null
-      }
-
-      rec.onerror = (ev: { error: string }) => {
-        console.log("Speech recognition error:", ev.error)
-        try {
-          if (!triedEnUsFallback && ev.error === "language-not-found") {
-            triedEnUsFallback = true
-            recognitionRestartingRef.current = true
-            const rec2 = new Ctor()
-            rec2.lang = "en-US"
-            rec2.interimResults = false
-            rec2.continuous = false
-            rec2.onstart = () => setIsListeningMic(true)
-            rec2.onend = () => {
-              setIsListeningMic(false)
-              recognitionRef.current = null
-            }
-            rec2.onerror = () => {
-              setIsListeningMic(false)
-              recognitionRef.current = null
-            }
-            rec2.onresult = (event: SpeechRecResultEvent) => {
-              const text = event.results[0][0].transcript
-              setInput((prev) => {
-                const t = prev.trim()
-                return t ? `${t} ${text}` : text
-              })
-            }
-            recognitionRef.current = rec2
-            rec2.start()
-            return
-          }
-        } catch {
-          /* silent */
-        }
-        setIsListeningMic(false)
-        recognitionRef.current = null
-      }
-
-      rec.onstart = () => {
-        console.log("Speech recognition started successfully")
-        setIsListeningMic(true)
-      }
-
-      rec.onresult = (event: SpeechRecResultEvent) => {
-        try {
-          const text = event.results[0][0].transcript
-          setInput((prev) => {
-            const t = prev.trim()
-            return t ? `${t} ${text}` : text
-          })
-        } catch {
-          /* silent */
-        }
-      }
-
-      recognitionRef.current = rec
-      console.log("Starting speech recognition with lang:", rec.lang)
-      rec.start()
-    } catch {
-      setIsListeningMic(false)
-    }
-  }, [isListeningMic])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -705,50 +482,19 @@ export default function ShoppingChat({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-@keyframes shopping-mic-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 69, 10, 0.55); }
-  50% { box-shadow: 0 0 0 10px rgba(212, 69, 10, 0); }
-}
-.shopping-mic-active {
-  animation: shopping-mic-pulse 1.2s ease-in-out infinite;
-  background-color: #D4450A;
-  color: white;
-  border-color: #D4450A;
-}
-`,
-        }}
-      />
       <div
-        className="flex w-full shrink-0 items-center justify-between border-b border-[#E5E5E5] px-3 py-2"
+        className="flex w-full shrink-0 items-center border-b border-[#E5E5E5] px-3 py-2 sm:hidden"
         style={{ backgroundColor: "var(--surface)" }}
       >
         <button
           type="button"
           aria-label="Open conversations"
           onClick={() => setShowHistory(true)}
-          className="flex h-10 w-10 flex-shrink-0 items-center justify-center text-xl leading-none sm:hidden"
+          className="flex h-10 w-10 flex-shrink-0 items-center justify-center text-xl leading-none"
           style={{ color: "#1C1C1A" }}
         >
           ☰
         </button>
-        <div className="hidden flex-1 sm:block" aria-hidden />
-        {ttsSupported ? (
-          <button
-            type="button"
-            aria-label={voiceOutputEnabled ? "Turn off voice output" : "Turn on voice output"}
-            aria-pressed={voiceOutputEnabled}
-            onClick={() => setVoiceOutputEnabled((v) => !v)}
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-lg leading-none"
-            style={{
-              color: voiceOutputEnabled ? "#D4450A" : "#666",
-            }}
-          >
-            🔊
-          </button>
-        ) : null}
       </div>
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
@@ -1054,25 +800,6 @@ export default function ShoppingChat({
               color: "var(--text-primary)",
             }}
           />
-
-          {recognitionSupported ? (
-            <button
-              type="button"
-              aria-label={isListeningMic ? "Stop listening" : "Speak to Zara"}
-              onClick={toggleMic}
-              disabled={isLoading}
-              className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-lg transition-opacity disabled:opacity-40 ${
-                isListeningMic ? "shopping-mic-active" : "hover:bg-zinc-100"
-              }`}
-              style={
-                isListeningMic
-                  ? undefined
-                  : { border: "1px solid var(--card-border)", color: "var(--text-muted)" }
-              }
-            >
-              🎤
-            </button>
-          ) : null}
 
           {/* Send button */}
           <button
