@@ -73,16 +73,6 @@ function summarizeProductsForContext(results: ChatProduct[]): string {
     .join("\n")
 }
 
-function productCodeBlockHint(): string {
-  return `
-
-To display these products use the products code block with this exact structure:
-\`\`\`products
-[{"id":"PRODUCT_ID","name":"PRODUCT_NAME","slug":"PRODUCT_SLUG","price":PRICE,"images":["IMAGE_URL"],"category":"CATEGORY","stock":STOCK,"storeName":"STORE_NAME","storeSlug":"STORE_SLUG","storeRegion":"REGION"}]
-\`\`\`
-Fill in the values from the products listed above.`
-}
-
 const ADD_TO_CART_TOOL: Anthropic.Tool = {
   name: "add_to_cart",
   description:
@@ -232,7 +222,23 @@ export async function POST(req: NextRequest) {
               const bottomsBlock = summarizeProductsForContext(bottomsResults)
               const shoesBlock = summarizeProductsForContext(shoesResults)
 
-              productContext = `
+              const combinedOutfitProducts: ChatProduct[] = []
+              const outfitSeen = new Set<string>()
+              for (const list of [
+                topsResults,
+                bottomsResults,
+                shoesResults,
+              ]) {
+                for (const p of list) {
+                  if (!outfitSeen.has(p.id)) {
+                    outfitSeen.add(p.id)
+                    combinedOutfitProducts.push(p)
+                  }
+                }
+              }
+
+              if (combinedOutfitProducts.length > 0) {
+                productContext = `
 
 OUTFIT-AWARE SEARCH (tops, bottoms, shoes — use to build a complete look):
 
@@ -244,7 +250,28 @@ ${bottomsBlock}
 
 SHOES FOUND:
 ${shoesBlock}
-${productCodeBlockHint()}`
+
+IMPORTANT: You must display these products using ONLY this exact code block. Copy it exactly as written below — do not modify it, do not rewrite it, do not describe the products in text instead:
+
+\`\`\`products
+${JSON.stringify(
+                  combinedOutfitProducts.map((p) => ({
+                    id: p.id,
+                    name: p.name,
+                    slug: p.slug,
+                    price: p.price,
+                    images: p.images,
+                    category: p.category,
+                    stock: p.stock,
+                    storeName: p.storeName,
+                    storeSlug: p.storeSlug,
+                    storeRegion: p.storeRegion,
+                  })),
+                )}
+\`\`\`
+
+Start your response with one short sentence, then paste the code block above exactly as shown, then add any styling advice or commentary after.`
+              }
             } else {
               const results = await searchProductsWithQueryFallbacks(base)
 
@@ -255,7 +282,27 @@ ${productCodeBlockHint()}`
 
 PRODUCTS FOUND FOR THIS QUERY:
 ${productSummary}
-${productCodeBlockHint()}`
+
+IMPORTANT: You must display these products using ONLY this exact code block. Copy it exactly as written below — do not modify it, do not rewrite it, do not describe the products in text instead:
+
+\`\`\`products
+${JSON.stringify(
+                  results.map((p) => ({
+                    id: p.id,
+                    name: p.name,
+                    slug: p.slug,
+                    price: p.price,
+                    images: p.images,
+                    category: p.category,
+                    stock: p.stock,
+                    storeName: p.storeName,
+                    storeSlug: p.storeSlug,
+                    storeRegion: p.storeRegion,
+                  })),
+                )}
+\`\`\`
+
+Start your response with one short sentence, then paste the code block above exactly as shown, then add any styling advice or commentary after.`
               }
             }
           } catch (searchErr) {
@@ -283,7 +330,7 @@ ${productCodeBlockHint()}`
         while (continueLoop) {
           const response = await client.messages.create({
             model: "claude-sonnet-4-5",
-            max_tokens: 1024,
+            max_tokens: 4096,
             system: systemWithContext,
             tools: [ADD_TO_CART_TOOL, ADD_MULTIPLE_TO_CART_TOOL],
             tool_choice: { type: "auto" },
