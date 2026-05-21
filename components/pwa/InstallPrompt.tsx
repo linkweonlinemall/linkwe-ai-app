@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { setDeferredPrompt as syncDeferredPromptToSharedStore } from "@/lib/pwa/install-prompt-store";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -36,6 +37,7 @@ export default function InstallPrompt() {
     // Listen for Chrome/Android install prompt
     window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
+      syncDeferredPromptToSharedStore(e);
       setDeferredPrompt(e as BeforeInstallPromptEvent);
       setTimeout(() => setShowBanner(true), 3000);
     });

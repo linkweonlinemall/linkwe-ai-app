@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { logoutAction } from "@/app/(auth)/auth-actions";
 import NotificationBell from "@/components/ui/NotificationBell";
 import { useCartStore } from "@/lib/cart/cart-store";
+import { triggerInstall } from "@/lib/pwa/install-prompt-store";
 
 type Props = {
   transparent?: boolean;
@@ -20,8 +22,10 @@ export default function PublicNav({
   dashboardHref,
   unreadCount = 0,
 }: Props) {
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [isStandalone, setIsStandalone] = useState(false);
   const toggleDrawer = useCartStore((s) => s.toggleDrawer);
   const itemCount = useCartStore((s) => s.itemCount());
 
@@ -33,6 +37,10 @@ export default function PublicNav({
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  useEffect(() => {
+    setIsStandalone(window.matchMedia("(display-mode: standalone)").matches);
   }, []);
 
   return (
@@ -188,17 +196,23 @@ export default function PublicNav({
               </span>
             </Link>
 
-            <Link
-              href="/get-app"
-              className="hidden items-center gap-1.5 rounded-xl border border-zinc-200 px-3 py-1.5 text-xs font-bold text-zinc-700 hover:border-[#D4450A] hover:text-[#D4450A] transition-colors sm:flex"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="17 8 12 3 7 8" />
-                <line x1="12" y1="3" x2="12" y2="15" />
-              </svg>
-              Get app
-            </Link>
+            {!isStandalone ? (
+              <button
+                type="button"
+                onClick={async () => {
+                  const ok = await triggerInstall();
+                  if (!ok) router.push("/get-app");
+                }}
+                className="hidden items-center gap-1.5 rounded-xl border border-zinc-200 px-3 py-1.5 text-xs font-bold text-zinc-700 hover:border-[#D4450A] hover:text-[#D4450A] transition-colors sm:flex"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                Get app
+              </button>
+            ) : null}
           </div>
           {user ? (
             <NotificationBell
