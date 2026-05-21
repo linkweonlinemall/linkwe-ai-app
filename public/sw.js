@@ -40,7 +40,8 @@ self.addEventListener("fetch", (event) => {
     event.request.method !== "GET" ||
     event.request.url.includes("/api/") ||
     event.request.url.includes("/_next/") ||
-    event.request.url.includes("/dashboard/")
+    event.request.url.includes("/dashboard/") ||
+    event.request.url.includes("/chat")
   ) {
     return;
   }
