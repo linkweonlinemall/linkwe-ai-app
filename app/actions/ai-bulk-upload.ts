@@ -1,6 +1,7 @@
 "use server"
 
 import type { ProductCondition, ServiceType, WeightUnit } from "@prisma/client"
+import ExcelJS from "exceljs"
 import { parse } from "csv-parse/sync"
 import { getSession } from "@/lib/auth/session"
 import { prisma } from "@/lib/prisma"
@@ -43,7 +44,6 @@ async function parseRows(file: File): Promise<CSVRow[] | null> {
   const fileName = file.name.toLowerCase()
   if (fileName.endsWith(".xlsx")) {
     try {
-      const ExcelJS = (await import("exceljs")).default
       const workbook = new ExcelJS.Workbook()
       const arrayBuffer = await file.arrayBuffer()
       await workbook.xlsx.load(arrayBuffer)
@@ -252,7 +252,6 @@ export async function bulkUploadFromCSV(
 export async function generateBulkTemplate(
   productType: ProductType
 ): Promise<Uint8Array> {
-  const ExcelJS = (await import("exceljs")).default
   const workbook = new ExcelJS.Workbook()
   const worksheet = workbook.addWorksheet("Products")
 
