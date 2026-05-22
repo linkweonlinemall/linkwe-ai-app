@@ -19,6 +19,7 @@ import {
   getVendorRecentOrders,
   getVendorSalesInsights,
   getVendorStoreSummary,
+  updateVendorStoreFields,
 } from "@/app/actions/ai-vendor-store"
 import { getSession } from "@/lib/auth/session"
 import { VENDOR_SYSTEM_PROMPT } from "@/lib/chat/vendorSystemPrompt"
@@ -321,6 +322,96 @@ const GET_RECENT_ORDERS_TOOL: Anthropic.Tool = {
   },
 }
 
+const UPDATE_STORE_TOOL: Anthropic.Tool = {
+  name: "update_store",
+  description:
+    "Update the vendor's store profile fields directly. Use this when the vendor asks to change their store name, tagline, description, tags, amenities, policies, address, opening hours, or social links. Always call this tool to make the change — never just describe what should be changed or ask the vendor to do it manually.",
+  input_schema: {
+    type: "object",
+    properties: {
+      name: { type: "string", description: "Store name" },
+      tagline: { type: "string", description: "Short tagline" },
+      description: { type: "string", description: "Full store description" },
+      tags: {
+        type: "array",
+        items: { type: "string" },
+        description: "Search tags",
+      },
+      amenities: {
+        type: "array",
+        items: { type: "string" },
+        description: "Store amenities",
+      },
+      policies: { type: "string", description: "Store policies text" },
+      address: { type: "string", description: "Physical address" },
+      openingHours: { type: "object", description: "Opening hours as JSON" },
+      socialLinks: { type: "object", description: "Social links as JSON" },
+      logoUrl: { type: "string", description: "Logo image URL" },
+      coverPhotoUrl: { type: "string", description: "Cover photo URL" },
+    },
+    required: [],
+  },
+}
+
+const PUBLISH_PRODUCT_TOOL: Anthropic.Tool = {
+  name: "publish_product",
+  description:
+    "Publish a product so it appears live on the store. Use when the vendor asks to publish, go live, or activate a product. Requires a product ID — search for it first if you don't have it.",
+  input_schema: {
+    type: "object",
+    properties: {
+      product_id: {
+        type: "string",
+        description: "The product ID to publish",
+      },
+    },
+    required: ["product_id"],
+  },
+}
+
+const UNPUBLISH_PRODUCT_TOOL: Anthropic.Tool = {
+  name: "unpublish_product",
+  description:
+    "Unpublish a product so it is hidden from the store. Use when the vendor asks to hide, deactivate, take down, or unpublish a product.",
+  input_schema: {
+    type: "object",
+    properties: {
+      product_id: {
+        type: "string",
+        description: "The product ID to unpublish",
+      },
+    },
+    required: ["product_id"],
+  },
+}
+
+const DELETE_PRODUCT_TOOL: Anthropic.Tool = {
+  name: "delete_product",
+  description:
+    "Permanently delete a product. Only use this when the vendor explicitly confirms they want to delete — always confirm before deleting. This cannot be undone.",
+  input_schema: {
+    type: "object",
+    properties: {
+      product_id: {
+        type: "string",
+        description: "The product ID to delete",
+      },
+    },
+    required: ["product_id"],
+  },
+}
+
+const GET_BOOKINGS_SUMMARY_TOOL: Anthropic.Tool = {
+  name: "get_bookings_summary",
+  description:
+    "Get a summary of the vendor's bookings including pending, confirmed, completed, and cancelled counts plus recent bookings. Use when the vendor asks about bookings, appointments, or schedule.",
+  input_schema: {
+    type: "object",
+    properties: {},
+    required: [],
+  },
+}
+
 const VENDOR_TOOLS: Anthropic.Tool[] = [
   CREATE_PRODUCT_TOOL,
   CREATE_SERVICE_TOOL,
@@ -336,6 +427,11 @@ const VENDOR_TOOLS: Anthropic.Tool[] = [
   GET_SALES_INSIGHTS_TOOL,
   GET_INVENTORY_ALERTS_TOOL,
   GET_RECENT_ORDERS_TOOL,
+  UPDATE_STORE_TOOL,
+  PUBLISH_PRODUCT_TOOL,
+  UNPUBLISH_PRODUCT_TOOL,
+  DELETE_PRODUCT_TOOL,
+  GET_BOOKINGS_SUMMARY_TOOL,
 ]
 
 /** Body messages: string or Anthropic user content (text + image blocks). */
@@ -891,6 +987,187 @@ export async function POST(req: NextRequest) {
             content: data
               ? JSON.stringify(data)
               : JSON.stringify({ error: "No orders found" }),
+          }
+        }
+
+        if (toolBlock.name === "update_store") {
+          const input = toolBlock.input as {
+            name?: string
+            tagline?: string
+            description?: string
+            tags?: string[]
+            amenities?: string[]
+            policies?: string
+            address?: string
+            openingHours?: Record<string, unknown>
+            socialLinks?: Record<string, unknown>
+            logoUrl?: string
+            coverPhotoUrl?: string
+          }
+          console.log("UPDATE STORE INPUT:", JSON.stringify(input))
+          const result = await updateVendorStoreFields(input)
+          console.log("UPDATE STORE RESULT:", JSON.stringify(result))
+          return {
+            content: result.ok
+              ? JSON.stringify({ ok: true, message: "Store updated successfully" })
+              : JSON.stringify({ ok: false, error: result.error }),
+          }
+        }
+
+        if (toolBlock.name === "publish_product") {
+          const input = toolBlock.input as { product_id?: string }
+          const productId = String(input.product_id ?? "")
+          if (!productId) {
+            return {
+              content: JSON.stringify({
+                ok: false,
+                error: "product_id is required",
+              }),
+            }
+          }
+          const product = await prisma.product.findFirst({
+            where: { id: productId, storeId: store.id },
+            select: { id: true },
+          })
+          if (!product) {
+            return {
+              content: JSON.stringify({ ok: false, error: "Product not found" }),
+            }
+          }
+          await prisma.product.update({
+            where: { id: productId },
+            data: { isPublished: true },
+          })
+          return {
+            content: JSON.stringify({
+              ok: true,
+              message: "Product published successfully",
+            }),
+          }
+        }
+
+        if (toolBlock.name === "unpublish_product") {
+          const input = toolBlock.input as { product_id?: string }
+          const productId = String(input.product_id ?? "")
+          if (!productId) {
+            return {
+              content: JSON.stringify({
+                ok: false,
+                error: "product_id is required",
+              }),
+            }
+          }
+          const product = await prisma.product.findFirst({
+            where: { id: productId, storeId: store.id },
+            select: { id: true },
+          })
+          if (!product) {
+            return {
+              content: JSON.stringify({ ok: false, error: "Product not found" }),
+            }
+          }
+          await prisma.product.update({
+            where: { id: productId },
+            data: { isPublished: false },
+          })
+          return {
+            content: JSON.stringify({
+              ok: true,
+              message: "Product unpublished successfully",
+            }),
+          }
+        }
+
+        if (toolBlock.name === "delete_product") {
+          const input = toolBlock.input as { product_id?: string }
+          const productId = String(input.product_id ?? "")
+          if (!productId) {
+            return {
+              content: JSON.stringify({
+                ok: false,
+                error: "product_id is required",
+              }),
+            }
+          }
+          const product = await prisma.product.findFirst({
+            where: { id: productId, storeId: store.id },
+            select: { id: true, name: true },
+          })
+          if (!product) {
+            return {
+              content: JSON.stringify({ ok: false, error: "Product not found" }),
+            }
+          }
+          await prisma.product.delete({ where: { id: productId } })
+          return {
+            content: JSON.stringify({
+              ok: true,
+              message: "Product deleted successfully",
+            }),
+          }
+        }
+
+        if (toolBlock.name === "get_bookings_summary") {
+          const storeBookingWhere = { product: { storeId: store.id } }
+          const [pending, confirmed, completed, cancelled] = await Promise.all([
+            prisma.productBooking.count({
+              where: { ...storeBookingWhere, status: "PENDING" },
+            }),
+            prisma.productBooking.count({
+              where: { ...storeBookingWhere, status: "CONFIRMED" },
+            }),
+            prisma.productBooking.count({
+              where: { ...storeBookingWhere, status: "COMPLETED" },
+            }),
+            prisma.productBooking.count({
+              where: { ...storeBookingWhere, status: "CANCELLED" },
+            }),
+          ])
+
+          const recentRows = await prisma.productBooking.findMany({
+            where: storeBookingWhere,
+            select: {
+              id: true,
+              customerId: true,
+              status: true,
+              bookingDate: true,
+              totalPrice: true,
+              product: { select: { name: true } },
+            },
+            orderBy: { bookingDate: "desc" },
+            take: 10,
+          })
+          const customerIds = [...new Set(recentRows.map((r) => r.customerId))]
+          const customers =
+            customerIds.length > 0
+              ? await prisma.user.findMany({
+                  where: { id: { in: customerIds } },
+                  select: { id: true, fullName: true },
+                })
+              : []
+          const customerNameById = new Map(
+            customers.map((u) => [u.id, u.fullName]),
+          )
+
+          const recent = recentRows.map((r) => ({
+            id: r.id,
+            status: r.status,
+            scheduledAt: r.bookingDate,
+            totalAmount: r.totalPrice,
+            customer: {
+              fullName: customerNameById.get(r.customerId) ?? "Unknown",
+            },
+            service: { name: r.product.name },
+          }))
+
+          return {
+            content: JSON.stringify({
+              pending,
+              confirmed,
+              completed,
+              cancelled,
+              recent,
+            }),
           }
         }
 

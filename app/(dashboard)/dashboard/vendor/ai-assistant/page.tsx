@@ -868,7 +868,121 @@ export default function VendorAIAssistantPage() {
                       </div>
                     ) : null}
                     <div className="prose prose-invert prose-sm max-w-none [&_p]:mb-2 [&_p:last-child]:mb-0">
-                      <ReactMarkdown>{m.content}</ReactMarkdown>
+                      <ReactMarkdown
+                        components={{
+                          p: ({ children }) => (
+                            <p
+                              style={{
+                                marginBottom: "12px",
+                                lineHeight: "1.7",
+                                color: "#e4e4e7",
+                              }}
+                            >
+                              {children}
+                            </p>
+                          ),
+                          strong: ({ children }) => (
+                            <strong
+                              style={{ color: "#E8820C", fontWeight: 700 }}
+                            >
+                              {children}
+                            </strong>
+                          ),
+                          ul: ({ children }) => (
+                            <ul
+                              style={{
+                                margin: "10px 0 12px 0",
+                                paddingLeft: "20px",
+                              }}
+                            >
+                              {children}
+                            </ul>
+                          ),
+                          ol: ({ children }) => (
+                            <ol
+                              style={{
+                                margin: "10px 0 12px 0",
+                                paddingLeft: "20px",
+                              }}
+                            >
+                              {children}
+                            </ol>
+                          ),
+                          li: ({ children }) => (
+                            <li
+                              style={{
+                                marginBottom: "6px",
+                                lineHeight: "1.6",
+                                color: "#e4e4e7",
+                              }}
+                            >
+                              {children}
+                            </li>
+                          ),
+                          h1: ({ children }) => (
+                            <h1
+                              style={{
+                                fontWeight: 700,
+                                color: "#ffffff",
+                                marginBottom: "8px",
+                                marginTop: "16px",
+                                fontSize: "18px",
+                              }}
+                            >
+                              {children}
+                            </h1>
+                          ),
+                          h2: ({ children }) => (
+                            <h2
+                              style={{
+                                fontWeight: 700,
+                                color: "#ffffff",
+                                marginBottom: "8px",
+                                marginTop: "14px",
+                                fontSize: "16px",
+                              }}
+                            >
+                              {children}
+                            </h2>
+                          ),
+                          h3: ({ children }) => (
+                            <h3
+                              style={{
+                                fontWeight: 600,
+                                color: "#ffffff",
+                                marginBottom: "6px",
+                                marginTop: "12px",
+                                fontSize: "14px",
+                              }}
+                            >
+                              {children}
+                            </h3>
+                          ),
+                          code: ({ children }) => (
+                            <code
+                              style={{
+                                backgroundColor: "rgba(255,255,255,0.1)",
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                fontSize: "12px",
+                                color: "#E8820C",
+                              }}
+                            >
+                              {children}
+                            </code>
+                          ),
+                          hr: () => (
+                            <hr
+                              style={{
+                                borderColor: "rgba(255,255,255,0.1)",
+                                margin: "16px 0",
+                              }}
+                            />
+                          ),
+                        }}
+                      >
+                        {m.content}
+                      </ReactMarkdown>
                     </div>
                     {isListingTypeMessage(m.content) && !loading ? (
                       <div className="mt-3 flex flex-col gap-2">
