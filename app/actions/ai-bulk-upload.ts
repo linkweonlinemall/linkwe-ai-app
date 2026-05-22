@@ -295,7 +295,7 @@ export async function generateBulkTemplate(
   }
 
   const columns = columnMap[productType]
-  worksheet.addRow(columns)
+  worksheet.columns = columns.map((key) => ({ header: key, key, width: 22 }))
 
   const exampleMap: Record<ProductType, string[]> = {
     simple: [
@@ -447,10 +447,6 @@ export async function generateBulkTemplate(
     pattern: "solid",
     fgColor: { argb: "FFFFF5F0" },
   }
-
-  worksheet.columns.forEach((col) => {
-    col.width = 22
-  })
 
   const buffer = await workbook.xlsx.writeBuffer()
   return new Uint8Array(buffer as ArrayBuffer)
