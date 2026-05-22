@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useState } from "react"
+import Papa from "papaparse"
 
 import DraggableImageGrid from "@/components/vendor/draggable-image-grid"
 
@@ -51,7 +52,7 @@ const PRODUCT_TYPES: {
 
 export default function BulkUploadTab() {
   const [stage, setStage] = useState<
-    "type" | "upload" | "progress" | "results" | "images" | "done"
+    "type" | "upload" | "progress" | "review" | "results" | "images" | "done"
   >("type")
   const [selectedType, setSelectedType] = useState<ProductType>("simple")
   const [publishImmediately, setPublishImmediately] = useState(false)
@@ -67,6 +68,9 @@ export default function BulkUploadTab() {
   const [productImages, setProductImages] = useState<Record<string, string[]>>(
     {}
   )
+  const [rexReview, setRexReview] = useState<string>("")
+  const [reviewLoading, setReviewLoading] = useState(false)
+  const [parsedRows, setParsedRows] = useState<Record<string, string>[]>([])
 
   async function handleDownloadTemplate() {
     const u8 = await generateBulkTemplate(selectedType)
@@ -85,16 +89,119 @@ export default function BulkUploadTab() {
     setCsvUploading(true)
     setStage("progress")
     setProgress(10)
+
+    const text = await file.text()
+    setProgress(30)
+
+    try {
+      const parsed = Papa.parse<Record<string, string>>(text, {
+        header: true,
+        skipEmptyLines: true,
+      })
+      const rows = parsed.data
+      setParsedRows(rows)
+      setProgress(60)
+
+      setReviewLoading(true)
+      setProgress(80)
+
+      const rowSummary = rows
+        .slice(0, 20)
+        .map((row, i) => {
+          const name = row["name"] || "unnamed"
+          const price = row["price"] || "no price"
+          const description = row["description"] || "no description"
+          const category = row["category"] || "no category"
+          const stock = row["stock"] || "no stock"
+          const tags = row["tags"] || "no tags"
+          return `Row ${i + 2}: "${name}" | Price: TTD ${price} | Category: ${category} | Stock: ${stock} | Tags: ${tags} | Description: ${description.slice(0, 80)}${description.length > 80 ? "..." : ""}`
+        })
+        .join("\n")
+
+      const prompt = `You are Rex, a sharp Trinidadian business partner reviewing a bulk product upload for a vendor on LinkWe marketplace.
+
+The vendor is uploading ${rows.length} ${selectedType} product(s). Review these rows and give concise, actionable feedback:
+
+${rowSummary}
+
+Your review must:
+1. Flag any rows with missing required fields (name or price)
+2. Point out descriptions that are too short or weak (under 20 words)
+3. Suggest better tags if tags are missing or thin
+4. Note any pricing that seems off for T&T market
+5. Give an overall verdict — is this upload ready to go live or does it need work?
+
+Be direct, specific, and helpful. Use Trinidadian tone. Keep it under 200 words. End with a clear recommendation: READY TO UPLOAD or NEEDS WORK.`
+
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: prompt }],
+        }),
+      })
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      let reviewText = ""
+
+      if (reader) {
+        streamLoop: while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          const chunk = decoder.decode(value)
+          for (const line of chunk.split("\n")) {
+            if (!line.startsWith("data: ")) continue
+            const data = line.slice(6)
+            if (data === "[DONE]") break streamLoop
+            try {
+              const evt = JSON.parse(data) as { text?: string }
+              if (evt.text) reviewText += evt.text
+            } catch {
+              /* skip */
+            }
+          }
+        }
+      }
+
+      setRexReview(reviewText)
+      setProgress(100)
+      setTimeout(() => {
+        setStage("review")
+        setReviewLoading(false)
+        setCsvUploading(false)
+      }, 300)
+    } catch (err) {
+      console.error("Rex review error:", err)
+      setReviewLoading(false)
+      const fd = new FormData()
+      fd.append("csv", file)
+      const res = await bulkUploadFromCSV(fd, selectedType, publishImmediately)
+      setResult(res)
+      if (res.createdProducts?.length > 0) setCreatedProducts(res.createdProducts)
+      setProgress(100)
+      setTimeout(() => {
+        setStage("results")
+        setCsvUploading(false)
+      }, 500)
+    }
+  }
+
+  async function handleConfirmUpload() {
+    setStage("progress")
+    setProgress(20)
+    setCsvUploading(true)
+
+    const csv = Papa.unparse(parsedRows)
+    const file = new File([csv], "upload.csv", { type: "text/csv" })
     const fd = new FormData()
     fd.append("csv", file)
-    setProgress(40)
+    setProgress(60)
+
     const res = await bulkUploadFromCSV(fd, selectedType, publishImmediately)
-    setProgress(90)
-    setResult(res)
-    if (res.createdProducts && res.createdProducts.length > 0) {
-      setCreatedProducts(res.createdProducts)
-    }
     setProgress(100)
+    setResult(res)
+    if (res.createdProducts?.length > 0) setCreatedProducts(res.createdProducts)
     setTimeout(() => {
       setStage("results")
       setCsvUploading(false)
@@ -109,6 +216,9 @@ export default function BulkUploadTab() {
     setProductImages({})
     setProgress(0)
     setPublishImmediately(false)
+    setRexReview("")
+    setParsedRows([])
+    setReviewLoading(false)
   }
 
   const selectedTypeInfo = PRODUCT_TYPES.find((t) => t.type === selectedType)!
@@ -293,7 +403,11 @@ export default function BulkUploadTab() {
           <div className="text-4xl">⚙️</div>
           <div className="w-full max-w-xs">
             <div className="mb-2 flex justify-between">
-              <p className="text-sm text-zinc-300">Creating products...</p>
+              <p className="text-sm text-zinc-300">
+                {reviewLoading
+                  ? "Rex is reviewing your upload..."
+                  : "Creating products..."}
+              </p>
               <p className="text-sm text-zinc-400">{progress}%</p>
             </div>
             <div className="h-2 rounded-full bg-zinc-700">
@@ -309,6 +423,66 @@ export default function BulkUploadTab() {
           <p className="text-xs text-zinc-500">
             Please wait while we set up your listings
           </p>
+        </div>
+      )}
+
+      {stage === "review" && (
+        <div className="space-y-6">
+          <div>
+            <div className="mb-4 flex items-center gap-3">
+              <div
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg"
+                style={{
+                  background: "linear-gradient(135deg, #D4450A, #E8820C)",
+                }}
+              >
+                ⚡
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">
+                  Rex reviewed your upload
+                </p>
+                <p className="text-xs text-zinc-500">
+                  {parsedRows.length} products · {selectedTypeInfo.label}
+                </p>
+              </div>
+            </div>
+            <div
+              className="rounded-xl p-4 text-sm leading-relaxed text-zinc-300 whitespace-pre-wrap"
+              style={{
+                backgroundColor: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
+              }}
+            >
+              {rexReview ||
+                "Rex reviewed your products and they look ready to upload."}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => void handleConfirmUpload()}
+              className="rounded-lg px-5 py-2.5 text-sm font-bold text-white hover:opacity-90"
+              style={{ backgroundColor: selectedTypeInfo.color }}
+            >
+              ✅ Looks good — create products
+            </button>
+            <button
+              type="button"
+              onClick={() => setStage("upload")}
+              className="rounded-lg border border-zinc-600 px-5 py-2.5 text-sm text-zinc-400 hover:border-zinc-400 hover:text-white"
+            >
+              ← Fix and re-upload
+            </button>
+            <button
+              type="button"
+              onClick={reset}
+              className="rounded-lg border border-zinc-600 px-5 py-2.5 text-sm text-zinc-400 hover:border-zinc-400 hover:text-white"
+            >
+              Start over
+            </button>
+          </div>
         </div>
       )}
 
