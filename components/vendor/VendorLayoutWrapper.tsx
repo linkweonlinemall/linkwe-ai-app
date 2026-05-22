@@ -14,7 +14,7 @@ export default function VendorLayoutWrapper({
   const isAIAssistant = pathname?.includes("/ai-assistant")
 
   return (
-    <div className="flex min-h-screen bg-[#F5F5F5]">
+    <div className="flex h-screen overflow-hidden bg-[#F5F5F5]">
       {!isAIAssistant && <VendorSidebarWrapper />}
       <div className="flex min-w-0 flex-1 flex-col">{children}</div>
       {!isAIAssistant && <FloatingAIChat />}

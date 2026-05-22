@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Playfair_Display, Sora } from "next/font/google";
 
 import CartProvider from "@/components/cart/CartProvider";
+import FooterWrapper from "@/components/layout/FooterWrapper";
 import InstallPrompt from "@/components/pwa/InstallPrompt";
 import ServiceWorkerRegistration from "@/components/pwa/ServiceWorkerRegistration";
 
@@ -77,29 +78,31 @@ export default function RootLayout({
         <ServiceWorkerRegistration />
         <InstallPrompt />
         <CartProvider>{children}</CartProvider>
-        <footer className="border-t border-zinc-200 bg-white py-8">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6">
-            <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
-              <p className="text-xs text-zinc-400">
-                © {new Date().getFullYear()} LinkWe Online Directory. All rights reserved.
-              </p>
-              <div className="flex items-center gap-6">
-                <a href="/privacy" className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
-                  Privacy Policy
-                </a>
-                <a href="/terms" className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
-                  Terms of Service
-                </a>
-                <a href="/contact" className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
-                  Contact
-                </a>
-                <a href="/get-app" className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
-                  Get the app
-                </a>
+        <FooterWrapper>
+          <footer className="border-t border-zinc-200 bg-white py-8">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6">
+              <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+                <p className="text-xs text-zinc-400">
+                  © {new Date().getFullYear()} LinkWe Online Directory. All rights reserved.
+                </p>
+                <div className="flex items-center gap-6">
+                  <a href="/privacy" className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
+                    Privacy Policy
+                  </a>
+                  <a href="/terms" className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
+                    Terms of Service
+                  </a>
+                  <a href="/contact" className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
+                    Contact
+                  </a>
+                  <a href="/get-app" className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
+                    Get the app
+                  </a>
+                </div>
               </div>
             </div>
-          </div>
-        </footer>
+          </footer>
+        </FooterWrapper>
       </body>
     </html>
   );

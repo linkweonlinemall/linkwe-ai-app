@@ -631,8 +631,8 @@ export default function VendorAIAssistantPage() {
 
   return (
     <div
-      className={`flex min-h-screen flex-col ${REX_FONT.className}`}
-      style={{ backgroundColor: "#0F1117" }}
+      className={`flex flex-col overflow-hidden ${REX_FONT.className}`}
+      style={{ background: "#0F1117", height: "calc(100dvh - 56px)" }}
     >
       <header
         className="shrink-0 border-b px-4 py-3 md:py-4"
@@ -677,7 +677,7 @@ export default function VendorAIAssistantPage() {
         </div>
       </header>
 
-      <div className="flex min-h-0 min-h-[calc(100vh-73px)] flex-1 md:min-h-[calc(100vh-80px)] w-full overflow-hidden">
+      <div className="flex min-h-0 w-full flex-1 overflow-hidden">
         {sidebarOpen ? (
           <button
             type="button"
@@ -748,7 +748,10 @@ export default function VendorAIAssistantPage() {
           </div>
           {activeTab === "assistant" && (
             <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col px-4 py-4">
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-4">
+            <div
+              className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-4"
+              style={{ flex: 1, overflowY: "auto", minHeight: 0 }}
+            >
           {messages.length === 0 ? (
             <div className="flex flex-col items-center px-4 py-8 text-center">
               <div
@@ -1191,6 +1194,7 @@ export default function VendorAIAssistantPage() {
           style={{
             backgroundColor: "#161B27",
             borderColor: CARD_BORDER_STYLE.borderColor,
+            flexShrink: 0,
           }}
         >
           {inputFocused ? (

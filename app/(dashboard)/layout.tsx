@@ -24,7 +24,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const unreadCount = await getNavUnreadCount();
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#F5F5F5]">
+    <div className="flex h-screen flex-col overflow-hidden bg-[#F5F5F5]">
       <header className="flex h-14 shrink-0 items-center justify-between bg-[#1C1C1A] px-4 md:px-6">
         <div className="flex min-w-0 flex-wrap items-center">
           <Link href="/" className="flex items-center">
@@ -54,7 +54,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </form>
         </div>
       </header>
-      <main className="min-h-0 flex-1">{children}</main>
+      <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
     </div>
   );
 }
