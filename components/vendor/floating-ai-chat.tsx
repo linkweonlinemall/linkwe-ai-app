@@ -339,14 +339,19 @@ export default function FloatingAIChat() {
   return (
     <>
       {open && (
-        <div
-          className="fixed right-6 bottom-20 z-50 flex h-[600px] w-96 flex-col overflow-hidden rounded-[16px]"
-          style={{
-            backgroundColor: "#161B27",
-            border: "1px solid rgba(255,255,255,0.12)",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-          }}
-        >
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/60 sm:hidden"
+            aria-hidden
+          />
+          <div
+            className="fixed bottom-0 left-0 right-0 z-50 flex h-[75dvh] w-full flex-col overflow-hidden rounded-t-2xl sm:bottom-6 sm:right-6 sm:left-auto sm:h-[600px] sm:w-[380px] sm:rounded-2xl"
+            style={{
+              backgroundColor: "#161B27",
+              border: "1px solid rgba(255,255,255,0.12)",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+            }}
+          >
           <div
             className="flex items-center justify-between px-4 py-3"
             style={{
@@ -766,10 +771,11 @@ export default function FloatingAIChat() {
           )}
 
           <div
-            className="px-3 pb-3 pt-3"
+            className="px-3 pt-3"
             style={{
               backgroundColor: "#161B27",
               borderTop: "1px solid rgba(255,255,255,0.08)",
+              paddingBottom: "env(safe-area-inset-bottom, 16px)",
             }}
           >
             {attachedPreviews.length > 0 && (
@@ -875,6 +881,7 @@ export default function FloatingAIChat() {
             </div>
           </div>
         </div>
+        </>
       )}
 
       <button
