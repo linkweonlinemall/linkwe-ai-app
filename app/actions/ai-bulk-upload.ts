@@ -295,7 +295,6 @@ export async function generateBulkTemplate(
   }
 
   const columns = columnMap[productType]
-  worksheet.columns = columns.map((key) => ({ header: key, key, width: 22 }))
 
   const exampleMap: Record<ProductType, string[]> = {
     simple: [
@@ -427,20 +426,26 @@ export async function generateBulkTemplate(
     ],
   }
 
+  worksheet.addRow(columns)
+  worksheet.addRow(hintMap[productType])
+  worksheet.addRow(exampleMap[productType])
+
+  for (let i = 1; i <= columns.length; i++) {
+    const col = worksheet.getColumn(i)
+    col.width = 22
+  }
+
   const headerRow = worksheet.getRow(1)
-  headerRow.font = { bold: true }
+  headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } }
   headerRow.fill = {
     type: "pattern",
     pattern: "solid",
     fgColor: { argb: "FFD4450A" },
   }
-  headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } }
 
-  worksheet.addRow(hintMap[productType])
   const hintRow = worksheet.getRow(2)
   hintRow.font = { italic: true, color: { argb: "FF888888" } }
 
-  worksheet.addRow(exampleMap[productType])
   const exampleRow = worksheet.getRow(3)
   exampleRow.fill = {
     type: "pattern",
