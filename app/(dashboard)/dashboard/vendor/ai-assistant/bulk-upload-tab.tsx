@@ -1,77 +1,236 @@
 "use client"
 
-import { useState, useRef } from "react"
-import { reorderProductImages } from "@/app/actions/ai-vendor-image"
-import DraggableImageGrid from "@/components/vendor/draggable-image-grid"
-import { bulkUploadFromCSV } from "@/app/actions/ai-bulk-upload"
+import { useRef, useState } from "react"
 
-type FailedRow = { row: number; name: string; error: string }
-type BulkResult = {
-  total: number
-  created: number
-  failed: FailedRow[]
-  createdProducts?: { productId: string; name: string }[]
-}
+import DraggableImageGrid from "@/components/vendor/draggable-image-grid"
+
+import type { BulkResult, ProductType } from "@/app/actions/ai-bulk-upload"
+import { bulkUploadFromCSV, generateBulkTemplate } from "@/app/actions/ai-bulk-upload"
+import { reorderProductImages } from "@/app/actions/ai-vendor-image"
+
+const PRODUCT_TYPES: {
+  type: ProductType
+  label: string
+  emoji: string
+  description: string
+  color: string
+}[] = [
+  {
+    type: "simple",
+    label: "Simple Product",
+    emoji: "📦",
+    description:
+      "One price, one stock level. Perfect for most physical products.",
+    color: "#D4450A",
+  },
+  {
+    type: "variable",
+    label: "Variable Product",
+    emoji: "🎨",
+    description:
+      "Has sizes, colours, or options. Each variant has its own price and stock.",
+    color: "#E8820C",
+  },
+  {
+    type: "service",
+    label: "Service",
+    emoji: "⚡",
+    description:
+      "Bookable service with no stock. Haircuts, repairs, consultations.",
+    color: "#1A7FB5",
+  },
+  {
+    type: "digital",
+    label: "Digital Product",
+    emoji: "💾",
+    description:
+      "Downloadable file. No shipping needed. Designs, music, documents.",
+    color: "#6B4FBB",
+  },
+]
 
 export default function BulkUploadTab() {
   const [stage, setStage] = useState<
-    "upload" | "results" | "images" | "done"
-  >("upload")
+    "type" | "upload" | "progress" | "results" | "images" | "done"
+  >("type")
+  const [selectedType, setSelectedType] = useState<ProductType>("simple")
+  const [publishImmediately, setPublishImmediately] = useState(false)
   const [result, setResult] = useState<BulkResult | null>(null)
   const [csvUploading, setCsvUploading] = useState(false)
+  const [progress, setProgress] = useState(0)
   const fileRef = useRef<HTMLInputElement>(null)
   const [createdProducts, setCreatedProducts] = useState<
-    { productId: string; name: string }[]
+    { productId: string; name: string; type: string }[]
   >([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [uploading, setUploading] = useState(false)
   const [productImages, setProductImages] = useState<Record<string, string[]>>(
     {}
   )
-  const stockInputRef = useRef<HTMLInputElement>(null)
 
   async function handleDownloadTemplate() {
-    const { generateXLSXTemplate } = await import("@/app/actions/ai-vendor")
-    const u8 = await generateXLSXTemplate()
-    const ab = u8.buffer.slice(
-      u8.byteOffset,
-      u8.byteOffset + u8.byteLength
-    ) as ArrayBuffer
-    const blob = new Blob([ab], {
+    const u8 = await generateBulkTemplate(selectedType)
+    const blob = new Blob([new Uint8Array(u8)], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = "linkwe-product-template.xlsx"
+    a.download = `linkwe-${selectedType}-template.xlsx`
     a.click()
     URL.revokeObjectURL(url)
   }
 
   async function handleCSVUpload(file: File) {
     setCsvUploading(true)
+    setStage("progress")
+    setProgress(10)
     const fd = new FormData()
     fd.append("csv", file)
-    const res = await bulkUploadFromCSV(fd)
+    setProgress(40)
+    const res = await bulkUploadFromCSV(fd, selectedType, publishImmediately)
+    setProgress(90)
     setResult(res)
     if (res.createdProducts && res.createdProducts.length > 0) {
       setCreatedProducts(res.createdProducts)
     }
-    setStage("results")
-    setCsvUploading(false)
+    setProgress(100)
+    setTimeout(() => {
+      setStage("results")
+      setCsvUploading(false)
+    }, 500)
   }
+
+  function reset() {
+    setStage("type")
+    setResult(null)
+    setCreatedProducts([])
+    setCurrentIndex(0)
+    setProductImages({})
+    setProgress(0)
+    setPublishImmediately(false)
+  }
+
+  const selectedTypeInfo = PRODUCT_TYPES.find((t) => t.type === selectedType)!
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col overflow-y-auto p-6">
-      {stage === "upload" && (
+      {stage === "type" && (
         <div className="space-y-6">
           <div>
-            <h2 className="mb-1 text-lg font-medium text-white">
+            <h2 className="mb-1 text-lg font-semibold text-white">
               Bulk upload products
             </h2>
             <p className="text-sm text-zinc-400">
-              Upload up to 50 products at once using a CSV file.
+              Upload up to 50 products at once. First, choose the type of
+              product you are uploading.
             </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {PRODUCT_TYPES.map((pt) => (
+              <button
+                key={pt.type}
+                type="button"
+                onClick={() => setSelectedType(pt.type)}
+                className="flex w-full flex-col items-start gap-2 rounded-xl border-2 p-4 text-left font-sans transition-all"
+                style={{
+                  borderColor:
+                    selectedType === pt.type ? pt.color : "rgb(63,63,70)",
+                  backgroundColor:
+                    selectedType === pt.type ? `${pt.color}26` : "rgba(24,24,27,0.78)",
+                }}
+              >
+                <span
+                  aria-hidden
+                  className="shrink-0 select-none text-4xl leading-none text-zinc-50"
+                  style={{
+                    fontFamily:
+                      "system-ui, \"Apple Color Emoji\", \"Segoe UI Emoji\", sans-serif",
+                  }}
+                >
+                  {pt.emoji}
+                </span>
+                <div className="min-w-0 w-full text-left">
+                  <p className="text-base font-bold leading-snug text-white">
+                    {pt.label}
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-zinc-400">
+                    {pt.description}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {selectedType === "variable" && (
+            <div className="rounded-lg border border-amber-800 bg-amber-950/30 p-4">
+              <p className="mb-1 text-xs font-semibold text-amber-400">
+                How to add variants
+              </p>
+              <p className="text-xs text-zinc-400">
+                In the variants column use this format:{" "}
+                <span className="font-mono text-amber-300">
+                  S:150:20|M:150:15|L:160:10
+                </span>
+              </p>
+              <p className="mt-1 text-xs text-zinc-500">
+                Each variant is Name:Price:Stock separated by |
+              </p>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 rounded-lg border border-zinc-700 p-4">
+            <input
+              type="checkbox"
+              id="publish-toggle"
+              checked={publishImmediately}
+              onChange={(e) => setPublishImmediately(e.target.checked)}
+              className="h-4 w-4 accent-[#D4450A]"
+            />
+            <div className="min-w-0">
+              <label
+                htmlFor="publish-toggle"
+                className="mb-1 block cursor-pointer text-sm font-semibold text-white"
+              >
+                Publish immediately
+              </label>
+              <p className="text-xs leading-relaxed text-zinc-400">
+                If unchecked, products are saved as drafts for you to review
+                first
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setStage("upload")}
+            className="w-full rounded-xl py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
+            style={{ backgroundColor: selectedTypeInfo.color }}
+          >
+            Continue with {selectedTypeInfo.label} →
+          </button>
+        </div>
+      )}
+
+      {stage === "upload" && (
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setStage("type")}
+              className="text-xs text-zinc-500 hover:text-zinc-300"
+            >
+              ← Back
+            </button>
+            <div>
+              <h2 className="text-lg font-semibold text-white">
+                {selectedTypeInfo.emoji} {selectedTypeInfo.label} — Bulk Upload
+              </h2>
+              <p className="text-sm text-zinc-400">
+                Download the template, fill it in, then upload it here.
+              </p>
+            </div>
           </div>
 
           <div className="space-y-3 rounded-lg border border-zinc-700 p-5">
@@ -79,27 +238,29 @@ export default function BulkUploadTab() {
               Step 1 — Download the template
             </p>
             <p className="text-xs text-zinc-500">
-              Fill in your product details. Each row is one product.
+              The template is pre-filled with an example row and hints for every
+              column.
             </p>
             <button
               type="button"
               onClick={handleDownloadTemplate}
-              className="rounded bg-zinc-700 px-4 py-2 text-sm text-white hover:bg-zinc-600"
+              className="rounded-lg border border-zinc-600 px-4 py-2 text-sm text-white transition-colors hover:border-zinc-400"
             >
-              Download CSV template
+              ⬇ Download {selectedTypeInfo.label} template
             </button>
           </div>
 
           <div className="space-y-3 rounded-lg border border-zinc-700 p-5">
             <p className="text-sm font-medium text-zinc-300">
-              Step 2 — Upload your filled CSV
+              Step 2 — Upload your filled file
             </p>
             <p className="text-xs text-zinc-500">
-              All products will be created as drafts. You can add images next.
+              {publishImmediately
+                ? "Products will be published immediately."
+                : "Products will be saved as drafts for you to review."}
             </p>
-
             <div
-              className="cursor-pointer rounded-lg border-2 border-dashed border-zinc-600 p-8 text-center transition-colors hover:border-zinc-400"
+              className="cursor-pointer rounded-xl border-2 border-dashed border-zinc-600 p-8 text-center transition-colors hover:border-[#D4450A]"
               onClick={() => fileRef.current?.click()}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
@@ -108,18 +269,10 @@ export default function BulkUploadTab() {
                 if (f) void handleCSVUpload(f)
               }}
             >
-              {csvUploading ? (
-                <p className="text-sm text-zinc-400">
-                  Uploading and creating products…
-                </p>
-              ) : (
-                <>
-                  <p className="mb-1 text-sm text-zinc-300">
-                    Drag and drop your CSV here
-                  </p>
-                  <p className="text-xs text-zinc-500">or click to browse</p>
-                </>
-              )}
+              <p className="mb-1 text-sm text-zinc-300">
+                Drag and drop your CSV or XLSX here
+              </p>
+              <p className="text-xs text-zinc-500">or click to browse</p>
             </div>
             <input
               ref={fileRef}
@@ -135,19 +288,47 @@ export default function BulkUploadTab() {
         </div>
       )}
 
+      {stage === "progress" && (
+        <div className="flex flex-col items-center justify-center gap-6 py-20">
+          <div className="text-4xl">⚙️</div>
+          <div className="w-full max-w-xs">
+            <div className="mb-2 flex justify-between">
+              <p className="text-sm text-zinc-300">Creating products...</p>
+              <p className="text-sm text-zinc-400">{progress}%</p>
+            </div>
+            <div className="h-2 rounded-full bg-zinc-700">
+              <div
+                className="h-2 rounded-full transition-all duration-500"
+                style={{
+                  width: `${progress}%`,
+                  backgroundColor: selectedTypeInfo.color,
+                }}
+              />
+            </div>
+          </div>
+          <p className="text-xs text-zinc-500">
+            Please wait while we set up your listings
+          </p>
+        </div>
+      )}
+
       {stage === "results" && result && (
         <div className="space-y-6">
           <div>
-            <h2 className="mb-1 text-lg font-medium text-white">
-              Upload complete
+            <h2 className="mb-1 text-lg font-semibold text-white">
+              {result.created === result.total
+                ? "✅ All done!"
+                : `⚠️ ${result.created} of ${result.total} created`}
             </h2>
             <p className="text-sm text-zinc-400">
-              {result.created} of {result.total} products created successfully.
+              {result.created} product{result.created !== 1 ? "s" : ""} created
+              successfully
+              {publishImmediately ? " and published." : " as drafts."}
             </p>
           </div>
 
           {result.failed.length > 0 && (
-            <div className="space-y-2 rounded-lg border border-red-900 p-4">
+            <div className="space-y-2 rounded-lg border border-red-900 bg-red-950/20 p-4">
               <p className="text-sm font-medium text-red-400">Failed rows</p>
               {result.failed.map((f) => (
                 <div key={f.row} className="text-xs text-zinc-400">
@@ -160,32 +341,49 @@ export default function BulkUploadTab() {
           {result.created > 0 && (
             <div className="space-y-3 rounded-lg border border-zinc-700 p-5">
               <p className="text-sm font-medium text-zinc-300">
-                Now let&apos;s add images
+                Add images to your products
               </p>
               <p className="text-xs text-zinc-500">
-                We&apos;ll go through each product one at a time. The first
-                image you upload will be the featured image shown in search
-                results.
+                We will go through each product one at a time. The first image
+                will be the cover image.
               </p>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 <button
                   type="button"
                   onClick={() => {
                     setCurrentIndex(0)
                     setStage("images")
                   }}
-                  className="rounded bg-[#D4450A] px-4 py-2 text-sm text-white hover:opacity-90"
+                  className="rounded-lg px-4 py-2 text-sm font-bold text-white hover:opacity-90"
+                  style={{ backgroundColor: selectedTypeInfo.color }}
                 >
                   Add images now
                 </button>
                 <a
                   href="/dashboard/vendor/products"
-                  className="rounded bg-zinc-700 px-4 py-2 text-sm text-white hover:bg-zinc-600"
+                  className="rounded-lg border border-zinc-600 px-4 py-2 text-sm text-white hover:border-zinc-400"
                 >
                   Go to products
                 </a>
+                <button
+                  type="button"
+                  onClick={reset}
+                  className="rounded-lg border border-zinc-600 px-4 py-2 text-sm text-zinc-400 hover:border-zinc-400 hover:text-white"
+                >
+                  Upload more
+                </button>
               </div>
             </div>
+          )}
+
+          {result.created === 0 && (
+            <button
+              type="button"
+              onClick={reset}
+              className="rounded-lg border border-zinc-600 px-4 py-2 text-sm text-zinc-400 hover:text-white"
+            >
+              Try again
+            </button>
           )}
         </div>
       )}
@@ -200,6 +398,9 @@ export default function BulkUploadTab() {
               <h2 className="text-xl font-semibold text-white">
                 {createdProducts[currentIndex].name}
               </h2>
+              <p className="mt-0.5 text-xs capitalize text-zinc-500">
+                {createdProducts[currentIndex].type}
+              </p>
             </div>
             <button
               type="button"
@@ -234,12 +435,9 @@ export default function BulkUploadTab() {
                 const { uploadProductImage } = await import(
                   "@/app/actions/ai-vendor-image"
                 )
-                const result = await uploadProductImage(pid, fd)
-                if (result.ok && result.images) {
-                  setProductImages((prev) => ({
-                    ...prev,
-                    [pid]: result.images!,
-                  }))
+                const upResult = await uploadProductImage(pid, fd)
+                if (upResult.ok && upResult.images) {
+                  setProductImages((prev) => ({ ...prev, [pid]: upResult.images! }))
                 }
               }
               setUploading(false)
@@ -291,11 +489,11 @@ export default function BulkUploadTab() {
                 const { uploadProductImage } = await import(
                   "@/app/actions/ai-vendor-image"
                 )
-                const result = await uploadProductImage(pid, fd)
-                if (result.ok && result.images) {
+                const upResult = await uploadProductImage(pid, fd)
+                if (upResult.ok && upResult.images) {
                   setProductImages((prev) => ({
                     ...prev,
-                    [pid]: result.images!,
+                    [pid]: upResult.images!,
                   }))
                 }
               }
@@ -307,7 +505,9 @@ export default function BulkUploadTab() {
           {(productImages[createdProducts[currentIndex].productId] ?? [])
             .length > 0 && (
             <div>
-              <p className="mb-2 text-xs text-zinc-500">Uploaded images</p>
+              <p className="mb-2 text-xs text-zinc-500">
+                Uploaded images — drag to reorder
+              </p>
               <DraggableImageGrid
                 images={
                   productImages[createdProducts[currentIndex].productId] ?? []
@@ -322,11 +522,11 @@ export default function BulkUploadTab() {
                   const { removeProductImageAI } = await import(
                     "@/app/actions/ai-vendor-image"
                   )
-                  const result = await removeProductImageAI(pid, url)
-                  if (result.ok && result.images) {
+                  const upResult = await removeProductImageAI(pid, url)
+                  if (upResult.ok && upResult.images) {
                     setProductImages((prev) => ({
                       ...prev,
-                      [pid]: result.images!,
+                      [pid]: upResult.images!,
                     }))
                   }
                 }}
@@ -334,13 +534,13 @@ export default function BulkUploadTab() {
             </div>
           )}
 
-          <div className="flex items-center justify-between border-t border-zinc-800 pt-2">
+          <div className="flex items-center justify-between border-t border-zinc-800 pt-4">
             <button
               type="button"
               onClick={() => setStage("done")}
               className="text-xs text-zinc-500 hover:text-zinc-300"
             >
-              Skip remaining products
+              Skip remaining
             </button>
             <button
               type="button"
@@ -351,7 +551,8 @@ export default function BulkUploadTab() {
                   setStage("done")
                 }
               }}
-              className="rounded-lg bg-[#D4450A] px-5 py-2 text-sm font-medium text-white hover:opacity-90"
+              className="rounded-lg px-5 py-2 text-sm font-bold text-white hover:opacity-90"
+              style={{ backgroundColor: selectedTypeInfo.color }}
             >
               {currentIndex + 1 < createdProducts.length
                 ? "Next product →"
@@ -362,18 +563,31 @@ export default function BulkUploadTab() {
       )}
 
       {stage === "done" && (
-        <div className="space-y-4">
-          <h2 className="text-lg font-medium text-white">All done!</h2>
+        <div className="space-y-4 py-8 text-center">
+          <div className="text-5xl">🎉</div>
+          <h2 className="text-xl font-semibold text-white">All done!</h2>
           <p className="text-sm text-zinc-400">
-            Your products have been created as drafts. Go to your products page
-            to review and publish them.
+            Your products have been created
+            {publishImmediately ? " and published" : " as drafts"}.
+            {!publishImmediately &&
+              " Go to your products page to review and publish them."}
           </p>
-          <a
-            href="/dashboard/vendor/products"
-            className="inline-block rounded bg-[#D4450A] px-4 py-2 text-sm text-white hover:opacity-90"
-          >
-            Go to products
-          </a>
+          <div className="flex flex-wrap justify-center gap-3 pt-2">
+            <a
+              href="/dashboard/vendor/products"
+              className="rounded-lg px-5 py-2 text-sm font-bold text-white hover:opacity-90"
+              style={{ backgroundColor: selectedTypeInfo.color }}
+            >
+              Go to products
+            </a>
+            <button
+              type="button"
+              onClick={reset}
+              className="rounded-lg border border-zinc-600 px-5 py-2 text-sm text-zinc-400 hover:border-zinc-400 hover:text-white"
+            >
+              Upload more
+            </button>
+          </div>
         </div>
       )}
     </div>

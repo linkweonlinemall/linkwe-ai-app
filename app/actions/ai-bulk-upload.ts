@@ -1,17 +1,22 @@
 "use server"
+
+import type { ProductCondition, ServiceType, WeightUnit } from "@prisma/client"
+import { parse } from "csv-parse/sync"
 import { getSession } from "@/lib/auth/session"
 import { prisma } from "@/lib/prisma"
-import { parse } from "csv-parse/sync"
-import type { ProductCondition, WeightUnit } from "@prisma/client"
 
 type CSVRow = Record<string, string>
 
-type BulkResult = {
+type FailedRow = { row: number; name: string; error: string }
+
+export type BulkResult = {
   total: number
   created: number
-  failed: { row: number; name: string; error: string }[]
-  createdProducts: { productId: string; name: string }[]
+  failed: FailedRow[]
+  createdProducts: { productId: string; name: string; type: string }[]
 }
+
+export type ProductType = "simple" | "variable" | "service" | "digital"
 
 function sanitizeSlug(raw: string): string {
   let s = raw.trim().toLowerCase().replace(/\s+/g, "-")
@@ -25,36 +30,17 @@ async function uniqueSlug(base: string): Promise<string> {
   let suffix = 0
   while (true) {
     const candidate = suffix === 0 ? slug : `${slug}-${suffix}`
-    const existing = await prisma.product.findUnique({ where: { slug: candidate }, select: { id: true } })
+    const existing = await prisma.product.findUnique({
+      where: { slug: candidate },
+      select: { id: true },
+    })
     if (!existing) return candidate
     suffix++
   }
 }
 
-export async function bulkUploadFromCSV(
-  formData: FormData
-): Promise<BulkResult> {
-  const session = await getSession()
-  if (!session || session.role !== "VENDOR") {
-    return { total: 0, created: 0, failed: [{ row: 0, name: "", error: "Unauthorized" }], createdProducts: [] }
-  }
-
-  const store = await prisma.store.findFirst({
-    where: { ownerId: session.userId },
-    select: { id: true },
-  })
-  if (!store) {
-    return { total: 0, created: 0, failed: [{ row: 0, name: "", error: "No store found" }], createdProducts: [] }
-  }
-
-  const file = formData.get("csv")
-  if (!(file instanceof File) || file.size === 0) {
-    return { total: 0, created: 0, failed: [{ row: 0, name: "", error: "No file provided" }], createdProducts: [] }
-  }
-
+async function parseRows(file: File): Promise<CSVRow[] | null> {
   const fileName = file.name.toLowerCase()
-  let rows: CSVRow[]
-
   if (fileName.endsWith(".xlsx")) {
     try {
       const ExcelJS = (await import("exceljs")).default
@@ -62,12 +48,12 @@ export async function bulkUploadFromCSV(
       const arrayBuffer = await file.arrayBuffer()
       await workbook.xlsx.load(arrayBuffer)
       const worksheet = workbook.worksheets[0]
-      if (!worksheet) throw new Error("No worksheet found")
+      if (!worksheet) return null
       const headers: string[] = []
       worksheet.getRow(1).eachCell((cell) => {
         headers.push(String(cell.value ?? "").trim())
       })
-      rows = []
+      const rows: CSVRow[] = []
       worksheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) return
         const obj: CSVRow = {}
@@ -77,25 +63,64 @@ export async function bulkUploadFromCSV(
         })
         if (Object.values(obj).some((v) => v)) rows.push(obj)
       })
+      return rows
     } catch {
-      return {
-        total: 0,
-        created: 0,
-        failed: [{ row: 0, name: "", error: "Invalid XLSX format" }],
-        createdProducts: [],
-      }
+      return null
     }
-  } else {
-    const text = await file.text()
-    try {
-      rows = parse(text, { columns: true, skip_empty_lines: true, trim: true })
-    } catch {
-      return {
-        total: 0,
-        created: 0,
-        failed: [{ row: 0, name: "", error: "Invalid CSV format" }],
-        createdProducts: [],
-      }
+  }
+  const text = await file.text()
+  try {
+    return parse(text, { columns: true, skip_empty_lines: true, trim: true })
+  } catch {
+    return null
+  }
+}
+
+export async function bulkUploadFromCSV(
+  formData: FormData,
+  productType: ProductType = "simple",
+  publishImmediately: boolean = false
+): Promise<BulkResult> {
+  const session = await getSession()
+  if (!session || session.role !== "VENDOR") {
+    return {
+      total: 0,
+      created: 0,
+      failed: [{ row: 0, name: "", error: "Unauthorized" }],
+      createdProducts: [],
+    }
+  }
+
+  const store = await prisma.store.findFirst({
+    where: { ownerId: session.userId },
+    select: { id: true },
+  })
+  if (!store) {
+    return {
+      total: 0,
+      created: 0,
+      failed: [{ row: 0, name: "", error: "No store found" }],
+      createdProducts: [],
+    }
+  }
+
+  const file = formData.get("csv")
+  if (!(file instanceof File) || file.size === 0) {
+    return {
+      total: 0,
+      created: 0,
+      failed: [{ row: 0, name: "", error: "No file provided" }],
+      createdProducts: [],
+    }
+  }
+
+  const rows = await parseRows(file)
+  if (!rows) {
+    return {
+      total: 0,
+      created: 0,
+      failed: [{ row: 0, name: "", error: "Invalid file format" }],
+      createdProducts: [],
     }
   }
 
@@ -110,12 +135,12 @@ export async function bulkUploadFromCSV(
     const row = rows[i]!
     const rowNum = i + 2
     const name = row["name"]?.trim() ?? ""
-    const price = parseFloat(row["price"] ?? "")
-
     if (!name) {
       result.failed.push({ row: rowNum, name: "", error: "Missing name" })
       continue
     }
+
+    const price = parseFloat(row["price"] ?? "")
     if (!Number.isFinite(price) || price <= 0) {
       result.failed.push({ row: rowNum, name, error: "Invalid price" })
       continue
@@ -123,7 +148,9 @@ export async function bulkUploadFromCSV(
 
     const conditionRaw = row["condition"]?.trim().toUpperCase()
     const validConditions: ProductCondition[] = ["NEW", "USED", "REFURBISHED"]
-    const condition: ProductCondition = validConditions.includes(conditionRaw as ProductCondition)
+    const condition: ProductCondition = validConditions.includes(
+      conditionRaw as ProductCondition
+    )
       ? (conditionRaw as ProductCondition)
       : "NEW"
 
@@ -138,6 +165,10 @@ export async function bulkUploadFromCSV(
     const baseSlug = sanitizeSlug(name) || "product"
     const slug = await uniqueSlug(baseSlug)
 
+    const isDigital = productType === "digital"
+    const isBookable = productType === "service"
+    const hasVariants = productType === "variable"
+
     try {
       const product = await prisma.product.create({
         data: {
@@ -151,29 +182,64 @@ export async function bulkUploadFromCSV(
           category: row["category"]?.trim() || null,
           brand: row["brand"]?.trim() || null,
           sku: row["sku"]?.trim() || null,
-          stock: parseInt(row["stock"] ?? "") || null,
+          stock:
+            isBookable || isDigital ? null : parseInt(row["stock"] ?? "", 10) || null,
           tags,
-          allowDelivery: row["allowDelivery"]?.trim().toLowerCase() === "true",
-          allowPickup: row["allowPickup"]?.trim().toLowerCase() === "true",
+          allowDelivery:
+            isDigital ? false : row["allowDelivery"]?.trim().toLowerCase() === "true",
+          allowPickup:
+            isBookable ? true : row["allowPickup"]?.trim().toLowerCase() === "true",
           weight: parseFloat(row["weight"] ?? "") || null,
           weightUnit,
           length: parseFloat(row["length"] ?? "") || null,
           width: parseFloat(row["width"] ?? "") || null,
           height: parseFloat(row["height"] ?? "") || null,
-          address: row["address"]?.trim() || null,
           returnPolicy: row["returnPolicy"]?.trim() || null,
           isFeatured: row["isFeatured"]?.trim().toLowerCase() === "true",
           metaTitle: row["metaTitle"]?.trim() || null,
           metaDescription: row["metaDescription"]?.trim() || null,
-          isPublished: false,
-          isDigital: false,
-          isBookable: false,
+          isPublished: publishImmediately,
+          isDigital,
+          isBookable,
+          hasVariants,
+          ...(productType === "service"
+            ? {
+                isService: true,
+                serviceType: "BOOKABLE" as ServiceType,
+              }
+            : {}),
           images: [],
         },
         select: { id: true },
       })
+
+      if (productType === "variable" && row["variants"]) {
+        const variantPairs = row["variants"]
+          .split("|")
+          .map((v) => v.trim())
+          .filter(Boolean)
+        for (const pair of variantPairs) {
+          const parts = pair.split(":").map((p) => p.trim())
+          const variantName = parts[0] ?? ""
+          const variantPrice = parseFloat(parts[1] ?? "") || price
+          const variantStock = parseInt(parts[2] ?? "", 10) || 0
+          if (variantName) {
+            await prisma.productVariant.create({
+              data: {
+                productId: product.id,
+                name: variantName,
+                price: variantPrice,
+                stock: variantStock,
+                images: [],
+                attributes: [],
+              },
+            })
+          }
+        }
+      }
+
       result.created++
-      result.createdProducts.push({ productId: product.id, name })
+      result.createdProducts.push({ productId: product.id, name, type: productType })
     } catch (e) {
       result.failed.push({ row: rowNum, name, error: "Database error" })
       console.error(e)
@@ -181,4 +247,211 @@ export async function bulkUploadFromCSV(
   }
 
   return result
+}
+
+export async function generateBulkTemplate(
+  productType: ProductType
+): Promise<Uint8Array> {
+  const ExcelJS = (await import("exceljs")).default
+  const workbook = new ExcelJS.Workbook()
+  const worksheet = workbook.addWorksheet("Products")
+
+  const baseColumns = [
+    "name",
+    "price",
+    "description",
+    "shortDescription",
+    "category",
+    "brand",
+    "tags",
+    "condition",
+    "returnPolicy",
+    "isFeatured",
+  ]
+  const simpleExtra = [
+    "stock",
+    "sku",
+    "allowDelivery",
+    "allowPickup",
+    "weight",
+    "weightUnit",
+  ]
+  const variableExtra = [
+    "variants",
+    "sku",
+    "allowDelivery",
+    "allowPickup",
+    "weight",
+    "weightUnit",
+  ]
+  const serviceExtra = ["sku"]
+  const digitalExtra = ["sku"]
+
+  const columnMap: Record<ProductType, string[]> = {
+    simple: [...baseColumns, ...simpleExtra],
+    variable: [...baseColumns, ...variableExtra],
+    service: [...baseColumns, ...serviceExtra],
+    digital: [...baseColumns, ...digitalExtra],
+  }
+
+  const columns = columnMap[productType]
+  worksheet.addRow(columns)
+
+  const exampleMap: Record<ProductType, string[]> = {
+    simple: [
+      "Red Sneakers",
+      "250",
+      "Great everyday sneaker",
+      "Comfy and stylish",
+      "Footwear",
+      "Nike",
+      "shoes,sneakers",
+      "NEW",
+      "No returns",
+      "false",
+      "10",
+      "SKU001",
+      "true",
+      "true",
+      "0.5",
+      "KG",
+    ],
+    variable: [
+      "Custom T-Shirt",
+      "150",
+      "Bold graphic tee",
+      "Statement piece",
+      "Clothing Apparel",
+      "Bad Dawg",
+      "tee,clothing",
+      "NEW",
+      "7 day returns",
+      "false",
+      "S:150:20|M:150:15|L:160:10",
+      "SKU002",
+      "true",
+      "true",
+      "0.3",
+      "KG",
+    ],
+    service: [
+      "Haircut",
+      "200",
+      "Professional haircut service",
+      "Fresh cut guaranteed",
+      "Beauty",
+      "My Salon",
+      "haircut,grooming",
+      "NEW",
+      "No refunds",
+      "false",
+      "SKU003",
+    ],
+    digital: [
+      "Logo Design Pack",
+      "500",
+      "Professional logo files",
+      "PNG SVG AI formats included",
+      "Design",
+      "CreativeStudio",
+      "logo,design,digital",
+      "NEW",
+      "No refunds",
+      "false",
+      "SKU004",
+    ],
+  }
+
+  const hintMap: Record<ProductType, string[]> = {
+    simple: [
+      "Product name",
+      "Price in TTD",
+      "Full description",
+      "Short description",
+      "Category",
+      "Brand",
+      "Comma separated tags",
+      "NEW/USED/REFURBISHED",
+      "Return policy text",
+      "true/false",
+      "Stock quantity",
+      "SKU code",
+      "true/false",
+      "true/false",
+      "Weight number",
+      "KG or LB",
+    ],
+    variable: [
+      "Product name",
+      "Price in TTD",
+      "Full description",
+      "Short description",
+      "Category",
+      "Brand",
+      "Comma separated tags",
+      "NEW/USED/REFURBISHED",
+      "Return policy text",
+      "true/false",
+      "Name:Price:Stock separated by | e.g. S:150:20|M:150:15",
+      "SKU code",
+      "true/false",
+      "true/false",
+      "Weight number",
+      "KG or LB",
+    ],
+    service: [
+      "Service name",
+      "Price in TTD",
+      "Full description",
+      "Short description",
+      "Category",
+      "Brand/Business",
+      "Comma separated tags",
+      "NEW",
+      "Refund policy",
+      "true/false",
+      "SKU code",
+    ],
+    digital: [
+      "Product name",
+      "Price in TTD",
+      "Full description",
+      "Short description",
+      "Category",
+      "Creator/Brand",
+      "Comma separated tags",
+      "NEW",
+      "Refund policy",
+      "true/false",
+      "SKU code",
+    ],
+  }
+
+  const headerRow = worksheet.getRow(1)
+  headerRow.font = { bold: true }
+  headerRow.fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFD4450A" },
+  }
+  headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } }
+
+  worksheet.addRow(hintMap[productType])
+  const hintRow = worksheet.getRow(2)
+  hintRow.font = { italic: true, color: { argb: "FF888888" } }
+
+  worksheet.addRow(exampleMap[productType])
+  const exampleRow = worksheet.getRow(3)
+  exampleRow.fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFFFF5F0" },
+  }
+
+  worksheet.columns.forEach((col) => {
+    col.width = 22
+  })
+
+  const buffer = await workbook.xlsx.writeBuffer()
+  return new Uint8Array(buffer as ArrayBuffer)
 }
