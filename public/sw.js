@@ -1,4 +1,4 @@
-const CACHE_NAME = "linkwe-v1";
+const CACHE_NAME = "linkwe-v2";
 const OFFLINE_URL = "/offline";
 
 const STATIC_ASSETS = [
