@@ -14,6 +14,12 @@ import {
   setProductCoverImage,
 } from "@/app/actions/ai-vendor-image"
 import { createProductFromAIRaw } from "@/app/actions/ai-vendor"
+import {
+  getVendorInventoryAlerts,
+  getVendorRecentOrders,
+  getVendorSalesInsights,
+  getVendorStoreSummary,
+} from "@/app/actions/ai-vendor-store"
 import { getSession } from "@/lib/auth/session"
 import { VENDOR_SYSTEM_PROMPT } from "@/lib/chat/vendorSystemPrompt"
 import { prisma } from "@/lib/prisma"
@@ -271,6 +277,50 @@ const CREATE_SERVICE_TOOL: Anthropic.Tool = {
   },
 }
 
+const GET_STORE_SUMMARY_TOOL: Anthropic.Tool = {
+  name: "get_store_summary",
+  description:
+    "Get the vendor's full store profile including name, description, category, region, tags, opening hours, social links, product counts, and verification status. Use this when the vendor asks about their store, wants a summary, or asks Rex to review their profile.",
+  input_schema: {
+    type: "object",
+    properties: {},
+    required: [],
+  },
+}
+
+const GET_SALES_INSIGHTS_TOOL: Anthropic.Tool = {
+  name: "get_sales_insights",
+  description:
+    "Get sales data for the last 30 days including total revenue, order count, and top performing products by revenue. Use when the vendor asks about sales, revenue, performance, or how their products are doing.",
+  input_schema: {
+    type: "object",
+    properties: {},
+    required: [],
+  },
+}
+
+const GET_INVENTORY_ALERTS_TOOL: Anthropic.Tool = {
+  name: "get_inventory_alerts",
+  description:
+    "Get inventory alerts including low stock products (5 or fewer units), out of stock products, and unpublished draft listings. Use when the vendor asks about stock levels, inventory, or what needs attention.",
+  input_schema: {
+    type: "object",
+    properties: {},
+    required: [],
+  },
+}
+
+const GET_RECENT_ORDERS_TOOL: Anthropic.Tool = {
+  name: "get_recent_orders",
+  description:
+    "Get the vendor's 20 most recent orders with product name, quantity, price, status, and customer name. Use when the vendor asks about recent orders, sales activity, or customer purchases.",
+  input_schema: {
+    type: "object",
+    properties: {},
+    required: [],
+  },
+}
+
 const VENDOR_TOOLS: Anthropic.Tool[] = [
   CREATE_PRODUCT_TOOL,
   CREATE_SERVICE_TOOL,
@@ -282,6 +332,10 @@ const VENDOR_TOOLS: Anthropic.Tool[] = [
   REMOVE_IMAGE_TOOL,
   SET_COVER_TOOL,
   REPLACE_IMAGE_TOOL,
+  GET_STORE_SUMMARY_TOOL,
+  GET_SALES_INSIGHTS_TOOL,
+  GET_INVENTORY_ALERTS_TOOL,
+  GET_RECENT_ORDERS_TOOL,
 ]
 
 /** Body messages: string or Anthropic user content (text + image blocks). */
@@ -803,6 +857,43 @@ export async function POST(req: NextRequest) {
           return { content: JSON.stringify(result) }
         }
 
+        if (toolBlock.name === "get_store_summary") {
+          const data = await getVendorStoreSummary()
+          console.log("REX STORE SUMMARY DATA:", JSON.stringify(data).slice(0, 200))
+          return {
+            content: data
+              ? JSON.stringify(data)
+              : JSON.stringify({ error: "No store found" }),
+          }
+        }
+
+        if (toolBlock.name === "get_sales_insights") {
+          const data = await getVendorSalesInsights()
+          return {
+            content: data
+              ? JSON.stringify(data)
+              : JSON.stringify({ error: "No data available" }),
+          }
+        }
+
+        if (toolBlock.name === "get_inventory_alerts") {
+          const data = await getVendorInventoryAlerts()
+          return {
+            content: data
+              ? JSON.stringify(data)
+              : JSON.stringify({ error: "No data available" }),
+          }
+        }
+
+        if (toolBlock.name === "get_recent_orders") {
+          const data = await getVendorRecentOrders()
+          return {
+            content: data
+              ? JSON.stringify(data)
+              : JSON.stringify({ error: "No orders found" }),
+          }
+        }
+
         return {
           content: JSON.stringify({
             ok: false,
@@ -936,6 +1027,7 @@ If SYSTEM notes further down report an issue with attaching to a product gallery
             }
           }
           if (assistantRoundText.length > 0) {
+            console.log("REX STREAM TEXT:", assistantRoundText.slice(0, 200))
             send(JSON.stringify({ text: assistantRoundText }))
           }
 
