@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { Sora } from "next/font/google"
 import ReactMarkdown from "react-markdown"
 import { assertVendorSession } from "@/app/actions/ai-vendor"
 import {
@@ -61,6 +62,22 @@ const ACCEPT_CHAT_IMAGES =
 
 const AUTO_START_MESSAGE =
   "I have uploaded my product images. Please analyse them and help me create a listing."
+
+const REX_FONT = Sora({
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+})
+
+const CARD_BORDER_STYLE = {
+  borderColor: "rgba(255,255,255,0.08)",
+} as const
+
+const QUICK_CHIP_MESSAGES = [
+  "📊 Show my sales",
+  "🏪 Update my store",
+  "📦 Check inventory",
+  "💬 How am I doing?",
+] as const
 
 async function compressImage(
   dataUrl: string,
@@ -124,6 +141,7 @@ export default function VendorAIAssistantPage() {
     { id: string; title: string; createdAt: Date }[]
   >([])
   const [loadingChats, setLoadingChats] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const selectionRef = useRef({ start: 0, end: 0 })
@@ -524,12 +542,88 @@ export default function VendorAIAssistantPage() {
     },
   ]
 
+  const conversationSidebarInner = () => (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <button
+        type="button"
+        onClick={() => {
+          setSidebarOpen(false)
+          setMessages([])
+          setChatId(null)
+          setCreatedProductId(null)
+          setFocusedProductId(null)
+          setProductImages([])
+          setStartImages([])
+          setStartImagePreviews([])
+          setInput("")
+        }}
+        className="mx-3 mt-3 w-[calc(100%-24px)] rounded-lg bg-[#D4450A] py-2.5 px-4 text-center text-[13px] font-semibold text-white"
+      >
+        + New
+      </button>
+      <p className="px-4 pb-2 pt-4 text-[11px] font-normal uppercase tracking-widest text-zinc-500">
+        Conversations
+      </p>
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
+        {loadingChats ? (
+          <p className="p-3 text-xs text-zinc-500">Loading…</p>
+        ) : null}
+        {chatList.map((chat) => (
+          <div
+            key={chat.id}
+            className={`group relative mb-1 flex cursor-pointer items-center rounded-lg px-[14px] py-2.5 transition-colors hover:bg-[rgba(255,255,255,0.05)] ${
+              chatId === chat.id
+                ? "border border-transparent bg-[rgba(212,69,10,0.15)] before:absolute before:left-0 before:top-0 before:h-full before:w-[3px] before:rounded-l-lg before:bg-[#D4450A]"
+                : ""
+            }`}
+            onClick={async () => {
+              const msgs = await getVendorChatMessages(chat.id)
+              setMessages([
+                ...msgs.map((m, i) => ({
+                  id: String(i),
+                  role: m.role as "user" | "assistant",
+                  content: m.content,
+                })),
+              ])
+              setChatId(chat.id)
+              setCreatedProductId(null)
+              setFocusedProductId(null)
+              setProductImages([])
+              setSidebarOpen(false)
+            }}
+          >
+            <div className="min-w-0 flex-1 pr-8">
+              <p className="truncate text-[13px] font-medium text-zinc-300">
+                {chat.title}
+              </p>
+              <p className="text-[10px] text-zinc-500">
+                {new Date(chat.createdAt).toLocaleDateString()}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={async (e) => {
+                e.stopPropagation()
+                await deleteVendorChat(chat.id)
+                setChatList((prev) => prev.filter((c) => c.id !== chat.id))
+                if (chatId === chat.id) {
+                  setChatId(null)
+                  setMessages([])
+                }
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-zinc-500 opacity-0 hover:text-red-400 group-hover:opacity-100"
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+
   if (allowed === null) {
     return (
-      <div
-        className="min-h-screen px-6 py-10"
-        style={{ backgroundColor: "var(--surface, #0c0c0b)" }}
-      >
+      <div className="min-h-screen px-6 py-10" style={{ backgroundColor: "#0F1117" }}>
         <p className="text-sm text-zinc-400">Loading…</p>
       </div>
     )
@@ -537,111 +631,105 @@ export default function VendorAIAssistantPage() {
 
   return (
     <div
-      className="flex min-h-screen flex-col"
-      style={{ backgroundColor: "var(--surface, #0c0c0b)" }}
+      className={`flex min-h-screen flex-col ${REX_FONT.className}`}
+      style={{ backgroundColor: "#0F1117" }}
     >
       <header
-        className="border-b border-zinc-800/80 bg-zinc-950 px-4 py-3"
-        style={{ borderColor: "rgba(63, 63, 70, 0.5)" }}
+        className="shrink-0 border-b px-4 py-3 md:py-4"
+        style={{
+          backgroundColor: "#161B27",
+          borderColor: CARD_BORDER_STYLE.borderColor,
+        }}
       >
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
-          <div>
-            <h1 className="text-sm font-semibold text-zinc-100">
-              AI listing assistant
-            </h1>
-            <p className="text-xs text-zinc-500">Vendor · LinkWe</p>
+        <div className="relative flex items-center gap-3">
+          <button
+            type="button"
+            aria-label="Open conversations"
+            onClick={() => setSidebarOpen(true)}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xl text-white hover:bg-[rgba(255,255,255,0.06)] md:hidden"
+          >
+            ☰
+          </button>
+          <div className="flex min-w-0 flex-1 flex-col items-start md:absolute md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:items-center">
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold leading-none text-white">
+                Rex
+              </h1>
+              <span
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{
+                  backgroundColor: "#22c55e",
+                  boxShadow: "0 0 6px #22c55e",
+                }}
+                aria-hidden
+              />
+            </div>
+            <p className="mt-1 text-[11px] leading-tight text-zinc-400">
+              Your AI business partner
+            </p>
           </div>
           <Link
             href="/dashboard/vendor"
-            className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-200"
+            className="ml-auto shrink-0 text-xs text-zinc-400 transition-colors hover:text-zinc-200"
           >
             ← Dashboard
           </Link>
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 w-full">
-        <div className="flex h-full w-64 flex-col border-r border-zinc-700 bg-zinc-900">
-          <div className="flex items-center justify-between border-b border-zinc-700 p-4">
-            <span className="text-sm font-semibold text-white">
-              Conversations
-            </span>
+      <div className="flex min-h-0 min-h-[calc(100vh-73px)] flex-1 md:min-h-[calc(100vh-80px)] w-full overflow-hidden">
+        {sidebarOpen ? (
+          <button
+            type="button"
+            aria-label="Close sidebar"
+            onClick={() => setSidebarOpen(false)}
+            className="fixed inset-0 z-40 bg-[rgba(0,0,0,0.6)] md:hidden"
+          />
+        ) : null}
+
+        <aside
+          className={`fixed inset-y-0 left-0 z-50 flex h-full max-h-[100dvh] w-[260px] flex-col overflow-hidden border-r transition-transform md:static md:z-0 md:max-h-none md:w-[220px] md:translate-x-0 md:transition-none lg:w-[260px] ${
+            sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+          }`}
+          style={{
+            backgroundColor: "#161B27",
+            borderColor: "rgba(255,255,255,0.08)",
+          }}
+        >
+          <div
+            className="flex shrink-0 items-center justify-end border-b p-3 md:hidden"
+            style={{ borderColor: CARD_BORDER_STYLE.borderColor }}
+          >
             <button
               type="button"
-              onClick={() => {
-                setMessages([])
-                setChatId(null)
-                setCreatedProductId(null)
-                setFocusedProductId(null)
-                setProductImages([])
-                setStartImages([])
-                setStartImagePreviews([])
-                setInput("")
-              }}
-              className="rounded bg-zinc-700 px-2 py-1 text-xs text-zinc-400 hover:text-white"
+              aria-label="Close conversations"
+              onClick={() => setSidebarOpen(false)}
+              className="rounded-lg px-3 py-1.5 text-sm text-zinc-300 hover:bg-[rgba(255,255,255,0.06)] hover:text-white"
             >
-              + New
+              Close
             </button>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            {loadingChats ? (
-              <p className="p-3 text-xs text-zinc-500">Loading…</p>
-            ) : null}
-            {chatList.map((chat) => (
-              <div
-                key={chat.id}
-                className={`group flex cursor-pointer items-center justify-between px-3 py-2 hover:bg-zinc-800 ${
-                  chatId === chat.id ? "bg-zinc-800" : ""
-                }`}
-                onClick={async () => {
-                  const msgs = await getVendorChatMessages(chat.id)
-                  setMessages([
-                    ...msgs.map((m, i) => ({
-                      id: String(i),
-                      role: m.role as "user" | "assistant",
-                      content: m.content,
-                    })),
-                  ])
-                  setChatId(chat.id)
-                  setCreatedProductId(null)
-                  setFocusedProductId(null)
-                  setProductImages([])
-                }}
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs text-zinc-300">{chat.title}</p>
-                  <p className="text-[10px] text-zinc-500">
-                    {new Date(chat.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={async (e) => {
-                    e.stopPropagation()
-                    await deleteVendorChat(chat.id)
-                    setChatList((prev) => prev.filter((c) => c.id !== chat.id))
-                    if (chatId === chat.id) {
-                      setChatId(null)
-                      setMessages([])
-                    }
-                  }}
-                  className="ml-1 text-xs text-zinc-500 opacity-0 group-hover:opacity-100 hover:text-red-400"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="flex border-b border-zinc-700">
+          {conversationSidebarInner()}
+        </aside>
+
+        <div
+          className="flex min-h-0 min-w-0 flex-1 flex-col"
+          style={{ backgroundColor: "#0F1117" }}
+        >
+          <div
+            className="flex shrink-0 border-b"
+            style={{
+              backgroundColor: "#161B27",
+              borderColor: CARD_BORDER_STYLE.borderColor,
+            }}
+          >
             <button
               type="button"
               onClick={() => setActiveTab("assistant")}
-              className={`px-6 py-3 text-sm font-medium transition-colors ${
+              className={`px-6 py-3 text-sm transition-colors ${
                 activeTab === "assistant"
-                  ? "border-b-2 border-[#D4450A] text-white"
-                  : "text-zinc-400 hover:text-zinc-200"
+                  ? "border-b-2 border-[#D4450A] font-semibold text-white"
+                  : "font-normal text-zinc-500 hover:text-zinc-300"
               }`}
             >
               AI Assistant
@@ -649,10 +737,10 @@ export default function VendorAIAssistantPage() {
             <button
               type="button"
               onClick={() => setActiveTab("bulk")}
-              className={`px-6 py-3 text-sm font-medium transition-colors ${
+              className={`px-6 py-3 text-sm transition-colors ${
                 activeTab === "bulk"
-                  ? "border-b-2 border-[#D4450A] text-white"
-                  : "text-zinc-400 hover:text-zinc-200"
+                  ? "border-b-2 border-[#D4450A] font-semibold text-white"
+                  : "font-normal text-zinc-500 hover:text-zinc-300"
               }`}
             >
               Bulk Upload
@@ -662,155 +750,140 @@ export default function VendorAIAssistantPage() {
             <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col px-4 py-4">
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-4">
           {messages.length === 0 ? (
-            <div className="mx-4 mt-4 rounded-lg border border-dashed border-zinc-600 p-4">
-              <p className="mb-1 text-sm font-medium text-zinc-300">
-                Upload product images first (optional)
-              </p>
-              <p className="mb-3 text-xs text-zinc-500">
-                Claude will analyse your images and help fill in the details.
-                First image becomes the featured image.
-              </p>
-
-              {startImagePreviews.length > 0 ? (
-                <div className="mb-3 flex flex-wrap gap-2">
-                  {startImagePreviews.map((url, i) => (
-                    <div key={url} className="relative">
-                      <img
-                        src={url}
-                        alt=""
-                        className="h-16 w-16 rounded object-cover"
-                      />
-                      {i === 0 && (
-                        <span className="absolute bottom-0 left-0 right-0 rounded-b bg-black/60 text-center text-[10px] text-white">
-                          Featured
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setStartImagePreviews((prev) =>
-                            prev.filter((_, idx) => idx !== i)
-                          )
-                          setStartImages((prev) =>
-                            prev.filter((_, idx) => idx !== i)
-                          )
-                        }}
-                        className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white hover:bg-red-600"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-
-              {startImages.length < 10 ? (
-                <label
-                  className={`inline-block cursor-pointer rounded px-3 py-1.5 text-sm text-white ${
-                    uploadingStart
-                      ? "bg-zinc-600"
-                      : "bg-zinc-700 hover:bg-zinc-600"
-                  }`}
-                >
-                  {uploadingStart ? "Uploading..." : "+ Add Images"}
-                  <input
-                    type="file"
-                    accept={ACCEPT_CHAT_IMAGES}
-                    multiple
-                    className="hidden"
-                    disabled={uploadingStart}
-                    onChange={async (e) => {
-                      const files = Array.from(e.target.files ?? [])
-                      if (!files.length) return
-                      setUploadingStart(true)
-                      const previews: string[] = []
-                      for (const file of files) {
-                        const reader = new FileReader()
-                        const dataUrl = await new Promise<string>((res) => {
-                          reader.onload = () => res(reader.result as string)
-                          reader.readAsDataURL(file)
-                        })
-                        const compressed = await compressImage(dataUrl)
-                        previews.push(compressed)
-                      }
-                      setStartImagePreviews((prev) =>
-                        [...prev, ...previews].slice(0, 10)
-                      )
-                      setStartImages((prev) =>
-                        [...prev, ...files.map((f) => f.name)].slice(0, 10)
-                      )
-                      setUploadingStart(false)
-                      e.target.value = ""
-                      if (autoChatTimerRef.current) {
-                        clearTimeout(autoChatTimerRef.current)
-                        autoChatTimerRef.current = null
-                      }
-                      autoChatTimerRef.current = setTimeout(() => {
-                        autoChatTimerRef.current = null
-                        if (messagesRef.current.length > 0) return
-                        void sendMessageRef.current(AUTO_START_MESSAGE)
-                      }, 300)
-                    }}
-                  />
-                </label>
-              ) : null}
-            </div>
-          ) : null}
-
-          {messages.length === 0 ? (
-            <div className="flex flex-col gap-4">
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-5 py-4 text-sm leading-relaxed text-zinc-300">
-                <p className="mb-1 text-base font-bold text-white">
-                  Hi! I&apos;m your LinkWe assistant.
-                </p>
-                <p className="text-zinc-400">
-                  What would you like to create today? Pick an option or type
-                  your own message below.
-                </p>
+            <div className="flex flex-col items-center px-4 py-8 text-center">
+              <div
+                className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full text-[36px] leading-none"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(135deg, #D4450A, #E8820C)",
+                }}
+                aria-hidden
+              >
+                ⚡
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  {
-                    label: "🛍️ Simple product",
-                    description: "One price, one stock level",
-                    message: "I want to create a simple product",
-                  },
-                  {
-                    label: "🎨 Variable product",
-                    description:
-                      "Different sizes, colours, or options",
-                    message:
-                      "I want to create a variable product with different sizes or colours",
-                  },
-                  {
-                    label: "📥 Digital product",
-                    description: "Downloadable file, ebook, music, software",
-                    message:
-                      "I want to create a digital product — downloadable file, ebook, music, or software",
-                  },
-                  {
-                    label: "🛎️ Service",
-                    description: "Bookable, quote, or subscription",
-                    message: "I want to create a service listing",
-                  },
-                  {
-                    label: "✏️ Edit a product",
-                    description: "Update an existing listing",
-                    message: "I want to edit an existing product",
-                  },
-                ].map((opt) => (
-                  <button
-                    key={opt.label}
-                    type="button"
-                    onClick={() => void handleSend(opt.message)}
-                    className="flex flex-col gap-1 rounded-2xl border border-zinc-700 bg-zinc-800/60 px-4 py-3 text-left transition-all hover:border-[#D4450A] hover:bg-zinc-800 active:scale-95"
+              <h2 className="mt-6 text-[22px] font-bold text-white md:text-[28px]">
+                Rex
+              </h2>
+              <p className="mt-3 max-w-[360px] text-[13px] leading-snug text-zinc-400 md:text-sm md:leading-relaxed">
+                Your AI business partner for LinkWe. I can update your store,
+                manage products, analyse your sales, and run your business with
+                you.
+              </p>
+
+              <div
+                className="mt-8 w-full max-w-lg rounded-xl p-4 text-left"
+                style={{
+                  backgroundColor: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                <p className="mb-1 text-sm font-medium text-zinc-300">
+                  Upload product images (optional)
+                </p>
+                <p className="mb-3 text-xs text-zinc-500">
+                  Claude will analyse your images and help fill in the details.
+                  First image becomes the featured image.
+                </p>
+
+                {startImagePreviews.length > 0 ? (
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    {startImagePreviews.map((url, i) => (
+                      <div key={url} className="relative">
+                        <img
+                          src={url}
+                          alt=""
+                          className="h-16 w-16 rounded object-cover"
+                        />
+                        {i === 0 ? (
+                          <span className="absolute bottom-0 left-0 right-0 rounded-b bg-black/60 text-center text-[10px] text-white">
+                            Featured
+                          </span>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStartImagePreviews((prev) =>
+                              prev.filter((_, idx) => idx !== i)
+                            )
+                            setStartImages((prev) =>
+                              prev.filter((_, idx) => idx !== i)
+                            )
+                          }}
+                          className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white hover:bg-red-600"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
+                {startImages.length < 10 ? (
+                  <label
+                    className={`cursor-pointer text-[13px] text-zinc-400 underline-offset-4 transition-colors hover:text-zinc-200 ${
+                      uploadingStart ? "pointer-events-none opacity-50" : ""
+                    }`}
                   >
-                    <span className="text-sm font-bold text-white">
-                      {opt.label}
-                    </span>
-                    <span className="text-xs text-zinc-400">
-                      {opt.description}
-                    </span>
+                    {uploadingStart ? "Uploading…" : "+ Add images"}
+                    <input
+                      type="file"
+                      accept={ACCEPT_CHAT_IMAGES}
+                      multiple
+                      className="hidden"
+                      disabled={uploadingStart}
+                      onChange={async (e) => {
+                        const files = Array.from(e.target.files ?? [])
+                        if (!files.length) return
+                        setUploadingStart(true)
+                        const previews: string[] = []
+                        for (const file of files) {
+                          const reader = new FileReader()
+                          const dataUrl = await new Promise<string>((res) => {
+                            reader.onload = () => res(reader.result as string)
+                            reader.readAsDataURL(file)
+                          })
+                          const compressed = await compressImage(dataUrl)
+                          previews.push(compressed)
+                        }
+                        setStartImagePreviews((prev) =>
+                          [...prev, ...previews].slice(0, 10)
+                        )
+                        setStartImages((prev) =>
+                          [...prev, ...files.map((f) => f.name)].slice(0, 10)
+                        )
+                        setUploadingStart(false)
+                        e.target.value = ""
+                        if (autoChatTimerRef.current) {
+                          clearTimeout(autoChatTimerRef.current)
+                          autoChatTimerRef.current = null
+                        }
+                        autoChatTimerRef.current = setTimeout(() => {
+                          autoChatTimerRef.current = null
+                          if (messagesRef.current.length > 0) return
+                          void sendMessageRef.current(AUTO_START_MESSAGE)
+                        }, 300)
+                      }}
+                    />
+                  </label>
+                ) : null}
+              </div>
+
+              <div className="mt-8 grid w-full max-w-lg grid-cols-2 gap-2 md:flex md:flex-wrap md:justify-center md:gap-2">
+                {QUICK_CHIP_MESSAGES.map((chip) => (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => {
+                      void handleSend(chip)
+                      setSidebarOpen(false)
+                    }}
+                    className="rounded-full border px-4 py-2 text-left text-[13px] leading-snug text-zinc-300 transition-colors hover:bg-[rgba(255,255,255,0.03)] md:text-center"
+                    style={{
+                      backgroundColor: "rgba(255,255,255,0.06)",
+                      borderColor: "rgba(255,255,255,0.1)",
+                    }}
+                  >
+                    {chip}
                   </button>
                 ))}
               </div>
@@ -827,11 +900,18 @@ export default function VendorAIAssistantPage() {
               }
             >
               <div
-                className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
+                className={`text-[14px] ${
                   m.role === "user"
-                    ? "bg-[#D4450A] text-white"
-                    : "border border-zinc-800 bg-zinc-900/60 text-zinc-200"
+                    ? "max-w-[90%] md:max-w-[80%] lg:max-w-[75%] bg-gradient-to-br from-[#D4450A] to-[#E8820C] px-4 py-3 text-white [border-radius:18px_18px_4px_18px]"
+                    : `max-w-[90%] md:max-w-[80%] border bg-[#1E2433] px-[18px] py-[14px] text-[#E4E4E7] shadow-none [border-radius:4px_18px_18px_18px]`
                 } ${m.role === "user" ? "whitespace-pre-wrap" : ""}`}
+                style={
+                  m.role === "assistant"
+                    ? {
+                        borderColor: "rgba(255,255,255,0.08)",
+                      }
+                    : undefined
+                }
               >
                 {m.role === "user" && m.images && m.images.length > 0 ? (
                   <div className="mb-2 flex flex-wrap gap-1.5">
@@ -862,7 +942,10 @@ export default function VendorAIAssistantPage() {
                             key={src.slice(-32) + i}
                             src={src}
                             alt=""
-                            className="h-16 w-16 rounded object-cover ring-1 ring-zinc-700"
+                            className="h-16 w-16 rounded object-cover"
+                            style={{
+                              border: "1px solid rgba(255,255,255,0.08)",
+                            }}
                           />
                         ))}
                       </div>
@@ -993,7 +1076,11 @@ export default function VendorAIAssistantPage() {
                             onClick={() => {
                               void handleSend(opt.label)
                             }}
-                            className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-left text-sm font-semibold text-zinc-100 transition-all hover:border-[#D4450A] hover:bg-zinc-700 active:scale-95"
+                            className="w-full rounded-xl px-4 py-3 text-left text-sm font-semibold text-white transition-all hover:bg-[rgba(255,255,255,0.06)] active:scale-[0.99]"
+                            style={{
+                              border: "1px solid rgba(255,255,255,0.08)",
+                              backgroundColor: "#161B27",
+                            }}
                           >
                             {opt.label}
                           </button>
@@ -1006,13 +1093,16 @@ export default function VendorAIAssistantPage() {
             </div>
           ))}
           {loading ? (
-            <p className="text-xs text-zinc-500">Thinking…</p>
+            <p className="pl-2 text-xs text-zinc-400">Thinking…</p>
           ) : null}
           <div ref={bottomRef} />
         </div>
 
         {createdProductId != null ? (
-          <div className="mt-auto border-t border-zinc-700 p-4">
+          <div
+            className="mt-auto border-t p-4"
+            style={{ borderColor: CARD_BORDER_STYLE.borderColor }}
+          >
             <p className="mb-1 text-sm font-semibold text-white">
               Upload Images
             </p>
@@ -1046,14 +1136,16 @@ export default function VendorAIAssistantPage() {
 
             {productImages.length < 10 ? (
               <label
-                className={`inline-block cursor-pointer rounded px-4 py-2 text-sm font-medium text-white ${
-                  uploading ? "bg-zinc-600" : "bg-[#D4450A]"
+                className={`inline-block cursor-pointer rounded-[10px] px-4 py-2 text-sm font-medium text-white hover:opacity-90 ${
+                  uploading ? "bg-zinc-600" : ""
                 }`}
+                style={uploading ? undefined : { backgroundColor: "#D4450A" }}
               >
                 {uploading ? "Uploading..." : "Add Image"}
                 <input
                   type="file"
-                  accept={ACCEPT_CHAT_IMAGES}                  multiple
+                  accept={ACCEPT_CHAT_IMAGES}
+                  multiple
                   className="hidden"
                   disabled={uploading}
                   onChange={async (e) => {
@@ -1087,21 +1179,33 @@ export default function VendorAIAssistantPage() {
 
             <Link
               href="/dashboard/vendor/products"
-              className="ml-3 text-sm text-zinc-400 underline"
+              className="ml-3 text-sm text-zinc-400 underline decoration-zinc-600 underline-offset-2 hover:text-zinc-200"
             >
               Go to products to publish
             </Link>
           </div>
         ) : null}
 
-        <div className="border-t border-zinc-800/80 py-3">
+        <div
+          className="border-t pb-[max(16px,env(safe-area-inset-bottom))] pt-3"
+          style={{
+            backgroundColor: "#161B27",
+            borderColor: CARD_BORDER_STYLE.borderColor,
+          }}
+        >
           {inputFocused ? (
-            <div className="mb-1 flex w-fit gap-1 rounded-full border border-zinc-700 bg-zinc-800 px-2 py-1">
+            <div
+              className="mb-1 flex w-fit gap-1 rounded-full border px-2 py-1"
+              style={{
+                borderColor: CARD_BORDER_STYLE.borderColor,
+                backgroundColor: "rgba(255,255,255,0.04)",
+              }}
+            >
               <button
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => wrapSelection("**", "**", "text")}
-                className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-zinc-300 hover:bg-zinc-700 hover:text-white"
+                className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-zinc-300 hover:bg-[rgba(255,255,255,0.08)] hover:text-white"
                 title="Bold"
               >
                 B
@@ -1110,7 +1214,7 @@ export default function VendorAIAssistantPage() {
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => wrapSelection("*", "*", "text")}
-                className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-zinc-300 italic hover:bg-zinc-700 hover:text-white"
+                className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-zinc-300 italic hover:bg-[rgba(255,255,255,0.08)] hover:text-white"
                 title="Italic"
               >
                 I
@@ -1119,7 +1223,7 @@ export default function VendorAIAssistantPage() {
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => insertAtCursor("\n- ")}
-                className="flex h-6 w-6 items-center justify-center rounded-full text-xs text-zinc-300 hover:bg-zinc-700 hover:text-white"
+                className="flex h-6 w-6 items-center justify-center rounded-full text-xs text-zinc-300 hover:bg-[rgba(255,255,255,0.08)] hover:text-white"
                 title="Bullet list"
               >
                 •
@@ -1128,7 +1232,7 @@ export default function VendorAIAssistantPage() {
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => insertAtCursor("\n1. ")}
-                className="flex h-6 w-6 items-center justify-center rounded-full text-xs text-zinc-300 hover:bg-zinc-700 hover:text-white"
+                className="flex h-6 w-6 items-center justify-center rounded-full text-xs text-zinc-300 hover:bg-[rgba(255,255,255,0.08)] hover:text-white"
                 title="Numbered list"
               >
                 1.
@@ -1137,7 +1241,7 @@ export default function VendorAIAssistantPage() {
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => setInput((v) => stripMarkdown(v))}
-                className="flex h-6 w-6 items-center justify-center rounded-full text-xs text-zinc-300 hover:bg-zinc-700 hover:text-white"
+                className="flex h-6 w-6 items-center justify-center rounded-full text-xs text-zinc-300 hover:bg-[rgba(255,255,255,0.08)] hover:text-white"
                 title="Clear formatting"
               >
                 ×
@@ -1173,10 +1277,11 @@ export default function VendorAIAssistantPage() {
               }}
               placeholder="Describe what you want to list…"
               disabled={loading}
-              className="min-h-11 max-h-48 min-w-0 flex-1 resize-none overflow-y-auto
-                rounded-xl border border-zinc-700 bg-zinc-900/80 px-3 py-2.5
-                text-sm text-zinc-100 placeholder:text-zinc-500
-                focus:border-zinc-600 focus:outline-none disabled:opacity-50"
+              className="min-h-11 max-h-48 min-w-0 flex-1 resize-none overflow-y-auto rounded-xl px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-[rgba(212,69,10,0.5)] focus:outline-none focus:ring-0 disabled:opacity-50"
+              style={{
+                backgroundColor: "#0F1117",
+                border: "1px solid rgba(255,255,255,0.1)",
+              }}
             />
             <button
               type="button"
@@ -1189,7 +1294,7 @@ export default function VendorAIAssistantPage() {
                     startImagePreviews.length > 0
                   ))
               }
-              className="h-11 shrink-0 self-start rounded-xl px-4 text-sm font-medium text-white transition-opacity disabled:opacity-40"
+              className="h-auto min-h-[44px] shrink-0 self-start rounded-[10px] px-[14px] py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-40"
               style={{ backgroundColor: "#D4450A" }}
             >
               Send

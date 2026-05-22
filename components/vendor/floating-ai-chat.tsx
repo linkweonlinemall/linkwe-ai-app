@@ -298,7 +298,8 @@ export default function FloatingAIChat() {
               }
               if (parsed.focusProductId)
                 setFocusedProductId(parsed.focusProductId)
-              if (parsed.text) {                assistantText += parsed.text
+              if (parsed.text) {
+                assistantText += parsed.text
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === assistantId ? { ...m, content: assistantText } : m
@@ -339,17 +340,30 @@ export default function FloatingAIChat() {
     <>
       {open && (
         <div
-          className="fixed right-6 bottom-20 z-50 flex h-[600px] w-96
-          flex-col overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900
-          shadow-2xl"
+          className="fixed right-6 bottom-20 z-50 flex h-[600px] w-96 flex-col overflow-hidden rounded-[16px]"
+          style={{
+            backgroundColor: "#161B27",
+            border: "1px solid rgba(255,255,255,0.12)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+          }}
         >
           <div
-            className="flex items-center justify-between border-b border-zinc-700
-            bg-zinc-800 px-4 py-3"
+            className="flex items-center justify-between px-4 py-3"
+            style={{
+              backgroundColor: "#161B27",
+              borderBottom: "1px solid rgba(255,255,255,0.08)",
+            }}
           >
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-[#D4450A]" />
-              <span className="text-sm font-medium text-white">AI Assistant</span>
+              <span className="text-sm font-bold text-white">Rex</span>
+              <span
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{
+                  backgroundColor: "#22c55e",
+                  boxShadow: "0 0 6px #22c55e",
+                }}
+                aria-hidden
+              />
             </div>
             <div className="flex items-center gap-2">
               <a
@@ -358,16 +372,14 @@ export default function FloatingAIChat() {
                     ? `/dashboard/vendor/ai-assistant?chatId=${chatId}`
                     : "/dashboard/vendor/ai-assistant"
                 }
-                className="rounded bg-zinc-700 px-2 py-1 text-xs text-zinc-400
-                  hover:bg-zinc-600 hover:text-white"
+                className="text-xs text-zinc-400 transition-colors hover:text-zinc-200"
               >
                 Full page
               </a>
               <button
                 type="button"
                 onClick={() => setShowHistory((h) => !h)}
-                className="rounded bg-zinc-700 px-2 py-1 text-xs text-zinc-400
-                  hover:bg-zinc-600 hover:text-white"
+                className="text-xs text-zinc-400 transition-colors hover:text-zinc-200"
               >
                 History
               </button>
@@ -381,14 +393,14 @@ export default function FloatingAIChat() {
                   setInput("")
                   setAttachedPreviews([])
                 }}
-                className="text-xs text-zinc-400 hover:text-white"
+                className="text-xs text-zinc-400 transition-colors hover:text-zinc-200"
               >
                 + New
               </button>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="text-lg leading-none text-zinc-400 hover:text-white"
+                className="text-lg leading-none text-zinc-500 transition-colors hover:text-zinc-200"
               >
                 ×
               </button>
@@ -396,11 +408,14 @@ export default function FloatingAIChat() {
           </div>
 
           {showHistory && (
-            <div className="max-h-40 overflow-y-auto border-b border-zinc-800 bg-zinc-800/80">
+            <div
+              className="max-h-40 overflow-y-auto bg-[#161B27]"
+              style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
+            >
               {chatList.length === 0 && (
                 <p className="p-3 text-xs text-zinc-500">No conversations yet</p>
               )}
-              {chatList.map((chat) => (
+              {chatList.map((chat, idx) => (
                 <button
                   type="button"
                   key={chat.id}
@@ -416,8 +431,13 @@ export default function FloatingAIChat() {
                     setChatId(chat.id)
                     setShowHistory(false)
                   }}
-                  className="w-full border-b border-zinc-800 px-3 py-2
-                    text-left last:border-0 hover:bg-zinc-700"
+                  className="w-full px-3 py-2 text-left hover:bg-[rgba(255,255,255,0.06)]"
+                  style={{
+                    borderBottom:
+                      idx !== chatList.length - 1
+                        ? "1px solid rgba(255,255,255,0.08)"
+                        : undefined,
+                  }}
                 >
                   <p className="truncate text-xs text-zinc-300">{chat.title}</p>
                   <p className="text-[10px] text-zinc-500">
@@ -428,13 +448,18 @@ export default function FloatingAIChat() {
             </div>
           )}
 
-          <div className="flex-1 space-y-3 overflow-y-auto p-4">
+          <div
+            className="flex flex-1 flex-col space-y-3 overflow-y-auto p-4"
+            style={{ backgroundColor: "#0F1117" }}
+          >
             {messages.length === 0 ? (
               <div className="flex flex-col gap-3 px-1 py-2">
-                <div className="rounded-xl bg-zinc-800 px-3 py-2.5 text-sm leading-relaxed text-zinc-200">
-                  Hi! I&apos;m your LinkWe assistant. What would you like to
-                  create today?
-                </div>
+                <p className="text-[15px] font-bold text-white">
+                  Hey, I&apos;m Rex 👋
+                </p>
+                <p className="text-[13px] text-zinc-400">
+                  What would you like to create today?
+                </p>
                 <div className="flex flex-col gap-2">
                   {[
                     {
@@ -464,7 +489,11 @@ export default function FloatingAIChat() {
                       key={opt.label}
                       type="button"
                       onClick={() => void handleSend(opt.message)}
-                      className="w-full rounded-xl border border-zinc-600 bg-zinc-700/60 px-3 py-2.5 text-left text-xs font-semibold text-zinc-100 transition-all hover:border-[#D4450A] hover:bg-zinc-700 active:scale-95"
+                      className="w-full rounded-lg px-[14px] py-2.5 text-left text-[13px] text-zinc-300 transition-colors hover:bg-[rgba(255,255,255,0.1)] active:scale-[0.99]"
+                      style={{
+                        backgroundColor: "rgba(255,255,255,0.06)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                      }}
                     >
                       {opt.label}
                     </button>
@@ -479,8 +508,10 @@ export default function FloatingAIChat() {
               >
                 {m.role === "user" ? (
                   <div
-                    className="max-w-[85%] overflow-hidden rounded-xl rounded-br-sm
-                      bg-[#D4450A] text-sm leading-relaxed text-white"
+                    className="max-w-[80%] overflow-hidden text-[13px] leading-relaxed text-white [border-radius:18px_18px_4px_18px]"
+                    style={{
+                      background: "linear-gradient(135deg, #D4450A, #E8820C)",
+                    }}
                   >
                     {m.images && m.images.length > 0 && (
                       <div
@@ -498,13 +529,16 @@ export default function FloatingAIChat() {
                       </div>
                     )}
                     {m.content && (
-                      <div className="px-3 py-2">{m.content}</div>
+                      <div className="px-[14px] py-2.5">{m.content}</div>
                     )}
                   </div>
                 ) : (
                   <div
-                    className={`max-w-[85%] rounded-xl px-3 py-2 text-sm leading-relaxed
-                    ${"rounded-bl-sm bg-zinc-800 text-zinc-200"}`}
+                    className="max-w-[85%] overflow-hidden border text-[13px] leading-relaxed text-[#E4E4E7] [border-radius:4px_18px_18px_18px] px-[14px] py-2.5"
+                    style={{
+                      backgroundColor: "#1E2433",
+                      borderColor: "rgba(255,255,255,0.08)",
+                    }}
                   >
                     {m.images && m.images.length > 0 ? (
                       <div className="mb-2 flex flex-wrap gap-1.5">
@@ -513,7 +547,10 @@ export default function FloatingAIChat() {
                             key={src.slice(-24) + ii}
                             src={src}
                             alt=""
-                            className="h-20 w-20 rounded-lg object-cover ring-1 ring-zinc-700"
+                            className="h-20 w-20 rounded-lg object-cover"
+                            style={{
+                              border: "1px solid rgba(255,255,255,0.08)",
+                            }}
                           />
                         ))}
                       </div>
@@ -665,7 +702,11 @@ export default function FloatingAIChat() {
                               setInput(opt.label)
                               void handleSend(opt.label)
                             }}
-                            className="w-full rounded-xl border border-zinc-600 bg-zinc-700 px-3 py-2.5 text-left text-xs font-semibold text-zinc-100 transition-all hover:border-[#D4450A] hover:bg-zinc-600 active:scale-95"
+                            className="w-full rounded-lg px-[14px] py-2.5 text-left text-[13px] text-zinc-300 transition-colors hover:bg-[rgba(255,255,255,0.1)] active:scale-[0.99]"
+                            style={{
+                              backgroundColor: "rgba(255,255,255,0.06)",
+                              border: "1px solid rgba(255,255,255,0.1)",
+                            }}
                           >
                             {opt.label}
                           </button>
@@ -678,7 +719,13 @@ export default function FloatingAIChat() {
             ))}
             {loading && messages[messages.length - 1]?.role === "user" && (
               <div className="flex justify-start">
-                <div className="rounded-xl rounded-bl-sm bg-zinc-800 px-3 py-2">
+                <div
+                  className="rounded-[4px_18px_18px_18px] border px-[14px] py-2.5"
+                  style={{
+                    backgroundColor: "#1E2433",
+                    borderColor: "rgba(255,255,255,0.08)",
+                  }}
+                >
                   <span className="flex gap-1">
                     <span
                       className="h-1.5 w-1.5 animate-bounce rounded-full
@@ -702,7 +749,13 @@ export default function FloatingAIChat() {
           </div>
 
           {createdProductId && (
-            <div className="border-t border-zinc-700 bg-zinc-800 px-4 py-2">
+            <div
+              className="px-4 py-2"
+              style={{
+                backgroundColor: "#161B27",
+                borderTop: "1px solid rgba(255,255,255,0.08)",
+              }}
+            >
               <a
                 href={`/dashboard/vendor/products/${createdProductId}/edit`}
                 className="text-xs text-[#D4450A] hover:underline"
@@ -712,7 +765,13 @@ export default function FloatingAIChat() {
             </div>
           )}
 
-          <div className="border-t border-zinc-700 px-3 py-3">
+          <div
+            className="px-3 pb-3 pt-3"
+            style={{
+              backgroundColor: "#161B27",
+              borderTop: "1px solid rgba(255,255,255,0.08)",
+            }}
+          >
             {attachedPreviews.length > 0 && (
               <div className="flex flex-wrap gap-1 px-3 pt-2">
                 {attachedPreviews.map((url, i) => (
@@ -741,9 +800,7 @@ export default function FloatingAIChat() {
             )}
             <div className="flex items-end gap-2">
               <label
-                className="flex h-9 w-9 shrink-0 cursor-pointer
-                  items-center justify-center rounded-xl bg-zinc-700
-                  hover:bg-zinc-600"
+                className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-zinc-400 transition-colors hover:text-zinc-200"
                 title="Attach images (JPG, PNG, WebP)"
               >
                 <svg
@@ -751,7 +808,7 @@ export default function FloatingAIChat() {
                   height="16"
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="white"
+                  stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -796,11 +853,12 @@ export default function FloatingAIChat() {
                 }}
                 placeholder="Ask me anything..."
                 rows={1}
-                className="max-h-[100px] flex-1 resize-none overflow-y-auto
-                  rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm
-                  text-white placeholder-zinc-500 focus:border-zinc-500
-                  focus:outline-none"
-                style={{ maxHeight: "100px" }}
+                className="max-h-[100px] flex-1 resize-none overflow-y-auto rounded-[10px] px-[14px] py-2.5 text-[13px] text-white placeholder:text-zinc-500 focus:border-[rgba(212,69,10,0.5)] focus:outline-none focus:ring-0"
+                style={{
+                  maxHeight: "100px",
+                  backgroundColor: "#0F1117",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                }}
               />
               <button
                 type="button"
@@ -808,8 +866,7 @@ export default function FloatingAIChat() {
                 disabled={
                   loading || (!input.trim() && attachedPreviews.length === 0)
                 }
-                className="flex h-9 w-9 shrink-0 items-center justify-center
-                  rounded-xl bg-[#D4450A] disabled:opacity-40"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#D4450A] transition-opacity hover:opacity-90 disabled:opacity-40"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
                   <path d="M2 21l21-9L2 3v7l15 2-15 2v7z" />
