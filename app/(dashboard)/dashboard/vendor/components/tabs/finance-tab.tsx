@@ -48,10 +48,8 @@ type Props = {
 };
 
 function formatTTD(minor: number): string {
-  return (minor / 100).toLocaleString("en-TT", {
-    style: "currency",
-    currency: "TTD",
-  });
+  const amount = (minor / 100).toFixed(2)
+  return `TTD ${Number(amount).toLocaleString("en-TT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests }: Props) {
@@ -109,15 +107,15 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
   return (
     <div className="flex flex-col gap-6">
       {/* Balance summary cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Total Earned</p>
-          <p className="mt-2 text-2xl font-bold text-zinc-900">{formatTTD(credits)}</p>
+          <p className="mt-2 truncate text-2xl font-bold text-zinc-900">{formatTTD(credits)}</p>
           <p className="mt-1 text-xs text-zinc-500">Gross revenue from orders</p>
         </div>
         <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Deductions</p>
-          <p className="mt-2 text-2xl font-bold text-red-500">-{formatTTD(pendingDebits)}</p>
+          <p className="mt-2 truncate text-2xl font-bold text-red-500">-{formatTTD(pendingDebits)}</p>
           <p className="mt-1 text-xs text-zinc-500">
             {lastPayoutDate ? "Since last payout" : "Platform fees and courier costs"}
           </p>
@@ -128,7 +126,7 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
             style={{ backgroundColor: "#D4450A" }}
           />
           <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Available Balance</p>
-          <p className="mt-2 text-2xl font-bold" style={{ color: "#D4450A" }}>
+          <p className="mt-2 truncate text-2xl font-bold" style={{ color: "#D4450A" }}>
             {formatTTD(availableBalance)}
           </p>
           <p className="mt-1 text-xs text-zinc-500">Ready to withdraw</p>
@@ -255,7 +253,7 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
 
       {/* Earnings ledger */}
       {activeSection === "earnings" ? (
-        <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+        <div className="-mx-4 overflow-x-auto rounded-2xl border border-zinc-200 bg-white px-4 shadow-sm">
           {ledgerEntries.length === 0 ? (
             <div className="p-8 text-center">
               <p className="text-sm text-zinc-500">
@@ -263,61 +261,100 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
               </p>
             </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-zinc-100 bg-zinc-50">
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Date
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Type
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Description
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Amount
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {ledgerEntries.map((entry, i) => {
+            <>
+              <div className="sm:hidden">
+                {ledgerEntries.map((entry) => {
                   const isCredit = entry.entryType === "CREDIT_ORDER_SETTLEMENT";
                   return (
-                    <tr
-                      key={entry.id}
-                      className={`border-b border-zinc-50 ${i % 2 === 0 ? "bg-white" : "bg-zinc-50/30"}`}
-                    >
-                      <td className="px-4 py-2.5 text-xs text-zinc-500">
-                        {new Date(entry.createdAt).toLocaleDateString("en-TT", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </td>
-                      <td className="px-4 py-2.5">
+                    <div key={entry.id} className="border-b border-zinc-100 py-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-zinc-400">
+                            {new Date(entry.createdAt).toLocaleDateString("en-TT", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                              isCredit ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"
+                            }`}
+                          >
+                            {isCredit ? "Revenue" : "Deduction"}
+                          </span>
+                        </div>
                         <span
-                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                            isCredit ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"
+                          className={`text-sm font-bold ${
+                            isCredit ? "text-emerald-600" : "text-red-500"
                           }`}
                         >
-                          {isCredit ? "Revenue" : "Deduction"}
+                          {isCredit ? "+" : "-"}
+                          {formatTTD(entry.amountMinor)}
                         </span>
-                      </td>
-                      <td className="px-4 py-2.5 text-xs text-zinc-600">{entry.description ?? "—"}</td>
-                      <td
-                        className={`px-4 py-2.5 text-right font-mono text-xs font-semibold ${
-                          isCredit ? "text-emerald-600" : "text-red-500"
-                        }`}
-                      >
-                        {isCredit ? "+" : "-"}
-                        {formatTTD(entry.amountMinor)}
-                      </td>
-                    </tr>
+                      </div>
+                      <p className="mt-0.5 text-xs text-zinc-500 truncate">{entry.description ?? "—"}</p>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
+              </div>
+
+              <table className="hidden w-full text-sm sm:table">
+                <thead className="hidden sm:table-header-group">
+                  <tr className="border-b border-zinc-100 bg-zinc-50">
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                      Date
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                      Type
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                      Description
+                    </th>
+                    <th className="whitespace-nowrap px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                      Amount
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ledgerEntries.map((entry, i) => {
+                    const isCredit = entry.entryType === "CREDIT_ORDER_SETTLEMENT";
+                    return (
+                      <tr
+                        key={entry.id}
+                        className={`border-b border-zinc-50 ${i % 2 === 0 ? "bg-white" : "bg-zinc-50/30"}`}
+                      >
+                        <td className="px-4 py-2.5 text-xs text-zinc-500">
+                          {new Date(entry.createdAt).toLocaleDateString("en-TT", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                              isCredit ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"
+                            }`}
+                          >
+                            {isCredit ? "Revenue" : "Deduction"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 text-xs text-zinc-600">{entry.description ?? "—"}</td>
+                        <td
+                          className={`whitespace-nowrap px-4 py-2.5 text-right font-mono text-xs font-semibold ${
+                            isCredit ? "text-emerald-600" : "text-red-500"
+                          }`}
+                        >
+                          {isCredit ? "+" : "-"}
+                          {formatTTD(entry.amountMinor)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </>
           )}
         </div>
       ) : null}

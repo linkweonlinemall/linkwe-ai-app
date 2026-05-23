@@ -274,7 +274,7 @@ export default async function VendorOrderDetailPage({ params }: Props) {
     splitOrder.status === "AWAITING_COURIER_PICKUP" && !courierLeg?.courierId;
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5]">
+    <div className="min-h-screen bg-[#f5f5f5] pb-24 sm:pb-0">
       <div className="max-w-4xl mx-auto px-6 py-6">
         <a
           href="/dashboard/vendor?tab=orders"

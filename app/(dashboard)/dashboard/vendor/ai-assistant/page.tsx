@@ -623,7 +623,7 @@ export default function VendorAIAssistantPage() {
 
   if (allowed === null) {
     return (
-      <div className="min-h-screen px-6 py-10" style={{ backgroundColor: "#0F1117" }}>
+      <div className="min-h-screen px-6 py-10 pb-24 sm:pb-0" style={{ backgroundColor: "#0F1117" }}>
         <p className="text-sm text-zinc-400">Loading…</p>
       </div>
     )

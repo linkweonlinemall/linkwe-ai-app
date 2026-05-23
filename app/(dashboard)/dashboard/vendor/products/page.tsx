@@ -360,6 +360,25 @@ export default function VendorProductsPage() {
                 </div>
               </div>
 
+              <div className="flex items-center justify-between md:hidden">
+                <span
+                  className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                  style={{
+                    backgroundColor: status === "PUBLISHED" ? "#DCFCE7" : "#F4F4F5",
+                    color: status === "PUBLISHED" ? "#15803D" : "var(--text-muted)",
+                  }}
+                >
+                  {status === "PUBLISHED" ? "Published" : "Draft"}
+                </span>
+                <Link
+                  href={`/dashboard/vendor/products/${product.id}/edit`}
+                  className="text-xs font-medium hover:underline"
+                  style={{ color: "var(--blue)" }}
+                >
+                  Edit →
+                </Link>
+              </div>
+
               <div className="hidden items-center gap-4 md:flex md:col-span-2">
                 <span
                   className="text-sm font-semibold"
@@ -380,7 +399,7 @@ export default function VendorProductsPage() {
                 </span>
               </div>
 
-              <div className="md:col-span-2">
+              <div className="hidden md:block md:col-span-2">
                 <span
                   className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
                   style={{
@@ -396,7 +415,7 @@ export default function VendorProductsPage() {
                 </span>
               </div>
 
-              <div className="flex justify-end md:col-span-1">
+              <div className="hidden md:flex md:justify-end md:col-span-1">
                 <Link
                   href={`/dashboard/vendor/products/${product.id}/edit`}
                   className="text-xs font-medium hover:underline"

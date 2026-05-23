@@ -16,7 +16,7 @@ export default async function NewVendorProductPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5] px-4 py-8 sm:px-6">
+    <div className="bg-[#f5f5f5] px-4 py-8 sm:px-6">
       <div className="mx-auto max-w-2xl">
         <div className="mb-8 flex items-center gap-4">
           <Link

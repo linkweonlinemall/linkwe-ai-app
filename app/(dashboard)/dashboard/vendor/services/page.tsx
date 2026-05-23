@@ -216,10 +216,9 @@ export default function VendorServicesPage() {
             return (
               <div
                 key={service.id}
-                className={`flex items-center gap-3 rounded-2xl border bg-white p-4 shadow-sm transition-all ${
-                  isSelected ? "border-[#D4450A]/40 ring-1 ring-[#D4450A]/20" : "border-zinc-200"
-                }`}
+                className={`flex flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm transition-all sm:flex-row sm:items-center ${isSelected ? "border-[#D4450A]/40 ring-1 ring-[#D4450A]/20" : "border-zinc-200"}`}
               >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                 <input
                   type="checkbox"
                   checked={isSelected}
@@ -258,7 +257,8 @@ export default function VendorServicesPage() {
                       : ""}
                   </p>
                 </div>
-                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                </div>
+                <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
                   <button
                     type="button"
                     disabled={togglingId === service.id}

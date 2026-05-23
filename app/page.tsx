@@ -161,7 +161,7 @@ export default async function Home() {
       </div>
 
       {/* Sticky category strip */}
-      <div className="sticky top-0 z-30 border-b border-amber-100 bg-[#FFFDF9]/95 shadow-sm backdrop-blur-sm">
+      <div className="static sm:sticky sm:top-0 z-30 border-b border-amber-100 bg-[#FFFDF9]/95 shadow-sm backdrop-blur-sm">
         <div className="mx-auto max-w-screen-xl px-4 sm:px-6">
           <div className="scrollbar-hide flex gap-1.5 overflow-x-auto py-3">
             <Link

@@ -144,7 +144,7 @@ export default function VendorDashboardTabs({
   }, [searchParams]);
 
   return (
-    <main className="min-w-0 flex-1 bg-[#F5F5F5] px-6 py-6">
+    <main className="min-w-0 flex-1 bg-[#F5F5F5] px-6 py-6 pb-24 sm:pb-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-zinc-900">Vendor dashboard</h1>
           <p className="mt-1 text-sm text-zinc-500">Manage your store and listings.</p>
