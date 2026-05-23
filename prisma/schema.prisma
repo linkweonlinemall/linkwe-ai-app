@@ -786,6 +786,8 @@ model Review {
   photos             String[]   @default([])
   isVerifiedPurchase Boolean    @default(false) @map("is_verified_purchase")
   helpfulCount       Int        @default(0) @map("helpful_count")
+  vendorReply        String?    @map("vendor_reply")
+  vendorRepliedAt    DateTime?  @map("vendor_replied_at")
   createdAt          DateTime   @default(now()) @map("created_at")
   updatedAt          DateTime   @updatedAt @map("updated_at")
   listing            Listing?   @relation(fields: [listingId], references: [id], onDelete: Cascade)
