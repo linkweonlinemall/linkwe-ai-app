@@ -157,7 +157,7 @@ export default function NotificationBell({
 
       {/* Dropdown */}
       {open ? (
-        <div className="absolute right-0 top-11 z-50 w-80 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl">
+        <div className="fixed left-4 right-4 top-16 z-50 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl sm:absolute sm:left-auto sm:right-0 sm:top-11 sm:w-80">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
             <div className="flex items-center gap-2">
@@ -208,10 +208,8 @@ export default function NotificationBell({
                     </span>
                     <div className="min-w-0 flex-1">
                       <p
-                        className={`text-xs leading-5 ${
-                          !notification.isRead
-                            ? "font-bold text-zinc-900"
-                            : "font-medium text-zinc-700"
+                        className={`text-xs font-bold leading-5 ${
+                          !notification.isRead ? "text-zinc-900" : "text-zinc-700"
                         }`}
                       >
                         {notification.title}

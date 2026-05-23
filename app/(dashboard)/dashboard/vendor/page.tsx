@@ -157,7 +157,7 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
       <div className="border-b border-zinc-100 bg-white px-4 py-4 md:px-8">
         <AvailabilityToggle initialAvailable={store.isAvailableNow} />
       </div>
-      <div className="flex min-h-screen flex-col pb-24 sm:pb-0 md:flex-row">
+      <div className="flex flex-col pb-24 sm:pb-0 md:flex-row">
       <VendorDashboardTabs
         store={store}
         listings={listings}
