@@ -253,7 +253,7 @@ export default function VendorProductsPage() {
         style={{ border: "1px solid var(--card-border)" }}
       >
         <div
-          className="grid grid-cols-12 gap-4 px-5 py-3 text-xs font-semibold uppercase tracking-wide"
+          className="hidden md:grid grid-cols-12 gap-4 px-5 py-3 text-xs font-semibold uppercase tracking-wide"
           style={{
             color: "var(--text-muted)",
             backgroundColor: "#F7F7F6",
@@ -295,10 +295,10 @@ export default function VendorProductsPage() {
           return (
             <div
               key={product.id}
-              className="grid grid-cols-12 items-center gap-4 px-5 py-4 transition-colors hover:bg-zinc-50/60"
+              className="flex flex-col gap-2 px-4 py-4 transition-colors hover:bg-zinc-50/60 md:grid md:grid-cols-12 md:items-center md:gap-4 md:px-5"
               style={{ borderBottom: "1px solid var(--card-border-subtle)" }}
             >
-              <div className="col-span-1">
+              <div className="flex items-center md:col-span-1">
                 <input
                   type="checkbox"
                   className="h-4 w-4"
@@ -313,7 +313,7 @@ export default function VendorProductsPage() {
                   title="Select"
                 />
               </div>
-              <div className="col-span-4 flex items-center gap-3">
+              <div className="flex min-w-0 flex-1 items-center gap-3 md:col-span-4">
                 <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-zinc-100">
                   {product.images?.[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element -- remote Cloudinary URLs
@@ -345,6 +345,13 @@ export default function VendorProductsPage() {
                       </span>
                     )}
                   </div>
+                  <div className="flex items-center gap-2 mt-1 md:hidden">
+                    <span className="text-sm font-semibold text-zinc-900">TTD {product.price}</span>
+                    <span className="text-xs text-zinc-400">·</span>
+                    <span className="text-xs text-zinc-500">
+                      {product.stock !== null ? `${product.stock} in stock` : "Unlimited"}
+                    </span>
+                  </div>
                   {product.category && (
                     <span className="mt-0.5 block text-xs capitalize text-zinc-400">
                       {product.category.replace(/_/g, " ")}
@@ -353,7 +360,7 @@ export default function VendorProductsPage() {
                 </div>
               </div>
 
-              <div className="col-span-2">
+              <div className="hidden items-center gap-4 md:flex md:col-span-2">
                 <span
                   className="text-sm font-semibold"
                   style={{ color: "var(--text-primary)" }}
@@ -362,7 +369,7 @@ export default function VendorProductsPage() {
                 </span>
               </div>
 
-              <div className="col-span-2">
+              <div className="hidden md:col-span-2 md:block">
                 <span
                   className="text-sm"
                   style={{
@@ -373,7 +380,7 @@ export default function VendorProductsPage() {
                 </span>
               </div>
 
-              <div className="col-span-2">
+              <div className="md:col-span-2">
                 <span
                   className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
                   style={{
@@ -389,7 +396,7 @@ export default function VendorProductsPage() {
                 </span>
               </div>
 
-              <div className="col-span-1 flex justify-end">
+              <div className="flex justify-end md:col-span-1">
                 <Link
                   href={`/dashboard/vendor/products/${product.id}/edit`}
                   className="text-xs font-medium hover:underline"

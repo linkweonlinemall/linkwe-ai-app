@@ -16,7 +16,7 @@ export default function VendorLayoutWrapper({
   return (
     <div className="flex h-screen overflow-hidden bg-[#F5F5F5]">
       {!isAIAssistant && <VendorSidebarWrapper />}
-      <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">{children}</div>
       {!isAIAssistant && <FloatingAIChat />}
     </div>
   )

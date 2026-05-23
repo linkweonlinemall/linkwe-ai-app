@@ -79,7 +79,7 @@ export default function RootLayout({
         <InstallPrompt />
         <CartProvider>{children}</CartProvider>
         <FooterWrapper>
-          <footer className="border-t border-zinc-200 bg-white py-8">
+          <footer className="border-t border-zinc-200 bg-white py-8 pb-16 sm:pb-0">
             <div className="mx-auto max-w-7xl px-4 sm:px-6">
               <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
                 <p className="text-xs text-zinc-400">
