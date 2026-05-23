@@ -12,6 +12,8 @@ model User {
   email                  String                 @unique
   phone                  String?                @unique
   passwordHash           String?                @map("password_hash")
+  resetToken             String?                @map("reset_token")
+  resetTokenExpiry       DateTime?              @map("reset_token_expiry")
   fullName               String                 @map("full_name")
   role                   UserRole               @default(CUSTOMER)
   /// Trinidad region key (dropdown), same normalization family as shipping.

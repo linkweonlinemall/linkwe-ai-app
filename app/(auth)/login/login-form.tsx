@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 
 import Button from "@/components/ui/Button";
@@ -32,9 +33,9 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
       />
 
       <div className="mb-4 mt-1 flex justify-end">
-        <a href="#" className="text-xs text-[#1A7FB5] hover:underline">
+        <Link href="/forgot-password" className="text-xs text-[#1A7FB5] hover:underline">
           Forgot password?
-        </a>
+        </Link>
       </div>
 
       {state.error ? (
