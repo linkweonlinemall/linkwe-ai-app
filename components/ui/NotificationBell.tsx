@@ -1,13 +1,41 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 
 import {
   getNotifications,
   markAllNotificationsRead,
   markNotificationRead,
 } from "@/app/actions/notifications";
+import type { LucideIcon } from "lucide-react";
+import {
+  Banknote,
+  Bell,
+  Calendar,
+  Check,
+  CheckCircle,
+  Package,
+  ShoppingBag,
+  Star,
+  XCircle,
+  Zap,
+} from "lucide-react";
+
+import { NotificationRowSkeleton } from "@/components/ui/content-skeletons";
+import { icn } from "@/lib/iconography";
+
+function notificationRowIconClass(type: string): string {
+  if (
+    type === "ON_DEMAND_REQUEST_ACCEPTED" ||
+    type === "ON_DEMAND_REQUEST_COMPLETED"
+  ) {
+    return icn.success;
+  }
+  if (type === "BOOKING_CANCELLED" || type === "ON_DEMAND_REQUEST_DECLINED") {
+    return icn.danger;
+  }
+  return icn.inline;
+}
 
 type Notification = {
   id: string;
@@ -19,18 +47,18 @@ type Notification = {
   createdAt: Date | string;
 };
 
-const TYPE_ICON: Record<string, string> = {
-  ORDER_PLACED: "🛍️",
-  ORDER_STATUS_UPDATED: "📦",
-  BOOKING_CONFIRMED: "📅",
-  BOOKING_CANCELLED: "❌",
-  ON_DEMAND_REQUEST_RECEIVED: "⚡",
-  ON_DEMAND_REQUEST_ACCEPTED: "✅",
-  ON_DEMAND_REQUEST_DECLINED: "❌",
-  ON_DEMAND_REQUEST_COMPLETED: "✓",
-  REVIEW_RECEIVED: "⭐",
-  PAYOUT_PROCESSED: "💰",
-  GENERAL: "🔔",
+const TYPE_ICON: Record<string, LucideIcon> = {
+  ORDER_PLACED: ShoppingBag,
+  ORDER_STATUS_UPDATED: Package,
+  BOOKING_CONFIRMED: Calendar,
+  BOOKING_CANCELLED: XCircle,
+  ON_DEMAND_REQUEST_RECEIVED: Zap,
+  ON_DEMAND_REQUEST_ACCEPTED: CheckCircle,
+  ON_DEMAND_REQUEST_DECLINED: XCircle,
+  ON_DEMAND_REQUEST_COMPLETED: Check,
+  REVIEW_RECEIVED: Star,
+  PAYOUT_PROCESSED: Banknote,
+  GENERAL: Bell,
 };
 
 function formatTime(d: Date | string): string {
@@ -51,11 +79,14 @@ function formatTime(d: Date | string): string {
 type Props = {
   initialUnreadCount: number;
   variant?: "light" | "dark";
+  /** 32×32-style control: smaller hit target, unread shown as a scarlet dot only (no count badge). */
+  compactToolbar?: boolean;
 };
 
 export default function NotificationBell({
   initialUnreadCount,
   variant = "light",
+  compactToolbar = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
@@ -63,7 +94,6 @@ export default function NotificationBell({
   const [loaded, setLoaded] = useState(false);
   const [isPending, startTransition] = useTransition();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
 
   // Close on outside click
   useEffect(() => {
@@ -99,17 +129,18 @@ export default function NotificationBell({
 
   async function handleMarkRead(notification: Notification) {
     if (!notification.isRead) {
-      startTransition(async () => {
-        await markNotificationRead(notification.id);
-        setNotifications((prev) =>
-          prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n)),
-        );
-        setUnreadCount((prev) => Math.max(0, prev - 1));
-      });
+      await markNotificationRead(notification.id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n)),
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     }
     if (notification.linkUrl) {
       setOpen(false);
-      router.push(notification.linkUrl);
+      // Avoid App Router SPA navigation: router.push has been rewriting some
+      // same-page query URLs (e.g. /dashboard/vendor?tab=reviews → /dashboard/vendor/reviews).
+      // Full navigation uses link_url verbatim from the server.
+      window.location.assign(notification.linkUrl);
     }
   }
 
@@ -126,18 +157,21 @@ export default function NotificationBell({
       ? "text-zinc-300 hover:text-white"
       : "text-zinc-600 hover:text-zinc-900";
 
+  const btnSize = compactToolbar ? "h-8 w-8 rounded-lg" : "h-9 w-9 rounded-xl";
+  const iconPx = compactToolbar ? 18 : 20;
+
   return (
     <div className="relative" ref={dropdownRef}>
       {/* Bell button */}
       <button
         type="button"
         onClick={handleOpen}
-        className={`relative flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${iconClass}`}
+        className={`relative flex items-center justify-center transition-colors ${btnSize} ${iconClass}`}
         aria-label="Notifications"
       >
         <svg
-          width="20"
-          height="20"
+          width={iconPx}
+          height={iconPx}
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -149,9 +183,13 @@ export default function NotificationBell({
           <path d="M13.73 21a2 2 0 0 1-3.46 0" />
         </svg>
         {unreadCount > 0 ? (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#D4450A] text-[9px] font-black text-white">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
+          compactToolbar ? (
+            <span className="absolute right-1 top-1 h-2 w-2 shrink-0 rounded-full bg-[#D4450A] ring-2 ring-white" />
+          ) : (
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#D4450A] text-[9px] font-black text-white">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )
         ) : null}
       </button>
 
@@ -183,18 +221,22 @@ export default function NotificationBell({
           {/* Notification list */}
           <div className="max-h-96 overflow-y-auto">
             {!loaded ? (
-              <div className="flex items-center justify-center py-8">
-                <span className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-200 border-t-[#D4450A]" />
+              <div className="divide-y divide-zinc-50">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <NotificationRowSkeleton key={i} />
+                ))}
               </div>
             ) : notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center">
-                <span className="mb-2 text-3xl">🔔</span>
+                <Bell className={`${icn.empty} mb-2`} aria-hidden strokeWidth={1.25} />
                 <p className="text-sm font-semibold text-zinc-700">All caught up</p>
                 <p className="mt-0.5 text-xs text-zinc-400">No notifications yet</p>
               </div>
             ) : (
               <div className="divide-y divide-zinc-50">
-                {notifications.map((notification) => (
+                {notifications.map((notification) => {
+                  const Icon = TYPE_ICON[notification.type] ?? Bell;
+                  return (
                   <button
                     key={notification.id}
                     type="button"
@@ -203,9 +245,11 @@ export default function NotificationBell({
                       !notification.isRead ? "bg-[#D4450A]/5" : ""
                     }`}
                   >
-                    <span className="mt-0.5 shrink-0 text-lg">
-                      {TYPE_ICON[notification.type] ?? "🔔"}
-                    </span>
+                    <Icon
+                      className={`mt-0.5 shrink-0 ${notificationRowIconClass(notification.type)}`}
+                      aria-hidden
+                      strokeWidth={2}
+                    />
                     <div className="min-w-0 flex-1">
                       <p
                         className={`text-xs font-bold leading-5 ${
@@ -227,7 +271,8 @@ export default function NotificationBell({
                       <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#D4450A]" />
                     ) : null}
                   </button>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

@@ -1,14 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { IconBolt } from "@tabler/icons-react";
 
 import { toggleVendorAvailability } from "@/app/actions/on-demand";
 
 type Props = {
   initialAvailable: boolean;
+  /** `banner` matches vendor dashboard spec (white card, amber icon, compact on mobile). */
+  appearance?: "default" | "banner";
 };
 
-export default function AvailabilityToggle({ initialAvailable }: Props) {
+export default function AvailabilityToggle({ initialAvailable, appearance = "default" }: Props) {
   const [isAvailable, setIsAvailable] = useState(initialAvailable);
   const [loading, setLoading] = useState(false);
 
@@ -19,6 +22,39 @@ export default function AvailabilityToggle({ initialAvailable }: Props) {
       setIsAvailable(result.isAvailableNow);
     }
     setLoading(false);
+  }
+
+  if (appearance === "banner") {
+    return (
+      <div className="avail-row flex flex-col gap-3 rounded-[12px] border-[0.5px] border-[rgba(28,28,26,0.12)] bg-white p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#FAEEDA] text-[#BA7517]">
+            <IconBolt className="size-[18px]" stroke={1.75} aria-hidden />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-[#1C1C1A]">On-demand availability</p>
+            <p className={`mt-0.5 text-xs ${isAvailable ? "text-[#854F0B]" : "text-[#7c7b77]"}`}>
+              {isAvailable ? "You are accepting on-demand requests" : "You are not accepting requests right now"}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={handleToggle}
+          disabled={loading}
+          className={`relative mx-auto h-8 w-[52px] shrink-0 self-end rounded-full transition-colors disabled:opacity-50 sm:mx-0 sm:self-center ${
+            isAvailable ? "bg-emerald-500" : "bg-zinc-200"
+          }`}
+          aria-pressed={isAvailable}
+        >
+          <span
+            className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow transition-transform ${
+              isAvailable ? "translate-x-[26px]" : "translate-x-1"
+            }`}
+          />
+        </button>
+      </div>
+    );
   }
 
   return (

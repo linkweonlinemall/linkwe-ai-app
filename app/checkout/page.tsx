@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import PublicNav from "@/components/layout/PublicNav";
 
 import CheckoutClient from "./checkout-client";
+import { typography, tw } from "@/lib/design-system";
 
 export const metadata: Metadata = {
   title: "Checkout",
@@ -48,7 +49,7 @@ export default async function CheckoutPage() {
   const subtotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-16 sm:pb-0">
+    <div className={`min-h-screen ${tw.bgPage} pb-mobile-public lg:pb-0 ${tw.fontSans}`}>
       <PublicNav
         user={
           userRecord
@@ -57,8 +58,8 @@ export default async function CheckoutPage() {
         }
         dashboardHref={continueHref ?? undefined}
       />
-      <div className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="mb-6 text-2xl font-bold text-zinc-900">Checkout</h1>
+      <div className={`mx-auto max-w-5xl px-4 py-8 sm:px-8`}>
+        <h1 className={`mb-6 ${typography.h3} ${tw.textPrimary}`}>Checkout</h1>
         <CheckoutClient items={items} subtotal={subtotal} />
       </div>
     </div>

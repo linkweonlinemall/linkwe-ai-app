@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { ClipboardList } from "lucide-react";
+
+import EmptyState from "@/components/ui/empty-state";
 
 export type SplitOrderItem = {
   id: string;
@@ -30,6 +33,8 @@ type Props = {
   splitOrders: VendorSplitOrder[];
 };
 
+const CARD_BORDER = "border-[0.5px] border-[rgba(28,28,26,0.12)]";
+
 function formatMinor(minor: number): string {
   return `TTD ${(minor / 100).toFixed(2)}`;
 }
@@ -42,39 +47,70 @@ function formatDate(date: Date | string): string {
   });
 }
 
+/** Compact pills aligned with dashboard overview palette */
 function getStatusBadge(status: string): { label: string; className: string } {
   switch (status) {
     case "AWAITING_VENDOR_ACTION":
-      return { label: "Action Required", className: "bg-red-50 text-red-700 border border-red-200" };
+      return {
+        label: "Action Required",
+        className: "bg-[#FAEEDA] text-[#854F0B]",
+      };
     case "VENDOR_PREPARING":
-      return { label: "Preparing", className: "bg-amber-50 text-amber-700 border border-amber-200" };
+      return {
+        label: "Preparing",
+        className: "bg-[#FAEEDA] text-[#854F0B]",
+      };
     case "AWAITING_COURIER_PICKUP":
-      return { label: "Awaiting Courier", className: "bg-blue-50 text-blue-700 border border-blue-200" };
     case "COURIER_ASSIGNED":
-      return { label: "Courier Assigned", className: "bg-blue-50 text-blue-700 border border-blue-200" };
     case "COURIER_PICKED_UP":
-      return { label: "Courier Picked Up", className: "bg-blue-50 text-blue-700 border border-blue-200" };
     case "VENDOR_DROPPED_OFF":
-      return { label: "Dropped Off", className: "bg-blue-50 text-blue-700 border border-blue-200" };
+      return {
+        label:
+          status === "AWAITING_COURIER_PICKUP"
+            ? "Awaiting courier"
+            : status === "COURIER_ASSIGNED"
+              ? "Courier assigned"
+              : status === "COURIER_PICKED_UP"
+                ? "Picked up"
+                : "Dropped off",
+        className: "bg-[#E6F1FB] text-[#185FA5]",
+      };
     case "AT_WAREHOUSE":
-      return { label: "At Warehouse", className: "bg-emerald-50 text-emerald-700 border border-emerald-200" };
+    case "PACKAGED":
+    case "BUNDLED_FOR_DISPATCH":
+      return {
+        label: status === "AT_WAREHOUSE" ? "At warehouse" : status === "PACKAGED" ? "Packaged" : "Bundled",
+        className: "bg-[#EAF3DE] text-[#3B6D11]",
+      };
     case "DISPATCHED":
-      return { label: "Dispatched", className: "bg-emerald-50 text-emerald-700 border border-emerald-200" };
     case "DELIVERED":
-      return { label: "Delivered", className: "bg-emerald-50 text-emerald-700 border border-emerald-200" };
+      return {
+        label: status === "DELIVERED" ? "Delivered" : "Dispatched",
+        className: "bg-[#EAF3DE] text-[#3B6D11]",
+      };
     default:
-      return { label: status, className: "bg-zinc-100 text-zinc-600 border border-zinc-200" };
+      return {
+        label: status.replace(/_/g, " "),
+        className: "bg-[#F7F5F2] text-[#45443f]",
+      };
   }
+}
+
+function primaryItemTitle(order: VendorSplitOrder): string {
+  return order.items[0]?.titleSnapshot ?? "Order";
 }
 
 export default function OrdersTab({ splitOrders }: Props) {
   if (splitOrders.length === 0) {
     return (
-      <div className="rounded-xl border border-zinc-200/60 bg-white p-12 text-center shadow-sm">
-        <p className="text-lg font-semibold text-zinc-900">No orders yet</p>
-        <p className="mt-2 text-sm text-zinc-500">
-          When customers purchase your products, orders will appear here.
-        </p>
+      <div className={`overflow-hidden rounded-[12px] bg-white ${CARD_BORDER}`}>
+        <EmptyState
+          icon={<ClipboardList strokeWidth={1.25} className="text-current" />}
+          title="No orders yet"
+          description="Your first sale is on its way. Make sure your store profile is complete."
+          actionLabel="Complete profile"
+          actionHref="/dashboard/vendor?tab=store"
+        />
       </div>
     );
   }
@@ -85,98 +121,70 @@ export default function OrdersTab({ splitOrders }: Props) {
       o.status,
     ),
   );
-  const completed = splitOrders.filter((o) => ["AT_WAREHOUSE", "DISPATCHED", "DELIVERED"].includes(o.status));
+  const completed = splitOrders.filter((o) =>
+    ["AT_WAREHOUSE", "PACKAGED", "BUNDLED_FOR_DISPATCH", "DISPATCHED", "DELIVERED"].includes(o.status),
+  );
 
   function renderOrderCard(order: VendorSplitOrder) {
     const badge = getStatusBadge(order.status);
+    const ref = `#LW-${order.mainOrderId.slice(-8).toUpperCase()}`;
+    const primary = primaryItemTitle(order);
+    const region = order.mainOrder.region?.replace(/_/g, " ") ?? "—";
+
     return (
-      <div key={order.id} className="rounded-xl border border-zinc-200/60 bg-white p-5 shadow-sm">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-zinc-900">
-              Order #LW-{order.mainOrderId.slice(-8).toUpperCase()}
+      <div key={order.id} className={`overflow-hidden rounded-[12px] bg-white ${CARD_BORDER}`}>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-[14px] md:flex-nowrap">
+          {/* Order # + date */}
+          <div className="min-w-[7.5rem] shrink-0">
+            <p className="text-[12px] font-medium tabular-nums text-[#1C1C1A]">{ref}</p>
+            <p className="mt-0.5 text-[10px] text-[#7c7b77]">{formatDate(order.createdAt)}</p>
+          </div>
+
+          {/* Items (one line) + count badge */}
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <p className="min-w-0 flex-1 truncate text-[12px] text-[#1C1C1A]" title={order.items.map((i) => i.titleSnapshot).join(", ")}>
+              {primary}
             </p>
-            <p className="mt-0.5 text-xs text-zinc-400">{formatDate(order.createdAt)}</p>
+            {order.items.length > 1 ? (
+              <span className="shrink-0 rounded-md bg-[#F7F5F2] px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[#45443f]">
+                {order.items.length}
+              </span>
+            ) : null}
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-2">
-            <span className={`rounded-full px-3 py-1 text-xs font-medium ${badge.className}`}>{badge.label}</span>
-            <a
-              href={`/api/vendor-invoice/${order.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+
+          {/* Region + order value */}
+          <div className="shrink-0 text-[12px] md:text-right">
+            <p className="truncate capitalize text-[#1C1C1A]">{region}</p>
+            <p className="font-medium tabular-nums text-[#1C1C1A]">{formatMinor(order.subtotalMinor)}</p>
+          </div>
+
+          {/* Status + View */}
+          <div className="flex shrink-0 items-center gap-2 md:gap-3">
+            <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold ${badge.className}`}>
+              {badge.label}
+            </span>
+            <Link
+              href={`/dashboard/vendor/orders/${order.id}`}
+              className="whitespace-nowrap rounded-lg border border-[rgba(28,28,26,0.12)] px-2.5 py-1 text-[11px] font-semibold text-[#1C1C1A] transition-colors hover:bg-[#F7F5F2]"
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              Invoice
-            </a>
+              View order
+            </Link>
           </div>
-        </div>
-
-        <div className="mt-3 grid grid-cols-2 gap-4">
-          <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">Items</p>
-            <div className="flex flex-col gap-1">
-              {order.items.map((item) => (
-                <div key={item.id} className="flex justify-between text-xs">
-                  <span className="max-w-[150px] truncate text-zinc-700">{item.titleSnapshot}</span>
-                  <span className="ml-2 text-zinc-500">×{item.quantity}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">Details</p>
-            <div className="flex flex-col gap-1">
-              <div className="flex justify-between text-xs">
-                <span className="text-zinc-500">Customer region</span>
-                <span className="font-medium capitalize text-zinc-700">
-                  {order.mainOrder.region?.replace(/_/g, " ") ?? "—"}
-                </span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-zinc-500">Order value</span>
-                <span className="font-medium text-zinc-700">{formatMinor(order.subtotalMinor)}</span>
-              </div>
-              {order.vendorInboundMethod ? (
-                <div className="flex justify-between text-xs">
-                  <span className="text-zinc-500">Fulfillment</span>
-                  <span className="font-medium text-zinc-700">
-                    {order.vendorInboundMethod === "VENDOR_DROPOFF" ? "Drop off" : "Courier pickup"}
-                  </span>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-3">
-          <Link
-            href={`/dashboard/vendor/orders/${order.id}`}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50"
-          >
-            View order
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-          </Link>
         </div>
 
         {order.status === "AWAITING_VENDOR_ACTION" ? (
-          <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
-            <span className="text-sm text-amber-600">⚠</span>
-            <p className="min-w-0 flex-1 text-xs font-medium text-amber-700">
-              Action required — choose how you will fulfill this order
-            </p>
+          <div
+            className="flex h-8 items-center gap-2 border-t border-[rgba(133,79,11,0.15)] px-4"
+            style={{ backgroundColor: "#FAEEDA" }}
+          >
+            <span className="min-w-0 truncate text-[10px] font-medium leading-none text-[#854F0B]">
+              Action required — choose fulfillment
+            </span>
             <Link
               href={`/dashboard/vendor/orders/${order.id}`}
-              className="ml-auto inline-flex shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:opacity-90"
-              style={{ backgroundColor: "#D4450A" }}
+              className="ml-auto shrink-0 text-[11px] font-semibold leading-none text-[#D4450A] underline-offset-2 hover:underline"
             >
-              Take action →
+              Take action
             </Link>
           </div>
         ) : null}
@@ -184,34 +192,22 @@ export default function OrdersTab({ splitOrders }: Props) {
     );
   }
 
+  function section(title: string, titleClass: string, orders: VendorSplitOrder[]) {
+    return (
+      <div>
+        <p className={`mb-2 text-[10px] font-semibold uppercase tracking-wide ${titleClass}`}>
+          {title} ({orders.length})
+        </p>
+        <div className="flex flex-col gap-2">{orders.map(renderOrderCard)}</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-6">
-      {actionRequired.length > 0 ? (
-        <div>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-red-600">
-            Action Required ({actionRequired.length})
-          </p>
-          <div className="flex flex-col gap-4">{actionRequired.map(renderOrderCard)}</div>
-        </div>
-      ) : null}
-
-      {inProgress.length > 0 ? (
-        <div>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-            In Progress ({inProgress.length})
-          </p>
-          <div className="flex flex-col gap-4">{inProgress.map(renderOrderCard)}</div>
-        </div>
-      ) : null}
-
-      {completed.length > 0 ? (
-        <div>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-            Completed ({completed.length})
-          </p>
-          <div className="flex flex-col gap-4">{completed.map(renderOrderCard)}</div>
-        </div>
-      ) : null}
+    <div className="flex flex-col gap-5">
+      {actionRequired.length > 0 ? section("Action required", "text-red-600", actionRequired) : null}
+      {inProgress.length > 0 ? section("In progress", "text-[#7c7b77]", inProgress) : null}
+      {completed.length > 0 ? section("Completed", "text-[#7c7b77]", completed) : null}
     </div>
   );
 }

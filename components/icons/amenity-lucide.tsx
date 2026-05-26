@@ -1,0 +1,103 @@
+"use client";
+
+import type { LucideIcon } from "lucide-react";
+import {
+  Accessibility,
+  AlertTriangle,
+  Armchair,
+  Baby,
+  Banknote,
+  Building2,
+  Calendar,
+  Car,
+  ClipboardList,
+  Coffee,
+  CreditCard,
+  DoorClosed,
+  DollarSign,
+  Droplets,
+  Footprints,
+  Gift,
+  GraduationCap,
+  Hand,
+  Home,
+  MapPin,
+  MessageCircle,
+  Monitor,
+  Moon,
+  Package,
+  PawPrint,
+  HelpCircle,
+  ShieldCheck,
+  Smartphone,
+  Snowflake,
+  Sofa,
+  Star,
+  Syringe,
+  Trash2,
+  TreePine,
+  Truck,
+  Users,
+  VenetianMask,
+  Wifi,
+  Wrench,
+  Zap,
+} from "lucide-react";
+
+/** Lucide equivalents for persisted store amenity keys (no emoji in UI). */
+export const AMENITY_LUCIDE: Record<string, LucideIcon> = {
+  free_wifi: Wifi,
+  parking_available: Car,
+  wheelchair_accessible: Accessibility,
+  air_conditioned: Snowflake,
+  outdoor_seating: TreePine,
+  indoor_seating: Armchair,
+  waiting_area: Sofa,
+  private_rooms: DoorClosed,
+  card_payments: CreditCard,
+  cash_accepted: Banknote,
+  linx_accepted: Building2,
+  online_payment: Smartphone,
+  free_consultation: MessageCircle,
+  payment_plans: ClipboardList,
+  deposits_required: DollarSign,
+  home_visits: Home,
+  mobile_service: Car,
+  virtual_sessions: Monitor,
+  same_day_service: Zap,
+  emergency_service: AlertTriangle,
+  weekend_available: Calendar,
+  evening_available: Moon,
+  walk_ins_welcome: Footprints,
+  by_appointment_only: MapPin,
+  sanitized_equipment: Droplets,
+  gloves_used: Hand,
+  masks_available: VenetianMask,
+  vaccinated_staff: Syringe,
+  insured: ShieldCheck,
+  certified_staff: GraduationCap,
+  pet_friendly: PawPrint,
+  family_friendly: Users,
+  child_friendly: Baby,
+  refreshments: Coffee,
+  loyalty_program: Star,
+  delivery_available: Truck,
+  pickup_available: Package,
+  free_delivery: Gift,
+  express_delivery: Zap,
+  installation_included: Wrench,
+  removal_service: Trash2,
+};
+
+export function AmenityLucideIcon({
+  value,
+  className,
+  "aria-hidden": ariaHidden = true,
+}: {
+  value: string;
+  className?: string;
+  "aria-hidden"?: boolean;
+}) {
+  const Icon = AMENITY_LUCIDE[value] ?? HelpCircle;
+  return <Icon className={className} aria-hidden={ariaHidden} />;
+}

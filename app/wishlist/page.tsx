@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { Download, Heart, Package } from "lucide-react";
 
 import { getWishlistItems } from "@/app/actions/wishlist";
 import PublicNav from "@/components/layout/PublicNav";
@@ -8,6 +9,7 @@ import WishlistButton from "@/components/ui/WishlistButton";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
+import { icn } from "@/lib/iconography";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
@@ -25,7 +27,7 @@ export default async function WishlistPage() {
   const items = await getWishlistItems();
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-16 sm:pb-0">
+    <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
       <PublicNav
         user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null}
         dashboardHref={continueHref ?? undefined}
@@ -51,7 +53,7 @@ export default async function WishlistPage() {
 
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-white py-24 text-center">
-            <span className="mb-4 text-6xl">🤍</span>
+            <Heart className={`${icn.empty} mb-4`} aria-hidden strokeWidth={1.25} />
             <h2 className="mb-2 text-lg font-bold text-zinc-900">Your wishlist is empty</h2>
             <p className="mb-6 text-sm text-zinc-500">Save products you love to buy later</p>
             <Link href="/shop" className="rounded-xl bg-[#D4450A] px-6 py-3 text-sm font-bold text-white hover:opacity-90">
@@ -74,7 +76,9 @@ export default async function WishlistPage() {
                       className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-4xl">📦</div>
+                    <div className="flex h-full w-full items-center justify-center">
+                      <Package className={`${icn.ui} text-zinc-300`} aria-hidden strokeWidth={2} />
+                    </div>
                   )}
                   {!item.product.isPublished ? (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50">
@@ -87,8 +91,9 @@ export default async function WishlistPage() {
                     <WishlistButton productId={item.productId} initialWishlisted={true} size="sm" />
                   </div>
                   {item.product.isDigital ? (
-                    <div className="absolute bottom-2 left-2 rounded-full bg-[#1A7FB5] px-2 py-0.5 text-[9px] font-bold text-white">
-                      ⬇ Digital
+                    <div className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-[#1A7FB5] px-2 py-0.5 text-[9px] font-bold text-white">
+                      <Download className="size-3 shrink-0" aria-hidden strokeWidth={2.5} />
+                      Digital
                     </div>
                   ) : null}
                 </div>

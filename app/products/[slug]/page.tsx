@@ -1,16 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import type { ProductCondition } from "@prisma/client";
+import { MainOrderStatus, type ProductCondition } from "@prisma/client";
+import { Package } from "lucide-react";
 
 import ProductBuyBox from "@/components/product/ProductBuyBox";
+import FrequentlyBoughtTogether from "@/components/product/FrequentlyBoughtTogether";
+import ProductReviewsSection from "@/components/product/ProductReviewsSection";
 import PublicNav from "@/components/layout/PublicNav";
-import WishlistButton from "@/components/ui/WishlistButton";
-import ReviewForm from "@/components/ui/ReviewForm";
-import ReviewsList from "@/components/ui/ReviewsList";
-import StarRating from "@/components/ui/StarRating";
 import ExpandableDescription from "@/components/ui/ExpandableDescription";
 import { ProductGallery } from "@/components/product/ProductGallery";
+import type { VariantAttribute } from "@/components/product/VariantSelector";
 import { getProductReviews, getUserProductReview } from "@/app/actions/reviews";
 import { getWishlistProductIds } from "@/app/actions/wishlist";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
@@ -18,6 +18,7 @@ import { getSession } from "@/lib/auth/session";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { prisma } from "@/lib/prisma";
+import { typography, radius, shadow, spacing, tw } from "@/lib/design-system";
 
 function formatLabel(value: string): string {
   return value
@@ -25,6 +26,19 @@ function formatLabel(value: string): string {
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
 }
+
+/** Order must be paid (or later) for the buyer to write a verified product review. */
+const REVIEW_PURCHASE_STATUSES: MainOrderStatus[] = [
+  MainOrderStatus.PAID,
+  MainOrderStatus.PROCESSING,
+  MainOrderStatus.PARTIALLY_IN_HOUSE,
+  MainOrderStatus.READY_TO_SHIP,
+  MainOrderStatus.PACKING_COMPLETE,
+  MainOrderStatus.SHIPPED,
+  MainOrderStatus.CUSTOMER_RECEIVED,
+  MainOrderStatus.DELIVERED,
+  MainOrderStatus.COMPLETED,
+];
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -111,6 +125,7 @@ export default async function PublicProductPage({ params }: Props) {
       createdAt: true,
       storeId: true,
       hasVariants: true,
+      isService: true,
       isDigital: true,
       digitalFileUrl: true,
       fileType: true,
@@ -130,6 +145,21 @@ export default async function PublicProductPage({ params }: Props) {
     getUserProductReview(product.id),
   ]);
 
+  const hasPurchased = session
+    ? !!(await prisma.orderItem.findFirst({
+        where: {
+          productId: product.id,
+          mainOrder: {
+            buyerId: session.userId,
+            status: { in: REVIEW_PURCHASE_STATUSES },
+          },
+        },
+        select: { id: true },
+      }))
+    : false;
+
+  const canWriteReview = hasPurchased && !userReview;
+
   const wishlistIds = await getWishlistProductIds();
   const isWishlisted = wishlistIds.includes(product.id);
 
@@ -148,10 +178,11 @@ export default async function PublicProductPage({ params }: Props) {
       })
     : [];
 
-  // Fetch related products from same store
-  const relatedProducts = await prisma.product.findMany({
+  const sameStoreOthers = await prisma.product.findMany({
     where: {
       isPublished: true,
+      isService: false,
+      isArchived: false,
       storeId: product.storeId,
       NOT: { slug: normalized },
     },
@@ -164,9 +195,12 @@ export default async function PublicProductPage({ params }: Props) {
       images: true,
       category: true,
     },
-    take: 4,
+    take: 10,
     orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
   });
+
+  const frequentlyTogether = !product.hasVariants && !product.isDigital ? sameStoreOthers.slice(0, 3) : [];
+  const moreFromStoreProducts = sameStoreOthers.slice(3, 7);
 
   const categoryRelatedProducts = product.category
     ? await prisma.product.findMany({
@@ -198,24 +232,24 @@ export default async function PublicProductPage({ params }: Props) {
   const buyBoxVariants = variants.map((v) => ({
     id: v.id,
     name: v.name,
-    attributes: v.attributes as any,
+    attributes: v.attributes as VariantAttribute[],
     price: v.price,
     stock: v.stock,
     images: v.images,
   }));
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-16 sm:pb-0">
+    <div className={`min-h-screen pb-16 ${tw.fontSans} antialiased sm:pb-0 ${tw.bgPage}`}>
       <PublicNav
         user={session ? { name: session.fullName ?? "Account", href: dashboardHref! } : null}
         dashboardHref={dashboardHref ?? undefined}
         unreadCount={unreadCount}
       />
 
-      <div className="mx-auto max-w-screen-2xl px-4 py-6 sm:px-6">
-        <div className="mb-4 h-1 w-16 rounded-full bg-[#D4450A]" />
+      <div className="mx-auto max-w-7xl px-4 py-6 md:px-6 lg:px-8">
+        <div className={`mb-4 h-1 w-16 ${radius.pill} ${tw.bgScarlet}`} />
         {/* Breadcrumb */}
-        <nav className="mb-6 flex items-center gap-2 text-sm text-zinc-400">
+        <nav className={`mb-6 flex items-center gap-2 ${typography.bodySmall} text-zinc-400`}>
           <Link href="/" className="transition-colors hover:text-zinc-700">
             Home
           </Link>
@@ -234,112 +268,88 @@ export default async function PublicProductPage({ params }: Props) {
           <span className="max-w-48 truncate text-zinc-600">{product.name}</span>
         </nav>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-          {/* Left — gallery */}
-          <div className="lg:col-span-5">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-10">
+          {/* Left — gallery (5 cols) */}
+          <div className="min-w-0 lg:col-span-5">
             <ProductGallery images={product.images} name={product.name} />
           </div>
 
-          {/* Center — product info */}
-          <div className="flex flex-col gap-5 lg:col-span-4">
-            {/* Category + badges */}
+          {/* Middle — product info (4 cols) */}
+          <div className="flex min-w-0 flex-col gap-5 lg:col-span-4">
             <div className="flex flex-wrap items-center gap-2">
               {product.category ? (
-                <span className="text-xs font-semibold uppercase tracking-widest text-zinc-400">
-                  {formatLabel(product.category)}
+                <span className="font-sans text-[13px] font-normal uppercase tracking-wide text-gray-600">
+                  {formatLabel(product.category).toUpperCase()}
                 </span>
               ) : null}
               {product.isFeatured ? (
-                <span className="rounded-full bg-[#D4450A] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                  Featured
+                <span className="rounded-md bg-[#D4450A] px-2 py-0.5 font-sans text-[11px] font-semibold uppercase text-white">
+                  FEATURED
                 </span>
               ) : null}
               {cond ? (
-                <span
-                  className={`rounded-full border px-2.5 py-0.5 text-[10px] font-medium ${cond.className}`}
-                >
+                <span className="rounded-md bg-green-50 px-2 py-0.5 font-sans text-[11px] font-semibold text-green-700">
                   {cond.label}
                 </span>
               ) : null}
             </div>
 
-            {/* Name */}
-            <div>
-              <h1 className="text-3xl font-black leading-tight text-zinc-900 sm:text-4xl">{product.name}</h1>
-              {product.brand ? <p className="mt-1 text-sm text-zinc-400">by {product.brand}</p> : null}
-            </div>
+            <h1 className={`${typography.h3} font-sans leading-tight text-zinc-900 sm:text-4xl sm:leading-tight`}>
+              {product.name}
+            </h1>
 
-            {reviewData.count > 0 ? (
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-0.5">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <svg
-                      key={s}
-                      viewBox="0 0 24 24"
-                      className={`h-4 w-4 ${s <= Math.round(reviewData.average) ? "fill-[#E8820C]" : "fill-zinc-200"}`}
-                    >
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                    </svg>
-                  ))}
-                </div>
-                <span className="text-sm font-semibold text-zinc-700">{reviewData.average.toFixed(1)}</span>
-                <span className="text-sm text-zinc-400">
-                  ({reviewData.count} review{reviewData.count !== 1 ? "s" : ""})
-                </span>
-              </div>
-            ) : (
-              <p className="text-xs text-zinc-400">No reviews yet</p>
-            )}
+            <p className={`${typography.bodySmall} text-zinc-600`}>
+              by{" "}
+              <Link href={`/store/${store.slug}`} className={`font-semibold ${tw.textScarlet} hover:underline`}>
+                {store.name}
+              </Link>
+            </p>
 
-            {/* Short description */}
             {product.shortDescription ? (
-              <p className="border-l-2 border-[#D4450A]/30 pl-3 text-sm leading-relaxed text-zinc-600">
+              <p
+                className={`border-l-2 ${tw.borderScarletMuted30} py-3 pl-4 font-sans text-lg font-medium italic leading-normal text-gray-700`}
+              >
                 {product.shortDescription}
               </p>
             ) : null}
 
-            <hr className="border-zinc-200" />
-
-            {/* Description */}
-            {product.description ? (
-              <ExpandableDescription title="About this product" description={product.description} />
-            ) : null}
-
-            {/* Tags */}
             {product.tags && product.tags.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {product.tags.map((tag) => (
-                  <span key={tag} className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-500">
+                  <span key={tag} className={`${radius.pill} bg-zinc-100 px-3 py-1 font-sans text-xs text-zinc-500`}>
                     {tag}
                   </span>
                 ))}
               </div>
             ) : null}
 
+            {product.description ? (
+              <ExpandableDescription title="ABOUT THIS PRODUCT" description={product.description} />
+            ) : null}
+
             {product.previewUrl ? (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5">
-                <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-zinc-900">Preview</h2>
+              <div className={`${radius.card} border border-zinc-200 bg-white ${spacing.cardPadding} ${shadow.card}`}>
+                <h2 className={`mb-3 ${typography.caption} text-zinc-900`}>Preview</h2>
                 <a
                   href={product.previewUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-xl border-2 border-[#D4450A]/30 bg-[#D4450A]/5 px-4 py-3 text-sm font-semibold text-[#D4450A] transition-colors hover:bg-[#D4450A]/10"
+                  className={`flex items-center gap-2 ${radius.card} border-2 ${tw.borderScarletMuted30} ${tw.bgScarletMuted5} px-4 py-3 ${typography.bodySmall} font-semibold ${tw.textScarlet} transition-colors ${tw.hoverBgScarletMuted10}`}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="17 8 12 3 7 8"/>
-                    <line x1="12" y1="3" x2="12" y2="15"/>
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
                   </svg>
                   Download free preview
                 </a>
               </div>
             ) : null}
 
-            {/* Product details table */}
             <div>
-              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-zinc-900">Product details</h2>
-              <div className="overflow-hidden rounded-xl border border-zinc-200">
-                <table className="w-full text-sm">
+              <h2 className={`mb-3 ${typography.caption} text-zinc-900`}>Product Details</h2>
+              <div className={`overflow-hidden ${radius.card} border border-zinc-200 bg-white ${shadow.card}`}>
+                <table className="w-full font-sans text-sm">
                   <tbody className="divide-y divide-zinc-100">
                     {product.brand ? (
                       <tr className="hover:bg-zinc-50">
@@ -392,17 +402,14 @@ export default async function PublicProductPage({ params }: Props) {
               </div>
             </div>
 
-            {/* Delivery regions */}
             {product.deliveryRegions.length > 0 ? (
               <div>
-                <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-zinc-900">
-                  Delivery regions
-                </h2>
+                <h2 className={`mb-2 ${typography.caption} text-zinc-900`}>Delivery regions</h2>
                 <div className="flex flex-wrap gap-2">
                   {product.deliveryRegions.map((r) => (
                     <span
                       key={r}
-                      className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs text-zinc-500"
+                      className={`${radius.pill} border border-zinc-200 bg-white px-3 py-1 font-sans text-xs text-zinc-500`}
                     >
                       {formatLabel(r)}
                     </span>
@@ -412,219 +419,80 @@ export default async function PublicProductPage({ params }: Props) {
             ) : null}
           </div>
 
-          {/* Right — buy box */}
-          <div className="flex flex-col gap-4 lg:sticky lg:top-6 lg:col-span-3 lg:self-start">
-            {/* Price card */}
-            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+          {/* Right — purchase card (3 cols) */}
+          <aside className="min-w-0 lg:col-span-3">
+            <div className="lg:sticky lg:top-24 lg:z-10 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
               <ProductBuyBox
                 productId={product.id}
+                productName={product.name}
                 basePrice={product.price}
                 compareAtPrice={product.compareAtPrice}
                 baseStock={product.stock}
                 hasVariants={product.hasVariants}
                 variants={buyBoxVariants}
-              />
-              <div className="mt-4 flex items-center gap-3 border-t border-zinc-100 pt-4">
-                <WishlistButton productId={product.id} initialWishlisted={isWishlisted} size="md" />
-                <span className="text-xs text-zinc-400">Save for later</span>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-3">
-              {product.isDigital ? (
-                <div className="flex flex-col gap-2.5">
-                  <div className="flex items-center gap-2 text-xs text-zinc-600">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="17 8 12 3 7 8"/>
-                      <line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
-                    <span>Instant digital download</span>
-                  </div>
-                  {product.fileType ? (
-                    <div className="flex items-center gap-2 text-xs text-zinc-600">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <polyline points="14 2 14 8 20 8"/>
-                      </svg>
-                      <span>
-                        {product.fileType.toUpperCase()} file
-                        {product.fileSizeKb
-                          ? ` · ${
-                              product.fileSizeKb >= 1024
-                                ? `${(product.fileSizeKb / 1024).toFixed(1)} MB`
-                                : `${product.fileSizeKb} KB`
-                            }`
-                          : ""}
-                      </span>
-                    </div>
-                  ) : null}
-                  {product.downloadLimit ? (
-                    <div className="flex items-center gap-2 text-xs text-zinc-600">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                      </svg>
-                      <span>
-                        {product.downloadLimit} download{product.downloadLimit > 1 ? "s" : ""} included
-                      </span>
-                    </div>
-                  ) : null}
-                  {product.licenceType ? (
-                    <div className="flex items-center gap-2 text-xs text-zinc-600">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                      </svg>
-                      <span>
-                        {product.licenceType === "PERSONAL"
-                          ? "Personal use licence"
-                          : product.licenceType === "COMMERCIAL"
-                            ? "Commercial use licence"
-                            : "Extended commercial licence"}
-                      </span>
-                    </div>
-                  ) : null}
-                  <div className="flex items-center gap-2 text-xs text-zinc-600">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                    </svg>
-                    <span>Secure checkout via Stripe</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2.5">
-                  {product.allowDelivery ? (
-                    <div className="flex items-center gap-2 text-xs text-zinc-600">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <rect x="1" y="3" width="15" height="13" />
-                        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-                        <circle cx="5.5" cy="18.5" r="2.5" />
-                        <circle cx="18.5" cy="18.5" r="2.5" />
-                      </svg>
-                      <span>
-                        Delivery available
-                        {product.deliveryFee != null ? ` — TTD ${product.deliveryFee.toFixed(2)}` : ""}
-                      </span>
-                    </div>
-                  ) : null}
-                  {product.allowPickup ? (
-                    <div className="flex items-center gap-2 text-xs text-zinc-600">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-                        <circle cx="12" cy="10" r="3" />
-                      </svg>
-                      <span>Local pickup available</span>
-                    </div>
-                  ) : null}
-                  {!product.allowDelivery && !product.allowPickup ? (
-                    <div className="flex items-center gap-2 text-xs text-zinc-500">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
-                      </svg>
-                      <span>No delivery or pickup — contact store for details</span>
-                    </div>
-                  ) : null}
-                  <div className="flex items-center gap-2 text-xs text-zinc-600">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                    </svg>
-                    <span>Secure checkout via Stripe</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Sold by */}
-            <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-400">Sold by</p>
-              <div className="mb-3 flex items-center gap-3">
-                {store.logoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={store.logoUrl}
-                    alt=""
-                    className="h-11 w-11 rounded-full border border-zinc-100 object-cover"
-                  />
-                ) : (
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#D4450A]/10">
-                    <span className="font-bold text-[#D4450A]">{store.name[0]}</span>
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-zinc-900">{store.name}</p>
-                  <p className="truncate text-xs text-zinc-400">{getRegionLabel(store.region)}</p>
-                </div>
-              </div>
-              <Link
-                href={`/store/${store.slug}`}
-                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-200 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
-              >
-                Visit store
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Reviews */}
-        <div className="mt-12">
-          <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-xl font-bold text-zinc-900">
-              Reviews
-              {reviewData.count > 0 ? (
-                <span className="ml-2 text-base font-normal text-zinc-400">
-                  ({reviewData.count})
-                </span>
-              ) : null}
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <ReviewsList
-                reviews={reviewData.reviews as any}
-                count={reviewData.count}
-                average={reviewData.average}
+                store={{
+                  name: store.name,
+                  slug: store.slug,
+                  logoUrl: store.logoUrl,
+                  region: store.region,
+                }}
+                storeRegionLabel={getRegionLabel(store.region)}
+                allowDelivery={product.allowDelivery}
+                allowPickup={product.allowPickup}
+                deliveryFeeSuffix={
+                  product.allowDelivery && product.deliveryFee != null
+                    ? ` — TTD ${product.deliveryFee.toFixed(2)}`
+                    : null
+                }
+                isDigital={product.isDigital}
+                digitalMeta={
+                  product.isDigital
+                    ? {
+                        fileType: product.fileType,
+                        fileSizeKb: product.fileSizeKb,
+                        downloadLimit: product.downloadLimit,
+                        licenceType: product.licenceType,
+                      }
+                    : null
+                }
+                initialWishlisted={isWishlisted}
               />
             </div>
-            <div>
-              {userReview ? (
-                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
-                  <p className="mb-3 text-sm font-bold text-zinc-700">Your review</p>
-                  <StarRating value={userReview.rating} readonly size="md" />
-                  {userReview.title ? (
-                    <p className="mt-2 text-sm font-semibold text-zinc-900">{userReview.title}</p>
-                  ) : null}
-                  {userReview.body ? (
-                    <p className="mt-1 text-sm text-zinc-600">{userReview.body}</p>
-                  ) : null}
-                </div>
-              ) : (
-                <ReviewForm
-                  type="product"
-                  targetId={product.id}
-                  targetName={product.name}
-                />
-              )}
-            </div>
-          </div>
+          </aside>
         </div>
 
-        {/* Related products */}
-        {relatedProducts.length > 0 ? (
+        {!product.hasVariants && !product.isDigital && frequentlyTogether.length > 0 ? (
+          <section className="mt-12 border-t border-zinc-200 pt-12 md:mt-16 md:pt-16">
+            <FrequentlyBoughtTogether items={frequentlyTogether} />
+          </section>
+        ) : null}
+
+        <section className="mt-12 border-t border-zinc-200 pt-12 md:mt-16 md:pt-16">
+          <ProductReviewsSection
+            productId={product.id}
+            productName={product.name}
+            count={reviewData.count}
+            average={reviewData.average}
+            reviews={reviewData.reviews}
+            userReview={userReview}
+            canWriteReview={canWriteReview}
+            fullWidthLayout
+          />
+        </section>
+        {moreFromStoreProducts.length > 0 ? (
           <div className="mt-16">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-zinc-900">More from {store.name}</h2>
-              <Link href={`/store/${store.slug}`} className="text-sm text-[#D4450A] hover:underline">
+              <h2 className={`${typography.h4} text-zinc-900`}>More from {store.name}</h2>
+              <Link href={`/store/${store.slug}`} className={`${typography.bodySmall} ${tw.textScarlet} hover:underline`}>
                 View all →
               </Link>
             </div>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              {relatedProducts.map((p) => (
+              {moreFromStoreProducts.map((p) => (
                 <Link
                   key={p.id}
                   href={`/products/${p.slug}`}
-                  className="group overflow-hidden rounded-2xl bg-white shadow-sm transition-all hover:shadow-md"
+                  className={`group overflow-hidden ${radius.card} bg-white ${shadow.card} transition-all hover:shadow-md`}
                 >
                   <div className="aspect-square overflow-hidden bg-zinc-100">
                     {p.images[0] ? (
@@ -636,7 +504,7 @@ export default async function PublicProductPage({ params }: Props) {
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center">
-                        <span className="text-3xl text-zinc-300">📦</span>
+                        <Package className="size-10 text-zinc-300" strokeWidth={1.25} aria-hidden />
                       </div>
                     )}
                   </div>
@@ -646,7 +514,7 @@ export default async function PublicProductPage({ params }: Props) {
                     ) : null}
                     <p className="truncate text-sm font-semibold text-zinc-900">{p.name}</p>
                     <div className="mt-1 flex items-center gap-2">
-                      <p className="text-sm font-bold" style={{ color: "#D4450A" }}>
+                      <p className={`text-sm font-bold ${tw.textScarlet}`}>
                         TTD {p.price.toFixed(2)}
                       </p>
                       {p.compareAtPrice && p.compareAtPrice > p.price ? (
@@ -663,12 +531,12 @@ export default async function PublicProductPage({ params }: Props) {
         {categoryRelatedProducts.length > 0 ? (
           <div className="mt-12">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-zinc-900">
+              <h2 className={`${typography.h4} text-zinc-900`}>
                 More in {formatLabel(product.category ?? "")}
               </h2>
               <Link
                 href={`/shop?category=${product.category}`}
-                className="text-sm text-[#D4450A] hover:underline"
+                className={`${typography.bodySmall} ${tw.textScarlet} hover:underline`}
               >
                 View all →
               </Link>
@@ -678,7 +546,7 @@ export default async function PublicProductPage({ params }: Props) {
                 <Link
                   key={p.id}
                   href={`/products/${p.slug}`}
-                  className="group overflow-hidden rounded-2xl bg-white shadow-sm transition-all hover:shadow-md"
+                  className={`group overflow-hidden ${radius.card} bg-white ${shadow.card} transition-all hover:shadow-md`}
                 >
                   <div className="aspect-square overflow-hidden bg-zinc-100">
                     {p.images[0] ? (
@@ -690,7 +558,7 @@ export default async function PublicProductPage({ params }: Props) {
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center">
-                        <span className="text-3xl text-zinc-300">📦</span>
+                        <Package className="size-10 text-zinc-300" strokeWidth={1.25} aria-hidden />
                       </div>
                     )}
                   </div>
@@ -700,7 +568,7 @@ export default async function PublicProductPage({ params }: Props) {
                     </p>
                     <p className="truncate text-sm font-semibold text-zinc-900">{p.name}</p>
                     <div className="mt-1 flex items-center gap-2">
-                      <p className="text-sm font-bold text-[#D4450A]">TTD {p.price.toFixed(2)}</p>
+                      <p className={`text-sm font-bold ${tw.textScarlet}`}>TTD {p.price.toFixed(2)}</p>
                       {p.compareAtPrice && p.compareAtPrice > p.price ? (
                         <p className="text-xs text-zinc-400 line-through">
                           TTD {p.compareAtPrice.toFixed(2)}

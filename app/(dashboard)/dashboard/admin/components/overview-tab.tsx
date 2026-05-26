@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { getAdminOverviewMetrics } from "@/app/actions/admin-metrics";
 import Card from "@/components/ui/Card";
+import { DashboardMetricSkeleton } from "@/components/ui/content-skeletons";
 import StatCard from "@/components/ui/StatCard";
 
 type Metrics = Awaited<ReturnType<typeof getAdminOverviewMetrics>>;
@@ -25,15 +26,6 @@ function relativeTime(date: Date | string): string {
   return `${mins}m`;
 }
 
-function SkeletonCard() {
-  return (
-    <Card className="animate-pulse rounded-2xl" padding="md">
-      <div className="mb-3 h-3 w-20 rounded bg-zinc-200" />
-      <div className="mb-2 h-8 w-24 rounded bg-zinc-200" />
-      <div className="h-3 w-32 rounded bg-zinc-100" />
-    </Card>
-  );
-}
 
 export default function OverviewTab() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
@@ -75,7 +67,7 @@ export default function OverviewTab() {
         </div>
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
-            <SkeletonCard key={i} />
+            <DashboardMetricSkeleton key={i} />
           ))}
         </div>
       </div>

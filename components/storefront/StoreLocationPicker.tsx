@@ -6,8 +6,9 @@ import { useLoadScript } from "@react-google-maps/api";
 import Map, { Marker } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 
-import { TRINIDAD_ONBOARDING_REGION_OPTIONS } from "@/lib/onboarding/tt-region-options";
-import { normalizeRegion } from "@/lib/shipping/trinidad-zoning";
+import {
+  detectOnboardingRegionFromAddress,
+} from "@/lib/onboarding/tt-region-options";
 
 const DEFAULT_LAT = 10.6549;
 const DEFAULT_LNG = -61.5019;
@@ -32,28 +33,117 @@ function extractCityFromComponents(
   return null;
 }
 
-function detectRegionFromAddress(address: string): string | null {
-  if (!address) return null;
-  const normalized = normalizeRegion(address);
+const GEO_LOG_PREFIX = "[StoreLocationPicker/geolocation]";
 
-  for (const option of TRINIDAD_ONBOARDING_REGION_OPTIONS) {
-    const optionNormalized = normalizeRegion(option.value);
-    if (normalized.includes(optionNormalized)) {
-      return option.value;
-    }
-  }
+type ReverseGeocodeResult = {
+  address: string | null;
+  source: "google" | "mapbox" | "none";
+  detail: string;
+};
 
-  const parts = address.split(",").map((p) => p.trim());
-  for (const part of parts) {
-    const partNormalized = normalizeRegion(part);
-    for (const option of TRINIDAD_ONBOARDING_REGION_OPTIONS) {
-      if (normalizeRegion(option.value) === partNormalized) {
-        return option.value;
+/** Reverse-geocode coords: Google Maps Geocoder when present, then Mapbox Geocoding API if needed. */
+async function reverseGeocodeLatLng(
+  lat: number,
+  lng: number,
+  mapboxToken: string,
+): Promise<ReverseGeocodeResult> {
+  console.log(`${GEO_LOG_PREFIX} reverse-geocode chain start`, { lat, lng });
+
+  if (typeof window !== "undefined" && window.google?.maps?.Geocoder) {
+    console.log(`${GEO_LOG_PREFIX} trying Google Maps Geocoder`);
+    const googleOutcome = await new Promise<{ address: string | null; detail: string }>((resolve) => {
+      try {
+        new window.google.maps.Geocoder().geocode({ location: { lat, lng } }, (results, status) => {
+          console.log(`${GEO_LOG_PREFIX} Google Geocoder callback`, {
+            status,
+            resultCount: results?.length ?? 0,
+          });
+          if (status === "OK" && results && results.length > 0) {
+            const best =
+              results.find(
+                (r) =>
+                  r.types.includes("street_address") ||
+                  r.types.includes("premise") ||
+                  r.types.includes("route"),
+              ) ??
+              results.find((r) => !r.formatted_address.includes("+")) ??
+              results[0];
+            resolve({ address: best?.formatted_address ?? null, detail: status });
+          } else {
+            resolve({ address: null, detail: String(status) });
+          }
+        });
+      } catch (e) {
+        console.warn(`${GEO_LOG_PREFIX} Google Geocoder threw`, e);
+        resolve({ address: null, detail: "exception" });
       }
+    });
+    if (googleOutcome.address) {
+      return { address: googleOutcome.address, source: "google", detail: googleOutcome.detail };
+    }
+    console.log(`${GEO_LOG_PREFIX} Google had no usable address; falling back if Mapbox token present`, {
+      detail: googleOutcome.detail,
+    });
+  } else {
+    console.log(`${GEO_LOG_PREFIX} Google Geocoder not on window yet (Places script still loading or no Places key)`);
+  }
+
+  const token = mapboxToken.trim();
+  if (token.length > 0) {
+    // Path must be literally "{longitude},{latitude}" — do not encode the comma (EncodeURIComponent breaks Mapbox 422/errors).
+    // https://api.mapbox.com/geocoding/v5/mapbox.places/{longitude},{latitude}.json?access_token=...
+    const coordPath = `${lng},${lat}`;
+    const query = new URLSearchParams({
+      access_token: token,
+      limit: "1",
+    });
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${coordPath}.json?${query.toString()}`;
+    console.log(`${GEO_LOG_PREFIX} Mapbox reverse URL (coords only; token omitted)`, {
+      urlPattern: `https://api.mapbox.com/geocoding/v5/mapbox.places/${coordPath}.json?access_token=<token>&limit=1`,
+      hasToken: true,
+      tokenLength: token.length,
+      tokenPrefix: `${token.slice(0, 5)}…`,
+    });
+    try {
+      const res = await fetch(url);
+      console.log(`${GEO_LOG_PREFIX} Mapbox HTTP`, { ok: res.ok, status: res.status });
+      const raw = await res.json().catch(() => null);
+      const data = raw as {
+        message?: string;
+        features?: { place_name?: string }[];
+      } | null;
+
+      if (!res.ok || (data?.message && !Array.isArray(data?.features))) {
+        console.warn(`${GEO_LOG_PREFIX} Mapbox error response`, {
+          status: res.status,
+          message: typeof data?.message === "string" ? data.message : raw,
+        });
+        return {
+          address: null,
+          source: "none",
+          detail:
+            typeof data?.message === "string" ? `mapbox_http_${res.status}: ${data.message}` : `mapbox_http_${res.status}`,
+        };
+      }
+
+      const place =
+        Array.isArray(data?.features) && data.features.length > 0 ? data.features[0]?.place_name : null;
+      console.log(`${GEO_LOG_PREFIX} Mapbox body`, {
+        featureCount: data?.features?.length ?? 0,
+        place_name: place ?? "(none)",
+      });
+      return { address: place ?? null, source: place ? "mapbox" : "none", detail: "mapbox" };
+    } catch (e) {
+      console.warn(`${GEO_LOG_PREFIX} Mapbox fetch failed`, e);
+      return { address: null, source: "none", detail: "mapbox_fetch_failed" };
     }
   }
 
-  return null;
+  console.warn(`${GEO_LOG_PREFIX} no reverse-geocode backend (Google unavailable/empty + NEXT_PUBLIC_MAPBOX_TOKEN empty)`, {
+    mapboxEnvPresent: !!process.env.NEXT_PUBLIC_MAPBOX_TOKEN,
+    mapboxTrimmedLength: token.length,
+  });
+  return { address: null, source: "none", detail: "no_provider" };
 }
 
 type Props = {
@@ -108,7 +198,7 @@ function LocationPickerShared({
       const polledAddress = addressInput.value;
       if (polledAddress && polledAddress !== addressValue) {
         setAddressValue(polledAddress);
-        const detected = detectRegionFromAddress(polledAddress);
+        const detected = detectOnboardingRegionFromAddress(polledAddress);
         if (detected) {
           onRegionDetectedRef.current?.(detected);
           setAddressDetectionNote(null);
@@ -141,37 +231,60 @@ function LocationPickerShared({
   const markerLat = lat ?? DEFAULT_LAT;
 
   function handleUseLocation() {
-    if (typeof navigator === "undefined" || !navigator.geolocation) return;
+    console.log(`${GEO_LOG_PREFIX} handleUseLocation click`, {
+      navigatorGeo: typeof navigator !== "undefined" && !!navigator.geolocation,
+      windowGoogle: typeof window !== "undefined" && !!(window as unknown as { google?: unknown }).google,
+    });
+
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      console.warn(`${GEO_LOG_PREFIX} geolocation unavailable`);
+      return;
+    }
     setGeoError(null);
     setGeoLoading(true);
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        fromAutocomplete.current = true;
-        setLat(position.coords.latitude);
-        setLng(position.coords.longitude);
-        if (window.google) {
-          const geocoder = new window.google.maps.Geocoder();
-          geocoder.geocode(
-            { location: { lat: position.coords.latitude, lng: position.coords.longitude } },
-            (results, status) => {
-              if (status === "OK" && results && results.length > 0) {
-                const best =
-                  results.find(
-                    (r) =>
-                      r.types.includes("street_address") ||
-                      r.types.includes("premise") ||
-                      r.types.includes("route"),
-                  ) ??
-                  results.find((r) => !r.formatted_address.includes("+")) ??
-                  results[0];
-                setAddress(best.formatted_address);
-              }
-            },
-          );
+      async (position) => {
+        const plat = position.coords.latitude;
+        const plng = position.coords.longitude;
+        console.log(`${GEO_LOG_PREFIX} getCurrentPosition SUCCESS`, {
+          latitude: plat,
+          longitude: plng,
+          accuracy: position.coords.accuracy,
+        });
+
+        try {
+          fromAutocomplete.current = true;
+          setLat(plat);
+          setLng(plng);
+
+          console.log(`${GEO_LOG_PREFIX} calling reverseGeocodeLatLng`);
+          const geo = await reverseGeocodeLatLng(plat, plng, mapboxToken);
+
+          console.log(`${GEO_LOG_PREFIX} reverse-geocode DONE`, geo);
+          if (geo.address) {
+            console.log(`${GEO_LOG_PREFIX} setAddress(…)`, geo.address.slice(0, 80));
+            setAddress(geo.address);
+            const detected = detectOnboardingRegionFromAddress(geo.address);
+            onRegionDetectedRef.current?.(detected ?? null);
+            setAddressDetectionNote(
+              detected
+                ? null
+                : geo.address.toLowerCase().includes("trinidad") ||
+                    geo.address.toLowerCase().includes("tobago")
+                  ? "We found your location in Trinidad & Tobago but could not identify your specific area. Please select your region below."
+                  : null,
+            );
+          } else {
+            setGeoError("Could not resolve an address from your coordinates. You can drag the pin or type your address.");
+            setAddressDetectionNote(null);
+          }
+        } finally {
+          setGeoLoading(false);
+          console.log(`${GEO_LOG_PREFIX} loading cleared`);
         }
-        setGeoLoading(false);
       },
-      () => {
+      (err) => {
+        console.warn(`${GEO_LOG_PREFIX} getCurrentPosition FAIL`, err);
         setGeoError("Could not get your location. Please type your address.");
         setGeoLoading(false);
       },
@@ -236,33 +349,24 @@ function LocationPickerShared({
               onDragEnd={(e) => {
                 const newLat = e.lngLat.lat;
                 const newLng = e.lngLat.lng;
+                console.log(`${GEO_LOG_PREFIX} marker drag end`, { latitude: newLat, longitude: newLng });
                 setLat(newLat);
                 setLng(newLng);
-                if (window.google) {
-                  const geocoder = new window.google.maps.Geocoder();
-                  geocoder.geocode(
-                    { location: { lat: newLat, lng: newLng } },
-                    (results, status) => {
-                      if (status === "OK" && results && results.length > 0) {
-                        const best =
-                          results.find(
-                            (r) =>
-                              r.types.includes("street_address") ||
-                              r.types.includes("premise") ||
-                              r.types.includes("route"),
-                          ) ??
-                          results.find((r) => !r.formatted_address.includes("+")) ??
-                          results[0];
-                        const geocodedAddress = best.formatted_address;
-                        setAddress(geocodedAddress);
-                        if (onRegionDetectedRef.current) {
-                          const detected = detectRegionFromAddress(geocodedAddress);
-                          onRegionDetectedRef.current(detected);
-                        }
-                      }
-                    },
-                  );
-                }
+                void (async () => {
+                  console.log(`${GEO_LOG_PREFIX} drag → reverseGeocodeLatLng`);
+                  const geo = await reverseGeocodeLatLng(newLat, newLng, mapboxToken);
+                  console.log(`${GEO_LOG_PREFIX} drag reverse-geocode DONE`, geo);
+                  if (geo.address) {
+                    console.log(`${GEO_LOG_PREFIX} drag setAddress`, geo.address.slice(0, 80));
+                    setAddress(geo.address);
+                    if (onRegionDetectedRef.current) {
+                      const detected = detectOnboardingRegionFromAddress(geo.address);
+                      onRegionDetectedRef.current(detected);
+                    }
+                  } else {
+                    console.warn(`${GEO_LOG_PREFIX} drag found no address`, geo);
+                  }
+                })();
               }}
             >
               <div
@@ -348,10 +452,10 @@ function StoreLocationPickerWithGoogle({ googleMapsApiKey, ...props }: Props & {
 
       let detectedRegion: string | null = null;
       if (cityFromComponents) {
-        detectedRegion = detectRegionFromAddress(cityFromComponents);
+        detectedRegion = detectOnboardingRegionFromAddress(cityFromComponents);
       }
       if (!detectedRegion) {
-        detectedRegion = detectRegionFromAddress(place.formatted_address ?? "");
+        detectedRegion = detectOnboardingRegionFromAddress(place.formatted_address ?? "");
       }
       if (!detectedRegion) {
         detectedRegion = null;

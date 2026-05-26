@@ -1,11 +1,13 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { Package } from "lucide-react";
 
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
-import { prisma } from "@/lib/prisma";
 import PublicNav from "@/components/layout/PublicNav";
+import { icn } from "@/lib/iconography";
+import { prisma } from "@/lib/prisma";
 
 import OrdersClient from "./orders-client";
 
@@ -51,7 +53,7 @@ export default async function OrdersPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-16 sm:pb-0">
+    <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
       <PublicNav
         user={
           userRecord
@@ -72,7 +74,7 @@ export default async function OrdersPage() {
 
         {orders.length === 0 ? (
           <div className="py-16 text-center">
-            <p className="mb-4 text-4xl">📦</p>
+            <Package className={`${icn.empty} mx-auto mb-4`} aria-hidden strokeWidth={1.25} />
             <h2 className="mb-2 text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
               No orders yet
             </h2>

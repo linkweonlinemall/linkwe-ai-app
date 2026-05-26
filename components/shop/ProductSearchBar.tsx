@@ -1,9 +1,12 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { useEffect, useRef, useState } from "react"
+import Link from "next/link";
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 
-import { getRegionLabel } from "@/lib/regions/tt-regions"
+import { getRegionLabel } from "@/lib/regions/tt-regions";
+import { NotificationRowSkeleton } from "@/components/ui/content-skeletons";
+import Skeleton from "@/components/ui/skeleton";
 
 type ProductResult = {
   id: string
@@ -28,8 +31,24 @@ export default function ProductSearchBar({ defaultValue = "", category = "" }: P
   const [results, setResults] = useState<ProductResult[]>([])
   const [loading, setLoading] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    function focusShopSearch(): void {
+      if (typeof window === "undefined") return;
+      if (window.location.hash !== "#shop-search") return;
+      window.setTimeout(() => {
+        containerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        inputRef.current?.focus();
+      }, 100);
+    }
+
+    focusShopSearch();
+    window.addEventListener("hashchange", focusShopSearch);
+    return () => window.removeEventListener("hashchange", focusShopSearch);
+  }, []);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -49,7 +68,8 @@ export default function ProductSearchBar({ defaultValue = "", category = "" }: P
     }
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
-      setLoading(true)
+      setLoading(true);
+      setShowDropdown(true);
       try {
         const params = new URLSearchParams({ q: query })
         if (category && category !== "all") params.set("category", category)
@@ -77,37 +97,54 @@ export default function ProductSearchBar({ defaultValue = "", category = "" }: P
   }
 
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div
+      id="shop-search"
+      ref={containerRef}
+      className="relative w-full scroll-mt-[calc(3.5rem+env(safe-area-inset-top,0px))]"
+    >
       <div className="flex gap-2">
-        <div className="relative flex-1">
+        <div className="relative min-w-0 flex-1">
           <input
+            ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => results.length > 0 && setShowDropdown(true)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             placeholder="Search products..."
-            className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 pr-10 text-sm
-              focus:border-[#D4450A] focus:outline-none"
+            className="min-h-[44px] w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 pr-10 text-base focus:border-[#D4450A] focus:outline-none md:min-h-0 md:text-sm"
           />
-          {loading && (
+          {loading ? (
             <div className="absolute top-1/2 right-3 -translate-y-1/2">
-              <div
-                className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-200 border-t-[#D4450A]"
-              />
+              <Skeleton className="h-8 w-8 rounded-full" />
             </div>
-          )}
+          ) : null}
         </div>
         <button
           type="button"
           onClick={handleSearch}
-          className="rounded-xl bg-[#D4450A] px-5 py-2.5 text-sm
-            font-medium whitespace-nowrap text-white hover:opacity-90"
+          className="min-h-[44px] shrink-0 rounded-xl bg-[#D4450A] px-5 py-2.5 text-base font-medium whitespace-nowrap text-white hover:opacity-90 md:min-h-0 md:text-sm"
         >
           Search
         </button>
       </div>
 
-      {showDropdown && results.length > 0 && (
+      {showDropdown && loading && query.trim() ? (
+        <div
+          className="absolute top-full right-0 left-0 z-[200] mt-2 overflow-hidden rounded-xl
+            border border-zinc-200 bg-white shadow-2xl"
+        >
+          <div className="border-b border-zinc-100 bg-zinc-50 px-3 py-2">
+            <p className="text-xs font-medium text-zinc-400">Searching…</p>
+          </div>
+          <div className="divide-y divide-zinc-50 py-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <NotificationRowSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {showDropdown && !loading && results.length > 0 && (
         <div
           className="absolute top-full right-0 left-0 z-[200] mt-2 overflow-hidden rounded-xl
             border border-zinc-200 bg-white shadow-2xl"
@@ -123,10 +160,17 @@ export default function ProductSearchBar({ defaultValue = "", category = "" }: P
               onClick={() => setShowDropdown(false)}
               className="flex items-start gap-3 border-b border-zinc-100 px-4 py-3 transition-colors last:border-0 hover:bg-zinc-50"
             >
-              <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-zinc-100">
+              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-zinc-100">
                 {product.images[0] ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={product.images[0]} alt="" className="h-full w-full object-cover" />
+                  <Image
+                    src={product.images[0]}
+                    alt=""
+                    width={56}
+                    height={56}
+                    className="h-full w-full object-cover"
+                    sizes="56px"
+                    loading="lazy"
+                  />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center">
                     <span className="text-xl text-zinc-300">📦</span>

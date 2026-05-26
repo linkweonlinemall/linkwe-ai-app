@@ -24,7 +24,7 @@ export default async function CustomerSettingsPage() {
   if (!user) redirect("/login");
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-16 sm:pb-0">
+    <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
       <div className="mx-auto max-w-2xl px-4 py-12">
         <div className="mb-8">
           <h1 className="text-2xl font-black text-zinc-900">Account settings</h1>

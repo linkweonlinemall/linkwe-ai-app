@@ -6,10 +6,11 @@ import { NotificationType } from "@prisma/client";
 
 import { createNotification } from "@/app/actions/notifications";
 import { getSession } from "@/lib/auth/session";
+import { BASE_URL } from "@/lib/email/resend";
 import { prisma } from "@/lib/prisma";
+import { VENDOR_DASHBOARD_REVIEWS_TAB_HREF } from "@/lib/routes/vendor-dashboard";
 import { sendEmail } from "@/lib/email/send";
 import { newReviewVendorEmail } from "@/lib/email/templates";
-import { BASE_URL } from "@/lib/email/resend";
 
 // Submit a product or service review
 export async function submitProductReview(input: {
@@ -93,7 +94,7 @@ export async function submitProductReview(input: {
         productName: reviewForEmail.product.name,
         rating: reviewForEmail.rating,
         body: reviewForEmail.body,
-        dashboardUrl: `${BASE_URL}/dashboard/vendor/reviews`,
+        dashboardUrl: `${BASE_URL}${VENDOR_DASHBOARD_REVIEWS_TAB_HREF}`,
       }),
     });
   }
@@ -108,7 +109,7 @@ export async function submitProductReview(input: {
       type: NotificationType.REVIEW_RECEIVED,
       title: `New ${input.rating}-star review`,
       body: `On ${reviewForEmail?.product?.name ?? "your product"}`,
-      linkUrl: `/dashboard/vendor/reviews`,
+      linkUrl: VENDOR_DASHBOARD_REVIEWS_TAB_HREF,
     });
   }
 

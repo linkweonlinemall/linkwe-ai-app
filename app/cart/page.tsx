@@ -1,21 +1,125 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { Check, Package, ShoppingBag } from "lucide-react";
 
-import { getCart, removeFromCart, updateCartQuantity } from "@/app/actions/cart";
+import { getCart, updateCartQuantity } from "@/app/actions/cart";
+import CartRemoveButton from "@/components/cart/CartRemoveButton";
+import CartRecommendationsRow, {
+  type CartRecommendation,
+} from "@/components/cart/CartRecommendationsRow";
+import PublicNav from "@/components/layout/PublicNav";
+import EmptyState from "@/components/ui/empty-state";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import PublicNav from "@/components/layout/PublicNav";
+import { StoreStatus } from "@prisma/client";
+import { typography, radius, shadow, spacing, tw } from "@/lib/design-system";
 
 export const metadata: Metadata = {
   title: "Your cart",
   description: "Review your cart and proceed to checkout.",
 };
 
+const FREE_DELIVERY_THRESHOLD_TTD = 200;
+
+const PRODUCT_REC_SELECT = {
+  id: true,
+  name: true,
+  slug: true,
+  price: true,
+  images: true,
+  store: { select: { name: true, slug: true } },
+} as const;
+
+function addDays(base: Date, days: number): Date {
+  const d = new Date(base);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function estimatedDeliveryRangeLabel(userRegion: string | null | undefined): string {
+  const norm = (userRegion ?? "").toLowerCase();
+  let minOffset = 2;
+  let maxOffset = 4;
+  if (norm.includes("tobago")) {
+    minOffset = 3;
+    maxOffset = 5;
+  } else if (["rio claro", "point fortin", "penal", "moruga", "siparia"].some((h) => norm.includes(h))) {
+    minOffset = 3;
+    maxOffset = 6;
+  }
+  const start = addDays(new Date(), minOffset);
+  const end = addDays(new Date(), maxOffset);
+  const fmtStart = start.toLocaleDateString("en-TT", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+  const fmtEnd = end.toLocaleDateString("en-TT", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  return `Estimated delivery: ${fmtStart} – ${fmtEnd}`;
+}
+
+async function fetchCartRecommendations(
+  cartProductIds: string[],
+  storeSlug: string | null,
+): Promise<CartRecommendation[]> {
+  const uniqExclude = [...new Set(cartProductIds)];
+  const baseExclude = uniqExclude.length > 0 ? { id: { notIn: uniqExclude } as const } : {};
+
+  let picked: CartRecommendation[] = [];
+
+  if (storeSlug) {
+    const store = await prisma.store.findFirst({
+      where: { slug: storeSlug, status: StoreStatus.ACTIVE },
+      select: { id: true },
+    });
+    if (store) {
+      picked = await prisma.product.findMany({
+        where: {
+          isPublished: true,
+          isService: false,
+          hasVariants: false,
+          storeId: store.id,
+          ...baseExclude,
+        },
+        orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+        take: 4,
+        select: PRODUCT_REC_SELECT,
+      });
+    }
+  }
+
+  if (picked.length < 4) {
+    const usedIds = [...uniqExclude, ...picked.map((p) => p.id)];
+    const more = await prisma.product.findMany({
+      where: {
+        isPublished: true,
+        isService: false,
+        hasVariants: false,
+        ...(usedIds.length > 0 ? { id: { notIn: usedIds } } : {}),
+      },
+      orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+      take: 4 - picked.length,
+      select: PRODUCT_REC_SELECT,
+    });
+    picked = [...picked, ...more];
+  }
+
+  return picked.slice(0, 4);
+}
+
 export default async function CartPage() {
   const session = await getSession();
   const user = session
-    ? await prisma.user.findUnique({ where: { id: session.userId } })
+    ? await prisma.user.findUnique({
+        where: { id: session.userId },
+        select: { fullName: true, role: true, region: true },
+      })
     : null;
   const continueHref = user ? getRoleDashboardPath(user.role) : null;
 
@@ -34,175 +138,180 @@ export default async function CartPage() {
   }, 0);
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
 
+  const recommendations = await fetchCartRecommendations(
+    items.map((i) => i.productId),
+    items.length > 0 ? items[0]!.product.store.slug : null,
+  );
+
+  const amountToFree = Math.max(0, FREE_DELIVERY_THRESHOLD_TTD - total);
+  const freeProgressPct = Math.min(100, (total / FREE_DELIVERY_THRESHOLD_TTD) * 100);
+  const deliveryEstimate = estimatedDeliveryRangeLabel(user?.region ?? null);
+
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-16 sm:pb-0">
+    <div className={`min-h-screen pb-16 ${tw.fontSans} antialiased sm:pb-0 ${tw.bgPage}`}>
       <PublicNav
         user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null}
         dashboardHref={continueHref ?? undefined}
       />
 
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-        <div className="mb-6 flex flex-col gap-3 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between">
-          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+      <div className={`mx-auto max-w-5xl px-4 py-8 sm:px-6`}>
+        <div className="mb-8">
+          <h1 className={`${typography.h3} ${tw.textPrimary}`}>
             Your Cart
-            <span className="ml-2 text-base font-normal" style={{ color: "var(--text-muted)" }}>
+            <span className={`ml-2 ${typography.body} font-medium text-zinc-500`}>
               ({itemCount} item{itemCount !== 1 ? "s" : ""})
             </span>
           </h1>
-          <a
-            href="/shop"
-            className="w-fit shrink-0 text-sm hover:underline min-[400px]:ml-auto"
-            style={{ color: "var(--blue)" }}
-          >
-            Continue shopping
-          </a>
         </div>
 
         {items.length === 0 ? (
-          <div className="py-20 text-center">
-            <p className="mb-4 text-5xl">🛒</p>
-            <h2 className="mb-2 text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
-              Your cart is empty
-            </h2>
-            <p className="mb-6 text-sm" style={{ color: "var(--text-muted)" }}>
-              Browse stores to find products you&apos;ll love
-            </p>
-            <a
-              href="/shop"
-              className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white"
-              style={{ backgroundColor: "var(--scarlet)" }}
-            >
-              Start shopping →
-            </a>
-          </div>
+          <>
+            <div className={`${radius.card} bg-white ${shadow.card}`}>
+              <EmptyState
+                icon={<ShoppingBag strokeWidth={1.25} className="text-current" />}
+                title="Your cart is empty"
+                description="Discover local vendors across Trinidad & Tobago."
+                actionLabel="Start shopping"
+                actionHref="/shop"
+              />
+            </div>
+            {recommendations.length > 0 ? <CartRecommendationsRow products={recommendations} /> : null}
+          </>
         ) : (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <div className="min-w-0 flex flex-col gap-3 lg:col-span-2">
-              {items.map((item) => {
-                const img = item.product.images[0];
-                const atMaxStock =
-                  item.product.stock !== null && item.quantity >= item.product.stock;
-                return (
-                  <div
-                    key={item.id}
-                    className="flex min-w-0 gap-4 rounded-xl bg-white p-4"
-                    style={{ border: "1px solid var(--card-border)" }}
-                  >
-                    <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-zinc-100">
-                      {img ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={img} alt="" className="h-full w-full object-cover" />
-                      ) : null}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <Link href={`/store/${item.product.store.slug}`} className="text-xs hover:underline" style={{ color: "var(--text-muted)" }}>
-                        {item.product.store.name}
-                      </Link>
-                      {item.variant ? (
-                        <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                          {(item.variant.attributes as { name: string; value: string }[]).map((a) => a.value).join(" / ")}
+          <div className={`grid grid-cols-1 lg:grid-cols-3 ${spacing.cardGap}`}>
+            <div className="min-w-0 space-y-4 lg:col-span-2">
+              <div className={`flex flex-col gap-4 ${radius.card} bg-white ${spacing.cardPadding} ${shadow.card}`}>
+                {items.map((item) => {
+                  const img = item.product.images[0];
+                  const atMaxStock =
+                    item.product.stock !== null && item.quantity >= item.product.stock;
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex min-w-0 gap-5 border-b border-zinc-100 pb-5 last:border-0 last:pb-0"
+                    >
+                      <div className={`flex h-[88px] w-[88px] shrink-0 overflow-hidden ${radius.card} bg-zinc-100 ${shadow.card}`}>
+                        {img ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={img} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full items-center justify-center">
+                            <Package className="size-10 text-zinc-300" strokeWidth={1.25} aria-hidden />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <Link href={`/store/${item.product.store.slug}`} className={`text-xs text-zinc-500 ${tw.hoverTextScarlet}`}>
+                          {item.product.store.name}
+                        </Link>
+                        {item.variant ? (
+                          <p className="text-xs text-zinc-500">
+                            {(item.variant.attributes as { name: string; value: string }[])
+                              .map((a) => a.value)
+                              .join(" / ")}
+                          </p>
+                        ) : null}
+                        <Link href={`/products/${item.product.slug}`}>
+                          <p className={`${typography.bodySmall} font-semibold ${tw.textPrimary} ${tw.hoverTextScarlet}`}>{item.product.name}</p>
+                        </Link>
+                        <p className={`mt-2 ${typography.body} font-bold ${tw.textScarlet}`}>
+                          TTD {(item.variant?.price ?? item.product.price).toFixed(2)}
                         </p>
-                      ) : null}
-                      <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                        {item.product.name}
-                      </p>
-                      <p className="mt-1 text-sm font-bold" style={{ color: "var(--scarlet)" }}>
-                        TTD {(item.variant?.price ?? item.product.price).toFixed(2)}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 flex-col items-end justify-between self-stretch">
-                      <form action={removeFromCart.bind(null, item.productId)}>
-                        <button
-                          type="submit"
-                          className="text-xs hover:text-red-500"
-                          style={{ color: "var(--text-faint)" }}
-                        >
-                          Remove
-                        </button>
-                      </form>
-                      <div
-                        className="flex items-center gap-2 rounded-lg border px-2 py-1"
-                        style={{ borderColor: "var(--card-border)" }}
-                      >
-                        <form action={updateCartQuantity.bind(null, item.productId, item.quantity - 1)}>
-                          <button
-                            type="submit"
-                            className="flex h-6 w-6 items-center justify-center text-lg font-medium"
-                            style={{ color: "var(--text-muted)" }}
-                          >
-                            −
-                          </button>
-                        </form>
-                        <span
-                          className="w-6 text-center text-sm font-semibold"
-                          style={{ color: "var(--text-primary)" }}
-                        >
-                          {item.quantity}
-                        </span>
-                        <form action={updateCartQuantity.bind(null, item.productId, item.quantity + 1)}>
-                          <button
-                            type="submit"
-                            disabled={atMaxStock}
-                            className="flex h-6 w-6 items-center justify-center text-lg font-medium disabled:opacity-40"
-                            style={{ color: "var(--text-muted)" }}
-                          >
-                            +
-                          </button>
-                        </form>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end justify-between self-stretch">
+                        <CartRemoveButton productId={item.productId} productName={item.product.name} />
+                        <div className={`flex min-h-[44px] items-center gap-2 ${radius.card} border border-zinc-200 bg-zinc-50 px-2`}>
+                          <form action={updateCartQuantity.bind(null, item.productId, item.quantity - 1)}>
+                            <button
+                              type="submit"
+                              className={`flex min-h-[44px] min-w-[44px] items-center justify-center text-lg font-medium text-zinc-700 hover:bg-white`}
+                            >
+                              −
+                            </button>
+                          </form>
+                          <span className={`min-w-[1.75rem] text-center ${typography.bodySmall} font-semibold ${tw.textPrimary}`}>{item.quantity}</span>
+                          <form action={updateCartQuantity.bind(null, item.productId, item.quantity + 1)}>
+                            <button
+                              type="submit"
+                              disabled={atMaxStock}
+                              className={`flex min-h-[44px] min-w-[44px] items-center justify-center text-lg font-medium text-zinc-700 hover:bg-white disabled:opacity-35`}
+                            >
+                              +
+                            </button>
+                          </form>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+              <CartRecommendationsRow products={recommendations} />
             </div>
 
             <div className="lg:col-span-1">
-              <div
-                className="rounded-xl bg-white p-5 lg:sticky lg:top-24"
-                style={{ border: "1px solid var(--card-border)" }}
-              >
-                <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                  Order Summary
-                </h2>
-                <div className="flex justify-between py-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+              <div className={`space-y-4 ${radius.card} bg-white ${spacing.cardPadding} ${shadow.card} lg:sticky lg:top-24`}>
+                {amountToFree > 0 ? (
+                  <div>
+                    <p className={`${typography.bodySmall} font-semibold ${tw.textPrimary}`}>
+                      Add TTD {amountToFree.toFixed(2)} more for free delivery
+                    </p>
+                    <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-zinc-100">
+                      <div
+                        className={`h-full ${radius.pill} ${tw.bgScarlet} transition-all`}
+                        style={{ width: `${freeProgressPct}%` }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <p className={`inline-flex items-center gap-2 ${radius.card} bg-emerald-50 px-3 py-2 ${typography.bodySmall} font-semibold text-emerald-700`}>
+                    <Check className="size-4 shrink-0 text-emerald-600" aria-hidden strokeWidth={2.5} />
+                    You&apos;ve unlocked free delivery
+                  </p>
+                )}
+
+                <h2 className={`${typography.h4} ${tw.textPrimary}`}>Order Summary</h2>
+                <div className={`flex justify-between py-2 ${typography.bodySmall} text-zinc-600`}>
                   <span>Subtotal</span>
                   <span>TTD {total.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between py-2 text-sm" style={{ color: "var(--text-secondary)" }}>
-                  <span>Delivery</span>
-                  <span>Calculated at checkout</span>
+                <div className={`flex flex-col gap-0.5 py-2 ${typography.bodySmall} text-zinc-600`}>
+                  <div className="flex justify-between">
+                    <span>Delivery</span>
+                    <span>Calculated at checkout</span>
+                  </div>
+                  <p className="text-xs text-zinc-500">{deliveryEstimate}</p>
                 </div>
-                <div className="my-3 border-t" style={{ borderColor: "var(--card-border-subtle)" }} />
+                <div className="border-t border-zinc-100 pt-4" />
                 <div className="flex justify-between">
-                  <span className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
-                    Total
-                  </span>
-                  <span className="text-lg font-bold" style={{ color: "var(--scarlet)" }}>
-                    TTD {total.toFixed(2)}
-                  </span>
+                  <span className={`${typography.bodySmall} font-bold ${tw.textPrimary}`}>Total</span>
+                  <span className={`text-lg font-bold ${tw.textScarlet}`}>TTD {total.toFixed(2)}</span>
                 </div>
-                <Link
-                  href="/checkout"
-                  className="mt-4 flex w-full items-center justify-center rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                  style={{ backgroundColor: "var(--scarlet)" }}
-                >
-                  Checkout
-                </Link>
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:gap-3">
+                  <Link
+                    href="/checkout"
+                    className={`flex flex-1 items-center justify-center ${radius.button} ${tw.bgScarlet} px-5 py-3 text-center text-sm font-bold text-white ${shadow.card} transition-opacity hover:opacity-90`}
+                  >
+                    Checkout
+                  </Link>
+                  <Link
+                    href="/shop"
+                    className={`flex flex-1 items-center justify-center ${radius.button} border-2 border-zinc-900/20 bg-transparent px-5 py-3 text-center text-sm font-bold ${tw.textPrimary} ${shadow.card} transition-colors hover:border-zinc-900/40`}
+                  >
+                    Continue shopping
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      <footer
-        className="mt-12 py-6 text-center"
-        style={{ borderTop: "1px solid var(--card-border-subtle)" }}
-      >
-        <p className="text-xs" style={{ color: "var(--text-faint)" }}>
-          <a href="/" style={{ color: "var(--scarlet)" }}>
+      <footer className="mt-12 py-6 text-center">
+        <p className="text-xs text-zinc-400">
+          <Link href="/" className={`font-semibold ${tw.textScarlet} hover:underline`}>
             LinkWe
-          </a>{" "}
-          — Trinidad & Tobago&apos;s Marketplace
+          </Link>{" "}
+          — Trinidad &amp; Tobago&apos;s Marketplace
         </p>
       </footer>
     </div>

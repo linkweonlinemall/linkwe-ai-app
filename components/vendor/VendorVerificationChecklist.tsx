@@ -1,11 +1,14 @@
 "use client";
 
 import type { FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import type { IdVerificationStatus } from "@prisma/client";
 
 import { savePayoutDetails, uploadIdDocument } from "@/app/actions/vendor-verification";
+import { toastChangesSaved, toastImageUploaded } from "@/lib/feedback/toasts";
+import { maskBankAccountBullets } from "@/lib/format/banking";
 
 const TT_BANKS = [
   "Republic Bank",
@@ -39,6 +42,7 @@ export default function VendorVerificationChecklist({
   accountType,
   embedded = false,
 }: Props) {
+  const router = useRouter();
   const [uploadLoading, setUploadLoading] = useState(false);
   const [payoutLoading, setPayoutLoading] = useState(false);
   const [uploadError, setUploadError] = useState("");
@@ -62,6 +66,7 @@ export default function VendorVerificationChecklist({
     if (result.ok) {
       setCurrentIdStatus("PENDING");
       setUploadSuccess(true);
+      toastImageUploaded("ID submitted for review");
     } else {
       setUploadError(result.error ?? "Upload failed");
     }
@@ -77,6 +82,8 @@ export default function VendorVerificationChecklist({
     if (result.ok) {
       setHasPayout(true);
       setPayoutSuccess(true);
+      toastChangesSaved();
+      router.refresh();
     } else {
       setPayoutError(result.error ?? "Save failed");
     }
@@ -244,12 +251,23 @@ export default function VendorVerificationChecklist({
                 required
                 className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:border-[#D4450A] focus:outline-none"
               />
+              {accountNumber?.trim() ? (
+                <p className="text-xs leading-relaxed text-zinc-700">
+                  <span className="text-zinc-500">Saved account number </span>
+                  <span className="font-mono font-medium text-zinc-900">{maskBankAccountBullets(accountNumber)}</span>
+                </p>
+              ) : null}
               <input
                 name="accountNumber"
-                defaultValue={accountNumber ?? ""}
-                placeholder="Account number"
-                required
-                className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:border-[#D4450A] focus:outline-none"
+                defaultValue=""
+                autoComplete="off"
+                required={!accountNumber?.trim()}
+                placeholder={
+                  accountNumber?.trim()
+                    ? "Leave blank to keep saved number — or enter a new one"
+                    : "Account number"
+                }
+                className="w-full rounded-xl border border-zinc-200 px-3 py-2 font-mono text-sm focus:border-[#D4450A] focus:outline-none"
               />
               <select
                 name="accountType"

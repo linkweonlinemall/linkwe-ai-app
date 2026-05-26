@@ -1,11 +1,14 @@
 import { redirect } from "next/navigation";
+import { ShieldCheck } from "lucide-react";
 
-import AvailabilityToggle from "@/components/vendor/AvailabilityToggle";
 import VendorDashboardTabs from "@/app/(dashboard)/dashboard/vendor/components/vendor-dashboard-tabs";
 import VendorVerificationChecklist from "@/components/vendor/VendorVerificationChecklist";
+import { getVendorReviewStats } from "@/app/actions/vendor-reviews";
 import { getSession } from "@/lib/auth/session";
 import { assertDashboardRole } from "@/lib/auth/assert-role";
 import { prisma } from "@/lib/prisma";
+import { getVendorDashboardAnalytics } from "@/lib/vendor/vendor-dashboard-analytics";
+import { radius, shadow, colors } from "@/lib/design-system";
 
 const DASHBOARD_MESSAGES: Record<string, string> = {
   bank_fields_required: "All bank detail fields are required.",
@@ -13,12 +16,30 @@ const DASHBOARD_MESSAGES: Record<string, string> = {
   store_saved: "Store saved successfully.",
 };
 
-type Props = { searchParams: Promise<{ error?: string; success?: string }> };
+type Props = { searchParams: Promise<{ error?: string; success?: string; tab?: string }> };
+
+const LEGACY_TAB_ROUTES: Record<string, string> = {
+  orders: "/dashboard/vendor/orders",
+  finance: "/dashboard/vendor/finance",
+  messages: "/dashboard/vendor/messages",
+  reviews: "/dashboard/vendor/reviews",
+};
 
 export default async function VendorDashboardPage({ searchParams }: Props) {
   const session = await getSession();
   if (!session) redirect("/login");
   assertDashboardRole(session, "VENDOR");
+
+  const sp = await searchParams;
+
+  const legacyTab = sp.tab !== undefined && sp.tab !== "" ? String(sp.tab) : "";
+  if (legacyTab && LEGACY_TAB_ROUTES[legacyTab]) {
+    const qs = new URLSearchParams();
+    if (sp.success) qs.set("success", String(sp.success));
+    if (sp.error) qs.set("error", String(sp.error));
+    const suffix = qs.toString();
+    redirect(`${LEGACY_TAB_ROUTES[legacyTab]}${suffix ? `?${suffix}` : ""}`);
+  }
 
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
@@ -64,26 +85,6 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
       longitude: true,
       address: true,
       images: { select: { id: true } },
-      ledgerEntries: {
-        select: {
-          id: true,
-          amountMinor: true,
-          entryType: true,
-          ledgerEntryType: true,
-          description: true,
-          createdAt: true,
-        },
-        orderBy: { createdAt: "desc" },
-      },
-      payoutRequests: {
-        select: {
-          id: true,
-          amountMinor: true,
-          status: true,
-          requestedAt: true,
-        },
-        orderBy: { requestedAt: "desc" },
-      },
     },
   });
   if (!store) redirect("/onboarding/business/step-3");
@@ -125,7 +126,6 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
     },
   });
 
-  const sp = await searchParams;
   const dashboardErrorKey = sp.error;
   const dashboardSuccessKey = sp.success;
   const dashboardErrorMessage =
@@ -150,54 +150,49 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
 
   const completedCount = completenessItems.filter((i) => i.done).length;
   const totalCount = completenessItems.length;
-  const completionPercent = Math.round((completedCount / totalCount) * 100);
+
+  const dashboardAnalytics = await getVendorDashboardAnalytics(store.id);
+  const reviewSummary = await getVendorReviewStats();
 
   return (
-    <>
-      <div className="border-b border-zinc-100 bg-white px-4 py-4 md:px-8">
-        <AvailabilityToggle initialAvailable={store.isAvailableNow} />
-      </div>
-      <div className="flex flex-col pb-24 sm:pb-0 md:flex-row">
-      <VendorDashboardTabs
-        store={store}
-        listings={listings}
-        splitOrders={splitOrders}
-        bankDetails={user.bankDetails}
-        ledgerEntries={store.ledgerEntries}
-        payoutRequests={store.payoutRequests}
-        completenessItems={completenessItems}
-        completedCount={completedCount}
-        totalCount={totalCount}
-        completionPercent={completionPercent}
-        dashboardSuccessMessage={dashboardSuccessMessage}
-        dashboardErrorMessage={dashboardErrorMessage}
-        verificationApprovedBanner={
-          user.idVerificationStatus === "APPROVED" ? (
-            <div key="verification-banner" className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                <polyline points="9 12 11 14 15 10" />
-              </svg>
-              <div>
-                <p className="text-xs font-bold text-emerald-800">Confirmed to sell ✓</p>
-                <p className="text-[10px] text-emerald-600">Identity verified — store is live on LinkWe</p>
-              </div>
+    <VendorDashboardTabs
+      store={store}
+      listings={listings}
+      splitOrders={splitOrders}
+      completenessItems={completenessItems}
+      completedCount={completedCount}
+      totalCount={totalCount}
+      dashboardAnalytics={dashboardAnalytics}
+      reviewSummary={reviewSummary}
+      initialAvailableNow={store.isAvailableNow}
+      dashboardSuccessMessage={dashboardSuccessMessage}
+      dashboardErrorMessage={dashboardErrorMessage}
+      verificationApprovedBanner={
+        user.idVerificationStatus === "APPROVED" ? (
+          <div
+            key="verification-banner"
+            className={`mt-3 flex items-center gap-2 ${radius.card} border border-y border-r border-emerald-100 border-l-4 bg-emerald-50/80 px-4 py-2.5 ${shadow.card}`}
+            style={{ borderLeftColor: colors.success }}
+          >
+            <ShieldCheck className="size-4 shrink-0 text-emerald-700" aria-hidden strokeWidth={2.25} />
+            <div>
+              <p className="text-xs font-bold text-emerald-800">Confirmed to sell</p>
+              <p className="text-[10px] text-emerald-600">Identity verified — store is live on LinkWe</p>
             </div>
-          ) : undefined
-        }
-        verificationChecklist={
-          <VendorVerificationChecklist
-            embedded
-            idStatus={user.idVerificationStatus}
-            idDocumentUrl={user.idDocumentUrl}
-            bankName={user.bankDetails?.bankName ?? null}
-            accountName={user.bankDetails?.accountName ?? null}
-            accountNumber={user.bankDetails?.accountNumber ?? null}
-            accountType={user.bankDetails?.accountType ?? null}
-          />
-        }
-      />
-      </div>
-    </>
+          </div>
+        ) : undefined
+      }
+      verificationChecklist={
+        <VendorVerificationChecklist
+          embedded
+          idStatus={user.idVerificationStatus}
+          idDocumentUrl={user.idDocumentUrl}
+          bankName={user.bankDetails?.bankName ?? null}
+          accountName={user.bankDetails?.accountName ?? null}
+          accountNumber={user.bankDetails?.accountNumber ?? null}
+          accountType={user.bankDetails?.accountType ?? null}
+        />
+      }
+    />
   );
 }

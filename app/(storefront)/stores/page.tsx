@@ -15,6 +15,7 @@ import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { prisma } from "@/lib/prisma";
+import { tw } from "@/lib/design-system";
 
 export const metadata: Metadata = {
   title: "Discover stores · LinkWe",
@@ -123,7 +124,7 @@ export default async function StoresDiscoveryPage({
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-16 sm:pb-0">
+    <div className={`min-h-screen pb-mobile-public lg:pb-0 ${tw.bgPage} ${tw.fontSans} antialiased`}>
       <PublicNav
         user={
           navUser ? { name: navUser.fullName ?? "Account", href: continueHref! } : null

@@ -168,7 +168,7 @@ function StoreTabProductCard({ product }: { product: StoreTabProduct }) {
               {product.hasVariants ? (
                 <ProductCardChooseOptionsLink slug={product.slug} />
               ) : (
-                <AddToCartButton productId={product.id} stock={product.stock} />
+                <AddToCartButton productId={product.id} productName={product.name} stock={product.stock} />
               )}
             </div>
           </div>

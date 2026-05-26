@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -330,19 +331,22 @@ export default async function PublicStoreSlugPage({ params, searchParams }: Prop
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {catalog.items.map((product) => (
                   <div
                     key={product.id}
                     className="group overflow-hidden rounded-xl bg-white shadow-sm transition-all hover:shadow-md"
                   >
                     <Link href={`/products/${product.slug}`} className="block">
-                      <div className="aspect-square overflow-hidden bg-zinc-100">
+                      <div className="relative aspect-square overflow-hidden bg-zinc-100">
                         {product.images[0] ? (
-                          <img
+                          <Image
                             src={product.images[0]}
                             alt={product.name}
-                            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                            fill
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            loading="lazy"
+                            className="object-cover transition-transform duration-200 group-hover:scale-105"
                           />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center">

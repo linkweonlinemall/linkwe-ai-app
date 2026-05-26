@@ -291,7 +291,7 @@ export default function ShopFilters({
                 setBrand(e.target.value);
                 applyFilters({ brand: e.target.value });
               }}
-              className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-xs font-medium text-zinc-700 focus:border-[#D4450A] focus:outline-none"
+              className="w-full max-lg:min-h-[44px] rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-xs font-medium text-zinc-700 focus:border-[#D4450A] focus:outline-none lg:min-h-0 max-lg:text-base max-lg:py-3"
             >
               <option value="">All brands</option>
               {availableBrands.map((b) => (
@@ -309,24 +309,26 @@ export default function ShopFilters({
           <div className="mb-2 flex items-center gap-1.5">
             <input
               type="number"
+              inputMode="decimal"
               value={priceMin}
               onChange={(e) => setPriceMin(e.target.value)}
               placeholder="Min"
-              className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-xs focus:border-[#D4450A] focus:outline-none"
+              className="w-full max-lg:min-h-[44px] rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-xs focus:border-[#D4450A] focus:outline-none lg:min-h-0 max-lg:text-base max-lg:py-3"
             />
             <span className="shrink-0 text-xs text-zinc-400">–</span>
             <input
               type="number"
+              inputMode="decimal"
               value={priceMax}
               onChange={(e) => setPriceMax(e.target.value)}
               placeholder="Max"
-              className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-xs focus:border-[#D4450A] focus:outline-none"
+              className="w-full max-lg:min-h-[44px] rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-xs focus:border-[#D4450A] focus:outline-none lg:min-h-0 max-lg:text-base max-lg:py-3"
             />
           </div>
           <button
             type="button"
             onClick={() => applyFilters()}
-            className="w-full rounded-lg bg-zinc-900 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-zinc-700"
+            className="w-full max-lg:min-h-[44px] rounded-lg bg-zinc-900 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-zinc-700 lg:min-h-0 max-lg:text-base max-lg:py-3"
           >
             Apply
           </button>
@@ -399,7 +401,7 @@ export default function ShopFilters({
         <button
           type="button"
           onClick={() => setDrawerOpen(true)}
-          className="flex items-center gap-2 rounded-xl border-2 border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 shadow-sm transition-all hover:border-[#D4450A] hover:text-[#D4450A]"
+          className="flex min-h-[44px] items-center gap-2 rounded-xl border-2 border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 shadow-sm transition-all hover:border-[#D4450A] hover:text-[#D4450A]"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="4" y1="6" x2="20" y2="6" />
@@ -430,15 +432,17 @@ export default function ShopFilters({
       {/* Mobile drawer overlay */}
       {drawerOpen ? (
         <div className="fixed inset-0 z-50 lg:hidden">
-          {/* Backdrop */}
-          <div
+          <button
+            type="button"
+            aria-label="Close filters"
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setDrawerOpen(false)}
           />
-          {/* Drawer panel — slides in from left */}
-          <div className="absolute inset-y-0 left-0 flex w-80 max-w-[85vw] flex-col bg-white shadow-2xl">
-            {/* Drawer header */}
-            <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
+          <div className="absolute inset-x-0 bottom-0 flex max-h-[min(92vh,calc(100dvh-env(safe-area-inset-bottom)))] flex-col rounded-t-2xl bg-white pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-8px_30px_rgba(0,0,0,0.12)]">
+            <div className="flex shrink-0 justify-center pt-3 pb-2" aria-hidden>
+              <div className="h-1 w-10 rounded-full bg-zinc-200" />
+            </div>
+            <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 px-5 py-3">
               <div className="flex items-center gap-2">
                 <p className="text-sm font-bold text-zinc-900">Filters</p>
                 {hasFilters ? (
@@ -450,35 +454,31 @@ export default function ShopFilters({
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 transition-colors hover:bg-zinc-200"
+                className="flex h-11 min-w-[44px] items-center justify-center rounded-full bg-zinc-100 px-3 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-200"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M18 6 6 18M6 6l12 12" />
-                </svg>
+                Done
               </button>
             </div>
 
-            {/* Drawer content — scrollable */}
-            <div className="flex-1 overflow-y-auto">
-              <div className="p-4">{filterBody}</div>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              <div className="p-4 pb-6">{filterBody}</div>
             </div>
 
-            {/* Drawer footer */}
-            <div className="flex gap-3 border-t border-zinc-100 p-4">
+            <div className="flex shrink-0 gap-3 border-t border-zinc-100 p-4">
               <button
                 type="button"
                 onClick={() => {
                   clearAll();
                   setDrawerOpen(false);
                 }}
-                className="flex-1 rounded-xl border-2 border-zinc-200 py-3 text-sm font-bold text-zinc-700 transition-colors hover:border-zinc-300"
+                className="flex min-h-[48px] flex-1 items-center justify-center rounded-xl border-2 border-zinc-200 text-sm font-bold text-zinc-700 transition-colors hover:border-zinc-300"
               >
                 Clear all
               </button>
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}
-                className="flex-1 rounded-xl py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
+                className="flex min-h-[48px] flex-1 items-center justify-center rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-90"
                 style={{ background: "linear-gradient(135deg, #D4450A, #E8820C)" }}
               >
                 Show results

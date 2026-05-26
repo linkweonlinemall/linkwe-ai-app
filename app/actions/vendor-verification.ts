@@ -44,8 +44,17 @@ export async function savePayoutDetails(formData: FormData) {
 
   const bankName = String(formData.get("bankName") ?? "").trim();
   const accountName = String(formData.get("accountName") ?? "").trim();
-  const accountNumber = String(formData.get("accountNumber") ?? "").trim();
+  const accountNumberSubmitted = String(formData.get("accountNumber") ?? "").trim();
   const accountType = String(formData.get("accountType") ?? "").trim();
+
+  const existingBank = await prisma.vendorBankDetails.findUnique({
+    where: { userId: session.userId },
+    select: { accountNumber: true },
+  });
+
+  /** Empty field on update preserves the saved number — never overwrite with blank. */
+  const accountNumber =
+    accountNumberSubmitted || existingBank?.accountNumber?.trim() || "";
 
   if (!bankName || !accountName || !accountNumber) {
     return { ok: false as const, error: "All payout fields are required" };

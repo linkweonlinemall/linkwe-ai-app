@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { UserRole } from "@prisma/client";
 import { logoutAction } from "@/app/(auth)/auth-actions";
@@ -19,12 +20,24 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect("/login");
   }
 
+  const hdrs = await headers();
+  const pathname = hdrs.get("x-pathname") ?? "";
+  const isVendorShell = pathname.startsWith("/dashboard/vendor");
+
+  if (isVendorShell) {
+    return (
+      <div className="flex h-dvh min-h-0 flex-col overflow-hidden bg-[#F7F5F2]">
+        <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
+      </div>
+    );
+  }
+
   const roleLabel = ROLE_LABEL[session.role] ?? session.role;
 
   const unreadCount = await getNavUnreadCount();
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[#F5F5F5]">
+    <div className="flex h-dvh min-h-0 flex-col overflow-hidden bg-[#F5F5F5]">
       <header className="flex h-14 shrink-0 items-center justify-between bg-[#1C1C1A] px-4 md:px-6">
         <div className="flex min-w-0 flex-wrap items-center">
           <Link href="/" className="flex items-center">

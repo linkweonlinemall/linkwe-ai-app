@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { requestPayout, saveVendorBankDetails } from "@/app/actions/vendor";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
+import { maskBankAccountStars } from "@/lib/format/banking";
 
 const BANK_OPTIONS = [
   "Republic Bank",
@@ -58,9 +59,24 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
   const [requestSuccess, setRequestSuccess] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [activeSection, setActiveSection] = useState<"earnings" | "bank" | "history">("earnings");
+  const [editingBankDetails, setEditingBankDetails] = useState(false);
+  const [editAccountNumber, setEditAccountNumber] = useState("");
 
   const hasBankOnFile =
     !!bankDetails?.bankName && !!bankDetails.accountName && !!bankDetails.accountNumber;
+
+  const showBankDetailForm = !hasBankOnFile || editingBankDetails;
+
+  useEffect(() => {
+    if (!showBankDetailForm) return;
+    if (!hasBankOnFile) {
+      setEditAccountNumber("");
+      return;
+    }
+    if (bankDetails?.accountNumber) {
+      setEditAccountNumber(bankDetails.accountNumber);
+    }
+  }, [showBankDetailForm, hasBankOnFile, bankDetails?.accountNumber]);
 
   const credits = ledgerEntries
     .filter((e) => e.entryType === "CREDIT_ORDER_SETTLEMENT")
@@ -104,38 +120,37 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
     setRequesting(false);
   }
 
+  const CARD = "rounded-[12px] border-[0.5px] border-[rgba(28,28,26,0.12)] bg-white";
+
   return (
-    <div className="flex flex-col gap-6">
-      {/* Balance summary cards */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Total Earned</p>
-          <p className="mt-2 truncate text-2xl font-bold text-zinc-900">{formatTTD(credits)}</p>
-          <p className="mt-1 text-xs text-zinc-500">Gross revenue from orders</p>
+    <div className="flex flex-col gap-4">
+      {/* Balance summary cards — denser */}
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className={`${CARD} p-4 shadow-none`}>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Total earned</p>
+          <p className="mt-1 truncate text-xl font-bold text-zinc-900">{formatTTD(credits)}</p>
+          <p className="mt-0.5 text-[11px] text-zinc-500">Gross revenue from orders</p>
         </div>
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Deductions</p>
-          <p className="mt-2 truncate text-2xl font-bold text-red-500">-{formatTTD(pendingDebits)}</p>
-          <p className="mt-1 text-xs text-zinc-500">
+        <div className={`${CARD} p-4 shadow-none`}>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Deductions</p>
+          <p className="mt-1 truncate text-xl font-bold text-red-500">-{formatTTD(pendingDebits)}</p>
+          <p className="mt-0.5 text-[11px] text-zinc-500">
             {lastPayoutDate ? "Since last payout" : "Platform fees and courier costs"}
           </p>
         </div>
-        <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <div
-            className="-mx-5 -mt-5 mb-4 h-1 w-[calc(100%+40px)]"
-            style={{ backgroundColor: "#D4450A" }}
-          />
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Available Balance</p>
-          <p className="mt-2 truncate text-2xl font-bold" style={{ color: "#D4450A" }}>
+        <div className={`overflow-hidden ${CARD} p-4 shadow-none`}>
+          <div className="-mx-4 -mt-4 mb-3 h-0.5 w-[calc(100%+32px)]" style={{ backgroundColor: "#D4450A" }} />
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Available balance</p>
+          <p className="mt-1 truncate text-xl font-bold" style={{ color: "#D4450A" }}>
             {formatTTD(availableBalance)}
           </p>
-          <p className="mt-1 text-xs text-zinc-500">Ready to withdraw</p>
+          <p className="mt-0.5 text-[11px] text-zinc-500">Ready to withdraw</p>
         </div>
       </div>
 
       {/* Pending payout alert */}
       {pendingPayout ? (
-        <div className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+        <div className="flex items-center justify-between rounded-[12px] border-[0.5px] border-amber-200/80 bg-amber-50 px-4 py-2.5">
           <div>
             <p className="text-sm font-semibold text-amber-800">Payout request pending</p>
             <p className="mt-0.5 text-xs text-amber-600">
@@ -150,13 +165,13 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
 
       {/* Request payout */}
       {!pendingPayout && availableBalance >= 5000 ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+        <div className={`${CARD} p-4 shadow-none`}>
+          <h2 className="mb-3 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Request a Payout
           </h2>
           {!hasBankOnFile ? (
             <p className="text-sm text-amber-600">
-              ⚠ Please add your bank details below before requesting a payout.
+              Please add your bank details below before requesting a payout.
             </p>
           ) : requestSuccess ? (
             <div className="flex items-center gap-2 text-sm text-emerald-700">
@@ -203,22 +218,22 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
       ) : null}
 
       {availableBalance > 0 ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+        <div className={`${CARD} p-4 shadow-none`}>
           <div className="flex items-start justify-between">
             <div>
               <h2 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
                 Subscription
               </h2>
-              <p className="mt-1 text-xs text-zinc-500">Starter plan — Free tier</p>
+              <p className="mt-0.5 text-[11px] text-zinc-500">Starter plan — Free tier</p>
             </div>
-            <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600">Free</span>
+            <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-[10px] font-medium text-zinc-600">Free</span>
           </div>
-          <div className="mt-4 rounded-xl border border-zinc-100 bg-zinc-50 p-3">
-            <p className="text-xs text-zinc-500">
+          <div className="mt-3 rounded-lg border border-zinc-100 bg-zinc-50 p-2.5">
+            <p className="text-[11px] text-zinc-500">
               Upgrade to Growth plan for TTD 200/month to reduce your commission from 15% to 12% and unlock 500 AI
               prompts per month.
             </p>
-            <div className="mt-3 flex gap-2">
+            <div className="mt-2 flex gap-2">
               <button
                 type="button"
                 className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:opacity-90"
@@ -236,7 +251,7 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
       ) : null}
 
       {/* Section tabs */}
-      <div className="flex overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+      <div className={`flex overflow-hidden ${CARD} shadow-none`}>
         {(["earnings", "bank", "history"] as const).map((s) => (
           <button
             key={s}
@@ -253,108 +268,48 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
 
       {/* Earnings ledger */}
       {activeSection === "earnings" ? (
-        <div className="-mx-4 overflow-x-auto rounded-2xl border border-zinc-200 bg-white px-4 shadow-sm">
+        <div>
           {ledgerEntries.length === 0 ? (
-            <div className="p-8 text-center">
+            <div className={`${CARD} p-6 text-center shadow-none`}>
               <p className="text-sm text-zinc-500">
                 No earnings yet. Earnings appear here when customers confirm receipt of their orders.
               </p>
             </div>
           ) : (
-            <>
-              <div className="sm:hidden">
-                {ledgerEntries.map((entry) => {
-                  const isCredit = entry.entryType === "CREDIT_ORDER_SETTLEMENT";
-                  return (
-                    <div key={entry.id} className="border-b border-zinc-100 py-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-zinc-400">
-                            {new Date(entry.createdAt).toLocaleDateString("en-TT", {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            })}
-                          </span>
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                              isCredit ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"
-                            }`}
-                          >
-                            {isCredit ? "Revenue" : "Deduction"}
-                          </span>
-                        </div>
-                        <span
-                          className={`text-sm font-bold ${
-                            isCredit ? "text-emerald-600" : "text-red-500"
-                          }`}
-                        >
-                          {isCredit ? "+" : "-"}
-                          {formatTTD(entry.amountMinor)}
-                        </span>
-                      </div>
-                      <p className="mt-0.5 text-xs text-zinc-500 truncate">{entry.description ?? "—"}</p>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <table className="hidden w-full text-sm sm:table">
-                <thead className="hidden sm:table-header-group">
-                  <tr className="border-b border-zinc-100 bg-zinc-50">
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                      Date
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                      Type
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                      Description
-                    </th>
-                    <th className="whitespace-nowrap px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                      Amount
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ledgerEntries.map((entry, i) => {
-                    const isCredit = entry.entryType === "CREDIT_ORDER_SETTLEMENT";
-                    return (
-                      <tr
-                        key={entry.id}
-                        className={`border-b border-zinc-50 ${i % 2 === 0 ? "bg-white" : "bg-zinc-50/30"}`}
-                      >
-                        <td className="px-4 py-2.5 text-xs text-zinc-500">
-                          {new Date(entry.createdAt).toLocaleDateString("en-TT", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                              isCredit ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"
-                            }`}
-                          >
-                            {isCredit ? "Revenue" : "Deduction"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2.5 text-xs text-zinc-600">{entry.description ?? "—"}</td>
-                        <td
-                          className={`whitespace-nowrap px-4 py-2.5 text-right font-mono text-xs font-semibold ${
-                            isCredit ? "text-emerald-600" : "text-red-500"
-                          }`}
-                        >
-                          {isCredit ? "+" : "-"}
-                          {formatTTD(entry.amountMinor)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </>
+            <div className="flex flex-col gap-2">
+              {ledgerEntries.map((entry) => {
+                const isCredit = entry.entryType === "CREDIT_ORDER_SETTLEMENT";
+                const dateLabel = new Date(entry.createdAt).toLocaleDateString("en-TT", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                });
+                return (
+                  <div
+                    key={entry.id}
+                    className={`flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-[10px] ${CARD} shadow-none md:flex-nowrap`}
+                  >
+                    <span className="w-[5.25rem] shrink-0 text-[10px] text-zinc-500">{dateLabel}</span>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                        isCredit ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"
+                      }`}
+                    >
+                      {isCredit ? "Revenue" : "Deduction"}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-[11px] text-zinc-600">{entry.description ?? "—"}</span>
+                    <span
+                      className={`ml-auto shrink-0 font-mono text-[12px] font-semibold tabular-nums ${
+                        isCredit ? "text-emerald-600" : "text-red-500"
+                      }`}
+                    >
+                      {isCredit ? "+" : "-"}
+                      {formatTTD(entry.amountMinor)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       ) : null}
@@ -365,65 +320,125 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Bank Details
           </h2>
-          {hasBankOnFile ? (
-            <div className="mb-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">Current Details</p>
-              <p className="text-sm font-medium text-zinc-900">{bankDetails?.bankName}</p>
-              <p className="text-sm text-zinc-600">{bankDetails?.accountName}</p>
-              <p className="text-sm text-zinc-600">****{bankDetails?.accountNumber?.slice(-4)}</p>
-              <p className="mt-1 text-xs capitalize text-zinc-400">{bankDetails?.accountType?.toLowerCase()}</p>
+
+          {hasBankOnFile && !editingBankDetails ? (
+            <>
+              <div className="mb-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">Current details</p>
+                <dl className="space-y-2 text-sm">
+                  <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-8">
+                    <dt className="shrink-0 font-medium text-zinc-500 sm:w-40">Bank name</dt>
+                    <dd className="font-medium text-zinc-900">{bankDetails!.bankName}</dd>
+                  </div>
+                  <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-8">
+                    <dt className="shrink-0 font-medium text-zinc-500 sm:w-40">Account name</dt>
+                    <dd className="text-zinc-700">{bankDetails!.accountName}</dd>
+                  </div>
+                  <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-8">
+                    <dt className="shrink-0 font-medium text-zinc-500 sm:w-40">Account number</dt>
+                    <dd className="font-mono text-zinc-900">{maskBankAccountStars(bankDetails!.accountNumber)}</dd>
+                  </div>
+                  <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-8">
+                    <dt className="shrink-0 font-medium text-zinc-500 sm:w-40">Account type</dt>
+                    <dd className="capitalize text-zinc-600">{bankDetails!.accountType?.toLowerCase() ?? "—"}</dd>
+                  </div>
+                </dl>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingBankDetails(true)}
+                className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:opacity-90"
+                style={{ backgroundColor: "#D4450A" }}
+              >
+                Edit bank details
+              </button>
+            </>
+          ) : null}
+
+          {showBankDetailForm ? (
+            <div className={hasBankOnFile && editingBankDetails ? "mt-6 border-t border-zinc-100 pt-6" : ""}>
+              {hasBankOnFile && editingBankDetails ? (
+                <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">Update details</p>
+              ) : null}
+              <form
+                key={hasBankOnFile ? `edit-${editingBankDetails}` : "new-bank"}
+                action={saveVendorBankDetails}
+                className="flex flex-col gap-4"
+              >
+                <Select
+                  required
+                  className="rounded-xl border-zinc-200"
+                  defaultValue={bankDetails?.bankName ?? ""}
+                  label="Bank name"
+                  name="bankName"
+                >
+                  <option value="">Select your bank</option>
+                  {BANK_OPTIONS.map((bank) => (
+                    <option key={bank} value={bank}>
+                      {bank}
+                    </option>
+                  ))}
+                </Select>
+                <Input
+                  required
+                  className="rounded-xl border-zinc-200"
+                  defaultValue={bankDetails?.accountName ?? ""}
+                  label="Account name"
+                  name="accountName"
+                  placeholder="Name on the account"
+                />
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="finance-vendor-account-number" className="text-sm font-medium text-zinc-700">
+                    Account number
+                  </label>
+                  <input
+                    id="finance-vendor-account-number"
+                    name="accountNumber"
+                    value={editAccountNumber}
+                    onChange={(e) => setEditAccountNumber(e.target.value)}
+                    autoComplete="off"
+                    required={!hasBankOnFile}
+                    placeholder={
+                      hasBankOnFile ? "Leave blank to keep current number, or enter a new one" : "Account number"
+                    }
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-zinc-800 placeholder:text-zinc-400 transition-colors duration-150 outline-none focus:border-[#1A7FB5] focus:ring-2 focus:ring-blue-200"
+                  />
+                </div>
+                <Select
+                  required
+                  className="rounded-xl border-zinc-200"
+                  defaultValue={bankDetails?.accountType ?? ""}
+                  label="Account type"
+                  name="accountType"
+                >
+                  <option value="">Select account type</option>
+                  <option value="CHEQUING">Chequing</option>
+                  <option value="SAVINGS">Savings</option>
+                </Select>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="submit"
+                    className="w-fit rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:opacity-90"
+                    style={{ backgroundColor: "#D4450A" }}
+                  >
+                    Save bank details
+                  </button>
+                  {hasBankOnFile && editingBankDetails ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingBankDetails(false);
+                        setEditAccountNumber(bankDetails?.accountNumber ?? "");
+                      }}
+                      className="rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
+                    >
+                      Cancel
+                    </button>
+                  ) : null}
+                </div>
+              </form>
             </div>
           ) : null}
-          <form action={saveVendorBankDetails} className="flex flex-col gap-4">
-            <Select
-              required
-              className="rounded-xl border-zinc-200"
-              defaultValue={bankDetails?.bankName ?? ""}
-              label="Bank name"
-              name="bankName"
-            >
-              <option value="">Select your bank</option>
-              {BANK_OPTIONS.map((bank) => (
-                <option key={bank} value={bank}>
-                  {bank}
-                </option>
-              ))}
-            </Select>
-            <Input
-              required
-              className="rounded-xl border-zinc-200"
-              defaultValue={bankDetails?.accountName ?? ""}
-              label="Account name"
-              name="accountName"
-              placeholder="Name on the account"
-            />
-            <Input
-              required
-              className="rounded-xl border-zinc-200"
-              defaultValue={bankDetails?.accountNumber ?? ""}
-              label="Account number"
-              name="accountNumber"
-              placeholder="Account number"
-            />
-            <Select
-              required
-              className="rounded-xl border-zinc-200"
-              defaultValue={bankDetails?.accountType ?? ""}
-              label="Account type"
-              name="accountType"
-            >
-              <option value="">Select account type</option>
-              <option value="CHEQUING">Chequing</option>
-              <option value="SAVINGS">Savings</option>
-            </Select>
-            <button
-              type="submit"
-              className="w-fit rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:opacity-90"
-              style={{ backgroundColor: "#D4450A" }}
-            >
-              Save bank details
-            </button>
-          </form>
         </div>
       ) : null}
 

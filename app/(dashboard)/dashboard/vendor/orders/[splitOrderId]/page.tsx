@@ -277,7 +277,7 @@ export default async function VendorOrderDetailPage({ params }: Props) {
     <div className="bg-[#f5f5f5] pb-24 sm:pb-0">
       <div className="max-w-4xl mx-auto px-6 py-6">
         <a
-          href="/dashboard/vendor?tab=orders"
+          href="/dashboard/vendor/orders"
           className="mb-4 inline-flex items-center gap-1 text-xs hover:underline"
           style={{ color: "var(--blue)" }}
         >

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { Bookmark } from "lucide-react";
 
 import { getSavedStores } from "@/app/actions/wishlist";
 import PublicNav from "@/components/layout/PublicNav";
@@ -9,6 +10,7 @@ import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { getSession } from "@/lib/auth/session";
 import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
+import { icn } from "@/lib/iconography";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
@@ -26,7 +28,7 @@ export default async function SavedStoresPage() {
   const saved = await getSavedStores();
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-16 sm:pb-0">
+    <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
       <PublicNav
         user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null}
         dashboardHref={continueHref ?? undefined}
@@ -52,7 +54,7 @@ export default async function SavedStoresPage() {
 
         {saved.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-white py-24 text-center">
-            <span className="mb-4 text-6xl">🔖</span>
+            <Bookmark className={`${icn.empty} mb-4`} aria-hidden strokeWidth={1.25} />
             <h2 className="mb-2 text-lg font-bold text-zinc-900">No saved stores yet</h2>
             <p className="mb-6 text-sm text-zinc-500">Save stores you love to find them easily later</p>
             <Link href="/stores" className="rounded-xl bg-[#D4450A] px-6 py-3 text-sm font-bold text-white hover:opacity-90">

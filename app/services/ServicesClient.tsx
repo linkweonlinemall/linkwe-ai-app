@@ -1,8 +1,17 @@
 "use client";
 
+import { ConciergeBell, FilterX } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import ServicesLaunchNotifyModal from "@/components/services/ServicesLaunchNotifyModal";
+import {
+  SERVICE_TYPE_BADGE_LABEL,
+  SERVICE_TYPE_FILTER_LABEL,
+  serviceTypeLucideIcon,
+} from "@/components/icons/service-type-lucide";
+import EmptyState from "@/components/ui/empty-state";
+import { icn } from "@/lib/iconography";
 import { SERVICE_CATEGORIES } from "@/lib/categories";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 
@@ -10,11 +19,11 @@ const ALL_CATEGORIES = [{ value: "all", label: "All Services" }, ...SERVICE_CATE
 
 const SERVICE_TYPE_OPTIONS = [
   { value: "all", label: "All types" },
-  { value: "BOOKABLE", label: "📅 Bookable" },
-  { value: "QUOTE", label: "💬 Quote" },
-  { value: "SUBSCRIPTION", label: "🔄 Subscription" },
-  { value: "ON_DEMAND", label: "⚡ On Demand" },
-  { value: "VIRTUAL", label: "💻 Virtual" },
+  { value: "BOOKABLE", label: SERVICE_TYPE_FILTER_LABEL.BOOKABLE },
+  { value: "QUOTE", label: SERVICE_TYPE_FILTER_LABEL.QUOTE },
+  { value: "SUBSCRIPTION", label: SERVICE_TYPE_FILTER_LABEL.SUBSCRIPTION },
+  { value: "ON_DEMAND", label: SERVICE_TYPE_FILTER_LABEL.ON_DEMAND },
+  { value: "VIRTUAL", label: SERVICE_TYPE_FILTER_LABEL.VIRTUAL },
 ];
 
 const SORT_OPTIONS = [
@@ -27,17 +36,23 @@ const SORT_OPTIONS = [
 function serviceTypeInfo(type: string | null) {
   switch (type) {
     case "BOOKABLE":
-      return { label: "Bookable", color: "bg-blue-50 text-blue-700", icon: "📅" };
+      return { label: SERVICE_TYPE_BADGE_LABEL.BOOKABLE, color: "bg-blue-50 text-blue-700" };
     case "QUOTE":
-      return { label: "Get Quote", color: "bg-amber-50 text-amber-700", icon: "💬" };
+      return { label: SERVICE_TYPE_BADGE_LABEL.QUOTE, color: "bg-amber-50 text-amber-700" };
     case "SUBSCRIPTION":
-      return { label: "Subscribe", color: "bg-purple-50 text-purple-700", icon: "🔄" };
+      return {
+        label: SERVICE_TYPE_BADGE_LABEL.SUBSCRIPTION,
+        color: "bg-purple-50 text-purple-700",
+      };
     case "ON_DEMAND":
-      return { label: "On Demand", color: "bg-emerald-50 text-emerald-700", icon: "⚡" };
+      return {
+        label: SERVICE_TYPE_BADGE_LABEL.ON_DEMAND,
+        color: "bg-emerald-50 text-emerald-700",
+      };
     case "VIRTUAL":
-      return { label: "Virtual", color: "bg-zinc-100 text-zinc-700", icon: "💻" };
+      return { label: SERVICE_TYPE_BADGE_LABEL.VIRTUAL, color: "bg-zinc-100 text-zinc-700" };
     default:
-      return { label: "Service", color: "bg-zinc-100 text-zinc-700", icon: "🛎️" };
+      return { label: "Service", color: "bg-zinc-100 text-zinc-700" };
   }
 }
 
@@ -67,6 +82,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [notifyOpen, setNotifyOpen] = useState(false);
 
   const hasFilters =
     category !== "all" ||
@@ -103,7 +119,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   }, [initialServices, search, category, serviceType, sort, priceMin, priceMax]);
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-16 sm:pb-0">
+    <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
       {/* Hero search bar */}
       <div className="bg-[#1C1C1A] py-5">
         <div className="mx-auto max-w-screen-xl px-4 sm:px-6">
@@ -112,13 +128,13 @@ export default function ServicesClient({ initialServices }: { initialServices: S
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search services — hairdresser, plumber, tutor..."
-              className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:bg-white/15 focus:outline-none"
+              className="min-h-[44px] w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-base text-white placeholder:text-white/40 focus:bg-white/15 focus:outline-none md:min-h-0 md:text-sm"
             />
             {search ? (
               <button
                 type="button"
                 onClick={() => setSearch("")}
-                className="shrink-0 rounded-xl border border-white/20 px-4 py-3 text-sm font-semibold text-white/70 transition-colors hover:text-white"
+                className="min-h-[44px] shrink-0 rounded-xl border border-white/20 px-4 py-3 text-base font-semibold text-white/70 transition-colors hover:text-white md:min-h-0 md:text-sm"
               >
                 Clear
               </button>
@@ -154,7 +170,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
-            className="flex items-center gap-2 rounded-xl border-2 border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 shadow-sm transition-all hover:border-[#D4450A] hover:text-[#D4450A]"
+            className="flex min-h-[44px] items-center gap-2 rounded-xl border-2 border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 shadow-sm transition-all hover:border-[#D4450A] hover:text-[#D4450A]"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="4" y1="6" x2="20" y2="6" />
@@ -200,24 +216,27 @@ export default function ServicesClient({ initialServices }: { initialServices: S
 
       {drawerOpen ? (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div
+          <button
+            type="button"
+            aria-label="Close filters"
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setDrawerOpen(false)}
           />
-          <div className="absolute inset-y-0 left-0 flex w-80 max-w-[85vw] flex-col bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
+          <div className="absolute inset-x-0 bottom-0 flex max-h-[min(92vh,calc(100dvh-env(safe-area-inset-bottom)))] flex-col rounded-t-2xl bg-white pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-8px_30px_rgba(0,0,0,0.12)]">
+            <div className="flex shrink-0 justify-center pt-3 pb-2" aria-hidden>
+              <div className="h-1 w-10 rounded-full bg-zinc-200" />
+            </div>
+            <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 px-5 py-3">
               <p className="text-sm font-bold text-zinc-900">Filters</p>
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 transition-colors hover:bg-zinc-200"
+                className="flex h-11 min-w-[44px] items-center justify-center rounded-full bg-zinc-100 px-3 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-200"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M18 6 6 18M6 6l12 12" />
-                </svg>
+                Done
               </button>
             </div>
-            <div className="flex-1 space-y-5 overflow-y-auto p-5">
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-5 py-4 pb-8">
               {/* Search */}
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-zinc-700">Search</label>
@@ -226,7 +245,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search services..."
-                  className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm focus:border-[#D4450A] focus:outline-none"
+                  className="min-h-[44px] w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-base focus:border-[#D4450A] focus:outline-none"
                 />
               </div>
 
@@ -239,7 +258,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                       key={opt.value}
                       type="button"
                       onClick={() => setSort(opt.value)}
-                      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                      className={`flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                         sort === opt.value ? "bg-[#D4450A]/10 font-semibold text-[#D4450A]" : "text-zinc-600 hover:bg-zinc-50"
                       }`}
                     >
@@ -256,12 +275,14 @@ export default function ServicesClient({ initialServices }: { initialServices: S
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-zinc-700">Service type</label>
                 <div className="flex flex-col gap-1">
-                  {SERVICE_TYPE_OPTIONS.map((opt) => (
+                  {SERVICE_TYPE_OPTIONS.map((opt) => {
+                    const FilterIcon = opt.value === "all" ? null : serviceTypeLucideIcon(opt.value);
+                    return (
                     <button
                       key={opt.value}
                       type="button"
                       onClick={() => setServiceType(opt.value)}
-                      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                      className={`flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                         serviceType === opt.value
                           ? "bg-[#D4450A]/10 font-semibold text-[#D4450A]"
                           : "text-zinc-600 hover:bg-zinc-50"
@@ -270,9 +291,21 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                       <span
                         className={`h-3 w-3 shrink-0 rounded-full border-2 ${serviceType === opt.value ? "border-[#D4450A] bg-[#D4450A]" : "border-zinc-300"}`}
                       />
+                      {FilterIcon ? (
+                        <FilterIcon
+                          className={
+                            serviceType === opt.value
+                              ? "size-4 shrink-0 stroke-[2] text-[#D4450A]"
+                              : icn.inline
+                          }
+                          aria-hidden
+                          strokeWidth={2}
+                        />
+                      ) : null}
                       {opt.label}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -282,18 +315,20 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
+                    inputMode="decimal"
                     value={priceMin}
                     onChange={(e) => setPriceMin(e.target.value)}
                     placeholder="Min"
-                    className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm focus:border-[#D4450A] focus:outline-none"
+                    className="min-h-[44px] w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-base focus:border-[#D4450A] focus:outline-none"
                   />
                   <span className="text-xs text-zinc-400">–</span>
                   <input
                     type="number"
+                    inputMode="decimal"
                     value={priceMax}
                     onChange={(e) => setPriceMax(e.target.value)}
                     placeholder="Max"
-                    className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm focus:border-[#D4450A] focus:outline-none"
+                    className="min-h-[44px] w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-base focus:border-[#D4450A] focus:outline-none"
                   />
                 </div>
               </div>
@@ -307,7 +342,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                       key={cat.value}
                       type="button"
                       onClick={() => setCategory(cat.value)}
-                      className={`flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                      className={`flex min-h-[44px] items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                         category === cat.value ? "bg-[#D4450A]/10 font-semibold text-[#D4450A]" : "text-zinc-600 hover:bg-zinc-50"
                       }`}
                     >
@@ -322,7 +357,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                 </div>
               </div>
             </div>
-            <div className="flex gap-3 border-t border-zinc-100 p-4">
+            <div className="flex shrink-0 gap-3 border-t border-zinc-100 p-4">
               <button
                 type="button"
                 onClick={() => {
@@ -334,14 +369,14 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                   setPriceMax("");
                   setDrawerOpen(false);
                 }}
-                className="flex-1 rounded-xl border-2 border-zinc-200 py-3 text-sm font-bold text-zinc-700 hover:border-zinc-300"
+                className="flex min-h-[48px] flex-1 items-center justify-center rounded-xl border-2 border-zinc-200 text-sm font-bold text-zinc-700 hover:border-zinc-300"
               >
                 Clear all
               </button>
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}
-                className="flex-1 rounded-xl py-3 text-sm font-bold text-white"
+                className="flex min-h-[48px] flex-1 items-center justify-center rounded-xl text-sm font-bold text-white"
                 style={{ background: "linear-gradient(135deg, #D4450A, #E8820C)" }}
               >
                 Show {filtered.length} results
@@ -423,7 +458,9 @@ export default function ServicesClient({ initialServices }: { initialServices: S
               <div className="border-b border-zinc-100 px-4 py-3">
                 <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Service type</p>
                 <div className="flex flex-col gap-0.5">
-                  {SERVICE_TYPE_OPTIONS.map((opt) => (
+                  {SERVICE_TYPE_OPTIONS.map((opt) => {
+                    const FilterIcon = opt.value === "all" ? null : serviceTypeLucideIcon(opt.value);
+                    return (
                     <button
                       key={opt.value}
                       type="button"
@@ -439,9 +476,21 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                           serviceType === opt.value ? "border-[#D4450A] bg-[#D4450A]" : "border-zinc-300"
                         }`}
                       />
+                      {FilterIcon ? (
+                        <FilterIcon
+                          className={
+                            serviceType === opt.value
+                              ? "size-4 shrink-0 stroke-[2] text-[#D4450A]"
+                              : icn.inline
+                          }
+                          aria-hidden
+                          strokeWidth={2}
+                        />
+                      ) : null}
                       {opt.label}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -528,26 +577,37 @@ export default function ServicesClient({ initialServices }: { initialServices: S
             </div>
 
             {filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-white py-24 text-center">
-                <span className="mb-4 text-6xl">🛎️</span>
-                <h2 className="mb-2 text-lg font-bold text-zinc-900">No services found</h2>
-                <p className="mb-6 text-sm text-zinc-500">Try a different category or search term</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearch("");
-                    setCategory("all");
-                    setServiceType("all");
-                  }}
-                  className="rounded-full bg-[#D4450A] px-5 py-2 text-sm font-semibold text-white"
-                >
-                  Clear filters
-                </button>
+              <div className="overflow-hidden rounded-2xl border border-dashed border-zinc-300 bg-white">
+                {initialServices.length === 0 ? (
+                  <EmptyState
+                    icon={<ConciergeBell strokeWidth={1.25} className="text-current" />}
+                    title="Services launching soon"
+                    description="Local service providers are joining LinkWe. Be the first to know when they go live."
+                    actionLabel="Notify me"
+                    actionOnClick={() => setNotifyOpen(true)}
+                  />
+                ) : (
+                  <EmptyState
+                    icon={<FilterX strokeWidth={1.25} className="text-current" />}
+                    title="No services match your filters"
+                    description="Try adjusting your search or browse all services."
+                    actionLabel="Clear filters"
+                    actionOnClick={() => {
+                      setSearch("");
+                      setCategory("all");
+                      setServiceType("all");
+                      setSort("featured");
+                      setPriceMin("");
+                      setPriceMax("");
+                    }}
+                  />
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {filtered.map((service) => {
                   const typeInfo = serviceTypeInfo(service.serviceType);
+                  const TypeBadgeIcon = serviceTypeLucideIcon(service.serviceType);
                   return (
                     <Link
                       key={service.id}
@@ -563,11 +623,20 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                           />
                         ) : (
-                          <div className="flex h-full w-full items-center justify-center text-4xl">🛎️</div>
+                          <div className="flex h-full w-full items-center justify-center">
+                            <ConciergeBell
+                              className={`${icn.ui} text-zinc-400`}
+                              aria-hidden
+                              strokeWidth={2}
+                            />
+                          </div>
                         )}
                         <div className="absolute left-2.5 top-2.5">
-                          <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${typeInfo.color}`}>
-                            {typeInfo.icon} {typeInfo.label}
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold ${typeInfo.color}`}
+                          >
+                            <TypeBadgeIcon className="size-3.5 shrink-0" aria-hidden strokeWidth={2.5} />
+                            {typeInfo.label}
                           </span>
                         </div>
                         {service.isFeatured ? (
@@ -636,6 +705,8 @@ export default function ServicesClient({ initialServices }: { initialServices: S
           </div>
         </div>
       </div>
+
+      <ServicesLaunchNotifyModal open={notifyOpen} onClose={() => setNotifyOpen(false)} />
     </div>
   );
 }

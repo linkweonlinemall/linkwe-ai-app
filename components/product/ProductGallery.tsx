@@ -1,25 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 export function ProductGallery({ images, name }: { images: string[]; name: string }) {
-  const [selectedImage, setSelectedImage] = useState(images[0] ?? "");
+  const [selectedIdx, setSelectedIdx] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomOrigin, setZoomOrigin] = useState("center center");
 
-  if (images.length === 0) {
+  const orderedUnique = useMemo(() => Array.from(new Set(images)), [images]);
+
+  const hasMultiple = orderedUnique.length > 1;
+
+  if (orderedUnique.length === 0) {
     return (
-      <div className="aspect-square w-full rounded-2xl border border-zinc-200 bg-zinc-200" aria-hidden />
+      <div
+        className="aspect-[4/5] w-full min-w-0 max-w-full overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100 font-sans"
+        aria-hidden
+      />
     );
   }
 
-  const mainSrc = selectedImage || images[0];
+  const safeIdx = Math.min(Math.max(0, selectedIdx), orderedUnique.length - 1);
+  const mainSrc = orderedUnique[safeIdx];
+  const mainAspect = hasMultiple ? "aspect-square" : "aspect-[4/5]";
 
   return (
-    <div>
+    <div className="w-full min-w-0 max-w-full font-sans">
+      {/* Single main hero — clipped; zoom scaling cannot bleed past column */}
       <div
-        className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-white"
-        style={{ aspectRatio: "1/1" }}
+        className={`relative ${mainAspect} w-full max-w-full overflow-hidden rounded-lg border border-zinc-200 bg-white`}
         onMouseEnter={() => setIsZoomed(true)}
         onMouseLeave={() => {
           setIsZoomed(false);
@@ -32,37 +41,39 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
           setZoomOrigin(`${x}% ${y}%`);
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          alt={name}
-          src={mainSrc}
-          className="h-full w-full object-contain p-4 transition-transform duration-300 ease-in-out"
-          style={{
-            transform: isZoomed ? "scale(1.6)" : "scale(1)",
-            transformOrigin: zoomOrigin,
-          }}
-        />
+        <div className="absolute inset-0 overflow-hidden p-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            alt={name}
+            src={mainSrc}
+            className="h-full w-full object-contain transition-transform duration-300 ease-out"
+            style={{
+              transform: isZoomed ? "scale(1.5)" : "scale(1)",
+              transformOrigin: zoomOrigin,
+            }}
+          />
+        </div>
       </div>
 
-      {images.length > 1 ? (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {images.map((img, i) => (
+      {hasMultiple ? (
+        <div
+          role="tablist"
+          aria-label={`${name} thumbnails`}
+          className="mt-3 flex max-w-full flex-wrap gap-2"
+        >
+          {orderedUnique.map((img, i) => (
             <button
-              key={img}
+              key={`thumb-${img}-${i}`}
               type="button"
-              onClick={() => setSelectedImage(img)}
-              className={`h-16 w-16 overflow-hidden rounded-xl border-2 transition-all ${
-                selectedImage === img
-                  ? "border-[#D4450A] shadow-sm"
-                  : "border-zinc-200 hover:border-zinc-400"
+              onClick={() => setSelectedIdx(i)}
+              aria-label={`View image ${i + 1}`}
+              className={`h-20 w-20 shrink-0 snap-start overflow-hidden rounded-md border-2 bg-zinc-50 transition-all ${
+                safeIdx === i ? "border-[#D4450A] shadow-sm" : "border-zinc-200 hover:border-zinc-400"
               }`}
+              aria-current={safeIdx === i ? "true" : undefined}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={img}
-                alt={`${name} thumbnail ${i + 1}`}
-                className="h-full w-full object-cover"
-              />
+              <img src={img} alt="" className="h-full w-full object-cover" draggable={false} />
             </button>
           ))}
         </div>

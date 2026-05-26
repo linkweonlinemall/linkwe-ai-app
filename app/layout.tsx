@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Sora } from "next/font/google";
+import { Sora } from "next/font/google";
 
 import CartProvider from "@/components/cart/CartProvider";
 import FooterWrapper from "@/components/layout/FooterWrapper";
 import InstallPrompt from "@/components/pwa/InstallPrompt";
+import LinkWeToaster from "@/components/providers/LinkWeToaster";
 import ServiceWorkerRegistration from "@/components/pwa/ServiceWorkerRegistration";
 
 import "./globals.css";
@@ -12,13 +13,6 @@ const sora = Sora({
   subsets: ["latin"],
   variable: "--font-sora",
   display: "swap",
-});
-
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  variable: "--font-playfair",
-  display: "swap",
-  style: ["normal", "italic"],
 });
 
 export const metadata: Metadata = {
@@ -73,29 +67,32 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${sora.variable} ${playfair.variable} h-full antialiased`}>
+    <html lang="en" className={`${sora.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <ServiceWorkerRegistration />
         <InstallPrompt />
-        <CartProvider>{children}</CartProvider>
+        <CartProvider>
+          <LinkWeToaster />
+          {children}
+        </CartProvider>
         <FooterWrapper>
-          <footer className="border-t border-zinc-200 bg-white py-8 pb-16 sm:pb-0">
+          <footer className="border-t border-zinc-200 bg-white py-8 pb-mobile-public lg:pb-0">
             <div className="mx-auto max-w-7xl px-4 sm:px-6">
               <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
                 <p className="text-xs text-zinc-400">
                   © {new Date().getFullYear()} LinkWe Online Directory. All rights reserved.
                 </p>
                 <div className="flex items-center gap-6">
-                  <a href="/privacy" className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
+                  <a href="/privacy" className="lw-link-subtle text-xs text-zinc-400 hover:text-zinc-700">
                     Privacy Policy
                   </a>
-                  <a href="/terms" className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
+                  <a href="/terms" className="lw-link-subtle text-xs text-zinc-400 hover:text-zinc-700">
                     Terms of Service
                   </a>
-                  <a href="/contact" className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
+                  <a href="/contact" className="lw-link-subtle text-xs text-zinc-400 hover:text-zinc-700">
                     Contact
                   </a>
-                  <a href="/get-app" className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
+                  <a href="/get-app" className="lw-link-subtle text-xs text-zinc-400 hover:text-zinc-700">
                     Get the app
                   </a>
                 </div>

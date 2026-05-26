@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Package } from "lucide-react";
 import {
   bulkAddStock,
   bulkChangeCategory,
@@ -12,6 +13,9 @@ import {
   getVendorProductsList,
   type VendorProductListItem,
 } from "@/app/actions/product-bulk";
+import { VendorProductRowSkeleton } from "@/components/ui/content-skeletons";
+import Skeleton from "@/components/ui/skeleton";
+import { icn } from "@/lib/iconography";
 
 export default function VendorProductsPage() {
   const router = useRouter();
@@ -89,9 +93,33 @@ export default function VendorProductsPage() {
   if (products === null && !loadError) {
     return (
       <div className="px-6 py-8">
-        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-          Loading…
-        </p>
+        <Skeleton className="mb-8 h-4 w-40 rounded-lg" />
+        <div className="mb-6 flex justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-36 rounded-lg" />
+            <Skeleton className="h-4 w-56 max-w-full rounded-lg" />
+          </div>
+          <Skeleton className="h-10 w-36 shrink-0 rounded-lg" />
+        </div>
+        <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
+          <table className="w-full border-collapse text-left text-sm">
+            <thead className="bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500">
+              <tr>
+                <th className="py-3 pl-5" />
+                <th className="py-3">Product</th>
+                <th className="py-3">Price</th>
+                <th className="py-3">Stock</th>
+                <th className="py-3">Status</th>
+                <th className="py-3 pr-5 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <VendorProductRowSkeleton key={i} />
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   }
@@ -430,7 +458,7 @@ export default function VendorProductsPage() {
 
         {products && products.length === 0 ? (
           <div className="py-16 text-center">
-            <p className="mb-3 text-3xl">📦</p>
+            <Package className={`${icn.empty} mx-auto mb-3`} aria-hidden strokeWidth={1.25} />
             <p
               className="mb-1 text-sm font-medium"
               style={{ color: "var(--text-primary)" }}

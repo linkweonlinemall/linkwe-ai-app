@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { ConciergeBell } from "lucide-react";
 
 import {
   bulkToggleServicesPublished,
@@ -9,6 +10,7 @@ import {
   permanentlyDeleteService,
   toggleServicePublished,
 } from "@/app/actions/services";
+import { icn } from "@/lib/iconography";
 
 function serviceTypeLabel(type: string | null) {
   switch (type) {
@@ -185,7 +187,7 @@ export default function VendorServicesPage() {
 
       {services.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-white py-20 text-center">
-          <span className="mb-4 text-5xl">🛎️</span>
+          <ConciergeBell className={`${icn.empty} mx-auto mb-4`} aria-hidden strokeWidth={1.25} />
           <h2 className="mb-2 text-lg font-bold text-zinc-900">No services yet</h2>
           <p className="mb-6 text-sm text-zinc-500">
             Create your first service to start accepting bookings
@@ -230,7 +232,9 @@ export default function VendorServicesPage() {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={service.images[0]} alt="" className="h-full w-full object-cover" />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-2xl">🛎️</div>
+                    <div className="flex h-full w-full items-center justify-center">
+                      <ConciergeBell className={`${icn.ui} text-zinc-400`} aria-hidden strokeWidth={2} />
+                    </div>
                   )}
                 </div>
                 <div className="min-w-0 flex-1">

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import PublicNav from "@/components/layout/PublicNav";
+import OrderConfirmationCelebration from "@/app/order-confirmation/[orderId]/OrderConfirmationCelebration";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -45,6 +46,7 @@ export default async function OrderConfirmationPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
+      <OrderConfirmationCelebration orderReference={order.referenceNumber} />
       <PublicNav
         user={session ? { name: session.fullName ?? "Account", href: dashboardHref! } : null}
         dashboardHref={dashboardHref ?? undefined}

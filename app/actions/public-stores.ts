@@ -117,6 +117,13 @@ function discoverableStoreEligibility(): Prisma.StoreWhereInput {
   };
 }
 
+/** Count of stores eligible for `/stores` discovery (same rule as listings). */
+export async function getDiscoverableActiveStoreCount(): Promise<number> {
+  return prisma.store.count({
+    where: discoverableStoreEligibility(),
+  });
+}
+
 function buildPublicStoresWhere(
   search: string | undefined,
   filters: PublicStoresFilters | undefined

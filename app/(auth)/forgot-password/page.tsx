@@ -2,6 +2,11 @@
 import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { Mail } from "lucide-react"
+import { toast } from "sonner"
+
+import { icn } from "@/lib/iconography"
+import InlineSpinner from "@/components/ui/InlineSpinner"
 
 export default function ForgotPasswordPage() {
   const [submitted, setSubmitted] = useState(false)
@@ -18,8 +23,12 @@ export default function ForgotPasswordPage() {
     setLoading(false)
     if ("error" in result) {
       setError(result.error)
+      toast.error("Something went wrong. Please try again.", { description: result.error })
     } else {
       setSubmitted(true)
+      toast.success("Check your email", {
+        description: "If an account exists, we sent a reset link.",
+      })
     }
   }
 
@@ -32,7 +41,7 @@ export default function ForgotPasswordPage() {
         <div className="rounded-2xl bg-white p-8 shadow-sm border border-zinc-100">
           {submitted ? (
             <div className="text-center">
-              <div className="text-4xl mb-4">📧</div>
+              <Mail className={`${icn.empty} mx-auto mb-4`} aria-hidden strokeWidth={1.25} />
               <h1 className="text-xl font-bold text-zinc-900 mb-2">Check your email</h1>
               <p className="text-sm text-zinc-500 mb-6">If an account exists for that email, we sent a password reset link. Check your inbox and spam folder.</p>
               <Link href="/login" className="text-sm text-[#D4450A] font-medium hover:underline">Back to login</Link>
@@ -57,9 +66,16 @@ export default function ForgotPasswordPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full rounded-xl bg-[#D4450A] py-3 text-sm font-bold text-white hover:opacity-90 disabled:opacity-50"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#D4450A] py-3 text-sm font-bold text-white transition-all duration-200 ease-in-out hover:bg-[#B83A09] disabled:opacity-50"
                 >
-                  {loading ? "Sending..." : "Send reset link"}
+                  {loading ? (
+                    <>
+                      <InlineSpinner className="h-4 w-4 text-white" />
+                      Sending…
+                    </>
+                  ) : (
+                    "Send reset link"
+                  )}
                 </button>
                 <div className="text-center">
                   <Link href="/login" className="text-sm text-zinc-500 hover:text-zinc-700">Back to login</Link>

@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { Banknote, Calendar, Clock, ConciergeBell } from "lucide-react";
 
 import PublicNav from "@/components/layout/PublicNav";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
+import { icn } from "@/lib/iconography";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
@@ -85,8 +87,8 @@ export default async function BookingsPage() {
                 className="h-full w-full object-cover"
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-2xl">
-                🛎️
+              <div className="flex h-full w-full items-center justify-center">
+                <ConciergeBell className={`${icn.ui} text-zinc-400`} aria-hidden strokeWidth={2} />
               </div>
             )}
           </div>
@@ -105,13 +107,20 @@ export default async function BookingsPage() {
               </span>
             </div>
             <div className="mt-2 flex flex-wrap gap-3 text-xs text-zinc-500">
-              <span>📅 {formatDate(booking.bookingDate)}</span>
-              <span>
-                🕐 {formatTime(booking.startTime)}
+              <span className="inline-flex items-center gap-1">
+                <Calendar className={icn.inline} aria-hidden strokeWidth={2} />
+                {formatDate(booking.bookingDate)}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Clock className={icn.inline} aria-hidden strokeWidth={2} />
+                {formatTime(booking.startTime)}
                 {booking.endTime ? ` – ${formatTime(booking.endTime)}` : ""}
               </span>
               {booking.totalPrice != null ? (
-                <span>💰 TTD {booking.totalPrice.toFixed(2)}</span>
+                <span className="inline-flex items-center gap-1">
+                  <Banknote className={icn.inline} aria-hidden strokeWidth={2} />
+                  TTD {booking.totalPrice.toFixed(2)}
+                </span>
               ) : null}
             </div>
             {booking.customerNotes ? (
@@ -132,7 +141,7 @@ export default async function BookingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-16 sm:pb-0">
+    <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
       <PublicNav
         user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null}
         dashboardHref={continueHref ?? undefined}
@@ -157,7 +166,7 @@ export default async function BookingsPage() {
 
         {bookings.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-white py-20 text-center">
-            <span className="mb-4 text-5xl">📅</span>
+            <Calendar className={`${icn.empty} mb-4`} aria-hidden strokeWidth={1.25} />
             <h2 className="mb-2 text-lg font-bold text-zinc-900">No bookings yet</h2>
             <p className="mb-6 text-sm text-zinc-500">
               Book a service from a local vendor to get started

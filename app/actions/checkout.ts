@@ -12,6 +12,7 @@ import { stripe } from "@/lib/stripe/stripe";
 import { sendEmail } from "@/lib/email/send";
 import { newOrderVendorEmail, orderConfirmedCustomerEmail } from "@/lib/email/templates";
 import { BASE_URL } from "@/lib/email/resend";
+import { VENDOR_DASHBOARD_ORDERS_TAB_HREF } from "@/lib/routes/vendor-dashboard";
 import { createNotification } from "@/app/actions/notifications";
 import { NotificationType } from "@prisma/client";
 
@@ -256,7 +257,7 @@ export async function confirmOrderPaid(orderId: string): Promise<void> {
         orderRef: ref,
         itemCount,
         totalTTD,
-        dashboardUrl: `${BASE_URL}/dashboard/vendor/orders`,
+        dashboardUrl: `${BASE_URL}${VENDOR_DASHBOARD_ORDERS_TAB_HREF}`,
       });
       await sendEmail({ to: vendor.email, ...vendorTemplate });
     }
@@ -279,7 +280,7 @@ export async function confirmOrderPaid(orderId: string): Promise<void> {
           type: NotificationType.ORDER_PLACED,
           title: `New order #${orderForEmail.referenceNumber}`,
           body: `${orderForEmail.items.length} item${orderForEmail.items.length !== 1 ? "s" : ""} · TTD ${(orderForEmail.totalMinor / 100).toFixed(2)}`,
-          linkUrl: `/dashboard/vendor/orders`,
+          linkUrl: VENDOR_DASHBOARD_ORDERS_TAB_HREF,
         });
       }
     }

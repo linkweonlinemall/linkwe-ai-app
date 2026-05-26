@@ -14,10 +14,18 @@ export async function saveVendorBankDetails(formData: FormData): Promise<void> {
 
   const bankName = String(formData.get("bankName") ?? "").trim();
   const accountName = String(formData.get("accountName") ?? "").trim();
-  const accountNumber = String(formData.get("accountNumber") ?? "").trim();
+  const accountNumberSubmitted = String(formData.get("accountNumber") ?? "").trim();
   const accountTypeRaw = String(formData.get("accountType") ?? "").trim();
   const accountType: AccountType | null =
     accountTypeRaw === "CHEQUING" || accountTypeRaw === "SAVINGS" ? accountTypeRaw : null;
+
+  const existingBank = await prisma.vendorBankDetails.findUnique({
+    where: { userId: session.userId },
+    select: { accountNumber: true },
+  });
+
+  const accountNumber =
+    accountNumberSubmitted || existingBank?.accountNumber?.trim() || "";
 
   if (!bankName || !accountName || !accountNumber) {
     redirect("/dashboard/vendor?error=bank_fields_required");

@@ -1,8 +1,22 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import type { LucideIcon } from "lucide-react";
+import {
+  Bookmark,
+  Bot,
+  Calendar,
+  ClipboardList,
+  ConciergeBell,
+  Hand,
+  Heart,
+  Package,
+  Settings,
+  ShoppingBag,
+} from "lucide-react";
 
 import { assertDashboardRole } from "@/lib/auth/assert-role";
 import { getSession } from "@/lib/auth/session";
+import { icn } from "@/lib/iconography";
 import { prisma } from "@/lib/prisma";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 
@@ -157,8 +171,20 @@ export default async function CustomerDashboardPage() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
+  const quickActions: { label: string; href: string; Icon: LucideIcon }[] = [
+    { label: "Shop with AI", href: "/chat", Icon: Bot },
+    { label: "Browse shop", href: "/shop", Icon: ShoppingBag },
+    { label: "Services", href: "/services", Icon: ConciergeBell },
+    { label: "My requests", href: "/my-requests", Icon: ClipboardList },
+    { label: "My orders", href: "/orders", Icon: Package },
+    { label: "Bookings", href: "/bookings", Icon: Calendar },
+    { label: "Wishlist", href: "/wishlist", Icon: Heart },
+    { label: "Saved stores", href: "/saved-stores", Icon: Bookmark },
+    { label: "Settings", href: "/dashboard/customer/settings", Icon: Settings },
+  ];
+
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-16 sm:pb-0">
+    <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         {/* Header */}
         <div className="mb-8 overflow-hidden rounded-2xl" style={{ background: "linear-gradient(135deg, #1C1C1A 0%, #2A1A0E 100%)" }}>
@@ -168,9 +194,9 @@ export default async function CustomerDashboardPage() {
               style={{ background: "radial-gradient(circle, #E8820C, transparent)" }}
             />
             <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">{greeting}</p>
-            <h1 className="font-display mt-1 text-3xl font-bold text-white sm:text-4xl">
-              {firstName}
-              <span className="italic text-[#E8820C]"> 👋</span>
+            <h1 className="font-display mt-1 flex flex-wrap items-center gap-2 text-3xl font-bold text-white sm:text-4xl">
+              <span>{firstName}</span>
+              <Hand className="size-8 shrink-0 text-[#E8820C]" aria-hidden strokeWidth={2} />
             </h1>
             <p className="mt-2 text-sm text-zinc-400">Here is what is happening with your account</p>
 
@@ -197,23 +223,13 @@ export default async function CustomerDashboardPage() {
 
         {/* Quick actions */}
         <div className="mb-6 grid grid-cols-3 gap-3 sm:grid-cols-6">
-          {[
-            { label: "Shop with AI", href: "/chat", icon: "🤖" },
-            { label: "Browse shop", href: "/shop", icon: "🛍️" },
-            { label: "Services", href: "/services", icon: "🛎️" },
-            { label: "My requests", href: "/my-requests", icon: "⚡" },
-            { label: "My orders", href: "/orders", icon: "📦" },
-            { label: "Bookings", href: "/bookings", icon: "📅" },
-            { label: "Wishlist", href: "/wishlist", icon: "🤍" },
-            { label: "Saved stores", href: "/saved-stores", icon: "🔖" },
-            { label: "Settings", href: "/dashboard/customer/settings", icon: "⚙️" },
-          ].map((item) => (
+          {quickActions.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               className="flex flex-col items-center gap-2 rounded-2xl bg-white p-4 text-center shadow-sm ring-1 ring-zinc-200/60 transition-all hover:-translate-y-0.5 hover:shadow-md"
             >
-              <span className="text-2xl">{item.icon}</span>
+              <item.Icon className={`${icn.header} text-gray-600`} aria-hidden strokeWidth={2} />
               <p className="text-xs font-semibold text-zinc-700">{item.label}</p>
             </Link>
           ))}
@@ -230,7 +246,7 @@ export default async function CustomerDashboardPage() {
             </div>
             {orders.length === 0 ? (
               <div className="flex flex-col items-center py-12 text-center">
-                <span className="mb-3 text-4xl">📦</span>
+                <Package className={`${icn.empty} mb-3`} aria-hidden strokeWidth={1.25} />
                 <p className="mb-4 text-sm text-zinc-500">No orders yet</p>
                 <Link href="/shop" className="rounded-xl bg-[#D4450A] px-5 py-2.5 text-xs font-bold text-white hover:opacity-90">
                   Start shopping
@@ -250,7 +266,9 @@ export default async function CustomerDashboardPage() {
                         {thumb ? (
                           <img src={thumb} alt="" className="h-full w-full object-cover" />
                         ) : (
-                          <div className="flex h-full w-full items-center justify-center text-zinc-300">📦</div>
+                          <div className="flex h-full w-full items-center justify-center">
+                            <Package className={`${icn.ui} text-zinc-300`} aria-hidden strokeWidth={2} />
+                          </div>
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -290,7 +308,7 @@ export default async function CustomerDashboardPage() {
             </div>
             {bookings.length === 0 ? (
               <div className="flex flex-col items-center py-12 text-center">
-                <span className="mb-3 text-4xl">📅</span>
+                <Calendar className={`${icn.empty} mb-3`} aria-hidden strokeWidth={1.25} />
                 <p className="mb-4 text-sm text-zinc-500">No upcoming bookings</p>
                 <Link href="/services" className="rounded-xl bg-[#D4450A] px-5 py-2.5 text-xs font-bold text-white hover:opacity-90">
                   Browse services
@@ -304,7 +322,9 @@ export default async function CustomerDashboardPage() {
                       {booking.product.images[0] ? (
                         <img src={booking.product.images[0]} alt="" className="h-full w-full object-cover" />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center text-zinc-300">🛎️</div>
+                        <div className="flex h-full w-full items-center justify-center">
+                          <ConciergeBell className={`${icn.ui} text-zinc-300`} aria-hidden strokeWidth={2} />
+                        </div>
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -345,7 +365,7 @@ export default async function CustomerDashboardPage() {
             </div>
             {wishlistCount === 0 ? (
               <div className="flex flex-col items-center py-12 text-center">
-                <span className="mb-3 text-4xl">🤍</span>
+                <Heart className={`${icn.empty} mb-3`} aria-hidden strokeWidth={1.25} />
                 <p className="mb-4 text-sm text-zinc-500">No items saved yet</p>
                 <Link href="/shop" className="rounded-xl bg-[#D4450A] px-5 py-2.5 text-xs font-bold text-white hover:opacity-90">
                   Browse shop
@@ -364,7 +384,9 @@ export default async function CustomerDashboardPage() {
                             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                           />
                         ) : (
-                          <div className="flex h-full w-full items-center justify-center text-2xl">📦</div>
+                          <div className="flex h-full w-full items-center justify-center">
+                            <Package className={`${icn.header} text-zinc-300`} aria-hidden strokeWidth={2} />
+                          </div>
                         )}
                       </div>
                     </Link>
@@ -394,7 +416,7 @@ export default async function CustomerDashboardPage() {
             </div>
             {savedStoresCount === 0 ? (
               <div className="flex flex-col items-center py-12 text-center">
-                <span className="mb-3 text-4xl">🔖</span>
+                <Bookmark className={`${icn.empty} mb-3`} aria-hidden strokeWidth={1.25} />
                 <p className="mb-4 text-sm text-zinc-500">No saved stores yet</p>
                 <Link href="/stores" className="rounded-xl bg-[#D4450A] px-5 py-2.5 text-xs font-bold text-white hover:opacity-90">
                   Browse stores

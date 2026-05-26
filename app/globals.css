@@ -9,6 +9,9 @@ html {
 }
 
 :root {
+  /* Mobile bottom tab bar + iOS safe area — used by fixed footers/checkout */
+  --mobile-tab-offset: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+
   --brand-red: #D4450A;
   --brand-amber: #E8820C;
   --brand-blue: #1A7FB5;
@@ -33,7 +36,8 @@ html {
   --text-disabled: #c4c3c0;
   --success-bg: #dcfce7;
   --success-text: #15803d;
-  --font-display: var(--font-playfair), Georgia, serif;
+  --color-border-tertiary: rgba(28, 28, 26, 0.12);
+  --font-display: var(--font-sora), sans-serif;
 }
 
 .font-display {
@@ -64,6 +68,27 @@ body {
   background-color: #f5f5f5;
   color: #45443f;
   font-family: var(--font-sora), sans-serif;
+}
+
+/* Listing / marketing pages avoid content hidden behind the mobile tab bar (lg+ unaffected). */
+.pb-mobile-public {
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 1024px) {
+  .pb-mobile-public {
+    padding-bottom: 0;
+  }
+}
+
+/* Touch + iOS zoom: meaningful controls ≥44×44px with 16px text on handheld. */
+@media (max-width: 1023px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 1rem;
+    line-height: 1.5;
+    min-height: 2.75rem;
+  }
 }
 
 /* Tiptap editor prose styles */
@@ -129,3 +154,78 @@ body {
   height: 0;
   pointer-events: none;
 }
+
+/* Loading & motion polish */
+@keyframes lw-skeleton-pulse {
+  0%,
+  100% {
+    background-color: #e4e4e7;
+  }
+  50% {
+    background-color: #d4d4d8;
+  }
+}
+
+.lw-skeleton {
+  animation: lw-skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes lw-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.lw-route-loading {
+  animation: lw-fade-in 200ms ease-out both;
+}
+
+@keyframes lw-cart-bump {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.2);
+  }
+  55% {
+    transform: scale(0.95);
+  }
+}
+
+.lw-cart-icon-bump {
+  animation: lw-cart-bump 0.55s cubic-bezier(0.34, 1.45, 0.64, 1);
+  transform-origin: center;
+}
+
+.lw-card-lift {
+  transition:
+    box-shadow 200ms ease,
+    transform 200ms ease;
+}
+
+.lw-card-lift:hover {
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.08),
+    0 2px 4px -2px rgb(0 0 0 / 0.06);
+  transform: translateY(-2px);
+}
+
+.lw-link-subtle {
+  transition:
+    color 200ms ease,
+    text-decoration-color 200ms ease;
+}
+
+.lw-link-subtle:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.lw-icon-scarlet-hint:hover {
+  color: var(--scarlet);
+}
+

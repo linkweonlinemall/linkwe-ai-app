@@ -1,77 +1,81 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { useState } from "react";
+
+import { AmenityLucideIcon } from "@/components/icons/amenity-lucide";
+import { icn } from "@/lib/iconography";
 
 const AMENITY_GROUPS = [
   {
     label: "Access & Facilities",
     amenities: [
-      { value: "free_wifi", label: "Free WiFi", icon: "📶" },
-      { value: "parking_available", label: "Parking available", icon: "🅿️" },
-      { value: "wheelchair_accessible", label: "Wheelchair accessible", icon: "♿" },
-      { value: "air_conditioned", label: "Air conditioned", icon: "❄️" },
-      { value: "outdoor_seating", label: "Outdoor seating", icon: "🌿" },
-      { value: "indoor_seating", label: "Indoor seating", icon: "🪑" },
-      { value: "waiting_area", label: "Waiting area", icon: "🛋️" },
-      { value: "private_rooms", label: "Private rooms", icon: "🚪" },
+      { value: "free_wifi", label: "Free WiFi" },
+      { value: "parking_available", label: "Parking available" },
+      { value: "wheelchair_accessible", label: "Wheelchair accessible" },
+      { value: "air_conditioned", label: "Air conditioned" },
+      { value: "outdoor_seating", label: "Outdoor seating" },
+      { value: "indoor_seating", label: "Indoor seating" },
+      { value: "waiting_area", label: "Waiting area" },
+      { value: "private_rooms", label: "Private rooms" },
     ],
   },
   {
     label: "Payments & Pricing",
     amenities: [
-      { value: "card_payments", label: "Card payments accepted", icon: "💳" },
-      { value: "cash_accepted", label: "Cash accepted", icon: "💵" },
-      { value: "linx_accepted", label: "LINX accepted", icon: "🏦" },
-      { value: "online_payment", label: "Online payment", icon: "📱" },
-      { value: "free_consultation", label: "Free consultation", icon: "💬" },
-      { value: "payment_plans", label: "Payment plans available", icon: "📋" },
-      { value: "deposits_required", label: "Deposit required", icon: "💰" },
+      { value: "card_payments", label: "Card payments accepted" },
+      { value: "cash_accepted", label: "Cash accepted" },
+      { value: "linx_accepted", label: "LINX accepted" },
+      { value: "online_payment", label: "Online payment" },
+      { value: "free_consultation", label: "Free consultation" },
+      { value: "payment_plans", label: "Payment plans available" },
+      { value: "deposits_required", label: "Deposit required" },
     ],
   },
   {
     label: "Service Options",
     amenities: [
-      { value: "home_visits", label: "Home visits available", icon: "🏠" },
-      { value: "mobile_service", label: "Mobile service", icon: "🚗" },
-      { value: "virtual_sessions", label: "Virtual sessions available", icon: "💻" },
-      { value: "same_day_service", label: "Same day service", icon: "⚡" },
-      { value: "emergency_service", label: "Emergency service", icon: "🚨" },
-      { value: "weekend_available", label: "Available weekends", icon: "📅" },
-      { value: "evening_available", label: "Evening appointments", icon: "🌙" },
-      { value: "walk_ins_welcome", label: "Walk-ins welcome", icon: "🚶" },
-      { value: "by_appointment_only", label: "By appointment only", icon: "📌" },
+      { value: "home_visits", label: "Home visits available" },
+      { value: "mobile_service", label: "Mobile service" },
+      { value: "virtual_sessions", label: "Virtual sessions available" },
+      { value: "same_day_service", label: "Same day service" },
+      { value: "emergency_service", label: "Emergency service" },
+      { value: "weekend_available", label: "Available weekends" },
+      { value: "evening_available", label: "Evening appointments" },
+      { value: "walk_ins_welcome", label: "Walk-ins welcome" },
+      { value: "by_appointment_only", label: "By appointment only" },
     ],
   },
   {
     label: "Health & Safety",
     amenities: [
-      { value: "sanitized_equipment", label: "Sanitized equipment", icon: "🧼" },
-      { value: "gloves_used", label: "Gloves used", icon: "🧤" },
-      { value: "masks_available", label: "Masks available", icon: "😷" },
-      { value: "vaccinated_staff", label: "Vaccinated staff", icon: "💉" },
-      { value: "insured", label: "Fully insured", icon: "🛡️" },
-      { value: "certified_staff", label: "Certified staff", icon: "🎓" },
+      { value: "sanitized_equipment", label: "Sanitized equipment" },
+      { value: "gloves_used", label: "Gloves used" },
+      { value: "masks_available", label: "Masks available" },
+      { value: "vaccinated_staff", label: "Vaccinated staff" },
+      { value: "insured", label: "Fully insured" },
+      { value: "certified_staff", label: "Certified staff" },
     ],
   },
   {
     label: "Family & Lifestyle",
     amenities: [
-      { value: "pet_friendly", label: "Pet friendly", icon: "🐾" },
-      { value: "family_friendly", label: "Family friendly", icon: "👨‍👩‍👧" },
-      { value: "child_friendly", label: "Child friendly", icon: "👶" },
-      { value: "refreshments", label: "Refreshments provided", icon: "☕" },
-      { value: "loyalty_program", label: "Loyalty program", icon: "⭐" },
+      { value: "pet_friendly", label: "Pet friendly" },
+      { value: "family_friendly", label: "Family friendly" },
+      { value: "child_friendly", label: "Child friendly" },
+      { value: "refreshments", label: "Refreshments provided" },
+      { value: "loyalty_program", label: "Loyalty program" },
     ],
   },
   {
     label: "Delivery & Logistics",
     amenities: [
-      { value: "delivery_available", label: "Delivery available", icon: "🚚" },
-      { value: "pickup_available", label: "Pickup available", icon: "📦" },
-      { value: "free_delivery", label: "Free delivery", icon: "🎁" },
-      { value: "express_delivery", label: "Express delivery", icon: "⚡" },
-      { value: "installation_included", label: "Installation included", icon: "🔧" },
-      { value: "removal_service", label: "Removal/disposal service", icon: "🗑️" },
+      { value: "delivery_available", label: "Delivery available" },
+      { value: "pickup_available", label: "Pickup available" },
+      { value: "free_delivery", label: "Free delivery" },
+      { value: "express_delivery", label: "Express delivery" },
+      { value: "installation_included", label: "Installation included" },
+      { value: "removal_service", label: "Removal/disposal service" },
     ],
   },
 ] as const;
@@ -171,20 +175,13 @@ export default function StoreAmenitiesPicker({ initialAmenities }: Props) {
                             : "border-zinc-100 bg-white hover:border-zinc-200"
                         }`}
                       >
-                        <span className="text-base">{amenity.icon}</span>
+                        <AmenityLucideIcon value={amenity.value} className={icn.button} />
                         <span className="text-sm font-medium text-zinc-700">{amenity.label}</span>
                         {isSelected ? (
-                          <svg
-                            className="ml-auto shrink-0 text-[#D4450A]"
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="3"
-                          >
-                            <polyline points="20 6 9 17 4 12" />
-                          </svg>
+                          <Check
+                            className="ml-auto size-[14px] shrink-0 text-[#D4450A] stroke-[3]"
+                            aria-hidden
+                          />
                         ) : null}
                       </button>
                     );

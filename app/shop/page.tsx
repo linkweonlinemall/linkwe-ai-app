@@ -1,14 +1,18 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { PackageSearch, Package, ArrowDownToLine } from "lucide-react";
 import { Suspense } from "react";
 
-import { Prisma } from "@prisma/client";
+import { Prisma, ProductCondition } from "@prisma/client";
 
 import { getWishlistProductIds } from "@/app/actions/wishlist";
 import ProductSearchBar from "@/components/shop/ProductSearchBar";
 import ShopProductCardActions from "@/components/shop/ShopProductCardActions";
 import ShopFilters from "@/components/shop/ShopFilters";
+import { ProductCardSkeleton, ShopFiltersSidebarSkeleton } from "@/components/ui/content-skeletons";
 import PublicNav from "@/components/layout/PublicNav";
+import EmptyState from "@/components/ui/empty-state";
 import WishlistButton from "@/components/ui/WishlistButton";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
@@ -16,6 +20,7 @@ import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { prisma } from "@/lib/prisma";
 import { PRODUCT_CATEGORIES } from "@/lib/categories";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
+import { typography, radius, shadow, tw } from "@/lib/design-system";
 
 export const metadata: Metadata = {
   title: "Shop",
@@ -130,7 +135,7 @@ export default async function ShopPage({ searchParams }: Props) {
           }
         : {}),
       ...(inStock ? { stock: { gt: 0 } } : {}),
-      ...(condition ? { condition: condition as any } : {}),
+      ...(condition ? { condition: condition as ProductCondition } : {}),
       ...(brand ? { brand: { contains: brand, mode: "insensitive" as const } } : {}),
       ...variantProductIdFilter,
     },
@@ -172,7 +177,7 @@ export default async function ShopPage({ searchParams }: Props) {
   const wishlistIds = await getWishlistProductIds();
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-16 sm:pb-0">
+    <div className={`min-h-screen pb-mobile-public lg:pb-0 ${tw.bgPage} ${tw.fontSans}`}>
       <PublicNav
         user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null}
         dashboardHref={continueHref ?? undefined}
@@ -180,7 +185,7 @@ export default async function ShopPage({ searchParams }: Props) {
       />
 
       {/* Amazon-style search hero bar */}
-      <div className="bg-[#1C1C1A] py-4">
+      <div className={`${tw.bgDark} py-4`}>
         <div className="mx-auto max-w-screen-xl px-4 sm:px-6">
           <ProductSearchBar defaultValue={q} category={category} />
         </div>
@@ -194,9 +199,9 @@ export default async function ShopPage({ searchParams }: Props) {
               <Link
                 key={cat.value}
                 href={cat.value === "all" ? "/shop" : `/shop?category=${cat.value}`}
-                className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap transition-all ${
+                className={`shrink-0 ${radius.pill} px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap transition-all ${
                   (!category && cat.value === "all") || category === cat.value
-                    ? "bg-[#D4450A] text-white shadow-sm"
+                    ? `${tw.bgScarlet} text-white ${shadow.card}`
                     : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
                 }`}
               >
@@ -212,14 +217,14 @@ export default async function ShopPage({ searchParams }: Props) {
         {/* Results header */}
         <div className="mb-5 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-zinc-900">
+            <h1 className={`${typography.h1} text-zinc-900`}>
               {category
                 ? CATEGORIES.find((c) => c.value === category)?.label ?? "Products"
                 : q
                   ? `Results for "${q}"`
                   : "All Products"}
             </h1>
-            <p className="mt-0.5 text-sm text-zinc-500">
+            <p className="mt-0.5 text-base text-zinc-500 md:text-sm">
               {products.length} product{products.length !== 1 ? "s" : ""} from local vendors across Trinidad & Tobago
             </p>
           </div>
@@ -237,10 +242,14 @@ export default async function ShopPage({ searchParams }: Props) {
           {/* Sidebar */}
           <Suspense
             fallback={
-              <aside className="w-full shrink-0 lg:w-56">
-                <div className="mb-4 h-11 animate-pulse rounded-xl bg-zinc-200 lg:mb-0 lg:hidden" />
-                <div className="h-96 animate-pulse rounded-2xl border border-zinc-200 bg-zinc-100" />
-              </aside>
+              <div className="flex w-full flex-col gap-6 lg:flex-row">
+                <ShopFiltersSidebarSkeleton />
+                <div className="grid min-h-[40vh] min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+                  {Array.from({ length: 10 }).map((_, i) => (
+                    <ProductCardSkeleton key={i} />
+                  ))}
+                </div>
+              </div>
             }
           >
             <div className="w-full shrink-0 lg:w-56">
@@ -274,19 +283,17 @@ export default async function ShopPage({ searchParams }: Props) {
           {/* Product grid */}
           <div className="min-w-0 flex-1">
             {products.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-white py-24 text-center">
-                <span className="mb-4 text-6xl">🔍</span>
-                <h2 className="mb-2 text-lg font-bold text-zinc-900">No products found</h2>
-                <p className="mb-6 text-sm text-zinc-500">Try a different category or search term</p>
-                <Link
-                  href="/shop"
-                  className="rounded-full bg-[#D4450A] px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
-                >
-                  Browse all products
-                </Link>
+              <div className={`overflow-hidden ${radius.card} border border-dashed border-zinc-300 bg-white`}>
+                <EmptyState
+                  icon={<PackageSearch strokeWidth={1.25} className="text-current" />}
+                  title="No products match your filters"
+                  description="Try adjusting your filters or browse all products."
+                  actionLabel="Clear filters"
+                  actionHref="/shop"
+                />
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
                 {products.map((product) => {
                   const discount =
                     product.compareAtPrice && product.compareAtPrice > product.price
@@ -295,20 +302,23 @@ export default async function ShopPage({ searchParams }: Props) {
                   return (
                     <div
                       key={product.id}
-                      className="group flex flex-col overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-zinc-200/60 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:ring-zinc-300"
+                      className={`group flex flex-col overflow-hidden ${radius.card} bg-white ${shadow.card} ring-1 ring-zinc-200/60 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md hover:ring-zinc-300`}
                     >
                       <Link href={`/products/${product.slug}`} className="block">
                         {/* Image */}
                         <div className="relative aspect-square overflow-hidden bg-zinc-100">
                           {product.images[0] ? (
-                            <img
+                            <Image
                               src={product.images[0]}
                               alt={product.name}
-                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              fill
+                              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                              loading="lazy"
+                              className="object-cover transition-transform duration-300 group-hover:scale-105"
                             />
                           ) : (
                             <div className="flex h-full w-full items-center justify-center">
-                              <span className="text-4xl text-zinc-300">📦</span>
+                              <Package className="size-10 text-zinc-300" strokeWidth={1.25} aria-hidden />
                             </div>
                           )}
                           <div className="absolute right-2 top-2 z-10">
@@ -321,19 +331,20 @@ export default async function ShopPage({ searchParams }: Props) {
                           {/* Badges */}
                           <div className="absolute left-2 top-2 flex flex-col gap-1">
                             {product.isFeatured ? (
-                              <span className="rounded-full bg-[#D4450A] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow">
+                              <span className={`${radius.pill} ${tw.bgScarlet} px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white ${shadow.modal}`}>
                                 Featured
                               </span>
                             ) : null}
                             {discount ? (
-                              <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-[9px] font-bold text-white shadow">
+                              <span className={`${radius.pill} ${tw.bgSuccessSolid} px-2 py-0.5 text-[9px] font-bold text-white ${shadow.modal}`}>
                                 -{discount}%
                               </span>
                             ) : null}
                           </div>
                           {product.isDigital ? (
-                            <span className="absolute bottom-2 left-2 rounded-full bg-[#1A7FB5] px-2 py-0.5 text-[9px] font-bold text-white">
-                              ⬇️ Digital
+                            <span className={`absolute bottom-2 left-2 inline-flex items-center gap-0.5 ${radius.pill} ${tw.bgBlue} px-2 py-0.5 text-[9px] font-bold text-white`}>
+                              <ArrowDownToLine className="size-2.5 shrink-0" aria-hidden strokeWidth={2.5} />
+                              Digital
                             </span>
                           ) : null}
                         </div>
@@ -350,7 +361,7 @@ export default async function ShopPage({ searchParams }: Props) {
                             {product.name}
                           </p>
                           <div className="mt-auto pt-2">
-                            <p className="text-sm font-black text-[#D4450A]">TTD {product.price.toFixed(2)}</p>
+                            <p className={`text-sm font-black ${tw.textScarlet}`}>TTD {product.price.toFixed(2)}</p>
                             {product.compareAtPrice != null && product.compareAtPrice > product.price ? (
                               <p className="text-xs text-zinc-400 line-through">
                                 TTD {product.compareAtPrice.toFixed(2)}
@@ -366,7 +377,7 @@ export default async function ShopPage({ searchParams }: Props) {
                                       <svg
                                         key={s}
                                         viewBox="0 0 24 24"
-                                        className={`h-2.5 w-2.5 ${s <= Math.round(rv.avg) ? "fill-[#E8820C]" : "fill-zinc-200"}`}
+                                        className={`h-2.5 w-2.5 ${s <= Math.round(rv.avg) ? tw.fillAmber : "fill-zinc-200"}`}
                                       >
                                         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                                       </svg>
@@ -383,6 +394,7 @@ export default async function ShopPage({ searchParams }: Props) {
                           isDigital={product.isDigital}
                           slug={product.slug}
                           productId={product.id}
+                          productName={product.name}
                         />
                       </div>
                     </div>

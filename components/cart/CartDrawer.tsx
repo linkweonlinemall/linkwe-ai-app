@@ -6,6 +6,7 @@ import { useCallback, useMemo, useState } from "react";
 import { getCart, removeFromCart, updateCartQuantity } from "@/app/actions/cart";
 import type { CartItem } from "@/lib/cart/cart-store";
 import { useCartStore } from "@/lib/cart/cart-store";
+import { toastRemovedFromCart } from "@/lib/feedback/toasts";
 
 function mapRows(rows: Awaited<ReturnType<typeof getCart>>): CartItem[] {
   return rows.map((row) => ({
@@ -58,9 +59,10 @@ export default function CartDrawer() {
     setBusyProductId(null);
   };
 
-  const onRemove = async (productId: string) => {
+  const onRemove = async (productId: string, productName: string) => {
     setBusyProductId(productId);
     await removeFromCart(productId);
+    toastRemovedFromCart(productName);
     await refresh();
     setBusyProductId(null);
   };
@@ -197,7 +199,7 @@ export default function CartDrawer() {
                       <button
                         type="button"
                         disabled={busy}
-                        onClick={() => void onRemove(item.productId)}
+                        onClick={() => void onRemove(item.productId, item.product.name)}
                         className="mt-1 text-xs text-zinc-400 hover:text-red-500 disabled:opacity-50"
                       >
                         Remove

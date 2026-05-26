@@ -1,26 +1,49 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
+import {
+  Calendar,
+  ClipboardList,
+  ConciergeBell,
+  CreditCard,
+  LayoutDashboard,
+  List,
+  MessageCircle,
+  Package,
+  Settings,
+  ShoppingBag,
+  Star,
+  Store,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+
+import {
+  VENDOR_VENDOR_FINANCE_PATH,
+  VENDOR_VENDOR_MESSAGES_PATH,
+  VENDOR_VENDOR_ORDERS_PATH,
+  VENDOR_VENDOR_REVIEWS_PATH,
+} from "@/lib/routes/vendor-dashboard";
 
 const SIDEBAR_ITEM =
   "mx-2 flex w-[calc(100%-1rem)] items-center gap-3 rounded-lg px-4 py-2.5 text-sm text-zinc-600 transition-colors duration-150 hover:bg-zinc-50 hover:text-zinc-900";
 const SIDEBAR_ITEM_ACTIVE = "bg-[#D4450A]/10 font-medium text-[#D4450A]";
 
-const NAV_ITEMS = [
-  { href: "/dashboard/vendor", label: "Dashboard", icon: "⚡", exact: true },
-  { href: "/dashboard/vendor/products", label: "Products", icon: "📦", exact: false },
-  { href: "/dashboard/vendor/services", label: "My Services", icon: "🛎️", exact: false },
-  { href: "/dashboard/vendor/bookings", label: "Bookings", icon: "🗓️", exact: false },
-  { href: "/dashboard/vendor/requests", label: "Requests", icon: "⚡", exact: false },
-  { href: "/dashboard/vendor/staff", label: "Staff", icon: "👥", exact: false },
-  { href: "/dashboard/vendor?tab=store", label: "Store", icon: "🏪", exact: false },
-  { href: "/dashboard/vendor?tab=listings", label: "Listings", icon: "📋", exact: false },
-  { href: "/dashboard/vendor?tab=orders", label: "Orders", icon: "🛍️", exact: false },
-  { href: "/dashboard/vendor?tab=finance", label: "Finance", icon: "💳", exact: false },
-  { href: "/dashboard/vendor?tab=messages", label: "Messages", icon: "💬", exact: false },
-  { href: "/dashboard/vendor?tab=reviews", label: "Reviews", icon: "⭐", exact: false },
-  { href: "/dashboard/vendor/settings", label: "Settings", icon: "⚙️", exact: false },
+const NAV_ITEMS: { href: string; label: string; Icon: LucideIcon; exact: boolean }[] = [
+  { href: "/dashboard/vendor", label: "Dashboard", Icon: LayoutDashboard, exact: true },
+  { href: "/dashboard/vendor/products", label: "Products", Icon: Package, exact: false },
+  { href: "/dashboard/vendor/services", label: "My Services", Icon: ConciergeBell, exact: false },
+  { href: "/dashboard/vendor/bookings", label: "Bookings", Icon: Calendar, exact: false },
+  { href: "/dashboard/vendor/requests", label: "Requests", Icon: ClipboardList, exact: false },
+  { href: "/dashboard/vendor/staff", label: "Staff", Icon: Users, exact: false },
+  { href: "/dashboard/vendor?tab=store", label: "Store", Icon: Store, exact: false },
+  { href: "/dashboard/vendor?tab=listings", label: "Listings", Icon: List, exact: false },
+  { href: VENDOR_VENDOR_ORDERS_PATH, label: "Orders", Icon: ShoppingBag, exact: false },
+  { href: VENDOR_VENDOR_FINANCE_PATH, label: "Finance", Icon: CreditCard, exact: false },
+  { href: VENDOR_VENDOR_MESSAGES_PATH, label: "Messages", Icon: MessageCircle, exact: false },
+  { href: VENDOR_VENDOR_REVIEWS_PATH, label: "Reviews", Icon: Star, exact: false },
+  { href: "/dashboard/vendor/settings", label: "Settings", Icon: Settings, exact: false },
 ];
 
 export default function VendorSidebarWrapper() {
@@ -53,7 +76,7 @@ export default function VendorSidebarWrapper() {
             href={item.href}
             className={[SIDEBAR_ITEM, isActive(item) ? SIDEBAR_ITEM_ACTIVE : ""].filter(Boolean).join(" ")}
           >
-            <span aria-hidden>{item.icon}</span>
+            <item.Icon className="size-4 shrink-0 stroke-[2] text-current" aria-hidden />
             <span>{item.label}</span>
           </Link>
         ))}
@@ -65,13 +88,13 @@ export default function VendorSidebarWrapper() {
             key={item.href}
             href={item.href}
             className={[
-              "inline-block shrink-0 whitespace-nowrap px-3 py-3 text-sm",
+              "inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap px-3 py-3 text-sm",
               isActive(item)
                 ? "border-b-2 border-[#D4450A] font-medium text-[#D4450A]"
                 : "text-zinc-500 hover:text-zinc-800",
             ].join(" ")}
           >
-            <span aria-hidden>{item.icon} </span>
+            <item.Icon className="size-4 shrink-0 stroke-[2] text-current" aria-hidden />{" "}
             {item.label}
           </Link>
         ))}

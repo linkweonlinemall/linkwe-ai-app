@@ -4,11 +4,14 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { addToCart, getCart } from "@/app/actions/cart";
+import InlineSpinner from "@/components/ui/InlineSpinner";
 import type { CartItem } from "@/lib/cart/cart-store";
 import { useCartStore } from "@/lib/cart/cart-store";
+import { toastAddedToCart } from "@/lib/feedback/toasts";
 
 type Props = {
   productId: string;
+  productName: string;
   stock: number | null;
   /** Number of units to add in one action (default 1). */
   quantity?: number;
@@ -41,10 +44,18 @@ function mapRows(rows: Awaited<ReturnType<typeof getCart>>): CartItem[] {
   }));
 }
 
-export default function AddToCartButton({ productId, stock, quantity = 1, variantId, disabled }: Props) {
+export default function AddToCartButton({
+  productId,
+  productName,
+  stock,
+  quantity = 1,
+  variantId,
+  disabled,
+}: Props) {
   const router = useRouter();
   const setItems = useCartStore((s) => s.setItems);
   const openDrawer = useCartStore((s) => s.openDrawer);
+  const bumpCartIcon = useCartStore((s) => s.bumpCartIcon);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +76,8 @@ export default function AddToCartButton({ productId, stock, quantity = 1, varian
       const rows = await getCart();
       setItems(mapRows(rows));
       setAdded(true);
+      toastAddedToCart(productName);
+      bumpCartIcon();
       openDrawer();
     } else if (result.error === "not_logged_in") {
       router.push("/login");
@@ -78,25 +91,20 @@ export default function AddToCartButton({ productId, stock, quantity = 1, varian
     setLoading(false);
   };
 
+  const baseBtn =
+    "font-sans flex h-14 w-full items-center justify-center whitespace-nowrap rounded-md text-base font-semibold transition-all duration-200 ease-in-out";
+
   if (disabled) {
     return (
-      <button
-        type="button"
-        disabled
-        className="h-12 w-full cursor-not-allowed rounded-xl bg-zinc-200 text-sm font-medium text-zinc-400"
-      >
-        Select options to add to cart
+      <button type="button" disabled className={`${baseBtn} cursor-not-allowed bg-gray-300 text-zinc-600`}>
+        Select options
       </button>
     );
   }
 
   if (stock === 0) {
     return (
-      <button
-        type="button"
-        disabled
-        className="h-12 w-full cursor-not-allowed rounded-xl bg-zinc-300 text-sm font-medium text-white"
-      >
+      <button type="button" disabled className={`${baseBtn} cursor-not-allowed bg-gray-300 text-white`}>
         Out of stock
       </button>
     );
@@ -108,14 +116,22 @@ export default function AddToCartButton({ productId, stock, quantity = 1, varian
         type="button"
         onClick={() => void handleClick()}
         disabled={loading || Boolean(disabled)}
-        className={`h-12 w-full rounded-xl text-sm font-medium text-white transition-opacity ${
-          added ? "bg-emerald-600" : "opacity-100"
-        } ${loading && !added ? "opacity-75" : ""}`}
-        style={added ? undefined : { backgroundColor: "#D4450A" }}
+        className={`${baseBtn} text-white ${
+          added ? "bg-emerald-600" : "bg-[#D4450A] hover:opacity-[0.97]"
+        } ${loading && !added ? "opacity-90" : ""}`}
       >
-        {loading ? "Adding..." : added ? "Added to cart ✓" : "Add to cart"}
+        {loading ? (
+          <>
+            <InlineSpinner className="mr-2 h-4 w-4 text-white" />
+            Adding…
+          </>
+        ) : added ? (
+          "Added to cart ✓"
+        ) : (
+          "Add to cart"
+        )}
       </button>
-      {error ? <p className="mt-2 text-center text-xs text-red-600">{error}</p> : null}
+      {error ? <p className="mt-2 text-center font-sans text-xs text-red-600">{error}</p> : null}
     </div>
   );
 }

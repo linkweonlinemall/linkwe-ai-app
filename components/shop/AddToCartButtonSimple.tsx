@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+
 import { addToCart, getCart } from "@/app/actions/cart";
-import { useCartStore } from "@/lib/cart/cart-store";
+import InlineSpinner from "@/components/ui/InlineSpinner";
 import type { CartItem } from "@/lib/cart/cart-store";
+import { useCartStore } from "@/lib/cart/cart-store";
+import { toastAddedToCart } from "@/lib/feedback/toasts";
 
 function mapRows(rows: Awaited<ReturnType<typeof getCart>>): CartItem[] {
   return rows.map((row) => ({
@@ -31,10 +34,11 @@ function mapRows(rows: Awaited<ReturnType<typeof getCart>>): CartItem[] {
   }));
 }
 
-export default function AddToCartButtonSimple({ productId }: { productId: string }) {
+export default function AddToCartButtonSimple({ productId, productName }: { productId: string; productName: string }) {
   const router = useRouter();
   const setItems = useCartStore((s) => s.setItems);
   const openDrawer = useCartStore((s) => s.openDrawer);
+  const bumpCartIcon = useCartStore((s) => s.bumpCartIcon);
   const [loading, setLoading] = useState(false);
   const [added, setAdded] = useState(false);
 
@@ -47,6 +51,8 @@ export default function AddToCartButtonSimple({ productId }: { productId: string
       const rows = await getCart();
       setItems(mapRows(rows));
       setAdded(true);
+      toastAddedToCart(productName);
+      bumpCartIcon();
       openDrawer();
       setTimeout(() => setAdded(false), 2000);
     } else if (result.error === "not_logged_in") {
@@ -60,11 +66,20 @@ export default function AddToCartButtonSimple({ productId }: { productId: string
       type="button"
       onClick={handleClick}
       disabled={loading}
-      className={`mt-2 w-full rounded-lg py-1.5 text-xs font-semibold text-white transition-all disabled:opacity-60 ${
-        added ? "bg-emerald-600" : "bg-[#D4450A] hover:opacity-90"
+      className={`mt-2 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg py-1.5 text-xs font-semibold text-white transition-all duration-200 ease-in-out disabled:opacity-60 ${
+        added ? "bg-emerald-600" : "bg-[#D4450A] hover:bg-[#B83A09]"
       }`}
     >
-      {loading ? "Adding..." : added ? "Added ✓" : "Add to cart"}
+      {loading ? (
+        <>
+          <InlineSpinner className="h-3.5 w-3.5 text-white" />
+          Adding…
+        </>
+      ) : added ? (
+        "Added ✓"
+      ) : (
+        "Add to cart"
+      )}
     </button>
   );
 }

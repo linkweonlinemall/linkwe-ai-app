@@ -2,15 +2,18 @@
 
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
+import { Check, ChevronUp } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { confirmOrderPaid, createPaymentIntent } from "@/app/actions/checkout";
 import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
 import Button from "@/components/ui/Button";
+import InlineSpinner from "@/components/ui/InlineSpinner";
 import Select from "@/components/ui/Select";
 import { TRINIDAD_ONBOARDING_REGION_OPTIONS } from "@/lib/onboarding/tt-region-options";
 import { useCartStore } from "@/lib/cart/cart-store";
+import { radius, spacing, tw } from "@/lib/design-system";
 import { getFinalShippingRateForRegion } from "@/lib/shipping/tt-markup";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
@@ -43,6 +46,8 @@ type CheckoutClientProps = {
   subtotal: number;
 };
 
+const mobilePrimaryBtn = `flex w-full min-h-[44px] items-center justify-center ${radius.button} py-3.5 text-base font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60 ${tw.bgScarlet}`;
+
 function PaymentForm({ orderId, onBack }: { orderId: string; onBack: () => void }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -73,9 +78,9 @@ function PaymentForm({ orderId, onBack }: { orderId: string; onBack: () => void 
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 lg:pb-0 max-lg:pb-24">
       <Button
-        className="!px-0 !py-0 text-sm text-zinc-500 hover:bg-transparent hover:text-zinc-900"
+        className="!px-0 !py-2 min-h-[44px] text-sm text-zinc-500 hover:bg-transparent hover:text-zinc-900"
         type="button"
         variant="ghost"
         onClick={onBack}
@@ -83,15 +88,21 @@ function PaymentForm({ orderId, onBack }: { orderId: string; onBack: () => void 
         ← Back to delivery details
       </Button>
       <PaymentElement />
-      {payError ? <p className="text-sm text-red-600">{payError}</p> : null}
+      {payError ? <p className={`text-base ${tw.textDangerToken}`}>{payError}</p> : null}
       <button
         type="button"
         onClick={() => void handlePay()}
         disabled={paying || !stripe}
-        className="mt-4 w-full rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-        style={{ backgroundColor: "var(--scarlet)" }}
+        className={`${mobilePrimaryBtn} mt-4 gap-2 lg:static lg:z-auto lg:translate-y-0 max-lg:fixed max-lg:inset-x-3 max-lg:w-auto max-lg:bottom-[calc(var(--mobile-tab-offset)+3.25rem)] max-lg:z-[96]`}
       >
-        {paying ? "Processing payment..." : "Pay now"}
+        {paying ? (
+          <>
+            <InlineSpinner className="h-5 w-5 shrink-0 text-white" />
+            Processing…
+          </>
+        ) : (
+          "Pay now"
+        )}
       </button>
     </div>
   );
@@ -104,24 +115,20 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
 
   const [step, setStep] = useState<"details" | "payment">("details");
   const [deliveryRegion, setDeliveryRegion] = useState("");
-  const [useDelivery, setUseDelivery] = useState(() => {
-    const anyD = items.some((i) => i.product.allowDelivery);
-    const anyP = items.some((i) => i.product.allowPickup);
-    if (anyD) return true;
-    if (anyP) return false;
-    return true;
-  });
+  const [fulfillmentChoice, setFulfillmentChoice] = useState<"delivery" | "pickup" | null>(() => null);
+  const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
 
+  const useDelivery = useMemo(() => {
+    if (anyDelivery && !anyPickup) return true;
+    if (!anyDelivery && anyPickup) return false;
+    if (fulfillmentChoice === "pickup") return false;
+    return true;
+  }, [anyDelivery, anyPickup, fulfillmentChoice]);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [regionDetectionFailed, setRegionDetectionFailed] = useState(false);
-
-  useEffect(() => {
-    if (anyDelivery && !anyPickup) setUseDelivery(true);
-    if (!anyDelivery && anyPickup) setUseDelivery(false);
-  }, [anyDelivery, anyPickup]);
 
   const shippingEstimate = useMemo(() => {
     if (allDigital) return 0;
@@ -142,243 +149,306 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
 
   const displayTotal = subtotal + shippingEstimate;
 
+  async function proceedToPayment() {
+    const addressInput = document.querySelector('input[name="locationAddress"]') as HTMLInputElement | null;
+    const address = addressInput?.value ?? "";
+
+    if (!allDigital && useDelivery && !deliveryRegion) {
+      setError("Please select your delivery region.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    const result = await createPaymentIntent(
+      address,
+      allDigital ? "" : deliveryRegion,
+      allDigital ? false : useDelivery,
+    );
+    if (result.ok) {
+      setClientSecret(result.clientSecret);
+      setOrderId(result.orderId);
+      setStep("payment");
+      setMobileSummaryOpen(false);
+    } else {
+      setError(result.error);
+    }
+    setLoading(false);
+  }
+
+  const summaryBody = (
+    <>
+      <ul className="max-lg:text-sm lg:text-[length:inherit]">
+        {items.map((item) => {
+          const line = item.product.price * item.quantity;
+          return (
+            <li key={item.id} className="flex justify-between py-1.5 text-xs" style={{ color: "var(--text-primary)" }}>
+              <span>
+                {item.product.name} × {item.quantity}
+              </span>
+              <span style={{ color: "var(--text-secondary)" }}>TTD {line.toFixed(2)}</span>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="my-3 border-t" style={{ borderColor: "var(--card-border-subtle)" }} />
+      <div className="flex justify-between py-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+        <span>Subtotal</span>
+        <span>TTD {subtotal.toFixed(2)}</span>
+      </div>
+      {allDigital ? (
+        <div className="flex justify-between py-2 text-sm">
+          <span>Delivery</span>
+          <span className="font-semibold text-emerald-600">Free — instant download</span>
+        </div>
+      ) : (
+        <div className="flex justify-between py-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+          <span>{useDelivery ? "Delivery" : "Pickup"}</span>
+          <span>
+            {useDelivery
+              ? deliveryRegion
+                ? `TTD ${shippingEstimate.toFixed(2)}`
+                : "Enter address to calculate"
+              : "Free"}
+          </span>
+        </div>
+      )}
+      <div className="my-3 border-t" style={{ borderColor: "var(--card-border-subtle)" }} />
+      <div className="flex justify-between">
+        <span className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
+          Total
+        </span>
+        <span className="text-base font-bold" style={{ color: "var(--scarlet)" }}>
+          TTD {displayTotal.toFixed(2)}
+        </span>
+      </div>
+    </>
+  );
+
+  const summaryForDesktop = (
+    <>
+      <h2 className="mb-3 text-xs font-semibold lg:mb-4 lg:text-sm" style={{ color: "var(--text-primary)" }}>
+        Order Summary
+      </h2>
+      {summaryBody}
+    </>
+  );
+
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="order-1 flex w-full min-w-0 flex-col gap-5 lg:order-none lg:col-span-2">
-            {step === "details" ? (
-              <div
-                className="rounded-xl bg-white p-5 sm:p-6"
-                style={{ border: "1px solid var(--card-border)" }}
-              >
-                <div id="checkout-delivery-form">
-                  <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                    Delivery details
-                  </h2>
+    <div className={`grid grid-cols-1 lg:grid-cols-3 ${spacing.cardGap} max-lg:pb-40 lg:pb-0`}>
+      <div className="order-1 flex w-full min-w-0 flex-col gap-5 lg:order-none lg:col-span-2">
+        {step === "details" ? (
+          <div
+            className={`${radius.card} bg-white ${spacing.cardPadding}`}
+            style={{ border: "1px solid var(--card-border)" }}
+          >
+            <div id="checkout-delivery-form">
+              <h2 className="mb-4 text-base font-semibold" style={{ color: "var(--text-primary)" }}>
+                Delivery details
+              </h2>
 
-                  {!allDigital ? (
-                    <>
-                      {anyDelivery && anyPickup ? (
-                        <div className="mt-4 space-y-3">
-                          <label className="flex cursor-pointer items-center gap-2">
-                            <input
-                              type="radio"
-                              name="fulfillment"
-                              checked={useDelivery}
-                              onChange={() => setUseDelivery(true)}
-                              className="border-zinc-300"
-                            />
-                            <span className="text-sm font-medium text-zinc-800">Deliver to my address</span>
-                          </label>
-                          <label className="flex cursor-pointer items-center gap-2">
-                            <input
-                              type="radio"
-                              name="fulfillment"
-                              checked={!useDelivery}
-                              onChange={() => setUseDelivery(false)}
-                              className="border-zinc-300"
-                            />
-                            <span className="text-sm font-medium text-zinc-800">Local pickup</span>
-                          </label>
-                        </div>
-                      ) : null}
+              {!allDigital ? (
+                <>
+                  {anyDelivery && anyPickup ? (
+                    <div className="mt-4 space-y-4">
+                      <label className="flex min-h-[44px] cursor-pointer items-center gap-3 py-1">
+                        <input
+                          type="radio"
+                          name="fulfillment"
+                          checked={useDelivery}
+                          onChange={() => setFulfillmentChoice("delivery")}
+                          className="h-5 w-5 shrink-0 border-zinc-300"
+                        />
+                        <span className="text-base font-medium text-zinc-800">Deliver to my address</span>
+                      </label>
+                      <label className="flex min-h-[44px] cursor-pointer items-center gap-3 py-1">
+                        <input
+                          type="radio"
+                          name="fulfillment"
+                          checked={!useDelivery}
+                          onChange={() => setFulfillmentChoice("pickup")}
+                          className="h-5 w-5 shrink-0 border-zinc-300"
+                        />
+                        <span className="text-base font-medium text-zinc-800">Local pickup</span>
+                      </label>
+                    </div>
+                  ) : null}
 
-                      {anyDelivery && !anyPickup ? (
-                        <p className="mt-4 text-sm text-zinc-600">Delivery to your address</p>
-                      ) : null}
+                  {anyDelivery && !anyPickup ? (
+                    <p className="mt-4 text-base text-zinc-600">Delivery to your address</p>
+                  ) : null}
 
-                      {!anyDelivery && anyPickup ? (
-                        <p className="mt-4 text-sm text-zinc-600">Local pickup at the vendor location</p>
-                      ) : null}
+                  {!anyDelivery && anyPickup ? (
+                    <p className="mt-4 text-base text-zinc-600">Local pickup at the vendor location</p>
+                  ) : null}
 
-                      {!anyDelivery && !anyPickup ? (
-                        <p className="mt-4 text-sm text-amber-700">
-                          These products have no delivery or pickup options set. Contact the vendor or try
-                          another cart.
+                  {!anyDelivery && !anyPickup ? (
+                    <p className="mt-4 text-base text-amber-700">
+                      These products have no delivery or pickup options set. Contact the vendor or try another
+                      cart.
+                    </p>
+                  ) : null}
+
+                  {useDelivery ? (
+                    <div className="mt-4 flex flex-col gap-3">
+                      {regionDetectionFailed ? (
+                        <p className="text-base text-amber-700">
+                          We couldn&apos;t detect your region from the map pin. Please choose your delivery region
+                          below.
                         </p>
                       ) : null}
+                      <Select
+                        className={`${radius.card} min-h-[44px] border bg-white px-4 py-3 text-base ${
+                          regionDetectionFailed ? "border-amber-400" : "border-zinc-200"
+                        }`}
+                        label="Select your delivery region"
+                        value={deliveryRegion}
+                        onChange={(e) => {
+                          setDeliveryRegion(e.target.value);
+                          setRegionDetectionFailed(false);
+                        }}
+                      >
+                        <option value="">Choose your region...</option>
+                        {TRINIDAD_ONBOARDING_REGION_OPTIONS.map((r) => (
+                          <option key={r.value} value={r.value}>
+                            {r.label}
+                          </option>
+                        ))}
+                      </Select>
 
-                      {useDelivery ? (
-                        <div className="mt-4 flex flex-col gap-3">
-                          {regionDetectionFailed ? (
-                            <p className="text-sm text-amber-700">
-                              We couldn&apos;t detect your region from the map pin. Please choose your delivery
-                              region below.
-                            </p>
-                          ) : null}
-                          <Select
-                            className={`rounded-xl border bg-white px-4 py-3 text-sm ${
-                              regionDetectionFailed ? "border-amber-400" : "border-zinc-200"
-                            }`}
-                            label="Select your delivery region"
-                            value={deliveryRegion}
-                            onChange={(e) => {
-                              setDeliveryRegion(e.target.value);
-                              setRegionDetectionFailed(false);
-                            }}
+                      {deliveryRegion ? (
+                        <>
+                          <Button
+                            className="!px-0 !py-2 min-h-[44px] text-sm text-zinc-500 hover:bg-transparent hover:text-zinc-900"
+                            type="button"
+                            variant="ghost"
+                            onClick={() => setDeliveryRegion("")}
                           >
-                            <option value="">Choose your region...</option>
-                            {TRINIDAD_ONBOARDING_REGION_OPTIONS.map((r) => (
-                              <option key={r.value} value={r.value}>
-                                {r.label}
-                              </option>
-                            ))}
-                          </Select>
+                            ← Change region
+                          </Button>
 
-                          {deliveryRegion ? (
-                            <>
-                              <Button
-                                className="!px-0 !py-0 text-sm text-zinc-500 hover:bg-transparent hover:text-zinc-900"
-                                type="button"
-                                variant="ghost"
-                                onClick={() => setDeliveryRegion("")}
-                              >
-                                ← Change region
-                              </Button>
+                          <div
+                            className={`flex items-center gap-2 ${radius.card} border border-emerald-200 bg-emerald-50 px-3 py-3`}
+                          >
+                            <Check className="size-5 shrink-0 text-emerald-600" aria-hidden strokeWidth={2.5} />
+                            <span className="text-base font-medium capitalize text-emerald-700">
+                              {deliveryRegion.replace(/_/g, " ")}
+                            </span>
+                          </div>
 
-                              <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
-                                <span className="text-sm text-emerald-500">✓</span>
-                                <span className="text-sm font-medium capitalize text-emerald-700">
-                                  {deliveryRegion.replace(/_/g, " ")}
-                                </span>
-                              </div>
-
-                              <StoreLocationPicker
-                                initialAddress=""
-                                initialLat={null}
-                                initialLng={null}
-                                onRegionDetected={(detected) => {
-                                  if (detected) {
-                                    setDeliveryRegion(detected);
-                                    setRegionDetectionFailed(false);
-                                  } else {
-                                    setRegionDetectionFailed(true);
-                                  }
-                                }}
-                              />
-                            </>
-                          ) : null}
-                        </div>
+                          <StoreLocationPicker
+                            initialAddress=""
+                            initialLat={null}
+                            initialLng={null}
+                            onRegionDetected={(detected) => {
+                              if (detected) {
+                                setDeliveryRegion(detected);
+                                setRegionDetectionFailed(false);
+                              } else {
+                                setRegionDetectionFailed(true);
+                              }
+                            }}
+                          />
+                        </>
                       ) : null}
-                    </>
-                  ) : (
-                    <p className="mt-4 text-sm text-zinc-600">
-                      Digital delivery — instant download after payment. No shipping address required.
-                    </p>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const addressInput = document.querySelector(
-                      'input[name="locationAddress"]',
-                    ) as HTMLInputElement | null;
-                    const address = addressInput?.value ?? "";
-
-                    if (!allDigital && useDelivery && !deliveryRegion) {
-                      setError("Please select your delivery region.");
-                      return;
-                    }
-
-                    setLoading(true);
-                    setError(null);
-                    const result = await createPaymentIntent(
-                      address,
-                      allDigital ? "" : deliveryRegion,
-                      allDigital ? false : useDelivery,
-                    );
-                    if (result.ok) {
-                      setClientSecret(result.clientSecret);
-                      setOrderId(result.orderId);
-                      setStep("payment");
-                    } else {
-                      setError(result.error);
-                    }
-                    setLoading(false);
-                  }}
-                  disabled={loading || (!allDigital && !anyDelivery && !anyPickup)}
-                  className="mt-4 flex w-full items-center justify-center rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-                  style={{ backgroundColor: "var(--scarlet)" }}
-                >
-                  {loading ? "Preparing payment..." : "Continue to payment"}
-                </button>
-                {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
-              </div>
-            ) : null}
-
-            {step === "payment" && clientSecret && orderId ? (
-              <div
-                className="rounded-xl bg-white p-5 sm:p-6"
-                style={{ border: "1px solid var(--card-border)" }}
-              >
-                <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                  Payment
-                </h2>
-                <Elements stripe={stripePromise} options={{ clientSecret }}>
-                  <PaymentForm orderId={orderId} onBack={() => setStep("details")} />
-                </Elements>
-              </div>
-            ) : null}
-          </div>
-
-          <div className="order-last w-full min-w-0 lg:order-none lg:col-span-1">
-            <div
-              className="rounded-xl bg-white p-5 lg:sticky lg:top-24"
-              style={{ border: "1px solid var(--card-border)" }}
-            >
-              <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                Order Summary
-              </h2>
-              <ul>
-                {items.map((item) => {
-                  const line = item.product.price * item.quantity;
-                  return (
-                    <li
-                      key={item.id}
-                      className="flex justify-between py-1.5 text-xs"
-                      style={{ color: "var(--text-primary)" }}
-                    >
-                      <span>
-                        {item.product.name} × {item.quantity}
-                      </span>
-                      <span style={{ color: "var(--text-secondary)" }}>TTD {line.toFixed(2)}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-              <div className="my-3 border-t" style={{ borderColor: "var(--card-border-subtle)" }} />
-              <div className="flex justify-between py-2 text-sm" style={{ color: "var(--text-secondary)" }}>
-                <span>Subtotal</span>
-                <span>TTD {subtotal.toFixed(2)}</span>
-              </div>
-              {allDigital ? (
-                <div className="flex justify-between py-2 text-sm">
-                  <span>Delivery</span>
-                  <span className="font-semibold text-emerald-600">Free — instant download</span>
-                </div>
+                    </div>
+                  ) : null}
+                </>
               ) : (
-                <div className="flex justify-between py-2 text-sm" style={{ color: "var(--text-secondary)" }}>
-                  <span>{useDelivery ? "Delivery" : "Pickup"}</span>
-                  <span>
-                    {useDelivery
-                      ? deliveryRegion
-                        ? `TTD ${shippingEstimate.toFixed(2)}`
-                        : "Enter address to calculate"
-                      : "Free"}
-                  </span>
-                </div>
+                <p className="mt-4 text-base text-zinc-600">
+                  Digital delivery — instant download after payment. No shipping address required.
+                </p>
               )}
-              <div className="my-3 border-t" style={{ borderColor: "var(--card-border-subtle)" }} />
-              <div className="flex justify-between">
-                <span className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
-                  Total
-                </span>
-                <span className="text-base font-bold" style={{ color: "var(--scarlet)" }}>
-                  TTD {displayTotal.toFixed(2)}
-                </span>
-              </div>
             </div>
+
+            <button
+              type="button"
+              onClick={() => void proceedToPayment()}
+              disabled={loading || (!allDigital && !anyDelivery && !anyPickup)}
+              className={`${mobilePrimaryBtn} mt-4 hidden gap-2 lg:flex`}
+            >
+              {loading ? (
+                <>
+                  <InlineSpinner className="h-5 w-5 shrink-0 text-white" />
+                  Processing…
+                </>
+              ) : (
+                "Continue to payment"
+              )}
+            </button>
+            {error ? <p className={`mt-3 text-base ${tw.textDangerToken}`}>{error}</p> : null}
           </div>
+        ) : null}
+
+        {step === "payment" && clientSecret && orderId ? (
+          <div
+            className={`${radius.card} bg-white ${spacing.cardPadding}`}
+            style={{ border: "1px solid var(--card-border)" }}
+          >
+            <h2 className="mb-4 text-base font-semibold" style={{ color: "var(--text-primary)" }}>
+              Payment
+            </h2>
+            <Elements stripe={stripePromise} options={{ clientSecret }}>
+              <PaymentForm orderId={orderId} onBack={() => setStep("details")} />
+            </Elements>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="hidden w-full min-w-0 lg:order-none lg:col-span-1 lg:block">
+        <div
+          className={`${radius.card} bg-white p-5 lg:sticky lg:top-24`}
+          style={{ border: "1px solid var(--card-border)" }}
+        >
+          {summaryForDesktop}
         </div>
+      </div>
+
+      {/* Mobile: sticky dock — order summary toggle + primary CTA */}
+      <div className="fixed inset-x-0 bottom-[var(--mobile-tab-offset)] z-[95] lg:hidden safe-area-bottom">
+        <div className="border-t border-zinc-200 bg-white shadow-[0_-4px_24px_rgba(0,0,0,0.08)] pb-[env(safe-area-inset-bottom,0px)]">
+          {mobileSummaryOpen ? (
+            <div className="max-h-[42vh] overflow-y-auto border-b border-zinc-100 p-4">{summaryBody}</div>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={() => setMobileSummaryOpen((o) => !o)}
+            className="flex w-full min-h-[44px] items-center justify-between gap-3 border-zinc-100 px-4 py-2 text-left text-sm font-semibold text-zinc-900"
+          >
+            <span>
+              View order{" "}
+              <span style={{ color: "var(--scarlet)" }} className="font-bold">
+                (TTD {displayTotal.toFixed(2)})
+              </span>
+            </span>
+            <ChevronUp
+              className={`size-5 shrink-0 text-zinc-500 transition-transform ${mobileSummaryOpen ? "rotate-180" : ""}`}
+              aria-hidden
+            />
+          </button>
+
+          {step === "details" ? (
+            <div className="px-4 pb-2 pt-1">
+              <button
+                type="button"
+                onClick={() => void proceedToPayment()}
+                disabled={loading || (!allDigital && !anyDelivery && !anyPickup)}
+                className={`${mobilePrimaryBtn} gap-2`}
+              >
+                {loading ? (
+                  <>
+                    <InlineSpinner className="h-5 w-5 shrink-0 text-white" />
+                    Processing…
+                  </>
+                ) : (
+                  "Continue to payment"
+                )}
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
   );
 }

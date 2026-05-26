@@ -82,7 +82,7 @@ export function newOrderVendorEmail(data: {
   dashboardUrl: string;
 }) {
   const content = `
-    ${heading("You have a new order! 🎉")}
+    ${heading("You have a new order!")}
     ${para(`Hi ${data.vendorName}, a customer just placed an order in your store.`)}
     ${infoBox([
       { label: "Order", value: `#${data.orderRef}` },
@@ -106,7 +106,7 @@ export function orderConfirmedCustomerEmail(data: {
   orderUrl: string;
 }) {
   const content = `
-    ${heading("Order confirmed ✅")}
+    ${heading("Order confirmed")}
     ${para(`Hi ${data.customerName}, your order has been placed successfully.`)}
     ${infoBox([
       { label: "Order", value: `#${data.orderRef}` },
@@ -131,7 +131,7 @@ export function newBookingVendorEmail(data: {
   dashboardUrl: string;
 }) {
   const content = `
-    ${heading("New booking received 📅")}
+    ${heading("New booking received")}
     ${para(`Hi ${data.vendorName}, you have a new booking for ${data.serviceName}.`)}
     ${infoBox([
       { label: "Service", value: data.serviceName },
@@ -157,7 +157,7 @@ export function bookingConfirmedCustomerEmail(data: {
   orderUrl: string;
 }) {
   const content = `
-    ${heading("Booking confirmed ✅")}
+    ${heading("Booking confirmed")}
     ${para(`Hi ${data.customerName}, your booking is confirmed.`)}
     ${infoBox([
       { label: "Service", value: data.serviceName },
@@ -183,7 +183,7 @@ export function newOnDemandRequestVendorEmail(data: {
   dashboardUrl: string;
 }) {
   const content = `
-    ${heading("New on-demand request ⚡")}
+    ${heading("New on-demand request")}
     ${para(`Hi ${data.vendorName}, a customer has sent you an on-demand request.`)}
     ${infoBox([
       { label: "Service", value: data.serviceName },
@@ -212,7 +212,7 @@ export function onDemandAcceptedCustomerEmail(data: {
   requestsUrl: string;
 }) {
   const content = `
-    ${heading("Your request was accepted ✅")}
+    ${heading("Your request was accepted")}
     ${para(`Hi ${data.customerName}, ${data.storeName} has accepted your on-demand request.`)}
     ${infoBox([
       { label: "Service", value: data.serviceName },
@@ -260,12 +260,12 @@ export function newReviewVendorEmail(data: {
   body: string | null;
   dashboardUrl: string;
 }) {
-  const stars = "★".repeat(data.rating) + "☆".repeat(5 - data.rating);
+  const ratingLine = `Rating: ${data.rating} out of 5`;
   const content = `
-    ${heading("You received a new review ⭐")}
+    ${heading("You received a new review")}
     ${para(`Hi ${data.vendorName}, ${data.reviewerName} left a review on ${data.productName}.`)}
     <div style="margin:16px 0;background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:16px;">
-      <p style="margin:0;font-size:20px;color:#D97706;letter-spacing:2px;">${stars}</p>
+      <p style="margin:0;font-size:18px;color:#D97706;font-weight:700;">${ratingLine}</p>
       ${data.body ? `<p style="margin:8px 0 0;font-size:13px;color:#78350f;line-height:1.6;">"${data.body}"</p>` : ""}
     </div>
     ${btn("View review", data.dashboardUrl)}
