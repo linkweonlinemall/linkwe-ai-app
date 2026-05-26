@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ListingMainImage } from "@/components/listing-main-image";
+import { formatDate } from "@/lib/format/format-display-date-utc";
 
 type ListingRow = {
   id: string;
@@ -49,8 +50,7 @@ export default function ListingsTab({ listings }: Props) {
                     <p className="font-medium text-zinc-900">{listing.title}</p>
                     <p className="mt-0.5 font-mono text-xs text-zinc-500">{listing.slug}</p>
                     <p className="mt-1 text-xs text-zinc-500">
-                      {listing.status} ·{" "}
-                      {new Date(listing.createdAt).toLocaleDateString(undefined, { dateStyle: "medium" })}
+                      {listing.status} · {formatDate(listing.createdAt)}
                     </p>
                   </div>
                 </div>

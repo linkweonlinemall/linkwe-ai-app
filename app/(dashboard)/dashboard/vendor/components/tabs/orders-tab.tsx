@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ClipboardList } from "lucide-react";
 
 import EmptyState from "@/components/ui/empty-state";
+import { formatDate } from "@/lib/format/format-display-date-utc";
 
 export type SplitOrderItem = {
   id: string;
@@ -37,14 +38,6 @@ const CARD_BORDER = "border-[0.5px] border-[rgba(28,28,26,0.12)]";
 
 function formatMinor(minor: number): string {
   return `TTD ${(minor / 100).toFixed(2)}`;
-}
-
-function formatDate(date: Date | string): string {
-  return new Date(date).toLocaleDateString("en-TT", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
 }
 
 /** Compact pills aligned with dashboard overview palette */

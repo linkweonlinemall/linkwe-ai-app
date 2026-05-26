@@ -3,13 +3,11 @@
 import { useEffect, useState } from "react";
 
 import Link from "next/link";
+import { CheckCircle2 } from "lucide-react";
 
 import PublicNav from "@/components/layout/PublicNav";
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
+import { toastPWAInstalled } from "@/components/ui/pwa-installed-toast";
+import { usePWAInstall } from "@/lib/hooks/use-pwa-install";
 
 type Platform = "ios" | "android" | "desktop-chrome" | "desktop-edge" | "desktop-other" | "unknown";
 
@@ -23,7 +21,10 @@ function detectPlatform(): Platform {
   return "desktop-other";
 }
 
-const STEPS: Record<Platform, { title: string; icon: string; steps: string[]; note?: string }> = {
+const STEPS: Record<
+  Platform,
+  { title: string; icon: string; steps: string[]; note?: string }
+> = {
   ios: {
     title: "Install on iPhone or iPad",
     icon: "🍎",
@@ -93,26 +94,17 @@ const STEPS: Record<Platform, { title: string; icon: string; steps: string[]; no
 
 export default function GetAppClient() {
   const [platform, setPlatform] = useState<Platform>("unknown");
-  const [installed, setInstalled] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+
+  const { isInstalled, isInstallable, install } = usePWAInstall({
+    onInstalled: () => toastPWAInstalled(),
+  });
 
   useEffect(() => {
     setPlatform(detectPlatform());
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-      setInstalled(true);
-    }
-    window.addEventListener("beforeinstallprompt", (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-    });
   }, []);
 
   async function handleInstall() {
-    if (deferredPrompt) {
-      await deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === "accepted") setInstalled(true);
-    }
+    await install();
   }
 
   const current = STEPS[platform];
@@ -133,25 +125,32 @@ export default function GetAppClient() {
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-[#E8820C]">Free download</p>
               <h1 className="mt-2 font-display text-4xl font-black text-white sm:text-5xl">LinkWe Online Mall</h1>
-              <p className="mt-3 text-sm leading-7 text-zinc-400">
+
+              {/* PWA prompt: native install when Chromium offers it; badge when standalone / accepted */}
+              {isInstalled ? (
+                <div className="mt-6 inline-flex items-center gap-2 rounded-xl border border-emerald-400/35 bg-emerald-500/15 px-5 py-2.5">
+                  <CheckCircle2 className="size-5 shrink-0 text-emerald-400" strokeWidth={2} aria-hidden />
+                  <span className="text-sm font-bold text-emerald-400">App installed</span>
+                </div>
+              ) : isInstallable ? (
+                <button
+                  type="button"
+                  onClick={() => void handleInstall()}
+                  className="mt-6 w-full rounded-2xl bg-[#D4450A] px-10 py-4 text-center text-base font-bold text-white shadow-lg transition-colors hover:bg-[#B83A08] focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#1C1C1A] sm:w-auto sm:min-w-[16rem]"
+                >
+                  Install app now
+                </button>
+              ) : (
+                <p className="mt-6 max-w-xl text-sm leading-6 text-zinc-400">
+                  When your browser supports it, you&apos;ll see an install prompt. On iPhone, use Safari and &quot;Add to
+                  Home Screen&quot;, or follow the steps below on any device.
+                </p>
+              )}
+
+              <p className="mt-6 text-sm leading-7 text-zinc-400">
                 Shop local, book services, discover vendors across Trinidad & Tobago. Install the app for the best
                 experience — works on iPhone, Android, and desktop.
               </p>
-              {installed ? (
-                <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2">
-                  <span className="text-emerald-400">✓</span>
-                  <span className="text-sm font-semibold text-emerald-400">App is installed</span>
-                </div>
-              ) : deferredPrompt ? (
-                <button
-                  type="button"
-                  onClick={handleInstall}
-                  className="mt-4 rounded-xl px-8 py-3 text-sm font-bold text-white shadow-lg transition-opacity hover:opacity-90"
-                  style={{ background: "linear-gradient(135deg, #D4450A, #E8820C)" }}
-                >
-                  Install now — it&apos;s free
-                </button>
-              ) : null}
             </div>
           </div>
         </div>
@@ -251,10 +250,7 @@ export default function GetAppClient() {
               { icon: "🆓", title: "Free forever", desc: "No app store fees, no subscriptions" },
               { icon: "🔄", title: "Always updated", desc: "Updates automatically — no manual updates" },
             ].map((item) => (
-              <div
-                key={item.title}
-                className="flex items-start gap-4 rounded-2xl border border-zinc-200 bg-white p-4"
-              >
+              <div key={item.title} className="flex items-start gap-4 rounded-2xl border border-zinc-200 bg-white p-4">
                 <span className="text-2xl">{item.icon}</span>
                 <div>
                   <p className="text-sm font-bold text-zinc-900">{item.title}</p>
@@ -271,9 +267,7 @@ export default function GetAppClient() {
           style={{ background: "linear-gradient(135deg, #1C1C1A 0%, #2A1A0E 100%)" }}
         >
           <p className="font-display text-2xl font-black text-white">Ready to shop local?</p>
-          <p className="mt-2 text-sm text-zinc-400">
-            Join thousands of shoppers discovering Trinidad & Tobago vendors
-          </p>
+          <p className="mt-2 text-sm text-zinc-400">Join thousands of shoppers discovering Trinidad & Tobago vendors</p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/shop"

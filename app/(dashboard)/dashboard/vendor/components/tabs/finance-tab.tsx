@@ -6,6 +6,7 @@ import { requestPayout, saveVendorBankDetails } from "@/app/actions/vendor";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import { maskBankAccountStars } from "@/lib/format/banking";
+import { formatDate } from "@/lib/format/format-display-date-utc";
 
 const BANK_OPTIONS = [
   "Republic Bank",
@@ -279,11 +280,7 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
             <div className="flex flex-col gap-2">
               {ledgerEntries.map((entry) => {
                 const isCredit = entry.entryType === "CREDIT_ORDER_SETTLEMENT";
-                const dateLabel = new Date(entry.createdAt).toLocaleDateString("en-TT", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                });
+                const dateLabel = formatDate(entry.createdAt);
                 return (
                   <div
                     key={entry.id}
@@ -470,13 +467,7 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
                     key={req.id}
                     className={`border-b border-zinc-50 ${i % 2 === 0 ? "bg-white" : "bg-zinc-50/30"}`}
                   >
-                    <td className="px-4 py-2.5 text-xs text-zinc-500">
-                      {new Date(req.requestedAt).toLocaleDateString("en-TT", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </td>
+                    <td className="px-4 py-2.5 text-xs text-zinc-500">{formatDate(req.requestedAt)}</td>
                     <td className="px-4 py-2.5 text-right font-mono text-xs font-semibold text-zinc-900">
                       {formatTTD(req.amountMinor)}
                     </td>

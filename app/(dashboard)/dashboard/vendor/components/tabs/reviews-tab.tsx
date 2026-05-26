@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { getVendorReviews, getVendorReviewStats, replyToReview } from "@/app/actions/vendor-reviews";
 import type { VendorReview } from "@/app/actions/vendor-reviews";
+import { formatDate } from "@/lib/format/format-display-date-utc";
 
 const CARD =
   "rounded-[12px] border-[0.5px] border-[rgba(28,28,26,0.12)] bg-white";
@@ -24,13 +25,6 @@ function StarRating({ rating, size = 12 }: { rating: number; size?: number }) {
       ))}
     </div>
   );
-}
-
-function formatDate(date: Date): string {
-  const d = new Date(date);
-  const day = d.getUTCDate();
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  return `${day} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
 export default function ReviewsTab() {

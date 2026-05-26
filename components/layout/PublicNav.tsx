@@ -21,9 +21,10 @@ import {
 
 import { logoutAction } from "@/app/(auth)/auth-actions";
 import NotificationBell from "@/components/ui/NotificationBell";
+import { toastPWAInstalled } from "@/components/ui/pwa-installed-toast";
 import { icn } from "@/lib/iconography";
+import { usePWAInstall } from "@/lib/hooks/use-pwa-install";
 import { useCartStore } from "@/lib/cart/cart-store";
-import { triggerInstall } from "@/lib/pwa/install-prompt-store";
 
 type Props = {
   transparent?: boolean;
@@ -66,7 +67,6 @@ export default function PublicNav({
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const [isStandalone, setIsStandalone] = useState(false);
   const toggleDrawer = useCartStore((s) => s.toggleDrawer);
   const cartBumpNonce = useCartStore((s) => s.cartBumpNonce);
   const itemCount = useCartStore((s) => s.itemCount());
@@ -74,6 +74,10 @@ export default function PublicNav({
   const lastBumpRef = useRef(0);
   /** Avoid hydrating cart badges from persisted store (server renders count 0, client may differ). */
   const [mounted, setMounted] = useState(false);
+
+  const { isInstalled, isInstallable, install } = usePWAInstall({
+    onInstalled: () => toastPWAInstalled(),
+  });
 
   useEffect(() => {
     setMounted(true);
@@ -135,10 +139,6 @@ export default function PublicNav({
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  useEffect(() => {
-    setIsStandalone(window.matchMedia("(display-mode: standalone)").matches);
   }, []);
 
   const headerIconClass = transparent
@@ -248,12 +248,15 @@ export default function PublicNav({
                 </span>
               </Link>
 
-              {!isStandalone ? (
+              {mounted && !isInstalled ? (
                 <button
                   type="button"
                   onClick={async () => {
-                    const ok = await triggerInstall();
-                    if (!ok) router.push("/get-app");
+                    if (isInstallable) {
+                      await install();
+                      return;
+                    }
+                    router.push("/get-app");
                   }}
                   className="hidden min-h-[44px] items-center gap-1.5 rounded-xl border border-zinc-200 px-3 py-2 text-xs font-bold text-zinc-700 hover:border-[#D4450A] hover:text-[#D4450A] transition-colors xl:flex"
                 >
