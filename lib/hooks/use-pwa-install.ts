@@ -8,6 +8,13 @@ export type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 };
 
+declare global {
+  interface Window {
+    /** Set by inline script in root layout before React loads; keeps early `beforeinstallprompt`. */
+    __pwaInstallPrompt?: Event | null;
+  }
+}
+
 let deferredPrompt: BeforeInstallPromptEvent | null = null;
 
 type WindowWithFlag = Window & { __linkwePwaInstallAttached?: boolean };
@@ -51,21 +58,43 @@ function readInstalled(): boolean {
   return readStandalone() || installAcceptedByUser;
 }
 
+function clearInstallPromptWindowState(): void {
+  if (typeof window === "undefined") return;
+  window.__pwaInstallPrompt = null;
+}
+
+function syncDeferredFromWindow(): void {
+  if (typeof window === "undefined") return;
+  const stored = window.__pwaInstallPrompt;
+  if (stored) {
+    deferredPrompt = stored as BeforeInstallPromptEvent;
+    notifyBumpers();
+  }
+}
+
 function attachGlobalListenersOnce(): void {
   if (typeof window === "undefined") return;
   const w = window as WindowWithFlag;
   if (w.__linkwePwaInstallAttached) return;
   w.__linkwePwaInstallAttached = true;
 
-  window.addEventListener("beforeinstallprompt", (event) => {
+  // Event may have fired before React mounted (captured by inline script in layout <head>).
+  syncDeferredFromWindow();
+
+  const onBeforeInstallPrompt = (event: Event) => {
     event.preventDefault();
-    deferredPrompt = event as BeforeInstallPromptEvent;
+    const e = event as BeforeInstallPromptEvent;
+    deferredPrompt = e;
+    window.__pwaInstallPrompt = e;
     notifyBumpers();
-  });
+  };
+
+  window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
 
   window.addEventListener("appinstalled", () => {
     installAcceptedByUser = true;
     deferredPrompt = null;
+    clearInstallPromptWindowState();
     notifyBumpers();
     notifyInstalled();
   });
@@ -114,6 +143,7 @@ export function usePWAInstall(options?: UsePWAInstallOptions): {
     await promptEvent.prompt();
     const { outcome } = await promptEvent.userChoice;
     deferredPrompt = null;
+    clearInstallPromptWindowState();
     if (outcome === "accepted") {
       installAcceptedByUser = true;
     }

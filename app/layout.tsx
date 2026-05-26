@@ -68,6 +68,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${sora.variable} h-full antialiased`}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+  window.__pwaInstallPrompt = null;
+  window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    window.__pwaInstallPrompt = e;
+  });
+`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">
         <ServiceWorkerRegistration />
         <InstallPrompt />
