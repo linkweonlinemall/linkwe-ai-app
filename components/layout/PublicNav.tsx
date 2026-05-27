@@ -1,34 +1,41 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import type { LucideIcon } from "lucide-react";
 import {
-  Bookmark,
-  ClipboardList,
-  Heart,
-  Home,
-  LayoutDashboard,
-  LogOut,
-  Package,
-  Search,
-  Settings,
-  ShoppingBag,
-  ShoppingCart,
-  UserRound,
-} from "lucide-react";
+  IconBell,
+  IconBookmark,
+  IconBuildingStore,
+  IconCalendarEvent,
+  IconChevronRight,
+  IconClipboardList,
+  IconHeart,
+  IconHome,
+  IconLogout,
+  IconMessageCircle,
+  IconPackage,
+  IconSearch,
+  IconSettings,
+  IconShoppingBag,
+  IconShoppingCart,
+  IconTools,
+  IconUser,
+} from "@tabler/icons-react";
 
 import { logoutAction } from "@/app/(auth)/auth-actions";
 import NotificationBell from "@/components/ui/NotificationBell";
 import { toastPWAInstalled } from "@/components/ui/pwa-installed-toast";
-import { icn } from "@/lib/iconography";
 import { usePWAInstall } from "@/lib/hooks/use-pwa-install";
 import { useCartStore } from "@/lib/cart/cart-store";
 
+const SCARLET = "#D4450A";
+
+type TablerOutlineIcon = typeof IconHome;
+
 type Props = {
   transparent?: boolean;
-  /** Standard wordmark for storefront; gradient AI logo only for AI surfaces (e.g. /chat). */
+  /** Standard storefront mark; `/chat` uses AI logo glyph. */
   logoVariant?: "wordmark" | "ai";
   user?: { name: string; href: string } | null;
   dashboardHref?: string;
@@ -38,8 +45,7 @@ type Props = {
 type MobileTab = {
   href: string;
   label: string;
-  Icon: LucideIcon;
-  /** Hash is empty on server render; synced on client for `/shop#shop-search`. */
+  Icon: TablerOutlineIcon;
   isActive: (pathname: string, hash: string) => boolean;
 };
 
@@ -55,6 +61,22 @@ function useHashFragment(): string {
   );
 }
 
+function initialsDisplay(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0]![0] ?? ""}${parts[1]![0] ?? ""}`.toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase() || "U";
+}
+
+function accountRoleLabel(dashboardHref: string | undefined, userHref: string | undefined): string {
+  const h = dashboardHref ?? userHref ?? "";
+  if (h.includes("/dashboard/vendor")) return "Vendor";
+  if (h.includes("/dashboard/courier")) return "Courier";
+  if (h.includes("/dashboard/admin")) return "Admin";
+  return "Customer";
+}
+
 export default function PublicNav({
   transparent = false,
   logoVariant = "wordmark",
@@ -65,19 +87,21 @@ export default function PublicNav({
   const pathname = usePathname() ?? "";
   const hash = useHashFragment();
   const router = useRouter();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const toggleDrawer = useCartStore((s) => s.toggleDrawer);
+  const drawerOpen = useDrawerOpenControlled();
+  const toggleDrawerCart = useCartStore((s) => s.toggleDrawer);
   const cartBumpNonce = useCartStore((s) => s.cartBumpNonce);
   const itemCount = useCartStore((s) => s.itemCount());
   const [cartBumpPlay, setCartBumpPlay] = useState(false);
   const lastBumpRef = useRef(0);
-  /** Avoid hydrating cart badges from persisted store (server renders count 0, client may differ). */
   const [mounted, setMounted] = useState(false);
 
-  const { isInstalled, isInstallable, install } = usePWAInstall({
+  const { isInstalled } = usePWAInstall({
     onInstalled: () => toastPWAInstalled(),
   });
+
+  const currentPathEncoded = encodeURIComponent(pathname?.trim() ? pathname : "/");
+  const loginHref = `/login?callbackUrl=${currentPathEncoded}`;
+  const dashTarget = dashboardHref ?? user?.href ?? "/dashboard";
 
   useEffect(() => {
     setMounted(true);
@@ -92,19 +116,17 @@ export default function PublicNav({
     return () => window.clearTimeout(t);
   }, [cartBumpNonce]);
 
-  const currentPathEncoded = encodeURIComponent(pathname?.trim() ? pathname : "/");
-
   const mobileTabs: MobileTab[] = [
     {
       href: "/",
       label: "Home",
-      Icon: Home,
-      isActive: (p, _h) => p === "/",
+      Icon: IconHome,
+      isActive: (p) => p === "/",
     },
     {
       href: "/shop",
       label: "Shop",
-      Icon: ShoppingBag,
+      Icon: IconShoppingBag,
       isActive: (p, h) =>
         (p.startsWith("/shop") || p.startsWith("/products")) &&
         !p.startsWith("/checkout") &&
@@ -113,327 +135,431 @@ export default function PublicNav({
     {
       href: "/shop#shop-search",
       label: "Search",
-      Icon: Search,
+      Icon: IconSearch,
       isActive: (p, h) => p.startsWith("/shop") && h === "#shop-search",
     },
     {
       href: "/cart",
       label: "Cart",
-      Icon: ShoppingCart,
-      isActive: (p, _h) => p.startsWith("/cart") || p.startsWith("/checkout"),
+      Icon: IconShoppingCart,
+      isActive: (p, h) => p.startsWith("/cart") || p.startsWith("/checkout"),
     },
     {
-      href: user ? (dashboardHref ?? user.href) : `/login?callbackUrl=${currentPathEncoded}`,
+      href: user ? dashTarget : loginHref,
       label: "Account",
-      Icon: UserRound,
-      isActive: (p, _h) =>
-        !!user && (p.startsWith("/dashboard") || p.startsWith(dashboardHref ?? user.href)),
+      Icon: IconUser,
+      isActive: (p) => !!user && p.startsWith("/dashboard"),
     },
   ];
 
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+  const roleLabel = user ? accountRoleLabel(dashboardHref, user.href) : "Customer";
 
-  const headerIconClass = transparent
-    ? "text-white/80 transition-colors duration-200 ease-in-out hover:bg-white/10 hover:text-white"
-    : "text-zinc-500 transition-colors duration-200 ease-in-out hover:bg-zinc-100 hover:text-[#D4450A]";
+  function LogoMark({ desktop }: { desktop: boolean }) {
+    const sqSize = desktop ? "h-8 w-8 rounded-lg text-[17px]" : "h-7 w-7 rounded-md text-[15px]";
+    const textSize = desktop ? "text-[16px]" : "text-[15px]";
+    return (
+      <span className="flex items-center gap-2 shrink-0">
+        {logoVariant === "ai" ? (
+          <img src="/linkwe-new-logo-light-2.png" alt="" className="h-9 w-auto max-h-9 shrink-0" />
+        ) : (
+          <span
+            className={`flex shrink-0 items-center justify-center font-black leading-none text-white ${sqSize}`}
+            style={{ backgroundColor: SCARLET }}
+            aria-hidden
+          >
+            L
+          </span>
+        )}
+        <span className={`font-bold tracking-tight text-white ${textSize}`}>LinkWe</span>
+      </span>
+    );
+  }
+
+  function handleDesktopSearchSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const q = String(fd.get("q") ?? "").trim();
+    router.push(q ? `/shop?q=${encodeURIComponent(q)}` : "/shop");
+  }
+
+  const glassHeader =
+    `${transparent ? "absolute inset-x-0 top-0 z-50" : "sticky top-0 z-40 border-b-[0.5px] border-white/10"} ` +
+    `w-full backdrop-blur-[12px] md:backdrop-blur-[16px] ` +
+    `bg-[rgba(28,28,26,0.85)] md:bg-[rgba(28,28,26,0.95)]`;
+
+  const desktopNavLinkClass = `flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors`;
+  function desktopBrowseActive(forPath: "/shop" | "/services" | "/stores"): boolean {
+    if (forPath === "/shop") return pathname.startsWith("/shop") || pathname.startsWith("/products");
+    if (forPath === "/services") return pathname.startsWith("/services") || pathname.startsWith("/service");
+    return pathname.startsWith("/stores") || pathname.startsWith("/store");
+  }
 
   return (
     <>
-      <nav
-        className={`z-40 h-14 min-h-[3.5rem] w-full min-w-0 ${
-          transparent
-            ? "absolute left-0 right-0 top-0 bg-transparent"
-            : "relative border-b border-zinc-200 bg-white shadow-sm"
-        }`}
-      >
-        <div className="mx-auto flex h-14 min-h-[3.5rem] w-full min-w-0 max-w-7xl items-center justify-between gap-3 px-4">
-          <Link
-            href="/"
-            className={`block shrink-0 ${transparent ? "text-white" : "text-inherit"}`}
+      {user ? (
+        <>
+          {/* Overlay */}
+          <div
+            role="presentation"
+            className={`fixed inset-0 z-[120] bg-black/50 transition-opacity duration-200 md:z-[118] ${drawerOpen.value ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}
+            onClick={drawerOpen.close}
+            aria-hidden={!drawerOpen.value}
+          />
+          {/* Slide panel */}
+          <div
+            className={`fixed right-0 top-0 z-[121] flex h-[100dvh] w-[min(20rem,85vw)] max-w-[85vw] flex-col bg-white shadow-2xl transition-transform duration-[200ms] ease-out md:z-[119] md:backdrop-blur-0 ${drawerOpen.value ? "translate-x-0" : "translate-x-full"}`}
+            aria-hidden={!drawerOpen.value}
           >
-            <img
-              src={logoVariant === "ai" ? "/linkwe-new-logo-light-2.png" : "/linkwe-new-log-dark.png"}
-              alt="LinkWe"
-              className={
-                transparent
-                  ? logoVariant === "ai"
-                    ? "h-8 w-auto max-h-8 object-contain drop-shadow-[0_1px_3px_rgba(0,0,0,0.35)]"
-                    : "h-8 w-auto object-contain brightness-0 invert drop-shadow-[0_1px_3px_rgba(0,0,0,0.45)]"
-                  : "h-8 w-auto object-contain"
-              }
-            />
+            <div className="shrink-0 px-4 py-5 shadow-[inset_0_-1px_0_rgba(255,255,255,0.06)]" style={{ backgroundColor: "#1C1C1A" }}>
+              <div className="relative flex items-start gap-3 pr-11">
+                <div
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[2.5px] border-white/20 text-sm font-black text-white"
+                  style={{ backgroundColor: SCARLET }}
+                  aria-hidden
+                >
+                  {initialsDisplay(user.name)}
+                </div>
+                <div className="min-w-0 pt-0.5">
+                  <p className="truncate text-[14px] font-semibold text-white">{user.name}</p>
+                  <p className="mt-2 inline-block rounded bg-[#E8820C] px-2 py-[2px] text-[10px] font-bold uppercase tracking-wide text-[#1C1C1A]">
+                    {roleLabel}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Close menu"
+                  onClick={drawerOpen.close}
+                  className="absolute right-4 top-5 flex h-[30px] w-[30px] items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/15"
+                >
+                  <svg width={16} height={16} viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                </button>
+              </div>
+              <Link
+                href={dashTarget}
+                onClick={drawerOpen.close}
+                className="mt-3 flex items-center gap-3 rounded-[10px] px-3.5 py-3"
+                style={{ backgroundColor: "#1C1C1A", borderWidth: "0.5px", borderStyle: "solid", borderColor: "rgba(255,255,255,0.12)" }}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12px] font-semibold text-white">My dashboard</p>
+                  <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "#E8820C" }}>
+                    Orders · Wishlist · Account
+                  </p>
+                </div>
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-white"
+                  style={{ backgroundColor: SCARLET }}
+                  aria-hidden
+                >
+                  <IconChevronRight className="size-4" stroke={2} aria-hidden />
+                </span>
+              </Link>
+            </div>
+
+            <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain pb-6 [-webkit-overflow-scrolling:touch]">
+              <p className="px-5 pt-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">Browse</p>
+              <div className="mt-2 space-y-[2px] px-4">
+                {(
+                  [
+                    { href: "/", label: "Home", Icon: IconHome, active: pathname === "/" },
+                    {
+                      href: "/shop",
+                      label: "Shop",
+                      Icon: IconShoppingBag,
+                      active:
+                        pathname.startsWith("/shop") ||
+                        pathname.startsWith("/products") ||
+                        pathname.startsWith("/checkout"),
+                    },
+                    { href: "/services", label: "Services", Icon: IconTools, active: pathname.startsWith("/services") || pathname.startsWith("/service") },
+                    {
+                      href: "/stores",
+                      label: "Stores",
+                      Icon: IconBuildingStore,
+                      active: pathname.startsWith("/stores") || pathname.startsWith("/store"),
+                    },
+                    { href: "/events", label: "Events", Icon: IconCalendarEvent, active: pathname.startsWith("/events") },
+                    {
+                      href: "/chat",
+                      label: "AI Shopping",
+                      Icon: IconMessageCircle,
+                      active: pathname.startsWith("/chat"),
+                    },
+                  ] as const
+                ).map((item) => (
+                  <DrawerRowLink
+                    key={item.href}
+                    href={item.href}
+                    label={item.label}
+                    Icon={item.Icon}
+                    active={item.active}
+                    onNavigate={drawerOpen.close}
+                  />
+                ))}
+              </div>
+
+              <div className="mx-4 my-[6px] h-px bg-[#f0f0f0]" role="presentation" />
+
+              <p className="px-5 pt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">Account</p>
+              <div className="mt-2 space-y-[2px] px-4 py-2">
+                <div className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5">
+                  <span className="flex items-center gap-2 text-[13px] font-medium text-[#1C1C1A]">
+                    <IconBell className="size-[18px] shrink-0 text-[#1C1C1A]" stroke={1.75} aria-hidden /> Notifications
+                  </span>
+                  <NotificationBell initialUnreadCount={unreadCount} variant="light" compactToolbar />
+                </div>
+              </div>
+              <div className="space-y-[2px] px-4 pb-2">
+                {(
+                  [
+                    { href: "/orders", label: "My orders", Icon: IconPackage },
+                    { href: "/wishlist", label: "My wishlist", Icon: IconHeart },
+                    { href: "/saved-stores", label: "Saved stores", Icon: IconBookmark },
+                    { href: "/my-requests", label: "My requests", Icon: IconClipboardList },
+                    { href: `${user.href}/settings`, label: "Settings", Icon: IconSettings },
+                  ] as const
+                ).map((item) => (
+                  <DrawerRowLink
+                    key={item.href}
+                    href={item.href}
+                    label={item.label}
+                    Icon={item.Icon}
+                    active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
+                    onNavigate={drawerOpen.close}
+                  />
+                ))}
+              </div>
+
+              <div className="mx-4 my-[6px] h-px bg-[#f0f0f0]" role="presentation" />
+
+              <form action={logoutAction} className="px-4 pt-2">
+                <button
+                  type="submit"
+                  className="flex min-h-[44px] w-full items-center gap-2 rounded-lg px-[11px] py-2 text-left text-[13px] font-medium transition-colors hover:bg-[#FEF0EB]"
+                  style={{ color: SCARLET }}
+                  onClick={drawerOpen.close}
+                >
+                  <IconLogout className="size-[18px] shrink-0" stroke={1.75} style={{ color: SCARLET }} aria-hidden /> Sign out
+                </button>
+              </form>
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      <header className={glassHeader}>
+        {/* Mobile */}
+        <nav aria-label="Primary mobile" className="flex px-4 py-3 md:hidden">
+          <div className="flex w-full min-w-0 items-center justify-between gap-3">
+            <Link href="/" className="min-w-0">
+              <LogoMark desktop={false} />
+            </Link>
+            <div className="flex shrink-0 items-center gap-2">
+              <Link
+                href="/shop#shop-search"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-white/[0.1] text-white"
+                aria-label="Search"
+              >
+                <IconSearch className="size-[20px]" stroke={1.75} aria-hidden />
+              </Link>
+              {user ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={toggleDrawerCart}
+                    className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-white/[0.1] text-white"
+                    aria-label="Cart"
+                  >
+                    <IconShoppingCart
+                      className={`size-[20px] ${cartBumpPlay ? "lw-cart-icon-bump" : ""}`}
+                      stroke={1.75}
+                      aria-hidden
+                    />
+                    {mounted && itemCount > 0 ? (
+                      <span className="absolute -right-1 top-[-3px] flex h-[14px] min-w-[14px] items-center justify-center rounded-full bg-[#D4450A] px-0.5 text-[8px] font-black text-white">
+                        {itemCount > 9 ? "9+" : itemCount}
+                      </span>
+                    ) : null}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Open account menu"
+                    onClick={() => drawerOpen.toggle()}
+                    className="relative flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full border-2 border-white/20 text-xs font-black text-white"
+                    style={{ backgroundColor: SCARLET }}
+                  >
+                    {initialsDisplay(user.name)}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href={loginHref}
+                    className="flex h-8 shrink-0 items-center justify-center rounded-lg px-3.5 text-[12px] font-bold leading-none text-white"
+                    style={{ backgroundColor: SCARLET }}
+                  >
+                    Sign in
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+        </nav>
+
+        {/* Desktop */}
+        <nav aria-label="Primary desktop" className="hidden h-[60px] w-full min-w-0 items-center gap-4 px-8 md:flex">
+          <Link href="/" className="shrink-0">
+            <LogoMark desktop />
           </Link>
 
-          <div className="flex min-w-0 flex-1 items-center justify-end gap-2 sm:gap-3 lg:gap-6">
-            {/* Desktop nav icons — lg+ */}
-            <div className="hidden items-center gap-1 lg:flex">
-              <Link
-                href="/stores"
-                title="Stores"
-                className={`group relative flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-xl transition-colors ${headerIconClass}`}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M5 22V12l7-5 7 5v10" />
-                  <path d="M9 22v-7h6v7" />
-                  <path strokeLinecap="round" d="M2 12h20" />
-                </svg>
-                <span className="pointer-events-none absolute left-1/2 top-full z-50 mt-1 -translate-x-1/2 whitespace-nowrap rounded bg-zinc-900 px-2 py-0.5 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100">
-                  Stores
-                </span>
-              </Link>
-
-              <Link
-                href="/shop"
-                title="Shop"
-                className={`group relative flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-xl transition-colors ${headerIconClass}`}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                  <line x1="3" y1="6" x2="21" y2="6" />
-                  <path d="M16 10a4 4 0 0 1-8 0" />
-                </svg>
-                <span className="pointer-events-none absolute left-1/2 top-full z-50 mt-1 -translate-x-1/2 whitespace-nowrap rounded bg-zinc-900 px-2 py-0.5 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100">
-                  Shop
-                </span>
-              </Link>
-
-              <Link
-                href="/services"
-                title="Services"
-                className={`group relative flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-xl transition-colors ${headerIconClass}`}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-                </svg>
-                <span className="pointer-events-none absolute left-1/2 top-full z-50 mt-1 -translate-x-1/2 whitespace-nowrap rounded bg-zinc-900 px-2 py-0.5 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100">
-                  Services
-                </span>
-              </Link>
-
-              <Link
-                href="/chat"
-                title="AI Shopping"
-                className={`group relative flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-xl transition-colors ${headerIconClass}`}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  <path d="M8 10h8M8 14h5" strokeLinecap="round" />
-                </svg>
-                <span className="pointer-events-none absolute left-1/2 top-full z-50 mt-1 -translate-x-1/2 whitespace-nowrap rounded bg-zinc-900 px-2 py-0.5 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100">
-                  AI Shopping
-                </span>
-              </Link>
-
-              <Link
-                href="/events"
-                title="Events"
-                className={`group relative flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-xl transition-colors ${headerIconClass}`}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                  <line x1="16" y1="2" x2="16" y2="6" />
-                  <line x1="8" y1="2" x2="8" y2="6" />
-                  <line x1="3" y1="10" x2="21" y2="10" />
-                </svg>
-                <span className="pointer-events-none absolute left-1/2 top-full z-50 mt-1 -translate-x-1/2 whitespace-nowrap rounded bg-zinc-900 px-2 py-0.5 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100">
-                  Events
-                </span>
-              </Link>
-
-              {mounted && !isInstalled ? (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (isInstallable) {
-                      await install();
-                      return;
-                    }
-                    router.push("/get-app");
-                  }}
-                  className="hidden min-h-[44px] items-center gap-1.5 rounded-xl border border-zinc-200 px-3 py-2 text-xs font-bold text-zinc-700 hover:border-[#D4450A] hover:text-[#D4450A] transition-colors xl:flex"
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="17 8 12 3 7 8" />
-                    <line x1="12" y1="3" x2="12" y2="15" />
-                  </svg>
-                  Get app
-                </button>
-              ) : null}
-            </div>
-
-            {/* Bell + cart: desktop only (mobile: bell in account menu, cart in tab bar) */}
-            <div className="hidden items-center gap-2 lg:flex">
-              {user ? (
-                <NotificationBell
-                  initialUnreadCount={unreadCount}
-                  variant={transparent ? "dark" : "light"}
+          <div className="flex min-h-0 min-w-0 flex-1 justify-center px-2 lg:px-6">
+            <form className="w-full max-w-[420px] min-w-[180px]" onSubmit={handleDesktopSearchSubmit}>
+              <div className="relative flex h-[38px] items-center rounded-[10px] border-[0.5px] border-white/[0.15] bg-white/[0.10] px-4">
+                <IconSearch className="pointer-events-none absolute left-3 top-1/2 size-[17px] -translate-y-1/2 text-white/50" stroke={1.75} aria-hidden />
+                <label htmlFor="public-nav-desktop-search" className="sr-only">
+                  Search
+                </label>
+                <input
+                  id="public-nav-desktop-search"
+                  type="search"
+                  name="q"
+                  placeholder="Search products, stores, services..."
+                  className="h-full w-full border-0 bg-transparent pl-[30px] pr-2 text-sm text-white caret-white outline-none placeholder:text-[13px] placeholder:text-white/40"
+                  autoComplete="off"
                 />
-              ) : null}
-              <button
-                type="button"
-                onClick={toggleDrawer}
-                className={`relative flex h-11 w-11 min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl border transition-colors ${
-                  transparent
-                    ? "border-white/30 bg-white/10 text-white hover:bg-white/20"
-                    : "border border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50"
-                }`}
-                aria-label="Open cart"
-              >
-                <span className={`inline-flex ${cartBumpPlay ? "lw-cart-icon-bump" : ""}`}>
-                  <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                  <line x1="3" y1="6" x2="21" y2="6" />
-                  <path d="M16 10a4 4 0 0 1-8 0" />
-                </svg>
-                </span>
-                {mounted && itemCount > 0 ? (
-                  <span
-                    className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white"
-                    style={{ backgroundColor: "#D4450A" }}
-                  >
-                    {itemCount > 9 ? "9+" : itemCount}
-                  </span>
-                ) : null}
-              </button>
-            </div>
+              </div>
+            </form>
+          </div>
 
+          <div className="flex min-w-0 shrink-0 flex-nowrap items-center justify-end gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <Link
+              href="/shop"
+              className={`${desktopNavLinkClass} ${
+                desktopBrowseActive("/shop") ? "bg-white/[0.12] text-white" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white"
+              }`}
+            >
+              <IconShoppingBag className="size-4 shrink-0" stroke={1.75} aria-hidden /> Shop
+            </Link>
+            <Link
+              href="/services"
+              className={`${desktopNavLinkClass} ${
+                pathname.startsWith("/services") || pathname.startsWith("/service")
+                  ? "bg-white/[0.12] text-white"
+                  : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white"
+              }`}
+            >
+              <IconTools className="size-4 shrink-0" stroke={1.75} aria-hidden /> Services
+            </Link>
+            <Link
+              href="/stores"
+              className={`${desktopNavLinkClass} ${
+                desktopBrowseActive("/stores") ? "bg-white/[0.12] text-white" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white"
+              }`}
+            >
+              <IconBuildingStore className="size-4 shrink-0" stroke={1.75} aria-hidden /> Stores
+            </Link>
+            <Link
+              href="/events"
+              className={`${desktopNavLinkClass} ${
+                pathname.startsWith("/events") ? "bg-white/[0.12] text-white" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white"
+              }`}
+            >
+              <IconCalendarEvent className="size-4 shrink-0" stroke={1.75} aria-hidden /> Events
+            </Link>
+            <Link
+              href="/chat"
+              className={`${desktopNavLinkClass} ${
+                pathname.startsWith("/chat") ? "bg-white/[0.12] text-white" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white"
+              }`}
+            >
+              <IconMessageCircle className="size-4 shrink-0" stroke={1.75} aria-hidden /> AI
+            </Link>
+            {mounted && !isInstalled ? (
+              <Link href="/get-app" className="ml-1 shrink-0 text-[11px] font-semibold text-white/[0.55] hover:text-white">
+                Get app
+              </Link>
+            ) : null}
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
             {user ? (
-              <div className="relative shrink-0" ref={menuRef}>
+              <>
+                <div className="flex h-9 w-9 items-center justify-center rounded-[10px] border-[0.5px] border-white/[0.12] bg-white/[0.08] text-white [&_button]:rounded-[10px] [&_button]:bg-transparent [&_button]:border-0 [&_button]:shadow-none [&_button]:hover:bg-transparent">
+                  <NotificationBell initialUnreadCount={unreadCount} variant="dark" compactToolbar />
+                </div>
                 <button
                   type="button"
-                  onClick={() => setMenuOpen((o) => !o)}
-                  className={`flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-sm font-bold text-white transition-all ${
-                    menuOpen ? "ring-2 ring-[#D4450A]" : ""
-                  } bg-[#D4450A] hover:opacity-90`}
-                  aria-expanded={menuOpen}
-                  aria-haspopup="true"
+                  aria-label="Open cart"
+                  onClick={toggleDrawerCart}
+                  className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border-[0.5px] border-white/[0.12] bg-white/[0.08] text-white hover:bg-white/[0.14]"
                 >
-                  {user.name[0]?.toUpperCase()}
+                  <IconShoppingCart
+                    className={`size-5 shrink-0 ${cartBumpPlay ? "lw-cart-icon-bump" : ""}`}
+                    stroke={1.75}
+                    aria-hidden
+                  />
+                  {mounted && itemCount > 0 ? (
+                    <span className="absolute -right-1 top-[-3px] flex h-[14px] min-w-[14px] items-center justify-center rounded-full bg-[#D4450A] px-0.5 text-[8px] font-black text-white">
+                      {itemCount > 9 ? "9+" : itemCount}
+                    </span>
+                  ) : null}
                 </button>
-
-                {menuOpen ? (
-                  <div
-                    className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl"
-                  >
-                    <div className="border-b border-zinc-100 px-4 py-3">
-                      <p className="truncate text-sm font-semibold text-zinc-900">{user.name}</p>
-                    </div>
-                    <div className="border-b border-zinc-100 px-2 py-2 lg:hidden">
-                      <div className="flex justify-center">
-                        <NotificationBell
-                          initialUnreadCount={unreadCount}
-                          variant="light"
-                        />
-                      </div>
-                    </div>
-                    <div className="py-1">
-                      {(
-                        [
-                          { label: "Home", href: "/", Icon: Home },
-                          {
-                            label: "My dashboard",
-                            href: dashboardHref ?? user.href,
-                            Icon: LayoutDashboard,
-                          },
-                          { label: "My requests", href: "/my-requests", Icon: ClipboardList },
-                          { label: "My orders", href: "/orders", Icon: Package },
-                          { label: "My wishlist", href: "/wishlist", Icon: Heart },
-                          { label: "Saved stores", href: "/saved-stores", Icon: Bookmark },
-                          { label: "My cart", href: "/cart", Icon: ShoppingCart },
-                          { label: "Settings", href: `${user.href}/settings`, Icon: Settings },
-                        ] as { label: string; href: string; Icon: LucideIcon }[]
-                      ).map((item) => (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          onClick={() => setMenuOpen(false)}
-                          className="flex min-h-[44px] items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                        >
-                          <item.Icon className={icn.inline} aria-hidden />
-                          {item.label}
-                        </Link>
-                      ))}
-                    </div>
-                    <div className="border-t border-zinc-100 py-1">
-                      <form action={logoutAction}>
-                        <button
-                          type="submit"
-                          className="flex min-h-[44px] w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-red-600 transition-colors hover:bg-red-50"
-                        >
-                          <LogOut className={icn.danger} aria-hidden />
-                          Sign out
-                        </button>
-                      </form>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
+                <button
+                  type="button"
+                  aria-label="Open account menu"
+                  aria-haspopup="dialog"
+                  aria-expanded={drawerOpen.value}
+                  className="flex h-[34px] min-w-[34px] shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-white/20 text-xs font-black text-white"
+                  style={{ backgroundColor: SCARLET }}
+                  onClick={() => drawerOpen.toggle()}
+                >
+                  {initialsDisplay(user.name)}
+                </button>
+              </>
             ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  window.location.href = `/login?callbackUrl=${currentPathEncoded}`;
-                }}
-                className={`min-h-[44px] shrink-0 rounded-xl px-5 py-2 text-sm font-medium transition-colors ${
-                  transparent
-                    ? "border border-white/20 bg-white/10 text-white hover:bg-white/20"
-                    : "bg-[#D4450A] text-white hover:opacity-90"
-                }`}
-              >
+              <Link href={loginHref} className="flex h-9 shrink-0 items-center justify-center rounded-[10px] px-5 text-[13px] font-semibold text-white" style={{ backgroundColor: SCARLET }}>
                 Sign in
-              </button>
+              </Link>
             )}
           </div>
-        </div>
-      </nav>
+        </nav>
+      </header>
 
-      {/* Mobile bottom tab bar — max width < lg */}
+      {/* Mobile bottom tab */}
       <div
-        className="fixed bottom-0 left-0 right-0 z-[100] border-t border-zinc-200 bg-white pb-[env(safe-area-inset-bottom,0px)] lg:hidden"
-        style={{ boxShadow: "0 -2px 10px rgba(0,0,0,0.06)" }}
+        role="navigation"
+        aria-label="Mobile bottom navigation"
+        className="fixed bottom-0 left-0 right-0 z-[100] border-t-[0.5px] border-[#e8e8e8] bg-white lg:hidden pb-[max(8px,calc(env(safe-area-inset-bottom,0px)+4px))] pt-2"
       >
-        <div className="mx-auto flex h-14 max-w-lg items-stretch justify-around">
+        <div className="mx-auto grid max-w-lg grid-cols-5 pb-px">
           {mobileTabs.map((tab) => {
             const active = tab.isActive(pathname, hash);
             return (
               <Link
-                key={tab.label}
+                key={tab.href}
                 href={tab.href}
-                className={`relative transition-colors duration-200 ease-in-out flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 pt-1 text-[10px] font-semibold ${
-                  active ? "text-[#D4450A]" : "text-zinc-500"
-                }`}
+                className="relative flex min-h-[48px] min-w-0 flex-col items-center justify-start gap-0.5 px-1 pb-2 pt-0.5 text-center"
                 aria-current={active ? "page" : undefined}
               >
-                <tab.Icon
-                  className={`size-6 shrink-0 ${tab.label === "Cart" && cartBumpPlay ? "lw-cart-icon-bump" : ""} ${active ? "text-[#D4450A]" : "text-zinc-500"}`}
-                  strokeWidth={active ? 2.5 : 2}
-                  aria-hidden
-                />
-                <span className="leading-none">{tab.label}</span>
-                {tab.label === "Cart" && mounted && itemCount > 0 ? (
-                  <span className="absolute right-[18%] top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-[#D4450A] px-1 text-[9px] font-bold text-white">
-                    {itemCount > 9 ? "9+" : itemCount}
-                  </span>
-                ) : null}
+                <span className="relative inline-flex">
+                  <tab.Icon
+                    className={`size-5 shrink-0 ${tab.label === "Cart" && cartBumpPlay ? "lw-cart-icon-bump" : ""} ${active ? "text-[#D4450A]" : "text-[#aaa]"}`}
+                    stroke={active ? 2.35 : 1.75}
+                    aria-hidden
+                  />
+                  {tab.label === "Cart" && mounted && itemCount > 0 ? (
+                    <span className="absolute -right-2 -top-[3px] flex h-[14px] min-w-[14px] items-center justify-center rounded-full bg-[#D4450A] px-0.5 text-[8px] font-black text-white shadow-sm">
+                      {itemCount > 9 ? "9+" : itemCount}
+                    </span>
+                  ) : null}
+                </span>
+                <span
+                  className={`leading-tight tracking-[0.02em] text-[9px] ${active ? "font-bold text-[#D4450A]" : "font-medium text-[#aaa]"}`}
+                >
+                  {tab.label}
+                </span>
               </Link>
             );
           })}
@@ -441,4 +567,58 @@ export default function PublicNav({
       </div>
     </>
   );
+}
+
+function DrawerRowLink({
+  href,
+  label,
+  Icon,
+  active,
+  onNavigate,
+}: {
+  href: string;
+  label: string;
+  Icon: TablerOutlineIcon;
+  active: boolean;
+  onNavigate: () => void;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onNavigate}
+      className={`flex items-center gap-3 rounded-lg px-[11px] py-2 text-[13px] font-medium transition-colors ${
+        active ? "bg-[#FEF0EB]" : "hover:bg-[#FEF0EB]"
+      } ${active ? "text-[#D4450A]" : "text-[#1C1C1A]"}`}
+    >
+      <Icon className="size-[18px] shrink-0" stroke={1.75} style={{ color: active ? SCARLET : "#1C1C1A" }} aria-hidden />
+      {label}
+    </Link>
+  );
+}
+
+function useDrawerOpenControlled() {
+  const [open, setOpen] = useState(false);
+
+  const close = useCallback(() => setOpen(false), []);
+  const toggle = useCallback(() => setOpen((o) => !o), []);
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onEsc);
+    return () => window.removeEventListener("keydown", onEsc);
+  }, [open]);
+
+  return { value: open, toggle, close };
 }

@@ -94,6 +94,7 @@ const STEPS: Record<
 
 export default function GetAppClient() {
   const [platform, setPlatform] = useState<Platform>("unknown");
+  const [showAddressBarHint, setShowAddressBarHint] = useState(false);
 
   const { isInstalled, isInstallable, install } = usePWAInstall({
     onInstalled: () => toastPWAInstalled(),
@@ -103,8 +104,13 @@ export default function GetAppClient() {
     setPlatform(detectPlatform());
   }, []);
 
-  async function handleInstall() {
-    await install();
+  function handleInstallClick() {
+    if (isInstallable) {
+      setShowAddressBarHint(false);
+      void install();
+      return;
+    }
+    setShowAddressBarHint(true);
   }
 
   const current = STEPS[platform];
@@ -132,19 +138,26 @@ export default function GetAppClient() {
                   <CheckCircle2 className="size-5 shrink-0 text-emerald-400" strokeWidth={2} aria-hidden />
                   <span className="text-sm font-bold text-emerald-400">App installed</span>
                 </div>
-              ) : isInstallable ? (
-                <button
-                  type="button"
-                  onClick={() => void handleInstall()}
-                  className="mt-6 w-full rounded-2xl bg-[#D4450A] px-10 py-4 text-center text-base font-bold text-white shadow-lg transition-colors hover:bg-[#B83A08] focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#1C1C1A] sm:w-auto sm:min-w-[16rem]"
-                >
-                  Install app now
-                </button>
               ) : (
-                <p className="mt-6 max-w-xl text-sm leading-6 text-zinc-400">
-                  When your browser supports it, you&apos;ll see an install prompt. On iPhone, use Safari and &quot;Add to
-                  Home Screen&quot;, or follow the steps below on any device.
-                </p>
+                <div className="mt-6 flex w-full flex-col items-stretch gap-4 sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={handleInstallClick}
+                    className="w-full rounded-2xl bg-[#D4450A] px-10 py-4 text-center text-base font-bold text-white shadow-lg transition-colors hover:bg-[#B83A08] focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#1C1C1A] sm:w-auto sm:min-w-[16rem]"
+                  >
+                    Install app
+                  </button>
+                  {showAddressBarHint ? (
+                    <p
+                      className="max-w-xl rounded-xl border border-white/20 bg-black/25 px-4 py-3 text-left text-sm leading-relaxed text-zinc-100"
+                      role="status"
+                      aria-live="polite"
+                    >
+                      Look for the &quot;Open in app&quot; icon in your address bar (right side) and click it to install
+                      LinkWe.
+                    </p>
+                  ) : null}
+                </div>
               )}
 
               <p className="mt-6 text-sm leading-7 text-zinc-400">
