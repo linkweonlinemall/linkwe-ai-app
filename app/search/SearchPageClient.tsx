@@ -271,7 +271,7 @@ export default function SearchPageClient() {
     setError(null);
     try {
       const sp = new URLSearchParams({ q, page, type });
-      if (effectiveRegion) sp.set("region", effectiveRegion);
+      if (effectiveRegion) sp.set("region", canonicalRegionValue(effectiveRegion));
       if (category) sp.set("category", category);
       if (minPrice) sp.set("minPrice", minPrice);
       if (maxPrice) sp.set("maxPrice", maxPrice);

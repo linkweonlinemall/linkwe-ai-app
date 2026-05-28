@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { IdVerificationStatus, ListingStatus, StoreStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { canonicalRegionValue } from "@/lib/regions/tt-regions";
 import { extractRegionFromQuery } from "@/lib/search/regions";
 import { reviewStatsForProducts, reviewStatsForStores } from "@/lib/search/review-stats";
 import type {
@@ -85,11 +86,13 @@ function productBaseWhere(
   }
 
   if (region) {
-    and.push({ store: { region } });
+    and.push({ store: { region: canonicalRegionValue(region) } });
   }
 
   if (category && category !== "all") {
-    and.push({ category });
+    and.push({
+      category: { equals: category, mode: "insensitive" },
+    });
   }
 
   if (minPrice != null || maxPrice != null) {
@@ -116,11 +119,13 @@ function storeBaseWhere(
   }
 
   if (region) {
-    and.push({ region });
+    and.push({ region: canonicalRegionValue(region) });
   }
 
   if (category && category !== "all") {
-    and.push({ categoryId: category });
+    and.push({
+      categoryId: { equals: category, mode: "insensitive" },
+    });
   }
 
   return { AND: and };
@@ -147,7 +152,8 @@ export async function runUniversalSearch(
 ): Promise<UniversalSearchResponse> {
   const rawQ = params.q.trim();
   const parsed = extractRegionFromQuery(rawQ);
-  const region = params.region?.trim() || parsed.detectedRegion || undefined;
+  const regionSlug = params.region?.trim() || parsed.detectedRegion || undefined;
+  const region = regionSlug ? canonicalRegionValue(regionSlug) : undefined;
   const terms = parsed.searchTerms || (parsed.detectedRegion ? "" : rawQ);
   const type = params.type ?? "all";
   const page = Math.max(1, params.page ?? 1);
@@ -171,6 +177,21 @@ export async function runUniversalSearch(
     params.maxPrice,
   );
   const storeWhere = storeBaseWhere(terms, region, params.category);
+
+  console.log("[search] parsed:", {
+    rawQ,
+    terms: terms || "(empty — region-only or browse)",
+    region,
+    detectedRegion: parsed.detectedRegion,
+    type,
+    category: params.category,
+    minRating,
+    preview,
+    page,
+  });
+  console.log("[search] productWhere:", JSON.stringify(productWhere));
+  console.log("[search] serviceWhere:", JSON.stringify(serviceWhere));
+  console.log("[search] storeWhere:", JSON.stringify(storeWhere));
 
   const productRatingIds = await filterProductIdsByRating(productWhere, minRating);
   const serviceRatingIds = await filterProductIdsByRating(serviceWhere, minRating);
@@ -262,6 +283,17 @@ export async function runUniversalSearch(
           })
         : [],
     ]);
+
+  console.log("[search] results:", {
+    productCount,
+    serviceCount,
+    storeCount,
+    productsFetched: products.length,
+    servicesFetched: services.length,
+    storesFetched: stores.length,
+    productRatingFilter: productRatingIds?.length ?? "none",
+    serviceRatingFilter: serviceRatingIds?.length ?? "none",
+  });
 
   const productIds = [...products, ...services].map((p) => p.id);
   const storeIds = stores.map((s) => s.id);

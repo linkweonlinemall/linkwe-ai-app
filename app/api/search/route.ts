@@ -1,8 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { prisma } from "@/lib/prisma";
 import { runUniversalSearch } from "@/lib/search/run-search";
 
 export const runtime = "nodejs";
+
+/** Unfiltered DB smoke test — use ?debug=smoke (no query required). */
+async function runSearchSmokeTest() {
+  console.log("[api/search] debug=smoke — running unfiltered findMany({ take: 5 })");
+
+  try {
+    const [products, stores, productTotal, storeTotal] = await Promise.all([
+      prisma.product.findMany({
+        take: 5,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          isPublished: true,
+          isArchived: true,
+          isService: true,
+        },
+      }),
+      prisma.store.findMany({
+        take: 5,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          status: true,
+          region: true,
+        },
+      }),
+      prisma.product.count(),
+      prisma.store.count(),
+    ]);
+
+    console.log("[api/search] smoke products returned:", products.length, "db total:", productTotal);
+    console.log("[api/search] smoke stores returned:", stores.length, "db total:", storeTotal);
+
+    return NextResponse.json({
+      debug: true,
+      mode: "smoke",
+      dbTotals: { products: productTotal, stores: storeTotal },
+      sampleProducts: products,
+      sampleStores: stores,
+    });
+  } catch (err) {
+    console.error("[api/search] smoke test failed:", err);
+    return NextResponse.json(
+      { debug: true, mode: "smoke", error: "Smoke test failed" },
+      { status: 500 },
+    );
+  }
+}
 
 function parseNumber(v: string | null): number | undefined {
   if (!v) return undefined;
@@ -12,6 +65,11 @@ function parseNumber(v: string | null): number | undefined {
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
+
+  if (searchParams.get("debug") === "smoke") {
+    return runSearchSmokeTest();
+  }
+
   const q = searchParams.get("q")?.trim() ?? "";
 
   if (q.length < 2) {
@@ -27,22 +85,28 @@ export async function GET(request: NextRequest) {
       ? typeRaw
       : "all";
 
+  const searchInput = {
+    q,
+    region: searchParams.get("region")?.trim() || undefined,
+    category: searchParams.get("category")?.trim() || undefined,
+    type,
+    minPrice: parseNumber(searchParams.get("minPrice")),
+    maxPrice: parseNumber(searchParams.get("maxPrice")),
+    rating: parseNumber(searchParams.get("rating")),
+    page: parseInt(searchParams.get("page") ?? "1", 10) || 1,
+    preview: searchParams.get("preview") === "true",
+  };
+
+  console.log("[api/search] request:", searchInput);
+
   try {
-    const data = await runUniversalSearch({
-      q,
-      region: searchParams.get("region")?.trim() || undefined,
-      category: searchParams.get("category")?.trim() || undefined,
-      type,
-      minPrice: parseNumber(searchParams.get("minPrice")),
-      maxPrice: parseNumber(searchParams.get("maxPrice")),
-      rating: parseNumber(searchParams.get("rating")),
-      page: parseInt(searchParams.get("page") ?? "1", 10) || 1,
-      preview: searchParams.get("preview") === "true",
-    });
+    const data = await runUniversalSearch(searchInput);
+
+    console.log("[api/search] counts:", data.counts, "total:", data.results.total);
 
     return NextResponse.json(data);
   } catch (err) {
-    console.error("[api/search]", err);
+    console.error("[api/search] failed:", err);
     return NextResponse.json({ error: "Search failed" }, { status: 500 });
   }
 }
