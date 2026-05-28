@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { redirect } from "next/navigation";
-
 import SearchPageClient from "@/app/search/SearchPageClient";
 import PublicNav from "@/components/layout/PublicNav";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
@@ -19,9 +17,7 @@ type Props = {
 };
 
 export default async function SearchPage({ searchParams }: Props) {
-  const params = await searchParams;
-  const q = params.q?.trim();
-  if (!q || q.length < 2) redirect("/");
+  await searchParams;
 
   const session = await getSession();
   const user = session

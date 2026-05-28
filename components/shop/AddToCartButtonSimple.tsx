@@ -66,7 +66,7 @@ export default function AddToCartButtonSimple({ productId, productName }: { prod
       type="button"
       onClick={handleClick}
       disabled={loading}
-      className={`mt-2 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg py-1.5 text-xs font-semibold text-white transition-all duration-200 ease-in-out disabled:opacity-60 ${
+      className={`mt-1.5 flex min-h-[36px] w-full items-center justify-center gap-1.5 rounded-lg px-1 py-1.5 text-[10px] font-semibold text-white transition-all duration-200 ease-in-out disabled:opacity-60 sm:mt-2 sm:min-h-[44px] sm:gap-2 sm:text-xs ${
         added ? "bg-emerald-600" : "bg-[#D4450A] hover:bg-[#B83A09]"
       }`}
     >

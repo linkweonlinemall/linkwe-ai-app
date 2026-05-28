@@ -65,3 +65,51 @@ export type UniversalSearchResponse = {
     stores: number;
   };
 };
+
+export function emptyUniversalSearchResponse(query = ""): UniversalSearchResponse {
+  return {
+    query,
+    detectedRegion: null,
+    results: {
+      products: [],
+      services: [],
+      stores: [],
+      total: 0,
+    },
+    counts: {
+      products: 0,
+      services: 0,
+      stores: 0,
+    },
+  };
+}
+
+/** Coerce API / cache payloads so clients never read null `results`. */
+export function normalizeUniversalSearchResponse(
+  raw: unknown,
+  fallbackQuery = "",
+): UniversalSearchResponse {
+  if (!raw || typeof raw !== "object") {
+    return emptyUniversalSearchResponse(fallbackQuery);
+  }
+
+  const o = raw as Partial<UniversalSearchResponse>;
+  const products = Array.isArray(o.results?.products) ? o.results.products : [];
+  const services = Array.isArray(o.results?.services) ? o.results.services : [];
+  const stores = Array.isArray(o.results?.stores) ? o.results.stores : [];
+  const total =
+    typeof o.results?.total === "number"
+      ? o.results.total
+      : products.length + services.length + stores.length;
+
+  return {
+    query: typeof o.query === "string" ? o.query : fallbackQuery,
+    detectedRegion: o.detectedRegion ?? null,
+    results: { products, services, stores, total },
+    counts: {
+      products: typeof o.counts?.products === "number" ? o.counts.products : products.length,
+      services: typeof o.counts?.services === "number" ? o.counts.services : services.length,
+      stores: typeof o.counts?.stores === "number" ? o.counts.stores : stores.length,
+    },
+  };
+}

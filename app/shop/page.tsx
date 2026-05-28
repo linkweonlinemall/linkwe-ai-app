@@ -244,7 +244,7 @@ export default async function ShopPage({ searchParams }: Props) {
             fallback={
               <div className="flex w-full flex-col gap-6 lg:flex-row">
                 <ShopFiltersSidebarSkeleton />
-                <div className="grid min-h-[40vh] min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+                <div className="grid min-h-[40vh] min-w-0 flex-1 grid-cols-2 gap-2 md:grid-cols-3 md:gap-3 lg:grid-cols-4 xl:grid-cols-5">
                   {Array.from({ length: 10 }).map((_, i) => (
                     <ProductCardSkeleton key={i} />
                   ))}
@@ -293,7 +293,7 @@ export default async function ShopPage({ searchParams }: Props) {
                 />
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+              <div className="grid grid-cols-2 gap-2 md:grid-cols-3 md:gap-3 lg:grid-cols-4 xl:grid-cols-5">
                 {products.map((product) => {
                   const discount =
                     product.compareAtPrice && product.compareAtPrice > product.price
@@ -357,11 +357,11 @@ export default async function ShopPage({ searchParams }: Props) {
                             {product.store.name}
                             {product.store.region ? ` · ${getRegionLabel(product.store.region)}` : ""}
                           </p>
-                          <p className="line-clamp-2 min-w-0 text-sm font-semibold leading-snug text-zinc-900">
+                          <p className="line-clamp-2 min-w-0 text-xs font-semibold leading-snug text-zinc-900 sm:text-sm">
                             {product.name}
                           </p>
-                          <div className="mt-auto pt-2">
-                            <p className={`text-sm font-black ${tw.textScarlet}`}>TTD {product.price.toFixed(2)}</p>
+                          <div className="mt-auto pt-1 sm:pt-2">
+                            <p className={`text-xs font-black sm:text-sm ${tw.textScarlet}`}>TTD {product.price.toFixed(2)}</p>
                             {product.compareAtPrice != null && product.compareAtPrice > product.price ? (
                               <p className="text-xs text-zinc-400 line-through">
                                 TTD {product.compareAtPrice.toFixed(2)}

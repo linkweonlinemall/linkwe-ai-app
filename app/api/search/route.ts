@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { runUniversalSearch } from "@/lib/search/run-search";
+import {
+  emptyUniversalSearchResponse,
+  normalizeUniversalSearchResponse,
+} from "@/lib/search/types";
 
 export const runtime = "nodejs";
 
@@ -73,10 +77,7 @@ export async function GET(request: NextRequest) {
   const q = searchParams.get("q")?.trim() ?? "";
 
   if (q.length < 2) {
-    return NextResponse.json(
-      { error: "Query must be at least 2 characters" },
-      { status: 400 },
-    );
+    return NextResponse.json(emptyUniversalSearchResponse(q));
   }
 
   const typeRaw = searchParams.get("type")?.trim() ?? "all";
@@ -101,12 +102,18 @@ export async function GET(request: NextRequest) {
 
   try {
     const data = await runUniversalSearch(searchInput);
+    const normalized = normalizeUniversalSearchResponse(data, q);
 
-    console.log("[api/search] counts:", data.counts, "total:", data.results.total);
+    console.log(
+      "[api/search] counts:",
+      normalized.counts,
+      "total:",
+      normalized.results.total,
+    );
 
-    return NextResponse.json(data);
+    return NextResponse.json(normalized);
   } catch (err) {
     console.error("[api/search] failed:", err);
-    return NextResponse.json({ error: "Search failed" }, { status: 500 });
+    return NextResponse.json(emptyUniversalSearchResponse(q));
   }
 }

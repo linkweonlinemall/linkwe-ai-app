@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { UniversalSearchResponse } from "@/lib/search/types";
+import {
+  emptyUniversalSearchResponse,
+  normalizeUniversalSearchResponse,
+  type UniversalSearchResponse,
+} from "@/lib/search/types";
 
 type CacheEntry = {
   data: UniversalSearchResponse;
@@ -80,14 +84,20 @@ export function useSearch(query: string, options?: { preview?: boolean; enabled?
           const body = (await res.json().catch(() => ({}))) as { error?: string };
           throw new Error(body.error ?? "Search failed");
         }
-        const data = (await res.json()) as UniversalSearchResponse;
+        const raw = await res.json().catch(() => null);
         if (controller.signal.aborted) return;
+        const data = res.ok
+          ? normalizeUniversalSearchResponse(raw, trimmed)
+          : emptyUniversalSearchResponse(trimmed);
+        if (!res.ok) {
+          setError("Search failed");
+        }
         writeCache(key, data);
         setResults(data);
       } catch (e) {
         if (e instanceof Error && e.name === "AbortError") return;
         setError(e instanceof Error ? e.message : "Search failed");
-        setResults(null);
+        setResults(emptyUniversalSearchResponse(trimmed));
       } finally {
         if (!controller.signal.aborted) {
           setIsLoading(false);

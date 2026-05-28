@@ -185,7 +185,7 @@ export default function PublicNav({
 
   const glassHeader = [
     headerPosition,
-    "w-full transition-[background-color,backdrop-filter,border-color] duration-200",
+    "w-full overflow-visible transition-[background-color,backdrop-filter,border-color] duration-200",
     navHasGlassBg
       ? "border-b-[0.5px] border-white/10 bg-[rgba(28,28,26,0.95)] backdrop-blur-[12px] md:backdrop-blur-[16px]"
       : "border-b-0 bg-transparent backdrop-blur-none",
@@ -412,13 +412,13 @@ export default function PublicNav({
         </nav>
 
         {/* Desktop */}
-        <nav aria-label="Primary desktop" className="hidden h-[60px] w-full min-w-0 items-center gap-4 px-8 md:flex">
+        <nav aria-label="Primary desktop" className="hidden h-[60px] w-full min-w-0 items-center gap-4 overflow-visible px-8 md:flex">
           <Link href="/" className="shrink-0">
             <LogoMark desktop />
           </Link>
 
-          <div className="flex min-h-0 min-w-0 flex-1 justify-center px-2 lg:px-6">
-            <div className="w-full max-w-[420px] min-w-[180px]">
+          <div className="flex min-h-0 min-w-0 flex-1 justify-center overflow-visible px-2 lg:px-6">
+            <div className="w-full max-w-[420px] min-w-[180px] overflow-visible">
               <NavSearchInput variant="desktop" inputId="public-nav-desktop-search" />
             </div>
           </div>

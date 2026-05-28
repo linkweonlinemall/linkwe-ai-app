@@ -38,9 +38,11 @@ export default function NavSearchInput({
     return () => window.clearTimeout(t);
   }, [variant]);
 
+  const searchEnabled = focused && query.trim().length >= 2;
+
   const { results, isLoading, error, detectedRegion } = useSearch(query, {
     preview: true,
-    enabled: focused && query.trim().length >= 2,
+    enabled: searchEnabled,
   });
 
   useEffect(() => {
@@ -86,8 +88,44 @@ export default function NavSearchInput({
     goToSearch(query);
   }
 
+  function handleQueryChange(value: string) {
+    setQuery(value);
+    setFocused(true);
+  }
+
   const showPopular = mounted && focused && query.trim().length === 0 && popular.length > 0;
   const showDropdown = mounted && focused && query.trim().length >= 2;
+
+  const popularPanel = showPopular ? (
+    <div className="rounded-[12px] border-[0.5px] border-[rgba(28,28,26,0.12)] bg-white p-3 shadow-lg">
+      <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+        Popular searches
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {popular.map((term) => (
+          <button
+            key={term}
+            type="button"
+            onClick={() => goToSearch(term)}
+            className="min-h-[32px] rounded-full border border-zinc-200 px-3 py-1 text-[11px] font-medium text-zinc-700 hover:border-[#D4450A] hover:text-[#D4450A]"
+          >
+            {term}
+          </button>
+        ))}
+      </div>
+    </div>
+  ) : null;
+
+  const resultsPanel = showDropdown ? (
+    <SearchDropdown
+      query={query}
+      results={results}
+      isLoading={isLoading}
+      error={error}
+      detectedRegion={detectedRegion}
+      onNavigate={closeDropdown}
+    />
+  ) : null;
 
   const inputClass =
     variant === "desktop"
@@ -99,17 +137,47 @@ export default function NavSearchInput({
       ? "relative flex h-[38px] items-center rounded-[10px] border-[0.5px] border-white/[0.15] bg-white/[0.10] px-4"
       : "relative min-w-0 flex-1";
 
+  if (variant === "mobile-overlay") {
+    return (
+      <div ref={rootRef} className="flex min-h-0 flex-1 flex-col">
+        <form className="w-full shrink-0" onSubmit={handleSubmit}>
+          <div className={wrapperClass}>
+            <label htmlFor={inputId} className="sr-only">
+              Search
+            </label>
+            <input
+              ref={inputRef}
+              id={inputId}
+              type="search"
+              value={query}
+              onChange={(e) => handleQueryChange(e.target.value)}
+              onFocus={() => setFocused(true)}
+              placeholder="Search products, stores, services..."
+              className={inputClass}
+              autoComplete="off"
+              autoFocus
+              suppressHydrationWarning
+            />
+          </div>
+        </form>
+        {(popularPanel || resultsPanel) ? (
+          <div className="mt-3 min-h-0 flex-1 overflow-y-auto pb-2">
+            {resultsPanel ?? popularPanel}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
-    <div ref={rootRef} className={variant === "desktop" ? "relative w-full" : "w-full min-w-0 flex-1"}>
+    <div ref={rootRef} className="relative z-[110] w-full">
       <form className="w-full" onSubmit={handleSubmit}>
         <div className={wrapperClass}>
-          {variant === "desktop" ? (
-            <IconSearch
-              className="pointer-events-none absolute left-3 top-1/2 size-[17px] -translate-y-1/2 text-white/50"
-              stroke={1.75}
-              aria-hidden
-            />
-          ) : null}
+          <IconSearch
+            className="pointer-events-none absolute left-3 top-1/2 size-[17px] -translate-y-1/2 text-white/50"
+            stroke={1.75}
+            aria-hidden
+          />
           <label htmlFor={inputId} className="sr-only">
             Search
           </label>
@@ -118,47 +186,25 @@ export default function NavSearchInput({
             id={inputId}
             type="search"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => handleQueryChange(e.target.value)}
             onFocus={() => setFocused(true)}
             placeholder="Search products, stores, services..."
             className={inputClass}
             autoComplete="off"
-            autoFocus={variant === "mobile-overlay"}
             suppressHydrationWarning
           />
         </div>
       </form>
 
-      {showPopular ? (
-        <div className="absolute left-0 right-0 top-full z-[100] mt-2 max-h-[min(60vh,400px)] overflow-y-auto rounded-[12px] border-[0.5px] border-[rgba(28,28,26,0.12)] bg-white p-3 shadow-lg">
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-            Popular searches
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {popular.map((term) => (
-              <button
-                key={term}
-                type="button"
-                onClick={() => goToSearch(term)}
-                className="min-h-[32px] rounded-full border border-zinc-200 px-3 py-1 text-[11px] font-medium text-zinc-700 hover:border-[#D4450A] hover:text-[#D4450A]"
-              >
-                {term}
-              </button>
-            ))}
-          </div>
+      {popularPanel ? (
+        <div className="absolute left-0 right-0 top-full z-[110] mt-2 max-h-[min(60vh,400px)] overflow-y-auto">
+          {popularPanel}
         </div>
       ) : null}
 
-      {showDropdown ? (
-        <div className="absolute left-0 right-0 top-full z-[100] mt-2 max-h-[min(60vh,400px)] overflow-y-auto rounded-[12px] border-[0.5px] border-[rgba(28,28,26,0.12)] bg-white shadow-lg">
-          <SearchDropdown
-            query={query}
-            results={results}
-            isLoading={isLoading}
-            error={error}
-            detectedRegion={detectedRegion}
-            onNavigate={closeDropdown}
-          />
+      {resultsPanel ? (
+        <div className="absolute left-0 right-0 top-full z-[110] mt-2 max-h-[min(60vh,400px)] overflow-y-auto">
+          {resultsPanel}
         </div>
       ) : null}
     </div>
@@ -185,35 +231,36 @@ export function MobileSearchOverlay({
 
   return (
     <div
-      className="fixed inset-x-0 top-0 z-[150] bg-[rgba(28,28,26,0.98)] px-4 py-3 md:hidden"
+      className="fixed inset-0 z-[150] flex flex-col bg-[rgba(28,28,26,0.98)] md:hidden"
       role="dialog"
       aria-modal="true"
       aria-label="Search"
     >
-      <div className="flex items-start gap-2">
+      <div className="flex shrink-0 items-center gap-2 border-b border-white/10 px-4 py-3">
         <button
           type="button"
           onClick={onClose}
-          className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white hover:bg-white/10"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white hover:bg-white/10"
           aria-label="Close search"
         >
           <IconArrowLeft className="size-5" stroke={2} aria-hidden />
         </button>
-        <div className="relative min-w-0 flex-1">
-          <NavSearchInput
-            variant="mobile-overlay"
-            inputId="public-nav-mobile-search"
-            onCloseOverlay={onClose}
-          />
-        </div>
+        <p className="min-w-0 flex-1 text-sm font-semibold text-white">Search</p>
         <button
           type="button"
           onClick={onClose}
-          className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white hover:bg-white/10"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white hover:bg-white/10"
           aria-label="Close search"
         >
           <IconX className="size-5" stroke={2} aria-hidden />
         </button>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col px-4 pb-[max(12px,env(safe-area-inset-bottom,0px))] pt-3">
+        <NavSearchInput
+          variant="mobile-overlay"
+          inputId="public-nav-mobile-search"
+          onCloseOverlay={onClose}
+        />
       </div>
     </div>
   );

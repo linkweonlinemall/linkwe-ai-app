@@ -11,7 +11,7 @@ export default function ShopLoading() {
         </div>
         <div className="mt-6 flex flex-col gap-6 lg:flex-row">
           <ShopFiltersSidebarSkeleton />
-          <div className="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 md:grid-cols-3 md:gap-3 lg:grid-cols-4 xl:grid-cols-5">
             {Array.from({ length: 10 }).map((_, i) => (
               <ProductCardSkeleton key={i} />
             ))}

@@ -9,12 +9,13 @@ import {
   IconClock,
   IconMapPin,
   IconPackage,
+  IconLoader2,
   IconSearch,
   IconSearchOff,
   IconStar,
   IconX,
 } from "@tabler/icons-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getPopularSearches } from "@/app/actions/search";
 import StarRating from "@/components/ui/StarRating";
@@ -28,11 +29,13 @@ import {
   isServiceCatalogItem,
   productResultAsService,
 } from "@/lib/search/resolve-catalog-item";
-import type {
-  SearchProductResult,
-  SearchServiceResult,
-  SearchStoreResult,
-  UniversalSearchResponse,
+import {
+  emptyUniversalSearchResponse,
+  normalizeUniversalSearchResponse,
+  type SearchProductResult,
+  type SearchServiceResult,
+  type SearchStoreResult,
+  type UniversalSearchResponse,
 } from "@/lib/search/types";
 
 const SCARLET = "#D4450A";
@@ -229,15 +232,18 @@ function buildSearchUrl(params: Record<string, string | undefined>) {
   for (const [k, v] of Object.entries(params)) {
     if (v != null && v !== "") sp.set(k, v);
   }
-  return `/search?${sp.toString()}`;
+  const qs = sp.toString();
+  return qs ? `/search?${qs}` : "/search";
 }
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 export default function SearchPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const q = searchParams.get("q")?.trim() ?? "";
   const [data, setData] = useState<UniversalSearchResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(q.length >= 2);
   const [error, setError] = useState<string | null>(null);
   const [headerQuery, setHeaderQuery] = useState(q);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -252,6 +258,8 @@ export default function SearchPageClient() {
 
   const detectedRegion = data?.detectedRegion ?? null;
   const effectiveRegion = region || detectedRegion || "";
+  const headerQueryTrimmed = headerQuery.trim();
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setHeaderQuery(q);
@@ -260,6 +268,45 @@ export default function SearchPageClient() {
   useEffect(() => {
     void getPopularSearches().then(setPopular);
   }, []);
+
+  const replaceSearchUrl = useCallback(
+    (query: string) => {
+      const trimmed = query.trim();
+      const params: Record<string, string | undefined> = {
+        type,
+        region: effectiveRegion || undefined,
+        category: category || undefined,
+        minPrice: minPrice || undefined,
+        maxPrice: maxPrice || undefined,
+        rating: rating || undefined,
+        page: "1",
+      };
+      if (trimmed.length > 0) {
+        params.q = trimmed;
+      }
+      router.replace(buildSearchUrl(params), { scroll: false });
+    },
+    [router, type, effectiveRegion, category, minPrice, maxPrice, rating],
+  );
+
+  useEffect(() => {
+    if (headerQueryTrimmed.length < 2) {
+      setData(null);
+      setLoading(false);
+      setError(null);
+    } else {
+      setLoading(true);
+    }
+
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      replaceSearchUrl(headerQuery);
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, [headerQuery, headerQueryTrimmed.length, replaceSearchUrl]);
 
   const fetchResults = useCallback(async () => {
     if (q.length < 2) {
@@ -277,9 +324,15 @@ export default function SearchPageClient() {
       if (maxPrice) sp.set("maxPrice", maxPrice);
       if (rating) sp.set("rating", rating);
       const res = await fetch(`/api/search?${sp}`);
-      if (!res.ok) throw new Error("Search failed");
-      setData((await res.json()) as UniversalSearchResponse);
+      const raw = await res.json().catch(() => null);
+      if (!res.ok) {
+        setData(emptyUniversalSearchResponse(q));
+        setError("Could not load search results");
+        return;
+      }
+      setData(normalizeUniversalSearchResponse(raw, q));
     } catch {
+      setData(emptyUniversalSearchResponse(q));
       setError("Could not load search results");
     } finally {
       setLoading(false);
@@ -306,11 +359,18 @@ export default function SearchPageClient() {
     );
   }
 
+  const products = data?.results?.products ?? [];
+  const services = data?.results?.services ?? [];
+  const stores = data?.results?.stores ?? [];
+  const resultTotal =
+    data?.results?.total ??
+    (data?.counts?.products ?? 0) + (data?.counts?.services ?? 0) + (data?.counts?.stores ?? 0);
+
   const tabs: { id: TabType; label: string; count: number }[] = [
-    { id: "all", label: "All", count: data?.results.total ?? 0 },
-    { id: "services", label: "Services", count: data?.counts.services ?? 0 },
-    { id: "stores", label: "Stores", count: data?.counts.stores ?? 0 },
-    { id: "products", label: "Products", count: data?.counts.products ?? 0 },
+    { id: "all", label: "All", count: resultTotal },
+    { id: "services", label: "Services", count: data?.counts?.services ?? services.length },
+    { id: "stores", label: "Stores", count: data?.counts?.stores ?? stores.length },
+    { id: "products", label: "Products", count: data?.counts?.products ?? products.length },
   ];
 
   const showProducts = type === "all" || type === "products";
@@ -318,13 +378,12 @@ export default function SearchPageClient() {
   const showStores = type === "all" || type === "stores";
 
   const categoriesInResults = useMemo(() => {
-    if (!data) return [];
     const set = new Set<string>();
-    for (const p of data.results.products) if (p.category) set.add(p.category);
-    for (const s of data.results.services) if (s.category) set.add(s.category);
-    for (const s of data.results.stores) if (s.category) set.add(s.category);
+    for (const p of products) if (p.category) set.add(p.category);
+    for (const s of services) if (s.category) set.add(s.category);
+    for (const s of stores) if (s.category) set.add(s.category);
     return [...set].sort();
-  }, [data]);
+  }, [products, services, stores]);
 
   const filterSidebar = (
     <div className="space-y-5">
@@ -412,18 +471,26 @@ export default function SearchPageClient() {
           className="mx-auto flex max-w-2xl items-center gap-2 rounded-[10px] border-[0.5px] border-white/[0.15] bg-white/[0.10] px-4 py-1"
           onSubmit={(e) => {
             e.preventDefault();
-            if (headerQuery.trim()) {
-              router.push(buildSearchUrl({ q: headerQuery.trim(), type, page: "1" }));
-            }
+            if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+            replaceSearchUrl(headerQuery);
           }}
         >
-          <IconSearch className="size-5 shrink-0 text-white/50" stroke={1.75} aria-hidden />
+          {loading && headerQueryTrimmed.length >= 2 ? (
+            <IconLoader2
+              className="size-5 shrink-0 animate-spin text-white/70"
+              stroke={1.75}
+              aria-hidden
+            />
+          ) : (
+            <IconSearch className="size-5 shrink-0 text-white/50" stroke={1.75} aria-hidden />
+          )}
           <input
             type="search"
             value={headerQuery}
             onChange={(e) => setHeaderQuery(e.target.value)}
-            className="min-h-[44px] flex-1 border-0 bg-transparent text-sm text-white outline-none placeholder:text-white/40"
+            className="min-h-[44px] flex-1 border-0 bg-transparent text-sm text-white caret-white outline-none placeholder:text-white/40"
             placeholder="Search products, stores, services..."
+            autoComplete="off"
             suppressHydrationWarning
           />
         </form>
@@ -505,10 +572,37 @@ export default function SearchPageClient() {
               </div>
             ) : error ? (
               <p className="text-center text-sm text-red-600">{error}</p>
-            ) : data && data.results.total === 0 ? (
+            ) : headerQueryTrimmed.length < 2 ? (
+              <div className="flex flex-col items-center py-16 text-center">
+                <IconSearch className="mb-3 size-12 text-zinc-300" stroke={1.25} aria-hidden />
+                <p className="text-lg font-bold text-zinc-900">Search LinkWe</p>
+                <p className="mt-1 text-sm text-zinc-500">
+                  Enter at least 2 characters to find products, services, and stores
+                </p>
+                {popular.length > 0 ? (
+                  <div className="mt-4 flex flex-wrap justify-center gap-2">
+                    {popular.map((term) => (
+                      <Link
+                        key={term}
+                        href={buildSearchUrl({ q: term })}
+                        className="min-h-[36px] rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium hover:border-[#D4450A]"
+                      >
+                        {term}
+                      </Link>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : !data || resultTotal === 0 ? (
               <div className="flex flex-col items-center py-16 text-center">
                 <IconSearchOff className="mb-3 size-12 text-zinc-300" stroke={1.25} aria-hidden />
-                <p className="text-lg font-bold text-zinc-900">No results for &ldquo;{q}&rdquo;</p>
+                <p className="text-lg font-bold text-zinc-900">
+                  {data ? (
+                    <>No results for &ldquo;{q}&rdquo;</>
+                  ) : (
+                    <>Could not load results for &ldquo;{q}&rdquo;</>
+                  )}
+                </p>
                 <p className="mt-1 text-sm text-zinc-500">
                   Try a different search term or browse by category
                 </p>
@@ -527,13 +621,13 @@ export default function SearchPageClient() {
             ) : (
               <div className={RESULT_GRID}>
                 {showServices
-                  ? data!.results.services.map((s) => <SearchServiceCard key={s.id} service={s} />)
+                  ? services.map((s) => <SearchServiceCard key={s.id} service={s} />)
                   : null}
                 {showStores
-                  ? data!.results.stores.map((s) => <SearchStoreCard key={s.id} store={s} />)
+                  ? stores.map((s) => <SearchStoreCard key={s.id} store={s} />)
                   : null}
                 {showProducts
-                  ? data!.results.products.map((p) =>
+                  ? products.map((p) =>
                       isServiceCatalogItem(p) ? (
                         <SearchServiceCard key={p.id} service={productResultAsService(p)} />
                       ) : (
@@ -576,7 +670,7 @@ export default function SearchPageClient() {
               style={{ backgroundColor: SCARLET }}
               onClick={() => setFilterOpen(false)}
             >
-              Show {data?.results.total ?? 0} results
+              Show {resultTotal} results
             </button>
           </div>
         </>

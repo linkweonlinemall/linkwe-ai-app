@@ -89,7 +89,7 @@ export default function SearchDropdown({
 
   return (
     <div
-      className="absolute left-0 right-0 top-full z-[100] mt-1 max-h-[480px] overflow-y-auto rounded-[12px] border-[0.5px] border-[rgba(28,28,26,0.12)] bg-white shadow-lg"
+      className="w-full overflow-y-auto rounded-[12px] border-[0.5px] border-[rgba(28,28,26,0.12)] bg-white shadow-lg max-h-[min(60vh,480px)]"
       role="listbox"
       aria-label="Search suggestions"
     >
