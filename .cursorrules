@@ -1,0 +1,1 @@
+Always read CLAUDE_CONTEXT.md before making any changes to this codebase. It contains the full map of routes, components, database models, brand tokens, and architecture decisions for LinkWe. Never guess file paths or component names — they are all in that document.

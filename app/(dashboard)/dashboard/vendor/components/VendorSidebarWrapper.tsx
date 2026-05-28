@@ -36,7 +36,7 @@ const NAV_ITEMS: { href: string; label: string; Icon: LucideIcon; exact: boolean
   { href: "/dashboard/vendor/services", label: "My Services", Icon: ConciergeBell, exact: false },
   { href: "/dashboard/vendor/bookings", label: "Bookings", Icon: Calendar, exact: false },
   { href: "/dashboard/vendor/requests", label: "Requests", Icon: ClipboardList, exact: false },
-  { href: "/dashboard/vendor/staff", label: "Staff", Icon: Users, exact: false },
+  { href: "/dashboard/vendor/staff", label: "Availability", Icon: Users, exact: false },
   { href: "/dashboard/vendor?tab=store", label: "Store", Icon: Store, exact: false },
   { href: "/dashboard/vendor?tab=listings", label: "Listings", Icon: List, exact: false },
   { href: VENDOR_VENDOR_ORDERS_PATH, label: "Orders", Icon: ShoppingBag, exact: false },

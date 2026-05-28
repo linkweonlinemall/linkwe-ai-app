@@ -65,6 +65,7 @@ export default function BulkUploadTab() {
   >([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [uploading, setUploading] = useState(false)
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null)
   const [productImages, setProductImages] = useState<Record<string, string[]>>(
     {}
   )
@@ -591,6 +592,12 @@ Be direct, specific, and helpful. Use Trinidadian tone. Keep it under 200 words.
             </button>
           </div>
 
+          {imageUploadError ? (
+            <p className="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+              {imageUploadError}
+            </p>
+          ) : null}
+
           <div
             className="cursor-pointer rounded-xl border-2 border-dashed border-zinc-600 bg-zinc-900/50 p-8 text-center transition-colors hover:border-[#D4450A]"
             onClick={() => document.getElementById("bulk-image-input")?.click()}
@@ -603,6 +610,7 @@ Be direct, specific, and helpful. Use Trinidadian tone. Keep it under 200 words.
               if (!files.length) return
               const pid = createdProducts[currentIndex].productId
               setUploading(true)
+              setImageUploadError(null)
               for (const file of files) {
                 const fd = new FormData()
                 fd.append("image", file)
@@ -612,6 +620,9 @@ Be direct, specific, and helpful. Use Trinidadian tone. Keep it under 200 words.
                 const upResult = await uploadProductImage(pid, fd)
                 if (upResult.ok && upResult.images) {
                   setProductImages((prev) => ({ ...prev, [pid]: upResult.images! }))
+                } else if (!upResult.ok) {
+                  setImageUploadError(upResult.error ?? `Could not upload ${file.name}.`)
+                  break
                 }
               }
               setUploading(false)
@@ -657,6 +668,7 @@ Be direct, specific, and helpful. Use Trinidadian tone. Keep it under 200 words.
               if (!files.length) return
               const pid = createdProducts[currentIndex].productId
               setUploading(true)
+              setImageUploadError(null)
               for (const file of files) {
                 const fd = new FormData()
                 fd.append("image", file)
@@ -669,6 +681,9 @@ Be direct, specific, and helpful. Use Trinidadian tone. Keep it under 200 words.
                     ...prev,
                     [pid]: upResult.images!,
                   }))
+                } else if (!upResult.ok) {
+                  setImageUploadError(upResult.error ?? `Could not upload ${file.name}.`)
+                  break
                 }
               }
               setUploading(false)

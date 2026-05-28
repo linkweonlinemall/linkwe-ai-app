@@ -1,34 +1,24 @@
 "use client";
 
+import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ProductBookingSlot } from "@prisma/client";
 
-import { createBooking } from "@/app/actions/booking";
-import { formatTime, generateSlotsFromStaff, getAvailableDatesFromStaff } from "@/lib/booking/slots";
-
-type StaffMemberProp = {
-  id: string;
-  name: string;
-  photoUrl: string | null;
-  availability: {
-    id: string;
-    dayOfWeek: number;
-    startTime: string;
-    endTime: string;
-    slotDurationMins: number;
-    slotBufferMins: number;
-    isActive: boolean;
-  }[];
-  overrides: {
-    id: string;
-    date: Date | string;
-    isBlocked: boolean;
-    customStartTime: string | null;
-    customEndTime: string | null;
-    reason: string | null;
-  }[];
-};
+import {
+  confirmBookingPaid,
+  createBooking,
+  createBookingPaymentIntent,
+} from "@/app/actions/booking";
+import InlineSpinner from "@/components/ui/InlineSpinner";
+import { formatTime } from "@/lib/booking/slots";
+import {
+  getAvailableDatesForService,
+  getAvailableSlots,
+  type ServiceAvailabilityInput,
+} from "@/lib/services/get-available-slots";
+import { parseStoreOpeningHours } from "@/lib/services/opening-hours";
 
 type Props = {
   serviceId: string;
@@ -41,8 +31,8 @@ type Props = {
   requiresApproval: boolean;
   bookingPaymentMode: string;
   advanceBookingDays: number;
-  staffMode: string;
-  staff: StaffMemberProp[];
+  availability: ServiceAvailabilityInput;
+  storeOpeningHours: unknown;
   existingSlots: ProductBookingSlot[];
 };
 
@@ -67,6 +57,153 @@ function formatDateShort(dateStr: string): string {
     weekday: "short", month: "short", day: "numeric",
     timeZone: "UTC",
   });
+}
+
+function hasDepositAmount(depositAmount: number | null): boolean {
+  return depositAmount != null && depositAmount > 0;
+}
+
+/** Amount to charge via Stripe now, or null if no payment at booking time. */
+function chargeAmountNow(
+  paymentMethod: "online" | "arrival",
+  fullPrice: number,
+  depositAmount: number | null,
+): number | null {
+  if (paymentMethod === "online") return fullPrice;
+  if (paymentMethod === "arrival" && hasDepositAmount(depositAmount)) {
+    return depositAmount!;
+  }
+  return null;
+}
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+
+function BookingPaymentForm({
+  bookingId,
+  paymentIntentId,
+  amountLabel,
+  onBack,
+}: {
+  bookingId: string;
+  paymentIntentId: string;
+  amountLabel: string;
+  onBack: () => void;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const router = useRouter();
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
+  const [elementsReady, setElementsReady] = useState(false);
+
+  async function handlePay() {
+    if (!stripe || !elements) {
+      setPayError("Payment form is still loading. Please wait a moment.");
+      return;
+    }
+    if (!elementsReady) {
+      setPayError("Payment form is still loading. Please wait a moment.");
+      return;
+    }
+
+    setPaying(true);
+    setPayError(null);
+
+    try {
+      const { error: submitError } = await elements.submit();
+      if (submitError) {
+        setPayError(submitError.message ?? "Please check your card details.");
+        return;
+      }
+
+      const returnUrl = `${window.location.origin}/booking-confirmation?bookingId=${encodeURIComponent(bookingId)}`;
+
+      const { error, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: { return_url: returnUrl },
+        redirect: "if_required",
+      });
+
+      if (error) {
+        setPayError(error.message ?? "Payment failed");
+        return;
+      }
+
+      // 3DS redirect in progress — page will unload; confirmation runs on return URL
+      if (paymentIntent?.status === "requires_action") {
+        return;
+      }
+
+      const result = await confirmBookingPaid(bookingId, paymentIntentId);
+      if ("error" in result) {
+        setPayError(
+          result.error === "Payment has not completed yet"
+            ? "Payment is processing. Please wait a moment and try again."
+            : result.error,
+        );
+        return;
+      }
+
+      router.push(`/booking-confirmation?bookingId=${encodeURIComponent(bookingId)}`);
+    } catch {
+      setPayError("Something went wrong. Please try again.");
+    } finally {
+      setPaying(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <button
+        type="button"
+        onClick={onBack}
+        className="text-left text-xs font-medium text-zinc-500 hover:text-zinc-900"
+      >
+        ← Back to booking details
+      </button>
+      <p className="text-xs text-zinc-600">
+        Pay <span className="font-bold text-[#D4450A]">{amountLabel}</span> to complete your booking.
+      </p>
+      <PaymentElement onReady={() => setElementsReady(true)} />
+      {payError ? (
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{payError}</p>
+      ) : null}
+      <button
+        type="button"
+        onClick={() => void handlePay()}
+        disabled={paying || !stripe || !elementsReady}
+        className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+        style={{ backgroundColor: "#D4450A" }}
+      >
+        {paying ? (
+          <>
+            <InlineSpinner className="h-5 w-5 shrink-0 text-white" />
+            Processing…
+          </>
+        ) : (
+          `Pay ${amountLabel}`
+        )}
+      </button>
+    </div>
+  );
+}
+
+function confirmButtonLabel(
+  booking: boolean,
+  requiresApproval: boolean,
+  paymentMethod: "online" | "arrival",
+  fullPrice: number,
+  depositAmount: number | null,
+): string {
+  if (booking) return "Booking...";
+  if (requiresApproval) return "Request booking";
+  if (paymentMethod === "online") {
+    return `Book & pay TTD ${fullPrice.toFixed(2)} online`;
+  }
+  if (hasDepositAmount(depositAmount)) {
+    return `Pay TTD ${depositAmount!.toFixed(2)} deposit to secure booking`;
+  }
+  return "Book now — pay on arrival";
 }
 
 const MONTH_NAMES = [
@@ -220,12 +357,25 @@ export default function BookingWidget({
   requiresApproval,
   bookingPaymentMode,
   advanceBookingDays,
-  staff,
+  availability,
+  storeOpeningHours: rawOpeningHours,
   existingSlots,
 }: Props) {
   const router = useRouter();
+  const openingHours = useMemo(
+    () => parseStoreOpeningHours(rawOpeningHours),
+    [rawOpeningHours],
+  );
 
-  const [step, setStep] = useState<"date" | "time" | "confirm">("date");
+  const availabilityConfig = useMemo(
+    (): ServiceAvailabilityInput => ({
+      ...availability,
+      durationMinutes: availability.durationMinutes || serviceDuration,
+    }),
+    [availability, serviceDuration],
+  );
+
+  const [step, setStep] = useState<"date" | "time" | "confirm" | "payment">("date");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -241,6 +391,11 @@ export default function BookingWidget({
   const [booking, setBooking] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
+  const [paidAmount, setPaidAmount] = useState<number | null>(null);
+  const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [bookingStatus, setBookingStatus] = useState<string | null>(null);
   const [confirmedDate, setConfirmedDate] = useState<string | null>(null);
   const [confirmedSlot, setConfirmedSlot] = useState<TimeSlot | null>(null);
@@ -263,24 +418,41 @@ export default function BookingWidget({
     [bookedSlots, serviceId],
   );
 
-  const availableDates = getAvailableDatesFromStaff(
-    staff,
-    [...existingSlots, ...localBookedAsSlots],
-    advanceBookingDays,
-    serviceDuration,
+  const allBookedSlots = useMemo(
+    () => [...existingSlots, ...localBookedAsSlots],
+    [existingSlots, localBookedAsSlots],
+  );
+
+  const availableDates = useMemo(
+    () =>
+      getAvailableDatesForService(
+        availabilityConfig,
+        openingHours,
+        allBookedSlots,
+        advanceBookingDays,
+      ),
+    [availabilityConfig, openingHours, allBookedSlots, advanceBookingDays],
   );
 
   useEffect(() => {
     if (!selectedDate) return;
     setLoadingSlots(true);
-    setSlots([]);
     setSelectedSlot(null);
-    const date = new Date(`${selectedDate}T12:00:00Z`);
-    const allBookedSlots = [...existingSlots, ...localBookedAsSlots];
-    const staffSlots = generateSlotsFromStaff(date, staff, allBookedSlots, serviceDuration);
-    setSlots(staffSlots);
+    const generated = getAvailableSlots(
+      availabilityConfig,
+      selectedDate,
+      openingHours,
+      allBookedSlots,
+    );
+    setSlots(
+      generated.map((s) => ({
+        startTime: s.time,
+        endTime: s.endTime,
+        available: s.available,
+      })),
+    );
     setLoadingSlots(false);
-  }, [selectedDate, staff, existingSlots, serviceDuration, localBookedAsSlots]);
+  }, [selectedDate, availabilityConfig, openingHours, allBookedSlots]);
 
   async function handleBook() {
     if (!selectedDate || !selectedSlot) {
@@ -313,37 +485,37 @@ export default function BookingWidget({
       return;
     }
 
-    // If paying online, redirect to Stripe checkout
-    if (paymentMethod === "online" && result.ok) {
-      try {
-        const stripeRes = await fetch("/api/booking-checkout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            bookingId: result.bookingId,
-            serviceId,
-            serviceName,
-            price: requiresDeposit && depositAmount ? depositAmount : price,
-            successUrl: `${window.location.origin}/booking-confirmation?bookingId=${result.bookingId}`,
-            cancelUrl: window.location.href,
-          }),
-        });
-        const stripeData = await stripeRes.json();
-        if (stripeData.url) {
-          window.location.href = stripeData.url;
+    if (result.requiresPayment && result.chargeAmount != null) {
+      const paymentType = paymentMethod === "online" ? "full" : "deposit";
+      const piResult = await createBookingPaymentIntent(result.bookingId, paymentType);
+      if ("error" in piResult) {
+        if (piResult.error === "not_logged_in") {
+          router.push("/login");
           return;
         }
-      } catch {
-        setBookingError("Could not start payment. Please try again.");
+        setBookingError(
+          piResult.error === "Payment setup failed. Please try again."
+            ? piResult.error
+            : "Could not start payment. Please try again.",
+        );
         setBooking(false);
         return;
       }
+      setPendingBookingId(result.bookingId);
+      setClientSecret(piResult.clientSecret);
+      setPaymentIntentId(piResult.paymentIntentId);
+      setPaidAmount(result.chargeAmount);
+      setBookingStatus(result.status ?? null);
+      setStep("payment");
+      setBooking(false);
+      return;
     }
 
     setBookedSlots((prev) => [...prev, { date: selectedDate!, startTime: selectedSlot!.startTime }]);
     setConfirmedDate(selectedDate);
     setConfirmedSlot(selectedSlot);
     setConfirmed(true);
+    setPaymentCompleted(false);
     setBookingStatus(result.status ?? null);
     setBooking(false);
   }
@@ -361,9 +533,17 @@ export default function BookingWidget({
               ? `You are booked for ${formatDateDisplay(confirmedDate ?? "")} at ${confirmedSlot ? formatTime(confirmedSlot.startTime) : ""}.`
               : `Your request for ${formatDateDisplay(confirmedDate ?? "")} at ${confirmedSlot ? formatTime(confirmedSlot.startTime) : ""} has been sent. The provider will confirm shortly.`}
           </p>
-          {paymentMethod === "arrival" ? (
+          {paymentCompleted && paidAmount != null ? (
             <p className="mt-2 text-xs font-semibold text-emerald-800">
-              💵 Payment on arrival — TTD {price.toFixed(2)}
+              💳 Paid TTD {paidAmount.toFixed(2)}{" "}
+              {paymentMethod === "online" ? "online" : "deposit"}
+              {paymentMethod === "arrival" && hasDepositAmount(depositAmount)
+                ? ` — TTD ${(price - depositAmount!).toFixed(2)} due on arrival`
+                : null}
+            </p>
+          ) : paymentMethod === "arrival" ? (
+            <p className="mt-2 text-xs font-semibold text-emerald-800">
+              💵 Pay TTD {price.toFixed(2)} on arrival
             </p>
           ) : null}
         </div>
@@ -386,7 +566,7 @@ export default function BookingWidget({
     );
   }
 
-  const steps = ["date", "time", "confirm"] as const;
+  const steps = ["date", "time", "confirm", "payment"] as const;
 
   return (
     <div className="flex flex-col gap-4">
@@ -407,9 +587,15 @@ export default function BookingWidget({
             <span
               className={`text-[10px] font-medium capitalize ${step === s ? "text-zinc-900" : "text-zinc-400"}`}
             >
-              {s === "confirm" ? "Confirm" : s === "date" ? "Date" : "Time"}
+              {s === "confirm"
+                ? "Confirm"
+                : s === "payment"
+                  ? "Pay"
+                  : s === "date"
+                    ? "Date"
+                    : "Time"}
             </span>
-            {i < 2 ? <div className="mx-1 h-px w-4 bg-zinc-200" /> : null}
+            {i < 3 ? <div className="mx-1 h-px w-4 bg-zinc-200" /> : null}
           </div>
         ))}
       </div>
@@ -510,6 +696,22 @@ export default function BookingWidget({
         </div>
       ) : null}
 
+      {step === "payment" && clientSecret && pendingBookingId && paymentIntentId && paidAmount != null ? (
+        <div>
+          <p className="mb-3 text-xs font-bold uppercase tracking-widest text-zinc-400">
+            Complete payment
+          </p>
+          <Elements stripe={stripePromise} options={{ clientSecret }}>
+            <BookingPaymentForm
+              bookingId={pendingBookingId}
+              paymentIntentId={paymentIntentId}
+              amountLabel={`TTD ${paidAmount.toFixed(2)}`}
+              onBack={() => setStep("confirm")}
+            />
+          </Elements>
+        </div>
+      ) : null}
+
       {step === "confirm" && selectedDate && selectedSlot ? (
         <div className="flex flex-col gap-3">
           <div className="mb-0.5 flex items-center justify-between">
@@ -550,17 +752,35 @@ export default function BookingWidget({
                 </span>
               </div>
               <div className="mt-0.5 flex justify-between border-t border-zinc-200 pt-1.5">
-                <span className="font-semibold text-zinc-700">Total</span>
+                <span className="font-semibold text-zinc-700">Service total</span>
                 <span className="font-black text-[#D4450A]">TTD {price.toFixed(2)}</span>
               </div>
-              {requiresDeposit && depositAmount ? (
+              {paymentMethod === "online" ? (
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">Deposit required</span>
-                  <span className="font-semibold text-amber-700">
-                    TTD {depositAmount.toFixed(2)}
-                  </span>
+                  <span className="font-semibold text-zinc-800">Due now (online)</span>
+                  <span className="font-bold text-[#D4450A]">TTD {price.toFixed(2)}</span>
                 </div>
-              ) : null}
+              ) : hasDepositAmount(depositAmount) ? (
+                <>
+                  <div className="flex justify-between">
+                    <span className="font-semibold text-zinc-800">Due now (deposit)</span>
+                    <span className="font-bold text-amber-700">
+                      TTD {depositAmount!.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Due on arrival</span>
+                    <span className="font-semibold text-zinc-700">
+                      TTD {(price - depositAmount!).toFixed(2)}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex justify-between">
+                  <span className="font-semibold text-zinc-800">Due on arrival</span>
+                  <span className="font-bold text-zinc-700">TTD {price.toFixed(2)}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -630,13 +850,13 @@ export default function BookingWidget({
             className="w-full rounded-xl py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
             style={{ backgroundColor: "#D4450A" }}
           >
-            {booking
-              ? "Booking..."
-              : requiresApproval
-                ? "Request booking"
-                : paymentMethod === "online"
-                  ? "Book & pay online"
-                  : "Confirm booking"}
+            {confirmButtonLabel(
+              booking,
+              requiresApproval,
+              paymentMethod,
+              price,
+              depositAmount,
+            )}
           </button>
         </div>
       ) : null}

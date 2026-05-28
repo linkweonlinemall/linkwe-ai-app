@@ -10,19 +10,43 @@ import {
 
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { sendEmail } from "@/lib/email/send";
-import { bookingConfirmedCustomerEmail, newBookingVendorEmail } from "@/lib/email/templates";
-import { BASE_URL } from "@/lib/email/resend";
-import { createNotification } from "@/app/actions/notifications";
+import { stripe } from "@/lib/stripe/stripe";
+import { sendBookingConfirmationEmails } from "@/app/actions/booking-emails";
+import { handleBookingPaymentIntentSucceeded } from "@/lib/finance/booking-payment";
 import {
   generateSlotsForDate,
   getAvailableDates,
   utcMidnightFromYmd,
 } from "@/lib/booking/slots";
+import { parseStoreOpeningHours } from "@/lib/services/opening-hours";
+import { getAvailableSlots } from "@/lib/services/get-available-slots";
+import {
+  calendarDateAnchorTrinidad,
+  dayRangeTrinidad,
+  isSlotInPastTrinidad,
+} from "@/lib/timezone/trinidad";
 
 function utcAnchorFromYmd(dateStr: string): Date {
   const [y, m, d] = dateStr.split("-").map((v) => parseInt(v, 10));
   return new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0));
+}
+
+/** Called after Stripe payment succeeds (webhook or client confirmation). */
+export async function finalizeBookingAfterPayment(bookingId: string) {
+  const pi = await prisma.productBooking.findUnique({
+    where: { id: bookingId },
+    select: { id: true },
+  });
+  if (!pi) return;
+
+  const intents = await stripe.paymentIntents.search({
+    query: `metadata['bookingId']:'${bookingId}'`,
+    limit: 1,
+  });
+  const paymentIntent = intents.data[0];
+  if (paymentIntent) {
+    await handleBookingPaymentIntentSucceeded(paymentIntent);
+  }
 }
 
 // Get service booking data for customer
@@ -128,10 +152,16 @@ export async function createBooking(input: {
   const session = await getSession();
   if (!session) return { error: "not_logged_in" };
 
-  const dayStart = utcMidnightFromYmd(input.date);
-  const dayEnd = new Date(dayStart.getTime() + 86400000);
-  const [by, bm, bd] = input.date.split("-").map(Number);
-  const bookingDate = new Date(Date.UTC(by, bm - 1, bd, 12, 0, 0, 0));
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) {
+    return { error: "slot_unavailable" };
+  }
+
+  if (isSlotInPastTrinidad(input.date, input.startTime)) {
+    return { error: "slot_unavailable" };
+  }
+
+  const bookingDate = calendarDateAnchorTrinidad(input.date);
+  const { start: dayStart, end: dayEnd } = dayRangeTrinidad(input.date);
 
   const service = await prisma.product.findUnique({
     where: { id: input.serviceId },
@@ -145,76 +175,84 @@ export async function createBooking(input: {
       requiresApproval: true,
       bookingPaymentMode: true,
       serviceDuration: true,
+      durationMinutes: true,
+      bufferMinutes: true,
+      maxPerDay: true,
+      useStoreHours: true,
+      availableDays: true,
+      availableFrom: true,
+      availableTo: true,
+      isAvailable: true,
       storeId: true,
-      store: { select: { id: true } },
-    },
-  });
-
-  if (!service) return { error: "Service not found" };
-
-  // Get staff for this service using storeId from the product
-  const staffForService = await prisma.staffMember.findMany({
-    where: {
-      storeId: service.storeId,
-      isActive: true,
-      OR: [
-        { services: { some: { serviceId: input.serviceId } } },
-        { services: { none: {} } },
-      ],
-    },
-    select: {
-      id: true,
-      availability: { where: { isActive: true } },
-      overrides: {
+      store: { select: { id: true, openingHours: true } },
+      bookingSlots: {
         where: {
-          date: {
-            gte: new Date(`${input.date}T00:00:00Z`),
-            lt: new Date(`${input.date}T23:59:59Z`),
-          },
+          date: { gte: dayStart, lte: dayEnd },
+        },
+        select: {
+          date: true,
+          startTime: true,
+          endTime: true,
+          currentBookings: true,
+          maxBookings: true,
+          isAvailable: true,
         },
       },
     },
   });
 
-  // If no staff found at all, allow booking (service has no staff requirement)
-  if (staffForService.length === 0) {
-    // No staff configured — skip availability check
-  } else {
-    const bookingDateCheck = new Date(Date.UTC(by, bm - 1, bd, 12, 0, 0, 0));
-    const dayOfWeek = bookingDateCheck.getUTCDay();
+  if (!service) return { error: "Service not found" };
 
-    const anyStaffAvailable = staffForService.some((member) => {
-      const override = member.overrides.find((o) => {
-        const od = new Date(o.date);
-        const oStr = `${od.getUTCFullYear()}-${String(od.getUTCMonth() + 1).padStart(2, "0")}-${String(od.getUTCDate()).padStart(2, "0")}`;
-        return oStr === input.date;
-      });
-      if (override?.isBlocked) return false;
-      const daySchedule = member.availability.find((a) => a.dayOfWeek === dayOfWeek && a.isActive);
-      if (!daySchedule && !override?.customStartTime) return false;
-      const startTime = override?.customStartTime ?? daySchedule!.startTime;
-      const endTime = override?.customEndTime ?? daySchedule!.endTime;
-      const [sh, sm] = startTime.split(":").map(Number);
-      const [eh, em] = endTime.split(":").map(Number);
-      const [rh, rm] = input.startTime.split(":").map(Number);
-      const requestedMins = rh * 60 + rm;
-      const startMins = sh * 60 + sm;
-      const endMins = eh * 60 + em;
-      return requestedMins >= startMins && requestedMins + (service.serviceDuration ?? 60) <= endMins;
-    });
+  if (!service.isAvailable) return { error: "slot_unavailable" };
 
-    if (!anyStaffAvailable) return { error: "slot_unavailable" };
-  }
+  const openingHours = parseStoreOpeningHours(service.store.openingHours);
+  const durationMinutes = service.durationMinutes || service.serviceDuration || 60;
+
+  const slots = getAvailableSlots(
+    {
+      durationMinutes,
+      bufferMinutes: service.bufferMinutes ?? 0,
+      maxPerDay: service.maxPerDay,
+      useStoreHours: service.useStoreHours,
+      availableDays: service.availableDays,
+      availableFrom: service.availableFrom,
+      availableTo: service.availableTo,
+      isAvailable: service.isAvailable,
+    },
+    input.date,
+    openingHours,
+    service.bookingSlots,
+  );
+
+  const chosen = slots.find((s) => s.time === input.startTime && s.available);
+  if (!chosen) return { error: "slot_unavailable" };
+
+  const endTime = chosen.endTime;
 
   const totalPrice = service.price;
 
-  let slot = await prisma.productBookingSlot.findUnique({
+  const depositDue =
+    service.depositAmount != null && service.depositAmount > 0
+      ? service.depositAmount
+      : null;
+  const chargeAmount =
+    input.paymentMethod === "online"
+      ? totalPrice
+      : input.paymentMethod === "arrival" && depositDue != null
+        ? depositDue
+        : null;
+  const needsPayment = chargeAmount != null;
+  const initialStatus = service.requiresApproval
+    ? BookingStatus.PENDING
+    : needsPayment
+      ? BookingStatus.PENDING
+      : BookingStatus.CONFIRMED;
+
+  let slot = await prisma.productBookingSlot.findFirst({
     where: {
-      productId_date_startTime: {
-        productId: input.serviceId,
-        date: bookingDate,
-        startTime: input.startTime,
-      },
+      productId: input.serviceId,
+      startTime: input.startTime,
+      date: { gte: dayStart, lte: dayEnd },
     },
   });
 
@@ -224,7 +262,7 @@ export async function createBooking(input: {
         productId: input.serviceId,
         date: bookingDate,
         startTime: input.startTime,
-        endTime: input.endTime,
+        endTime,
         maxBookings: 1,
         currentBookings: 0,
         isAvailable: true,
@@ -232,6 +270,11 @@ export async function createBooking(input: {
     });
   } else if (!slot.isAvailable || slot.currentBookings >= slot.maxBookings) {
     return { error: "slot_unavailable" };
+  } else if (slot.date.getTime() !== bookingDate.getTime()) {
+    await prisma.productBookingSlot.update({
+      where: { id: slot.id },
+      data: { date: bookingDate, endTime },
+    });
   }
 
   const booking = await prisma.productBooking.create({
@@ -241,12 +284,10 @@ export async function createBooking(input: {
       customerId: session.userId,
       bookingDate,
       startTime: input.startTime,
-      endTime: input.endTime,
+      endTime,
       guestCount: input.guestCount ?? 1,
       totalPrice,
-      status: service.requiresApproval
-        ? BookingStatus.PENDING
-        : BookingStatus.CONFIRMED,
+      status: initialStatus,
       customerNotes: input.customerNotes ?? null,
     },
   });
@@ -261,95 +302,8 @@ export async function createBooking(input: {
     },
   });
 
-  const bookingForEmail = await prisma.productBooking.findUnique({
-    where: { id: booking.id },
-    select: {
-      bookingDate: true,
-      startTime: true,
-      customerId: true,
-      product: {
-        select: {
-          name: true,
-          slug: true,
-          store: {
-            select: {
-              name: true,
-              ownerId: true,
-              owner: { select: { email: true, fullName: true } },
-            },
-          },
-        },
-      },
-    },
-  });
-
-  if (bookingForEmail) {
-    const customerUser = await prisma.user.findUnique({
-      where: { id: bookingForEmail.customerId },
-      select: { email: true, fullName: true },
-    });
-    if (customerUser) {
-      const dateStr = new Date(bookingForEmail.bookingDate).toLocaleDateString("en-TT", {
-        weekday: "long",
-        month: "long",
-        day: "numeric",
-        timeZone: "UTC",
-      });
-      const timeStr = (() => {
-        const [h, m] = bookingForEmail.startTime.split(":").map(Number);
-        const period = h >= 12 ? "PM" : "AM";
-        const hour = h % 12 === 0 ? 12 : h % 12;
-        return `${hour}:${m.toString().padStart(2, "0")} ${period}`;
-      })();
-
-      await sendEmail({
-        to: customerUser.email,
-        ...bookingConfirmedCustomerEmail({
-          customerName: customerUser.fullName ?? "Customer",
-          serviceName: bookingForEmail.product.name,
-          storeName: bookingForEmail.product.store.name,
-          bookingDate: dateStr,
-          startTime: timeStr,
-          orderUrl: `${BASE_URL}/orders?tab=bookings`,
-        }),
-      });
-
-      await sendEmail({
-        to: bookingForEmail.product.store.owner.email,
-        ...newBookingVendorEmail({
-          vendorName: bookingForEmail.product.store.owner.fullName ?? "Vendor",
-          serviceName: bookingForEmail.product.name,
-          customerName: customerUser.fullName ?? "Customer",
-          bookingDate: dateStr,
-          startTime: timeStr,
-          dashboardUrl: `${BASE_URL}/dashboard/vendor/bookings`,
-        }),
-      });
-
-      await createNotification({
-        userId: session.userId,
-        type: NotificationType.BOOKING_CONFIRMED,
-        title: `Booking confirmed — ${bookingForEmail.product.name}`,
-        body: new Date(bookingForEmail.bookingDate).toLocaleDateString("en-TT", {
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-          timeZone: "UTC",
-        }),
-        linkUrl: `/orders?tab=bookings`,
-      });
-
-      const vendorOwnerId = bookingForEmail.product.store.ownerId;
-      if (vendorOwnerId) {
-        await createNotification({
-          userId: vendorOwnerId,
-          type: NotificationType.BOOKING_CONFIRMED,
-          title: `New booking — ${bookingForEmail.product.name}`,
-          body: `From ${customerUser.fullName ?? "a customer"}`,
-          linkUrl: `/dashboard/vendor/bookings`,
-        });
-      }
-    }
+  if (initialStatus === BookingStatus.CONFIRMED) {
+    await sendBookingConfirmationEmails(booking.id, session.userId);
   }
 
   revalidatePath(`/service/${service.slug}`);
@@ -358,10 +312,128 @@ export async function createBooking(input: {
     ok: true,
     bookingId: booking.id,
     status: booking.status,
-    requiresPayment: input.paymentMethod === "online",
+    requiresPayment: chargeAmount != null,
+    chargeAmount,
     totalPrice,
-    depositAmount: service.requiresDeposit ? service.depositAmount : null,
+    depositAmount: depositDue,
   };
+}
+
+export async function createBookingPaymentIntent(
+  bookingId: string,
+  paymentType: "full" | "deposit",
+): Promise<
+  | { ok: true; clientSecret: string; paymentIntentId: string }
+  | { error: string }
+> {
+  const session = await getSession();
+  if (!session) return { error: "not_logged_in" };
+
+  const booking = await prisma.productBooking.findFirst({
+    where: { id: bookingId, customerId: session.userId },
+    select: {
+      id: true,
+      status: true,
+      totalPrice: true,
+      product: { select: { depositAmount: true } },
+    },
+  });
+
+  if (!booking) return { error: "Booking not found" };
+  if (booking.status !== BookingStatus.PENDING) {
+    return { error: "This booking is not awaiting payment" };
+  }
+
+  const depositDue =
+    booking.product.depositAmount != null && booking.product.depositAmount > 0
+      ? booking.product.depositAmount
+      : null;
+
+  const amountTtd =
+    paymentType === "deposit" && depositDue != null
+      ? depositDue
+      : booking.totalPrice;
+
+  const amountMinor = Math.round(amountTtd * 100);
+  if (amountMinor < 1) return { error: "Invalid payment amount" };
+
+  let paymentIntent;
+  try {
+    paymentIntent = await stripe.paymentIntents.create({
+      amount: amountMinor,
+      currency: "ttd",
+      metadata: {
+        bookingId,
+        userId: session.userId,
+        paymentType: paymentType === "deposit" ? "deposit" : "full_payment",
+      },
+    });
+  } catch (e) {
+    console.error("[createBookingPaymentIntent]", e);
+    return { error: "Payment setup failed. Please try again." };
+  }
+
+  const clientSecret = paymentIntent.client_secret;
+  if (!clientSecret) {
+    return { error: "Payment setup failed." };
+  }
+
+  return {
+    ok: true,
+    clientSecret,
+    paymentIntentId: paymentIntent.id,
+  };
+}
+
+async function retrieveSucceededPaymentIntent(paymentIntentId: string) {
+  const retryable = new Set(["processing", "requires_confirmation", "requires_action"]);
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    if (paymentIntent.status === "succeeded") return paymentIntent;
+    if (!retryable.has(paymentIntent.status)) return null;
+    if (attempt < 7) {
+      await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
+    }
+  }
+  const last = await stripe.paymentIntents.retrieve(paymentIntentId);
+  return last.status === "succeeded" ? last : null;
+}
+
+export async function confirmBookingPaid(
+  bookingId: string,
+  paymentIntentId: string,
+): Promise<{ ok: true; status: BookingStatus } | { error: string }> {
+  const session = await getSession();
+  if (!session) return { error: "not_logged_in" };
+
+  let paymentIntent;
+  try {
+    paymentIntent = await retrieveSucceededPaymentIntent(paymentIntentId);
+  } catch (e) {
+    console.error("[confirmBookingPaid]", e);
+    return { error: "Could not verify payment" };
+  }
+
+  if (!paymentIntent) {
+    return { error: "Payment has not completed yet" };
+  }
+  if (paymentIntent.metadata?.bookingId !== bookingId) {
+    return { error: "Payment does not match this booking" };
+  }
+  if (paymentIntent.metadata?.userId !== session.userId) {
+    return { error: "Not authorized" };
+  }
+
+  await handleBookingPaymentIntentSucceeded(paymentIntent);
+
+  const booking = await prisma.productBooking.findUnique({
+    where: { id: bookingId },
+    select: { status: true },
+  });
+
+  if (!booking) return { error: "Booking not found" };
+
+  return { ok: true, status: booking.status };
 }
 
 // Get customer's bookings

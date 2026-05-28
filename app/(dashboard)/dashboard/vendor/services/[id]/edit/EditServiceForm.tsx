@@ -106,17 +106,21 @@ export default function EditServiceForm({ service }: { service: ServiceData }) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     setUploadingImages(true);
+    setError(null);
     const formData = new FormData();
     Array.from(files).forEach((file) => formData.append("images", file));
     try {
       const result = await uploadVendorChatImages(formData);
       if (result.ok && result.urls) {
         setUploadedImages((prev) => [...prev, ...result.urls].slice(0, 10));
+      } else if (!result.ok) {
+        setError(result.error ?? "Image upload failed.");
       }
-    } catch {
-      // upload failed silently
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Image upload failed.");
     }
     setUploadingImages(false);
+    e.target.value = "";
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
+import BookingConfirmationClient from "@/components/service/BookingConfirmationClient";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
@@ -42,9 +44,18 @@ export default async function BookingConfirmationPage({ searchParams }: Props) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#F5F5F5] px-4">
       <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm text-center">
+        <Suspense fallback={null}>
+          <BookingConfirmationClient bookingId={params.bookingId} />
+        </Suspense>
         <div className="mb-4 text-5xl">✅</div>
-        <h1 className="text-2xl font-black text-zinc-900">Booking confirmed!</h1>
-        <p className="mt-2 text-sm text-zinc-500">Your payment was successful and your booking is confirmed.</p>
+        <h1 className="text-2xl font-black text-zinc-900">
+          {booking?.status === "PENDING" ? "Payment received" : "Booking confirmed!"}
+        </h1>
+        <p className="mt-2 text-sm text-zinc-500">
+          {booking?.status === "PENDING"
+            ? "Your payment was successful. The provider will confirm your booking shortly."
+            : "Your payment was successful and your booking is confirmed."}
+        </p>
 
         {booking ? (
           <div className="mt-6 rounded-xl border border-zinc-100 bg-zinc-50 p-4 text-left">

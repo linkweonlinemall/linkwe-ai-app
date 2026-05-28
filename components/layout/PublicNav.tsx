@@ -99,6 +99,9 @@ export default function PublicNav({
     onInstalled: () => toastPWAInstalled(),
   });
 
+  const isGetAppPage = pathname === "/get-app";
+  const showSignIn = !user && !isGetAppPage;
+
   const currentPathEncoded = encodeURIComponent(pathname?.trim() ? pathname : "/");
   const loginHref = `/login?callbackUrl=${currentPathEncoded}`;
   const dashTarget = dashboardHref ?? user?.href ?? "/dashboard";
@@ -155,23 +158,12 @@ export default function PublicNav({
   const roleLabel = user ? accountRoleLabel(dashboardHref, user.href) : "Customer";
 
   function LogoMark({ desktop }: { desktop: boolean }) {
-    const sqSize = desktop ? "h-8 w-8 rounded-lg text-[17px]" : "h-7 w-7 rounded-md text-[15px]";
-    const textSize = desktop ? "text-[16px]" : "text-[15px]";
     return (
-      <span className="flex items-center gap-2 shrink-0">
-        {logoVariant === "ai" ? (
-          <img src="/linkwe-new-logo-light-2.png" alt="" className="h-9 w-auto max-h-9 shrink-0" />
-        ) : (
-          <span
-            className={`flex shrink-0 items-center justify-center font-black leading-none text-white ${sqSize}`}
-            style={{ backgroundColor: SCARLET }}
-            aria-hidden
-          >
-            L
-          </span>
-        )}
-        <span className={`font-bold tracking-tight text-white ${textSize}`}>LinkWe</span>
-      </span>
+      <img
+        src="/linkwe-new-logo-light-2.png"
+        alt="LinkWe"
+        className={desktop ? "block h-8 w-auto shrink-0" : "block h-7 w-auto shrink-0"}
+      />
     );
   }
 
@@ -353,7 +345,7 @@ export default function PublicNav({
         {/* Mobile */}
         <nav aria-label="Primary mobile" className="flex px-4 py-3 md:hidden">
           <div className="flex w-full min-w-0 items-center justify-between gap-3">
-            <Link href="/" className="min-w-0">
+            <Link href="/" className="block shrink-0">
               <LogoMark desktop={false} />
             </Link>
             <div className="flex shrink-0 items-center gap-2">
@@ -393,17 +385,15 @@ export default function PublicNav({
                     {initialsDisplay(user.name)}
                   </button>
                 </>
-              ) : (
-                <>
-                  <Link
-                    href={loginHref}
-                    className="flex h-8 shrink-0 items-center justify-center rounded-lg px-3.5 text-[12px] font-bold leading-none text-white"
-                    style={{ backgroundColor: SCARLET }}
-                  >
-                    Sign in
-                  </Link>
-                </>
-              )}
+              ) : showSignIn ? (
+                <Link
+                  href={loginHref}
+                  className="flex h-8 shrink-0 items-center justify-center rounded-lg px-3.5 text-[12px] font-bold leading-none text-white"
+                  style={{ backgroundColor: SCARLET }}
+                >
+                  Sign in
+                </Link>
+              ) : null}
             </div>
           </div>
         </nav>
@@ -518,11 +508,11 @@ export default function PublicNav({
                   {initialsDisplay(user.name)}
                 </button>
               </>
-            ) : (
+            ) : showSignIn ? (
               <Link href={loginHref} className="flex h-9 shrink-0 items-center justify-center rounded-[10px] px-5 text-[13px] font-semibold text-white" style={{ backgroundColor: SCARLET }}>
                 Sign in
               </Link>
-            )}
+            ) : null}
           </div>
         </nav>
       </header>

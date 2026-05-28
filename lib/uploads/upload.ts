@@ -1,4 +1,5 @@
 import cloudinary from "@/lib/cloudinary/client";
+import { assertCloudinaryConfigured, formatUploadError } from "@/lib/uploads/cloudinary-config";
 
 export type UploadFolder =
   | "gallery"
@@ -16,6 +17,8 @@ export type UploadFolder =
   | "digital";
 
 export async function uploadFile(file: File, folder: UploadFolder): Promise<string> {
+  assertCloudinaryConfigured();
+
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
@@ -28,12 +31,17 @@ export async function uploadFile(file: File, folder: UploadFolder): Promise<stri
         },
         (error, result) => {
           if (error || !result) {
-            reject(error ?? new Error("Cloudinary upload failed"));
+            const message = error?.message?.trim()
+              ? `Cloudinary upload failed: ${error.message}`
+              : "Cloudinary upload failed (no response from Cloudinary)";
+            reject(new Error(message));
             return;
           }
           resolve(result.secure_url);
         },
       )
       .end(buffer);
+  }).catch((err) => {
+    throw new Error(formatUploadError(err));
   });
 }

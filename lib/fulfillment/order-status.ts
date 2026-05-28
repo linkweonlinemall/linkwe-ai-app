@@ -1,5 +1,6 @@
 import type { MainOrderStatus } from "@prisma/client";
 
+import { getOrderAutoCompleteAt } from "@/lib/finance/complete-order";
 import { prisma } from "@/lib/prisma";
 
 const TERMINAL_STATUSES: MainOrderStatus[] = [
@@ -17,7 +18,7 @@ const AT_WAREHOUSE_OR_BEYOND: string[] = [
   "DELIVERED",
 ];
 
-const DISPATCHED_OR_BEYOND: string[] = ["DISPATCHED", "DELIVERED"];
+const DISPATCHED_OR_BEYOND: string[] = ["DISPATCHED", "DELIVERED", "COMPLETED"];
 
 const PACKAGED_OR_BEYOND: string[] = [
   "PACKAGED",
@@ -47,7 +48,7 @@ export async function recalculateMainOrderStatus(mainOrderId: string): Promise<v
 
   let newStatus: MainOrderStatus;
 
-  const allDelivered = statuses.every((s) => s === "DELIVERED");
+  const allDelivered = statuses.every((s) => s === "DELIVERED" || s === "COMPLETED");
   const allDispatchedOrBeyond = statuses.every((s) => DISPATCHED_OR_BEYOND.includes(s));
   const allAtWarehouseOrBeyond = statuses.every((s) => AT_WAREHOUSE_OR_BEYOND.includes(s));
   const someAtWarehouseOrBeyond = statuses.some((s) => AT_WAREHOUSE_OR_BEYOND.includes(s));
@@ -74,6 +75,21 @@ export async function recalculateMainOrderStatus(mainOrderId: string): Promise<v
     await prisma.mainOrder.update({
       where: { id: mainOrderId },
       data: { status: newStatus },
+    });
+  }
+
+  if (newStatus === "DELIVERED") {
+    const now = new Date();
+    await prisma.splitOrder.updateMany({
+      where: {
+        mainOrderId,
+        status: "DELIVERED",
+        autoCompleteAt: null,
+      },
+      data: {
+        deliveredAt: now,
+        autoCompleteAt: getOrderAutoCompleteAt(now),
+      },
     });
   }
 }

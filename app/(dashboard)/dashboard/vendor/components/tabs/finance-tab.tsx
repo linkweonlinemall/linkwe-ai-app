@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { requestPayout, saveVendorBankDetails } from "@/app/actions/vendor";
 import Input from "@/components/ui/Input";
@@ -27,7 +28,30 @@ type LedgerEntry = {
   ledgerEntryType: string | null;
   description: string | null;
   createdAt: Date | string;
+  grossMinor: number | null;
+  commissionMinor: number | null;
+  netMinor: number | null;
+  releasedAt: Date | string | null;
 };
+
+function ledgerTypeLabel(ledgerEntryType: string | null): string {
+  switch (ledgerEntryType) {
+    case "BOOKING_COMPLETE":
+      return "Booking";
+    case "BOOKING_AUTO_COMPLETE":
+      return "Auto-complete";
+    case "DEPOSIT_RECEIVED":
+      return "Deposit";
+    case "ORDER_AUTO_COMPLETE":
+      return "Order auto";
+    case "ORDER_REVENUE":
+      return "Order";
+    case "PLATFORM_COMMISSION":
+      return "Commission";
+    default:
+      return ledgerEntryType ?? "Entry";
+  }
+}
 
 type PayoutRequest = {
   id: string;
@@ -54,14 +78,31 @@ function formatTTD(minor: number): string {
   return `TTD ${Number(amount).toLocaleString("en-TT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
+type FinanceSection = "earnings" | "bank" | "history";
+
+function sectionFromTabParam(tab: string | null): FinanceSection | null {
+  if (tab === "bank-details" || tab === "bank") return "bank";
+  if (tab === "history" || tab === "payout-history") return "history";
+  if (tab === "earnings") return "earnings";
+  return null;
+}
+
 export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests }: Props) {
+  const searchParams = useSearchParams();
   const [requestAmount, setRequestAmount] = useState("");
   const [requestError, setRequestError] = useState<string | null>(null);
   const [requestSuccess, setRequestSuccess] = useState(false);
   const [requesting, setRequesting] = useState(false);
-  const [activeSection, setActiveSection] = useState<"earnings" | "bank" | "history">("earnings");
+  const [activeSection, setActiveSection] = useState<FinanceSection>(
+    () => sectionFromTabParam(searchParams.get("tab")) ?? "earnings",
+  );
   const [editingBankDetails, setEditingBankDetails] = useState(false);
   const [editAccountNumber, setEditAccountNumber] = useState("");
+
+  useEffect(() => {
+    const section = sectionFromTabParam(searchParams.get("tab"));
+    if (section) setActiveSection(section);
+  }, [searchParams]);
 
   const hasBankOnFile =
     !!bankDetails?.bankName && !!bankDetails.accountName && !!bankDetails.accountNumber;
@@ -78,6 +119,21 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
       setEditAccountNumber(bankDetails.accountNumber);
     }
   }, [showBankDetailForm, hasBankOnFile, bankDetails?.accountNumber]);
+
+  const earningCredits = ledgerEntries.filter(
+    (e) =>
+      e.entryType === "CREDIT_ORDER_SETTLEMENT" &&
+      e.ledgerEntryType !== "PLATFORM_COMMISSION",
+  );
+
+  const totalEarnedMinor = earningCredits.reduce(
+    (s, e) => s + (e.netMinor ?? e.amountMinor),
+    0,
+  );
+  const totalCommissionMinor = earningCredits.reduce(
+    (s, e) => s + (e.commissionMinor ?? 0),
+    0,
+  );
 
   const credits = ledgerEntries
     .filter((e) => e.entryType === "CREDIT_ORDER_SETTLEMENT")
@@ -128,16 +184,14 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
       {/* Balance summary cards — denser */}
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <div className={`${CARD} p-4 shadow-none`}>
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Total earned</p>
-          <p className="mt-1 truncate text-xl font-bold text-zinc-900">{formatTTD(credits)}</p>
-          <p className="mt-0.5 text-[11px] text-zinc-500">Gross revenue from orders</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Total earned (net)</p>
+          <p className="mt-1 truncate text-xl font-bold text-zinc-900">{formatTTD(totalEarnedMinor)}</p>
+          <p className="mt-0.5 text-[11px] text-zinc-500">After platform commission</p>
         </div>
         <div className={`${CARD} p-4 shadow-none`}>
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Deductions</p>
-          <p className="mt-1 truncate text-xl font-bold text-red-500">-{formatTTD(pendingDebits)}</p>
-          <p className="mt-0.5 text-[11px] text-zinc-500">
-            {lastPayoutDate ? "Since last payout" : "Platform fees and courier costs"}
-          </p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Commission paid</p>
+          <p className="mt-1 truncate text-xl font-bold text-red-500">-{formatTTD(totalCommissionMinor)}</p>
+          <p className="mt-0.5 text-[11px] text-zinc-500">Platform fees on released earnings</p>
         </div>
         <div className={`overflow-hidden ${CARD} p-4 shadow-none`}>
           <div className="-mx-4 -mt-4 mb-3 h-0.5 w-[calc(100%+32px)]" style={{ backgroundColor: "#D4450A" }} />
@@ -278,31 +332,39 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              {ledgerEntries.map((entry) => {
-                const isCredit = entry.entryType === "CREDIT_ORDER_SETTLEMENT";
+              {earningCredits.map((entry) => {
                 const dateLabel = formatDate(entry.createdAt);
+                const gross = entry.grossMinor ?? entry.amountMinor;
+                const commission = entry.commissionMinor ?? 0;
+                const net = entry.netMinor ?? entry.amountMinor;
                 return (
-                  <div
-                    key={entry.id}
-                    className={`flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-[10px] ${CARD} shadow-none md:flex-nowrap`}
-                  >
-                    <span className="w-[5.25rem] shrink-0 text-[10px] text-zinc-500">{dateLabel}</span>
-                    <span
-                      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                        isCredit ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"
-                      }`}
-                    >
-                      {isCredit ? "Revenue" : "Deduction"}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-[11px] text-zinc-600">{entry.description ?? "—"}</span>
-                    <span
-                      className={`ml-auto shrink-0 font-mono text-[12px] font-semibold tabular-nums ${
-                        isCredit ? "text-emerald-600" : "text-red-500"
-                      }`}
-                    >
-                      {isCredit ? "+" : "-"}
-                      {formatTTD(entry.amountMinor)}
-                    </span>
+                  <div key={entry.id} className={`px-4 py-3 ${CARD} shadow-none`}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] text-zinc-500">{dateLabel}</span>
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                        {ledgerTypeLabel(entry.ledgerEntryType)}
+                      </span>
+                      {entry.releasedAt ? (
+                        <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600">
+                          Released
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-1 truncate text-[11px] text-zinc-600">{entry.description ?? "—"}</p>
+                    <div className="mt-2 grid grid-cols-3 gap-2 text-[10px]">
+                      <div>
+                        <p className="text-zinc-400">Gross</p>
+                        <p className="font-semibold tabular-nums text-zinc-800">{formatTTD(gross)}</p>
+                      </div>
+                      <div>
+                        <p className="text-zinc-400">Commission</p>
+                        <p className="font-semibold tabular-nums text-red-500">-{formatTTD(commission)}</p>
+                      </div>
+                      <div>
+                        <p className="text-zinc-400">Net</p>
+                        <p className="font-semibold tabular-nums text-emerald-600">+{formatTTD(net)}</p>
+                      </div>
+                    </div>
                   </div>
                 );
               })}

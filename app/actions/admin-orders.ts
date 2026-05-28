@@ -10,7 +10,8 @@ import {
 } from "@/lib/fulfillment/courier-pickup-rates";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { calculateCommissionMinor, calculateVendorNetMinor } from "@/lib/platform/commission";
+import { createProductOrderEarningsLedger } from "@/lib/finance/release-earnings";
+import { resolveVendorPlan } from "@/lib/finance/vendor-plan";
 
 export async function completeOrders(orderIds: string[]): Promise<void> {
   const session = await getSession();
@@ -29,7 +30,8 @@ export async function completeOrders(orderIds: string[]): Promise<void> {
             subtotalMinor: true,
             vendorInboundMethod: true,
             inboundShipmentId: true,
-            store: { select: { region: true } },
+            store: { select: { region: true, subscriptionPlan: true } },
+            earningsReleased: true,
           },
         },
       },
@@ -47,44 +49,24 @@ export async function completeOrders(orderIds: string[]): Promise<void> {
       const debitedPickupShipments = new Set<string>();
 
       for (const splitOrder of order.splitOrders) {
-        const existingEntry = await tx.vendorLedgerEntry.findFirst({
-          where: {
-            splitOrderRef: splitOrder.id,
-            ledgerEntryType: "ORDER_REVENUE",
-          },
+        if (splitOrder.earningsReleased) continue;
+
+        const plan = resolveVendorPlan(splitOrder.store.subscriptionPlan);
+
+        await createProductOrderEarningsLedger(tx, {
+          storeId: splitOrder.storeId,
+          splitOrderId: splitOrder.id,
+          mainOrderId: orderId,
+          subtotalMinor: splitOrder.subtotalMinor,
+          plan,
+          ledgerEntryType: "ORDER_REVENUE",
+          idempotencyKey: `split:${splitOrder.id}:ORDER_REVENUE`,
+          description: "Revenue from completed order — customer confirmed receipt",
         });
 
-        if (existingEntry) continue;
-
-        const commissionMinor = calculateCommissionMinor(splitOrder.subtotalMinor);
-        const vendorNetMinor = calculateVendorNetMinor(splitOrder.subtotalMinor);
-
-        await tx.vendorLedgerEntry.create({
-          data: {
-            storeId: splitOrder.storeId,
-            currency: "TTD",
-            entryType: "CREDIT_ORDER_SETTLEMENT",
-            ledgerEntryType: "ORDER_REVENUE",
-            amountMinor: vendorNetMinor,
-            splitOrderId: splitOrder.id,
-            splitOrderRef: splitOrder.id,
-            mainOrderId: orderId,
-            description: `Revenue from completed order — customer confirmed receipt`,
-          },
-        });
-
-        await tx.vendorLedgerEntry.create({
-          data: {
-            storeId: splitOrder.storeId,
-            currency: "TTD",
-            entryType: "DEBIT_PLATFORM_FEE",
-            ledgerEntryType: "PLATFORM_COMMISSION",
-            amountMinor: commissionMinor,
-            splitOrderId: splitOrder.id,
-            splitOrderRef: splitOrder.id,
-            mainOrderId: orderId,
-            description: `Platform commission 12% on completed order`,
-          },
+        await tx.splitOrder.update({
+          where: { id: splitOrder.id },
+          data: { earningsReleased: true, status: "COMPLETED", completedAt: new Date() },
         });
 
         if (splitOrder.vendorInboundMethod === "PICKUP_REQUESTED") {

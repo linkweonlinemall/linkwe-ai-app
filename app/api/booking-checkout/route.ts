@@ -11,21 +11,53 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { bookingId, serviceName, price, successUrl, cancelUrl } = body;
+  const { bookingId, serviceName, price, successUrl, cancelUrl, paymentType } = body as {
+    bookingId?: string;
+    serviceName?: string;
+    price?: number;
+    successUrl?: string;
+    cancelUrl?: string;
+    paymentType?: "full" | "deposit";
+  };
 
-  if (!bookingId || !price || !successUrl) {
+  if (!bookingId || price == null || !successUrl) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  // Verify booking belongs to this user
   const booking = await prisma.productBooking.findFirst({
     where: { id: bookingId, customerId: session.userId },
-    select: { id: true, status: true, totalPrice: true },
+    select: {
+      id: true,
+      status: true,
+      totalPrice: true,
+      product: {
+        select: { depositAmount: true },
+      },
+    },
   });
 
   if (!booking) {
     return NextResponse.json({ error: "Booking not found" }, { status: 404 });
   }
+
+  const depositDue =
+    booking.product.depositAmount != null && booking.product.depositAmount > 0
+      ? booking.product.depositAmount
+      : null;
+
+  const expectedAmount =
+    paymentType === "deposit" && depositDue != null
+      ? depositDue
+      : booking.totalPrice;
+
+  if (Math.abs(Number(price) - expectedAmount) > 0.01) {
+    return NextResponse.json({ error: "Invalid payment amount" }, { status: 400 });
+  }
+
+  const chargeLabel =
+    paymentType === "deposit" && depositDue != null
+      ? `Booking deposit — ${serviceName ?? "Service"}`
+      : `Service booking — ${serviceName ?? "Service"}`;
 
   try {
     const checkoutSession = await stripe.checkout.sessions.create({
@@ -36,10 +68,10 @@ export async function POST(req: NextRequest) {
           price_data: {
             currency: "ttd",
             product_data: {
-              name: serviceName ?? "Service Booking",
+              name: chargeLabel,
               description: `Booking ID: ${bookingId}`,
             },
-            unit_amount: Math.round(price * 100),
+            unit_amount: Math.round(expectedAmount * 100),
           },
           quantity: 1,
         },
@@ -49,6 +81,7 @@ export async function POST(req: NextRequest) {
       metadata: {
         bookingId,
         userId: session.userId,
+        paymentType: paymentType === "deposit" ? "deposit" : "full",
       },
     });
 

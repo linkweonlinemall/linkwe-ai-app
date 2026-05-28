@@ -41,8 +41,8 @@ export default async function VendorSettingsPage() {
               { label: "Edit store profile", href: "/dashboard/vendor/store/edit" },
               { label: "Manage products", href: "/dashboard/vendor/products" },
               { label: "Manage services", href: "/dashboard/vendor/services" },
-              { label: "Staff and availability", href: "/dashboard/vendor/staff" },
-              { label: "Payouts and bank details", href: "/dashboard/vendor" },
+              { label: "Availability", href: "/dashboard/vendor/staff" },
+              { label: "Payouts and bank details", href: "/dashboard/vendor/finance?tab=bank-details" },
             ].map((link) => (
               <Link
                 key={link.href}

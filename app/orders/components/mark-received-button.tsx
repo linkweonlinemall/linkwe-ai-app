@@ -33,7 +33,13 @@ export default function MarkReceivedButton({ orderId }: Props) {
               setSubmitting(true);
               const fd = new FormData();
               fd.append("orderId", orderId);
-              await markOrderReceived(fd);
+              const result = await markOrderReceived(fd);
+              setSubmitting(false);
+              if (result && "error" in result) {
+                alert(result.error);
+                return;
+              }
+              window.location.reload();
             }}
             disabled={submitting}
             className="flex-1 rounded-xl py-2 text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"

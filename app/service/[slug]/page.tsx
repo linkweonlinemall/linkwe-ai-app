@@ -147,67 +147,37 @@ export default async function ServiceDetailPage({ params }: Props) {
 
   const bookingData =
     service.serviceType === "BOOKABLE" || service.serviceType === "VIRTUAL"
-      ? await (async () => {
-          // Get the store for this service
-          const store = await prisma.store.findFirst({
-            where: { id: service.storeId },
-            select: { id: true, staffMode: true },
-          });
-
-          // Get staff members who offer this service
-          const staffWithService = await prisma.staffMember.findMany({
-            where: {
-              storeId: service.storeId,
-              isActive: true,
-              services: { some: { serviceId: service.id } },
-            },
-            select: {
-              id: true,
-              name: true,
-              photoUrl: true,
-              availability: {
-                where: { isActive: true },
-                orderBy: { dayOfWeek: "asc" },
+      ? await prisma.product.findUnique({
+          where: { id: service.id },
+          select: {
+            advanceBookingDays: true,
+            bookingPaymentMode: true,
+            requiresDeposit: true,
+            depositAmount: true,
+            requiresApproval: true,
+            durationMinutes: true,
+            bufferMinutes: true,
+            maxPerDay: true,
+            useStoreHours: true,
+            availableDays: true,
+            availableFrom: true,
+            availableTo: true,
+            isAvailable: true,
+            serviceDuration: true,
+            store: { select: { openingHours: true } },
+            bookingSlots: {
+              where: { date: { gte: new Date() } },
+              select: {
+                date: true,
+                startTime: true,
+                endTime: true,
+                currentBookings: true,
+                maxBookings: true,
+                isAvailable: true,
               },
-              overrides: {
-                where: { date: { gte: new Date() } },
-              },
             },
-          });
-
-          // Get existing booking slots for this service
-          const bookingSlots = await prisma.productBookingSlot.findMany({
-            where: {
-              productId: service.id,
-              date: { gte: new Date() },
-              isAvailable: true,
-            },
-          });
-
-          // Get service settings
-          const serviceSettings = await prisma.product.findUnique({
-            where: { id: service.id },
-            select: {
-              advanceBookingDays: true,
-              bookingPaymentMode: true,
-              requiresDeposit: true,
-              depositAmount: true,
-              requiresApproval: true,
-            },
-          });
-
-          if (!serviceSettings) return null;
-
-          return {
-            ...serviceSettings,
-            staffMode: store?.staffMode ?? "SOLO",
-            staff: staffWithService,
-            bookingSlots,
-            // Keep legacy fields empty — booking engine now uses staff
-            availabilitySchedule: [],
-            availabilityOverrides: [],
-          };
-        })()
+          },
+        })
       : null;
 
   const [reviewData, userReview] = await Promise.all([
@@ -668,21 +638,42 @@ export default async function ServiceDetailPage({ params }: Props) {
 
               {(service.serviceType === "BOOKABLE" || service.serviceType === "VIRTUAL") &&
               bookingData ? (
-                <BookingWidget
-                  serviceId={service.id}
-                  serviceSlug={service.slug}
-                  serviceName={service.name}
-                  price={service.price}
-                  serviceDuration={service.serviceDuration ?? 60}
-                  requiresDeposit={bookingData.requiresDeposit ?? false}
-                  depositAmount={bookingData.depositAmount ?? null}
-                  requiresApproval={bookingData.requiresApproval ?? false}
-                  bookingPaymentMode={bookingData.bookingPaymentMode ?? "CUSTOMER_CHOOSES"}
-                  advanceBookingDays={bookingData.advanceBookingDays ?? 30}
-                  staffMode={bookingData.staffMode ?? "SOLO"}
-                  staff={bookingData.staff ?? []}
-                  existingSlots={bookingData.bookingSlots}
-                />
+                bookingData.isAvailable ? (
+                  <BookingWidget
+                    serviceId={service.id}
+                    serviceSlug={service.slug}
+                    serviceName={service.name}
+                    price={service.price}
+                    serviceDuration={
+                      bookingData.durationMinutes || bookingData.serviceDuration || 60
+                    }
+                    requiresDeposit={bookingData.requiresDeposit ?? false}
+                    depositAmount={bookingData.depositAmount ?? null}
+                    requiresApproval={bookingData.requiresApproval ?? false}
+                    bookingPaymentMode={bookingData.bookingPaymentMode ?? "CUSTOMER_CHOOSES"}
+                    advanceBookingDays={bookingData.advanceBookingDays ?? 30}
+                    availability={{
+                      durationMinutes:
+                        bookingData.durationMinutes || bookingData.serviceDuration || 60,
+                      bufferMinutes: bookingData.bufferMinutes ?? 0,
+                      maxPerDay: bookingData.maxPerDay,
+                      useStoreHours: bookingData.useStoreHours,
+                      availableDays: bookingData.availableDays,
+                      availableFrom: bookingData.availableFrom,
+                      availableTo: bookingData.availableTo,
+                      isAvailable: bookingData.isAvailable,
+                    }}
+                    storeOpeningHours={bookingData.store.openingHours}
+                    existingSlots={bookingData.bookingSlots}
+                  />
+                ) : (
+                  <div className="mt-4 rounded-xl border border-[#e8e8e8] bg-[#F7F5F2] px-4 py-4 text-center">
+                    <p className="text-sm font-semibold text-[#45443f]">No availability</p>
+                    <p className="mt-1 text-xs text-[#7c7b77]">
+                      This service is not accepting bookings right now. Check back later.
+                    </p>
+                  </div>
+                )
               ) : service.serviceType === "QUOTE" ? (
                 <div className="flex flex-col gap-3">
                   <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-4">

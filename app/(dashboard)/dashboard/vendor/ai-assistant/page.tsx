@@ -131,6 +131,7 @@ export default function VendorAIAssistantPage() {
   const [focusedProductId, setFocusedProductId] = useState<string | null>(null)
   const [productImages, setProductImages] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null)
   const [startImages, setStartImages] = useState<string[]>([])
   const [startImagePreviews, setStartImagePreviews] = useState<string[]>([])
   const [uploadingStart, setUploadingStart] = useState(false)
@@ -1137,6 +1138,12 @@ export default function VendorAIAssistantPage() {
               </div>
             ) : null}
 
+            {imageUploadError ? (
+              <p className="mb-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+                {imageUploadError}
+              </p>
+            ) : null}
+
             {productImages.length < 10 ? (
               <label
                 className={`inline-block cursor-pointer rounded-[10px] px-4 py-2 text-sm font-medium text-white hover:opacity-90 ${
@@ -1156,6 +1163,7 @@ export default function VendorAIAssistantPage() {
                     if (!list?.length || !createdProductId) return
                     const files = Array.from(list)
                     setUploading(true)
+                    setImageUploadError(null)
                     try {
                       for (const file of files) {
                         const fd = new FormData()
@@ -1169,8 +1177,19 @@ export default function VendorAIAssistantPage() {
                         )
                         if (result.ok && result.images) {
                           setProductImages(result.images)
+                        } else if (!result.ok) {
+                          setImageUploadError(
+                            result.error ?? `Could not upload ${file.name}.`
+                          )
+                          break
                         }
                       }
+                    } catch (err) {
+                      setImageUploadError(
+                        err instanceof Error
+                          ? err.message
+                          : "Image upload failed."
+                      )
                     } finally {
                       setUploading(false)
                       e.target.value = ""

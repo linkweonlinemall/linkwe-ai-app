@@ -158,6 +158,8 @@ model Store {
   address          String?
   socialLinks      Json?       @map("social_links")
   staffMode        StaffMode   @default(SOLO)
+  /// Vendor subscription tier — drives platform commission rates.
+  subscriptionPlan VendorSubscriptionPlan @default(STARTER) @map("subscription_plan")
   isAvailableNow   Boolean     @default(false)
   staffMembers     StaffMember[]
   createdAt        DateTime    @default(now()) @map("created_at")
@@ -225,12 +227,19 @@ model VendorLedgerEntry {
   splitOrderId      String?               @map("split_order_id")
   splitOrderRef     String?               @map("split_order_ref")
   payoutRequestId   String?               @map("payout_request_id")
+  bookingId         String?               @map("booking_id")
   idempotencyKey    String?               @unique @map("idempotency_key")
   description       String?
   metadata          Json?
+  /// Audit: gross / commission / net in minor units (TTD cents) for earnings releases.
+  grossMinor        Int?                  @map("gross_minor")
+  commissionMinor   Int?                  @map("commission_minor")
+  netMinor          Int?                  @map("net_minor")
+  releasedAt        DateTime?             @map("released_at")
   createdByUserId   String?               @map("created_by_user_id")
   createdAt         DateTime              @default(now()) @map("created_at")
   createdBy         User?                 @relation("LedgerActor", fields: [createdByUserId], references: [id])
+  booking           ProductBooking?       @relation(fields: [bookingId], references: [id])
   mainOrder         MainOrder?            @relation(fields: [mainOrderId], references: [id])
   payoutRequest     PayoutRequest?        @relation(fields: [payoutRequestId], references: [id])
   splitOrder        SplitOrder?           @relation(fields: [splitOrderId], references: [id])
@@ -238,6 +247,7 @@ model VendorLedgerEntry {
 
   @@index([storeId, createdAt])
   @@index([splitOrderId])
+  @@index([bookingId])
   @@index([payoutRequestId])
   @@map("vendor_ledger_entries")
 }
@@ -610,6 +620,11 @@ model SplitOrder {
   vendorDropoffScheduledAt DateTime?            @map("vendor_dropoff_scheduled_at")
   vendorDropoffCompletedAt DateTime?            @map("vendor_dropoff_completed_at")
   customerMarkedReceivedAt DateTime?            @map("customer_marked_received_at")
+  deliveredAt              DateTime?            @map("delivered_at")
+  completedAt              DateTime?            @map("completed_at")
+  autoCompleteAt           DateTime?            @map("auto_complete_at")
+  markedCompleteBy         String?              @map("marked_complete_by")
+  earningsReleased         Boolean              @default(false) @map("earnings_released")
   shippingBundleId         String?              @map("shipping_bundle_id")
   inboundShipmentId        String?              @map("inbound_shipment_id")
   createdAt                DateTime             @default(now()) @map("created_at")
@@ -965,6 +980,7 @@ enum SplitOrderStatus {
   BUNDLED_FOR_DISPATCH
   DISPATCHED
   DELIVERED
+  COMPLETED
   CANCELLED
 }
 
@@ -1001,6 +1017,16 @@ enum LedgerEntryType {
   PLATFORM_COMMISSION
   PAYOUT
   ADJUSTMENT
+  BOOKING_COMPLETE
+  BOOKING_AUTO_COMPLETE
+  DEPOSIT_RECEIVED
+  ORDER_AUTO_COMPLETE
+}
+
+enum VendorSubscriptionPlan {
+  STARTER
+  GROWTH
+  PRO
 }
 
 /// How vendor gets goods into the warehouse for this split
@@ -1086,6 +1112,7 @@ enum BookingType {
 enum BookingStatus {
   PENDING
   CONFIRMED
+  DEPOSIT_PAID
   CANCELLED
   COMPLETED
   NO_SHOW
@@ -1308,6 +1335,15 @@ model Product {
   serviceType           ServiceType?
   serviceLocation       ServiceLocation?
   serviceDuration       Int?
+  /// Bookable service availability (vendor Availability page)
+  durationMinutes       Int               @default(60)
+  bufferMinutes         Int               @default(0)
+  maxPerDay             Int?
+  useStoreHours         Boolean           @default(true)
+  availableDays         String[]          @default([])
+  availableFrom         String?
+  availableTo           String?
+  isAvailable           Boolean           @default(true)
   requiresDeposit       Boolean           @default(false)
   depositAmount         Float?
 
@@ -1489,12 +1525,21 @@ model ProductBooking {
   staffMemberId      String?
   staffMember        StaffMember? @relation(fields: [staffMemberId], references: [id], onDelete: SetNull)
   reminderSentAt     DateTime?
+  /// Total paid via Stripe so far (full or deposit).
+  amountPaid         Float?              @map("amount_paid")
+  completedAt        DateTime?           @map("completed_at")
+  autoCompleteAt     DateTime?           @map("auto_complete_at")
+  markedCompleteBy   String?             @map("marked_complete_by")
+  earningsReleased   Boolean             @default(false) @map("earnings_released")
+  earningsAmount     Float?              @map("earnings_amount")
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
   review             Review?
+  ledgerEntries      VendorLedgerEntry[]
 
   @@index([productId])
+  @@index([autoCompleteAt, earningsReleased])
   @@index([customerId])
   @@index([slotId])
   @@index([status])
@@ -1935,8 +1980,16 @@ model Service {
   duration                Int?
 
   isBookable              Boolean           @default(false)
-  availableDays           String[]
+  availableDays           String[]          @default([])
+  /// Legacy combined hours hint; prefer availableFrom / availableTo
   availableHours          String?
+  durationMinutes         Int               @default(60)
+  bufferMinutes           Int               @default(0)
+  maxPerDay               Int?
+  useStoreHours           Boolean           @default(true)
+  availableFrom           String?
+  availableTo             String?
+  isAvailable             Boolean           @default(true)
   responseTime            String?
 
   onlineSessionAvailable  Boolean           @default(false)

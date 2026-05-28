@@ -576,3 +576,158 @@ export async function getPublicServices(
     reviewCount: reviewMap.get(s.id)?.count ?? 0,
   }));
 }
+
+export type ServiceAvailabilityUpdate = {
+  durationMinutes: number;
+  bufferMinutes: number;
+  maxPerDay: number | null;
+  useStoreHours: boolean;
+  availableDays: string[];
+  availableFrom: string | null;
+  availableTo: string | null;
+  isAvailable: boolean;
+};
+
+export async function getVendorAvailabilityPageData() {
+  const session = await getSession();
+  if (!session) return null;
+
+  const store = await prisma.store.findFirst({
+    where: { ownerId: session.userId },
+    select: { id: true, openingHours: true },
+  });
+  if (!store) return null;
+
+  // Vendor bookable services are persisted on Product (isService: true), not the dormant Service table.
+  const services = await prisma.product.findMany({
+    where: { storeId: store.id, isService: true, isArchived: false },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      category: true,
+      serviceType: true,
+      serviceDuration: true,
+      durationMinutes: true,
+      bufferMinutes: true,
+      maxPerDay: true,
+      useStoreHours: true,
+      availableDays: true,
+      availableFrom: true,
+      availableTo: true,
+      isAvailable: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return {
+    openingHours: store.openingHours,
+    services: services.map((s) => ({
+      id: s.id,
+      name: s.name,
+      slug: s.slug,
+      category: s.category,
+      serviceType: s.serviceType,
+      durationMinutes: s.durationMinutes || s.serviceDuration || 60,
+      bufferMinutes: s.bufferMinutes,
+      maxPerDay: s.maxPerDay,
+      useStoreHours: s.useStoreHours,
+      availableDays: s.availableDays,
+      availableFrom: s.availableFrom,
+      availableTo: s.availableTo,
+      isAvailable: s.isAvailable,
+    })),
+  };
+}
+
+export async function updateServiceAvailability(
+  serviceId: string,
+  data: ServiceAvailabilityUpdate,
+): Promise<{ success: true } | { error: string }> {
+  const session = await getSession();
+  if (!session) return { error: "Not authenticated" };
+
+  const store = await prisma.store.findFirst({
+    where: { ownerId: session.userId },
+    select: { id: true },
+  });
+  if (!store) return { error: "No store found" };
+
+  const service = await prisma.product.findFirst({
+    where: { id: serviceId, storeId: store.id, isService: true },
+    select: { id: true },
+  });
+  if (!service) return { error: "Service not found" };
+
+  if (data.durationMinutes < 15 || data.durationMinutes > 480) {
+    return { error: "Duration must be between 15 minutes and 8 hours" };
+  }
+  if (data.bufferMinutes < 0 || data.bufferMinutes > 120) {
+    return { error: "Buffer is invalid" };
+  }
+  if (!data.useStoreHours) {
+    if (data.availableDays.length === 0) {
+      return { error: "Select at least one day for a custom schedule" };
+    }
+    if (!data.availableFrom || !data.availableTo) {
+      return { error: "Set a start and end time for your custom schedule" };
+    }
+  }
+
+  try {
+    await prisma.product.update({
+      where: { id: serviceId },
+      data: {
+        durationMinutes: data.durationMinutes,
+        bufferMinutes: data.bufferMinutes,
+        maxPerDay: data.maxPerDay,
+        useStoreHours: data.useStoreHours,
+        availableDays: data.availableDays,
+        availableFrom: data.useStoreHours ? null : data.availableFrom,
+        availableTo: data.useStoreHours ? null : data.availableTo,
+        isAvailable: data.isAvailable,
+        serviceDuration: data.durationMinutes,
+      },
+    });
+
+    revalidatePath("/dashboard/vendor/staff");
+    revalidatePath("/dashboard/vendor/services");
+    revalidatePath("/service/[slug]", "page");
+    return { success: true };
+  } catch {
+    return { error: "Could not save availability" };
+  }
+}
+
+export async function toggleServiceAvailability(
+  serviceId: string,
+  isAvailable: boolean,
+): Promise<{ success: true } | { error: string }> {
+  const session = await getSession();
+  if (!session) return { error: "Not authenticated" };
+
+  const store = await prisma.store.findFirst({
+    where: { ownerId: session.userId },
+    select: { id: true },
+  });
+  if (!store) return { error: "No store found" };
+
+  const service = await prisma.product.findFirst({
+    where: { id: serviceId, storeId: store.id, isService: true },
+    select: { id: true },
+  });
+  if (!service) return { error: "Service not found" };
+
+  try {
+    await prisma.product.update({
+      where: { id: serviceId },
+      data: { isAvailable },
+    });
+
+    revalidatePath("/dashboard/vendor/staff");
+    revalidatePath("/dashboard/vendor/services");
+    return { success: true };
+  } catch {
+    return { error: "Could not update availability" };
+  }
+}

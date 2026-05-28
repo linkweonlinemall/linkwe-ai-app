@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache"
 import { getSession } from "@/lib/auth/session"
 import { prisma } from "@/lib/prisma"
+import {
+  formatUploadError,
+  getCloudinaryEnvStatus,
+} from "@/lib/uploads/cloudinary-config"
 import { uploadFile } from "@/lib/uploads/upload"
 
 const ALLOWED_CHAT_MIME = new Set(["image/jpeg", "image/png", "image/webp"])
@@ -72,6 +76,21 @@ export async function uploadVendorChatImages(
   if (files.length > 10) {
     return { ok: false, error: "At most 10 images per message" }
   }
+
+  const cloudinaryStatus = getCloudinaryEnvStatus()
+  console.info("[uploadVendorChatImages] attempt", {
+    userId: session.userId,
+    fileCount: files.length,
+    files: files.map((f) => ({ name: f.name, type: f.type, size: f.size })),
+    cloudinary: cloudinaryStatus,
+  })
+
+  if (!cloudinaryStatus.allSet) {
+    const message = `Cloudinary is not configured. Missing: ${cloudinaryStatus.missing.join(", ")}`
+    console.error("[uploadVendorChatImages] config missing", cloudinaryStatus)
+    return { ok: false, error: message }
+  }
+
   const urls: string[] = []
   for (const file of files) {
     if (!ALLOWED_CHAT_MIME.has(file.type)) {
@@ -84,9 +103,21 @@ export async function uploadVendorChatImages(
       return { ok: false, error: "Each image must be 12MB or smaller" }
     }
     try {
-      urls.push(await uploadFile(file, "products"))
-    } catch {
-      return { ok: false, error: "Upload failed. Try again." }
+      const url = await uploadFile(file, "products")
+      urls.push(url)
+      console.info("[uploadVendorChatImages] uploaded", {
+        fileName: file.name,
+        urlPrefix: url.slice(0, 48),
+      })
+    } catch (err) {
+      const message = formatUploadError(err)
+      console.error("[uploadVendorChatImages] upload failed", {
+        fileName: file.name,
+        fileSize: file.size,
+        cloudinary: cloudinaryStatus,
+        error: message,
+      })
+      return { ok: false, error: message }
     }
   }
   return { ok: true, urls }

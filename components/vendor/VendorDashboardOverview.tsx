@@ -148,7 +148,7 @@ export default function VendorDashboardOverview(props: {
             </div>
           </div>
           <Link
-            href="/dashboard/vendor?tab=store"
+            href="/dashboard/vendor/store/edit"
             className="max-md:w-full shrink-0 rounded-lg border border-[#378ADD] bg-white px-4 py-2 text-center text-sm font-semibold text-[#0C447C] hover:bg-[#f8fbff]"
           >
             Complete profile
@@ -359,7 +359,7 @@ export default function VendorDashboardOverview(props: {
                 <span className="text-[10px] font-medium leading-tight text-[#45443f]">New product</span>
               </Link>
               <Link
-                href="/dashboard/vendor?tab=store"
+                href="/dashboard/vendor/store/edit"
                 className="flex flex-col items-center gap-1.5 rounded-lg bg-[#F7F5F2] px-2 py-3 text-center hover:bg-[#FEF0EB]"
               >
                 <IconEdit className="size-[18px] text-[#D4450A]" stroke={1.75} aria-hidden />

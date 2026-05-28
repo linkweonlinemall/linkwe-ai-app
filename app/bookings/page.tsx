@@ -3,7 +3,9 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Banknote, Calendar, Clock, ConciergeBell } from "lucide-react";
 
+import MarkBookingCompleteButton from "@/components/bookings/MarkBookingCompleteButton";
 import PublicNav from "@/components/layout/PublicNav";
+import { canCustomerMarkBookingComplete } from "@/lib/finance/booking-ui";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { icn } from "@/lib/iconography";
@@ -30,6 +32,8 @@ export default async function BookingsPage() {
       endTime: true,
       status: true,
       totalPrice: true,
+      completedAt: true,
+      earningsReleased: true,
       customerNotes: true,
       product: {
         select: {
@@ -128,13 +132,31 @@ export default async function BookingsPage() {
             ) : null}
           </div>
         </div>
-        <div className="border-t border-zinc-100 px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-zinc-100 px-4 py-3">
           <Link
             href={`/service/${booking.product.slug}`}
             className="text-xs font-semibold text-[#D4450A] hover:underline"
           >
             View service →
           </Link>
+          {booking.status === "COMPLETED" || booking.earningsReleased ? (
+            <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800">
+              Completed
+              {booking.completedAt
+                ? ` · ${formatDate(booking.completedAt)}`
+                : ""}
+            </span>
+          ) : canCustomerMarkBookingComplete({
+              status: booking.status,
+              earningsReleased: booking.earningsReleased,
+              bookingDate: booking.bookingDate,
+              endTime: booking.endTime,
+            }) ? (
+            <MarkBookingCompleteButton
+              bookingId={booking.id}
+              storeName={booking.product.store.name}
+            />
+          ) : null}
         </div>
       </div>
     );

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 
+import { handleBookingPaymentIntentSucceeded } from "@/lib/finance/booking-payment";
 import { createSplitOrdersFromMainOrder } from "@/lib/fulfillment/split-orders";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe/stripe";
@@ -47,6 +48,11 @@ export async function POST(request: NextRequest) {
 
       case "payment_intent.succeeded": {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        const bookingId = paymentIntent.metadata?.bookingId;
+        if (bookingId) {
+          await handleBookingPaymentIntentSucceeded(paymentIntent);
+        }
+
         const orderId = paymentIntent.metadata?.orderId;
         if (orderId) {
           await prisma.mainOrder.updateMany({

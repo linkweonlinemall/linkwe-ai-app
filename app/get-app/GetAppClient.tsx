@@ -92,7 +92,12 @@ const STEPS: Record<
   },
 };
 
-export default function GetAppClient() {
+type GetAppClientProps = {
+  user?: { name: string; href: string } | null;
+  dashboardHref?: string;
+};
+
+export default function GetAppClient({ user = null, dashboardHref }: GetAppClientProps) {
   const [platform, setPlatform] = useState<Platform>("unknown");
   const [showAddressBarHint, setShowAddressBarHint] = useState(false);
 
@@ -117,7 +122,7 @@ export default function GetAppClient() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
-      <PublicNav />
+      <PublicNav user={user} dashboardHref={dashboardHref} />
 
       {/* Hero */}
       <div style={{ background: "linear-gradient(135deg, #1C1C1A 0%, #2A1A0E 100%)" }}>
