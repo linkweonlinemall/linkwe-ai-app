@@ -9,6 +9,7 @@ import { assertDashboardRole } from "@/lib/auth/assert-role";
 import { prisma } from "@/lib/prisma";
 import { getVendorDashboardAnalytics } from "@/lib/vendor/vendor-dashboard-analytics";
 import { getVendorReviewStatsForStore } from "@/lib/vendor/get-vendor-review-stats";
+import { vendorSplitOrderListSelect } from "@/lib/vendor/vendor-split-order-query";
 import { radius, shadow, colors } from "@/lib/design-system";
 
 const DASHBOARD_MESSAGES: Record<string, string> = {
@@ -106,25 +107,7 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
   const splitOrders = await prisma.splitOrder.findMany({
     where: { storeId: store.id },
     orderBy: { createdAt: "desc" },
-    include: {
-      items: {
-        select: {
-          id: true,
-          titleSnapshot: true,
-          quantity: true,
-          unitPriceMinor: true,
-          lineTotalMinor: true,
-        },
-      },
-      mainOrder: {
-        select: {
-          region: true,
-          buyer: {
-            select: { fullName: true },
-          },
-        },
-      },
-    },
+    select: vendorSplitOrderListSelect,
   });
 
   const dashboardErrorKey = sp.error;

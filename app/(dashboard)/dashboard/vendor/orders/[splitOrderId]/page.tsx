@@ -10,6 +10,7 @@ import {
 } from "@/lib/fulfillment/courier-pickup-rates";
 import { calculateCommissionMinor, calculateVendorNetMinor } from "@/lib/platform/commission";
 import { prisma } from "@/lib/prisma";
+import { vendorSplitOrderDetailSelect } from "@/lib/vendor/vendor-split-order-query";
 
 type Props = { params: Promise<{ splitOrderId: string }> };
 
@@ -140,72 +141,7 @@ export default async function VendorOrderDetailPage({ params }: Props) {
       id: splitOrderId,
       store: { ownerId: session.userId },
     },
-    include: {
-      store: {
-        select: {
-          name: true,
-          region: true,
-          address: true,
-          logoUrl: true,
-        },
-      },
-      items: {
-        select: {
-          id: true,
-          titleSnapshot: true,
-          quantity: true,
-          unitPriceMinor: true,
-          lineTotalMinor: true,
-        },
-      },
-      mainOrder: {
-        select: {
-          id: true,
-          referenceNumber: true,
-          status: true,
-          region: true,
-          shippingMinor: true,
-          totalMinor: true,
-          createdAt: true,
-          buyer: {
-            select: { fullName: true, email: true },
-          },
-          _count: {
-            select: { splitOrders: true },
-          },
-        },
-      },
-      inboundShipment: {
-        select: {
-          id: true,
-          shipmentStatus: true,
-          region: true,
-          claimedAt: true,
-          pickedUpAt: true,
-          courierId: true,
-          pickupFeeMinor: true,
-          totalWeightLbs: true,
-          courier: {
-            select: { fullName: true, region: true, phone: true },
-          },
-        },
-      },
-      legacyInboundShipment: {
-        select: {
-          id: true,
-          shipmentStatus: true,
-          region: true,
-          claimedAt: true,
-          pickedUpAt: true,
-          courierId: true,
-          pickupFeeMinor: true,
-          totalWeightLbs: true,
-          courier: {
-            select: { fullName: true, region: true, phone: true },
-          },
-        },
-      },
-    },
+    select: vendorSplitOrderDetailSelect,
   });
 
   if (!splitOrder) redirect("/dashboard/vendor");
@@ -216,7 +152,6 @@ export default async function VendorOrderDetailPage({ params }: Props) {
       where: {
         storeId: splitOrder.storeId,
         status: "AWAITING_VENDOR_ACTION",
-        inboundShipmentId: null,
       },
       select: {
         mainOrderId: true,
@@ -251,20 +186,18 @@ export default async function VendorOrderDetailPage({ params }: Props) {
   }
 
   const badge = getStatusBadge(splitOrder.status);
-  const splitRef = splitOrder.referenceNumber ?? `SP-${splitOrder.id.slice(-8).toUpperCase()}`;
-  const mainRef =
-    splitOrder.mainOrder.referenceNumber ?? `LW-${splitOrder.mainOrderId.slice(-8).toUpperCase()}`;
+  const splitRef = `SP-${splitOrder.id.slice(-8).toUpperCase()}`;
+  const mainRef = `LW-${splitOrder.mainOrderId.slice(-8).toUpperCase()}`;
   const stepIndex = getVendorStepIndex(splitOrder.status);
   const commissionMinor = calculateCommissionMinor(splitOrder.subtotalMinor);
   const netAfterCommission = calculateVendorNetMinor(splitOrder.subtotalMinor);
-  const courierLeg = splitOrder.inboundShipment ?? splitOrder.legacyInboundShipment;
+  const courierLeg = splitOrder.legacyInboundShipment;
   const regionForPickup = splitOrder.store.region ?? "";
   const weightForPickupFee =
-    courierLeg?.totalWeightLbs ??
-    (splitOrder.status === "AWAITING_VENDOR_ACTION" ? batchWeightLbsForDisplay : 1);
+    splitOrder.status === "AWAITING_VENDOR_ACTION" ? batchWeightLbsForDisplay : 1;
   const pickupFeeMinor =
     splitOrder.vendorInboundMethod === "PICKUP_REQUESTED"
-      ? courierLeg?.pickupFeeMinor ?? getCourierPickupFeeMinor(regionForPickup, weightForPickupFee)
+      ? getCourierPickupFeeMinor(regionForPickup, weightForPickupFee)
       : 0;
   const netEarningsMinor = netAfterCommission - pickupFeeMinor;
 
@@ -452,7 +385,7 @@ export default async function VendorOrderDetailPage({ params }: Props) {
                       <p className="mt-1 text-sm text-zinc-600">{courierLeg.courier.phone}</p>
                     ) : null}
                     <p className="mt-2 text-xs text-zinc-500">
-                      Status: {courierLeg.shipmentStatus?.replace(/_/g, " ") ?? "—"}
+                      Status: {courierLeg.status.replace(/_/g, " ")}
                     </p>
                     {courierLeg.claimedAt ? (
                       <p className="text-xs text-zinc-500">

@@ -5,6 +5,7 @@ import OrdersTab from "@/app/(dashboard)/dashboard/vendor/components/tabs/orders
 import { getSession } from "@/lib/auth/session";
 import { assertDashboardRole } from "@/lib/auth/assert-role";
 import { prisma } from "@/lib/prisma";
+import { vendorSplitOrderListSelect } from "@/lib/vendor/vendor-split-order-query";
 
 export default async function VendorOrdersPage() {
   const session = await getSession();
@@ -20,25 +21,7 @@ export default async function VendorOrdersPage() {
   const splitOrders = await prisma.splitOrder.findMany({
     where: { storeId: store.id },
     orderBy: { createdAt: "desc" },
-    include: {
-      items: {
-        select: {
-          id: true,
-          titleSnapshot: true,
-          quantity: true,
-          unitPriceMinor: true,
-          lineTotalMinor: true,
-        },
-      },
-      mainOrder: {
-        select: {
-          region: true,
-          buyer: {
-            select: { fullName: true },
-          },
-        },
-      },
-    },
+    select: vendorSplitOrderListSelect,
   });
 
   const count = splitOrders.length;
