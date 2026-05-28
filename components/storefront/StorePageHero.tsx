@@ -39,7 +39,7 @@ export default function StorePageHero({
 
   return (
     <section className="relative w-full overflow-hidden">
-      <div className="relative h-[220px] w-full md:h-[375px]">
+      <div className="relative aspect-[4/3] w-full md:aspect-auto md:h-[375px]">
         {store.coverPhotoUrl ? (
           <Image
             src={store.coverPhotoUrl}
@@ -59,8 +59,8 @@ export default function StorePageHero({
               "linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.72) 100%)",
           }}
         />
-        <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 px-4 py-5 max-md:pb-4 md:flex-row md:items-end md:justify-between md:gap-4 md:px-7">
-          <div className="flex min-w-0 flex-1 items-end gap-3 md:gap-4">
+        <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2.5 px-4 py-5 max-md:pb-4 md:flex-row md:items-end md:justify-between md:gap-4 md:px-7">
+          <div className="flex min-w-0 items-end gap-3 md:flex-1 md:gap-4">
             <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-[14px] border-[3px] border-white/90 md:h-[68px] md:w-[68px]">
               {store.logoUrl ? (
                 <Image
@@ -68,7 +68,7 @@ export default function StorePageHero({
                   alt={store.name}
                   fill
                   className="object-cover"
-                  sizes="68px"
+                  sizes="(max-width: 768px) 56px, 68px"
                 />
               ) : (
                 <div
@@ -81,15 +81,15 @@ export default function StorePageHero({
             </div>
 
             <div className="min-w-0 pb-0.5">
-              <h1 className="truncate text-lg font-medium text-white md:text-[22px]">
+              <h1 className="truncate text-[18px] font-medium text-white md:text-[22px]">
                 {store.name}
               </h1>
               {store.tagline ? (
-                <p className="mt-[3px] line-clamp-2 text-xs text-white/[0.65] md:text-xs">
+                <p className="mt-[3px] line-clamp-2 text-[11px] text-white/[0.65] md:text-xs">
                   {store.tagline}
                 </p>
               ) : null}
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-white/80">
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-white/80 md:text-[11px]">
                 {store.region ? (
                   <span className="inline-flex items-center gap-1">
                     <IconMapPin className="size-3.5 shrink-0" stroke={1.75} aria-hidden />
@@ -110,7 +110,7 @@ export default function StorePageHero({
                       ·
                     </span>
                     <span
-                      className="inline-flex items-center rounded-[20px] px-2.5 py-[3px] text-[11px] font-medium text-white backdrop-blur-[8px]"
+                      className="inline-flex items-center rounded-[20px] px-2.5 py-[3px] text-[10px] font-medium text-white backdrop-blur-[8px] md:text-[11px]"
                       style={{ backgroundColor: "rgba(255,255,255,0.15)" }}
                     >
                       {ratingChip}

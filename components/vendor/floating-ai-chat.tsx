@@ -887,9 +887,7 @@ export default function FloatingAIChat() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="fixed right-6 bottom-6 z-50 flex h-14 w-14 items-center
-          justify-center rounded-full bg-[#D4450A] shadow-lg transition-all
-          hover:opacity-90"
+        className="fixed right-4 bottom-[80px] z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#D4450A] shadow-lg transition-all hover:opacity-90 lg:right-6 lg:bottom-6"
       >
         {open ? (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="white">

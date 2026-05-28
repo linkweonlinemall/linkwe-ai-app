@@ -10,9 +10,11 @@ import {
   IconCalendarEvent,
   IconChevronRight,
   IconClipboardList,
+  IconDownload,
   IconHeart,
   IconHome,
   IconLogout,
+  IconMenu2,
   IconMessageCircle,
   IconPackage,
   IconSearch,
@@ -20,7 +22,6 @@ import {
   IconShoppingBag,
   IconShoppingCart,
   IconTools,
-  IconUser,
 } from "@tabler/icons-react";
 
 import { logoutAction } from "@/app/(auth)/auth-actions";
@@ -43,12 +44,15 @@ type Props = {
   unreadCount?: number;
 };
 
-type MobileTab = {
-  href: string;
+type MobileTabBase = {
   label: string;
   Icon: TablerOutlineIcon;
   isActive: (pathname: string, hash: string) => boolean;
 };
+
+type MobileTab =
+  | (MobileTabBase & { href: string })
+  | (MobileTabBase & { action: "more" });
 
 function useHashFragment(): string {
   return useSyncExternalStore(
@@ -88,6 +92,7 @@ export default function PublicNav({
   const pathname = usePathname() ?? "";
   const hash = useHashFragment();
   const drawerOpen = useDrawerOpenControlled();
+  const moreSheetOpen = useDrawerOpenControlled();
   const toggleDrawerCart = useCartStore((s) => s.toggleDrawer);
   const cartBumpNonce = useCartStore((s) => s.cartBumpNonce);
   const itemCount = useCartStore((s) => s.itemCount());
@@ -101,6 +106,8 @@ export default function PublicNav({
 
   const isGetAppPage = pathname === "/get-app";
   const showSignIn = !user && !isGetAppPage;
+  const isStorePage = pathname.startsWith("/store/");
+  const [storeNavScrolled, setStoreNavScrolled] = useState(false);
 
   const currentPathEncoded = encodeURIComponent(pathname?.trim() ? pathname : "/");
   const loginHref = `/login?callbackUrl=${currentPathEncoded}`;
@@ -130,16 +137,14 @@ export default function PublicNav({
       href: "/shop",
       label: "Shop",
       Icon: IconShoppingBag,
-      isActive: (p, h) =>
-        (p.startsWith("/shop") || p.startsWith("/products")) &&
-        !p.startsWith("/checkout") &&
-        !(p === "/shop" && h === "#shop-search"),
+      isActive: (p) =>
+        (p.startsWith("/shop") || p.startsWith("/products")) && !p.startsWith("/checkout"),
     },
     {
-      href: "/shop#shop-search",
+      href: "/search",
       label: "Search",
       Icon: IconSearch,
-      isActive: (p, h) => p.startsWith("/shop") && h === "#shop-search",
+      isActive: (p) => p.startsWith("/search"),
     },
     {
       href: "/cart",
@@ -148,10 +153,10 @@ export default function PublicNav({
       isActive: (p, h) => p.startsWith("/cart") || p.startsWith("/checkout"),
     },
     {
-      href: user ? dashTarget : loginHref,
-      label: "Account",
-      Icon: IconUser,
-      isActive: (p) => !!user && p.startsWith("/dashboard"),
+      label: "More",
+      Icon: IconMenu2,
+      action: "more",
+      isActive: () => false,
     },
   ];
 
@@ -169,10 +174,22 @@ export default function PublicNav({
 
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
-  const glassHeader =
-    `${transparent ? "absolute inset-x-0 top-0 z-50" : "sticky top-0 z-40 border-b-[0.5px] border-white/10"} ` +
-    `w-full backdrop-blur-[12px] md:backdrop-blur-[16px] ` +
-    `bg-[rgba(28,28,26,0.85)] md:bg-[rgba(28,28,26,0.95)]`;
+  const storeNavAtTop = isStorePage && !storeNavScrolled;
+  const navHasGlassBg = !storeNavAtTop;
+
+  const headerPosition = storeNavAtTop
+    ? "fixed inset-x-0 top-0 z-50"
+    : transparent
+      ? "sticky top-0 z-40"
+      : "sticky top-0 z-40";
+
+  const glassHeader = [
+    headerPosition,
+    "w-full transition-[background-color,backdrop-filter,border-color] duration-200",
+    navHasGlassBg
+      ? "border-b-[0.5px] border-white/10 bg-[rgba(28,28,26,0.95)] backdrop-blur-[12px] md:backdrop-blur-[16px]"
+      : "border-b-0 bg-transparent backdrop-blur-none",
+  ].join(" ");
 
   const desktopNavLinkClass = `flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors`;
   function desktopBrowseActive(forPath: "/shop" | "/services" | "/stores"): boolean {
@@ -500,43 +517,221 @@ export default function PublicNav({
         </nav>
       </header>
 
+      <MobileSearchOverlay
+        open={mobileSearchOpen}
+        onClose={() => setMobileSearchOpen(false)}
+      />
+
+      <PublicMoreSheet
+        open={moreSheetOpen.value}
+        onClose={moreSheetOpen.close}
+        user={user}
+        loginHref={loginHref}
+        dashTarget={dashTarget}
+        isInstalled={mounted && isInstalled}
+      />
+
       {/* Mobile bottom tab */}
       <div
         role="navigation"
         aria-label="Mobile bottom navigation"
-        className="fixed bottom-0 left-0 right-0 z-[100] border-t-[0.5px] border-[#e8e8e8] bg-white lg:hidden pb-[max(8px,calc(env(safe-area-inset-bottom,0px)+4px))] pt-2"
+        className="fixed bottom-0 left-0 right-0 z-[100] border-t-[0.5px] border-[var(--color-border-tertiary)] bg-white lg:hidden"
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
-        <div className="mx-auto grid max-w-lg grid-cols-5 pb-px">
+        <div className="mx-auto grid h-[60px] max-w-lg grid-cols-5">
           {mobileTabs.map((tab) => {
-            const active = tab.isActive(pathname, hash);
-            return (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                className="relative flex min-h-[48px] min-w-0 flex-col items-center justify-start gap-0.5 px-1 pb-2 pt-0.5 text-center"
-                aria-current={active ? "page" : undefined}
-              >
+            const active =
+              tab.label === "More"
+                ? moreSheetOpen.value
+                : tab.isActive(pathname, hash);
+            const tabClass =
+              "relative flex min-w-0 flex-col items-center justify-center gap-[3px] px-1 transition-colors duration-150";
+
+            const tabInner = (
+              <>
+                {active ? (
+                  <span
+                    className="mb-px h-[2px] w-[3px] shrink-0 rounded-full bg-[#D4450A]"
+                    aria-hidden
+                  />
+                ) : (
+                  <span className="mb-px h-[2px] w-[3px] shrink-0" aria-hidden />
+                )}
                 <span className="relative inline-flex">
                   <tab.Icon
-                    className={`size-5 shrink-0 ${tab.label === "Cart" && cartBumpPlay ? "lw-cart-icon-bump" : ""} ${active ? "text-[#D4450A]" : "text-[#aaa]"}`}
-                    stroke={active ? 2.35 : 1.75}
+                    className={`size-[22px] shrink-0 transition-colors duration-150 ${
+                      tab.label === "Cart" && cartBumpPlay ? "lw-cart-icon-bump" : ""
+                    } ${active ? "text-[#D4450A]" : "text-[var(--color-text-secondary)]"}`}
+                    stroke={active ? 2.25 : 1.75}
                     aria-hidden
                   />
                   {tab.label === "Cart" && mounted && itemCount > 0 ? (
-                    <span className="absolute -right-2 -top-[3px] flex h-[14px] min-w-[14px] items-center justify-center rounded-full bg-[#D4450A] px-0.5 text-[8px] font-black text-white shadow-sm">
+                    <span className="absolute -right-1 -top-1 flex h-[14px] min-w-[14px] items-center justify-center rounded-full bg-[#D4450A] px-0.5 text-[8px] font-semibold text-white">
                       {itemCount > 9 ? "9+" : itemCount}
                     </span>
                   ) : null}
                 </span>
                 <span
-                  className={`leading-tight tracking-[0.02em] text-[9px] ${active ? "font-bold text-[#D4450A]" : "font-medium text-[#aaa]"}`}
+                  className={`text-[10px] leading-none transition-colors duration-150 ${
+                    active
+                      ? "font-semibold text-[#D4450A]"
+                      : "font-medium text-[var(--color-text-secondary)]"
+                  }`}
                 >
                   {tab.label}
                 </span>
+              </>
+            );
+
+            if ("action" in tab && tab.action === "more") {
+              return (
+                <button
+                  key={tab.label}
+                  type="button"
+                  className={tabClass}
+                  aria-expanded={moreSheetOpen.value}
+                  aria-haspopup="dialog"
+                  onClick={() => moreSheetOpen.toggle()}
+                >
+                  {tabInner}
+                </button>
+              );
+            }
+
+            if (!("href" in tab)) return null;
+
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                className={tabClass}
+                aria-current={active ? "page" : undefined}
+              >
+                {tabInner}
               </Link>
             );
           })}
         </div>
+      </div>
+    </>
+  );
+}
+
+function PublicMoreSheet({
+  open,
+  onClose,
+  user,
+  loginHref,
+  dashTarget,
+  isInstalled,
+}: {
+  open: boolean;
+  onClose: () => void;
+  user: { name: string; href: string } | null;
+  loginHref: string;
+  dashTarget: string;
+  isInstalled: boolean;
+}) {
+  const gridLinks: {
+    href: string;
+    label: string;
+    Icon: TablerOutlineIcon;
+    authOnly?: boolean;
+  }[] = [
+    { href: "/services", label: "Services", Icon: IconTools },
+    { href: "/stores", label: "Stores", Icon: IconBuildingStore },
+    { href: "/events", label: "Events", Icon: IconCalendarEvent },
+    { href: "/chat", label: "AI Chat", Icon: IconMessageCircle },
+    { href: "/orders", label: "My Orders", Icon: IconPackage, authOnly: true },
+    { href: "/wishlist", label: "My Wishlist", Icon: IconHeart, authOnly: true },
+    { href: "/saved-stores", label: "Saved Stores", Icon: IconBookmark, authOnly: true },
+    { href: "/get-app", label: "Get App", Icon: IconDownload },
+  ];
+
+  const visibleLinks = gridLinks.filter((item) => {
+    if (item.href === "/get-app" && isInstalled) return false;
+    if (item.authOnly && !user) return false;
+    return true;
+  });
+
+  if (!open) return null;
+
+  return (
+    <>
+      <div
+        role="presentation"
+        className="fixed inset-0 z-[110] bg-[rgba(0,0,0,0.5)] lg:hidden"
+        onClick={onClose}
+        aria-hidden={false}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="More menu"
+        className={`fixed inset-x-0 bottom-0 z-[111] max-h-[min(85vh,560px)] overflow-y-auto rounded-t-2xl bg-white pb-[calc(env(safe-area-inset-bottom,0px)+12px)] shadow-[0_-8px_32px_rgba(0,0,0,0.12)] transition-transform duration-200 ease-out lg:hidden ${
+          open ? "translate-y-0" : "translate-y-full"
+        }`}
+      >
+        <div className="flex justify-center pt-3 pb-2">
+          <span className="h-1 w-10 rounded-full bg-[var(--color-border-tertiary)]" aria-hidden />
+        </div>
+
+        {user ? (
+          <div className="flex items-center gap-3 border-b border-[0.5px] border-[var(--color-border-tertiary)] px-4 pb-4">
+            <div
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-black text-white"
+              style={{ backgroundColor: SCARLET }}
+              aria-hidden
+            >
+              {initialsDisplay(user.name)}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-[15px] font-semibold text-[#1C1C1A]">Hi {user.name.split(/\s+/)[0] ?? user.name}</p>
+              <Link
+                href={dashTarget}
+                onClick={onClose}
+                className="mt-0.5 text-[12px] font-medium text-[#D4450A] hover:underline"
+              >
+                My dashboard →
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="border-b border-[0.5px] border-[var(--color-border-tertiary)] px-4 pb-4">
+            <p className="text-[15px] font-semibold text-[#1C1C1A]">Welcome to LinkWe</p>
+            <Link href={loginHref} onClick={onClose} className="mt-1 text-[12px] font-medium text-[#D4450A] hover:underline">
+              Sign in →
+            </Link>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-3 p-4">
+          {visibleLinks.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onClose}
+              className="flex flex-col items-center justify-center gap-2 rounded-xl bg-white p-4 text-center transition-colors hover:bg-[#F7F7F6]"
+              style={{ border: "0.5px solid var(--color-border-tertiary)" }}
+            >
+              <item.Icon className="size-6 text-[#D4450A]" stroke={1.75} aria-hidden />
+              <span className="text-[11px] font-medium text-[#1C1C1A]">{item.label}</span>
+            </Link>
+          ))}
+        </div>
+
+        {user ? (
+          <form action={logoutAction} className="px-4 pt-1">
+            <button
+              type="submit"
+              className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-[0.5px] border-[var(--color-border-tertiary)] text-[13px] font-semibold text-[#D4450A] transition-colors hover:bg-[#FEF0EB]"
+              onClick={onClose}
+            >
+              <IconLogout className="size-[18px]" stroke={1.75} aria-hidden />
+              Sign out
+            </button>
+          </form>
+        ) : null}
       </div>
     </>
   );

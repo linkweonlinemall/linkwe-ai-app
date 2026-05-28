@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { IconHome } from "@tabler/icons-react";
+
 import NotificationBell from "@/components/ui/NotificationBell";
 
 function formatVendorDate(now: Date) {
@@ -46,6 +48,14 @@ export default function VendorDashboardTopbar({ firstName, unreadCount }: Vendor
         <p className="truncate text-[15px] font-medium text-[#1C1C1A]">{shortGreeting(firstName || "there", now)}</p>
       </div>
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+        <Link
+          href="/"
+          className="flex size-8 items-center justify-center rounded-lg border border-[rgba(28,28,26,0.12)] text-[#7c7b77] transition-colors hover:bg-[#F7F5F2] hover:text-[#D4450A] md:hidden"
+          aria-label="Back to LinkWe homepage"
+          title="Home"
+        >
+          <IconHome className="size-[18px]" stroke={1.75} aria-hidden />
+        </Link>
         <div className="flex size-8 items-center justify-center rounded-lg border border-[rgba(28,28,26,0.12)]">
           <NotificationBell compactToolbar initialUnreadCount={unreadCount} variant="light" />
         </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { usePathname } from "next/navigation";
 
 import VendorDashboardSidebar from "@/components/vendor/vendor-dashboard-sidebar";
@@ -42,13 +43,15 @@ export default function VendorDashboardShell({
 
   return (
     <div className="flex h-full min-h-0 bg-[#F7F5F2]">
-      <VendorDashboardSidebar
-        storeName={storeName}
-        storeSlug={storeSlug}
-        storeLogoUrl={storeLogoUrl}
-        pendingRequestsCount={pendingRequestsCount}
-        activeOrdersCount={activeOrdersCount}
-      />
+      <Suspense fallback={null}>
+        <VendorDashboardSidebar
+          storeName={storeName}
+          storeSlug={storeSlug}
+          storeLogoUrl={storeLogoUrl}
+          pendingRequestsCount={pendingRequestsCount}
+          activeOrdersCount={activeOrdersCount}
+        />
+      </Suspense>
 
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col md:ml-[60px] lg:ml-[220px]">
         <VendorDashboardTopbar firstName={userFirstName} unreadCount={unreadCount} />
@@ -57,7 +60,9 @@ export default function VendorDashboardShell({
           {children}
         </div>
 
-        <VendorMobileBottomNav />
+        <Suspense fallback={null}>
+          <VendorMobileBottomNav />
+        </Suspense>
         <FloatingAIChat />
       </div>
     </div>

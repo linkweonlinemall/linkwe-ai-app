@@ -63,8 +63,14 @@ export async function getVendorDashboardAnalytics(storeId: string): Promise<Vend
       select: { createdAt: true },
     }),
     Promise.all([
-      prisma.product.aggregate({ where: { storeId }, _sum: { viewCount: true } }),
-      prisma.service.aggregate({ where: { storeId }, _sum: { viewCount: true } }),
+      prisma.product.aggregate({
+        where: { storeId, isService: false },
+        _sum: { viewCount: true },
+      }),
+      prisma.product.aggregate({
+        where: { storeId, isService: true },
+        _sum: { viewCount: true },
+      }),
     ]),
     prisma.savedStore.count({
       where: { storeId, createdAt: { gte: thisMonthStart, lt: nextMonthStart } },

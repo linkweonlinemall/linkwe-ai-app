@@ -129,6 +129,8 @@ export default async function Home() {
     ? await prisma.user.findUnique({ where: { id: session.userId } })
     : null;
   const continueHref = user ? getRoleDashboardPath(user.role) : null;
+  const showHeroDashboard =
+    user?.role === "VENDOR" || user?.role === "COURIER";
 
   const unreadCount = await getNavUnreadCount();
 
@@ -258,7 +260,10 @@ export default async function Home() {
 
       <div className="flex flex-col">
         {/* Hero */}
-        <HeroSlider continueHref={continueHref} />
+        <HeroSlider
+          continueHref={continueHref}
+          showDashboardButton={showHeroDashboard}
+        />
 
         {/* Stats bar */}
         <div className={`relative overflow-hidden ${tw.bgDark}`}>

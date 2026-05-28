@@ -1,13 +1,14 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { ShieldCheck } from "lucide-react";
 
 import VendorDashboardTabs from "@/app/(dashboard)/dashboard/vendor/components/vendor-dashboard-tabs";
 import VendorVerificationChecklist from "@/components/vendor/VendorVerificationChecklist";
-import { getVendorReviewStats } from "@/app/actions/vendor-reviews";
 import { getSession } from "@/lib/auth/session";
 import { assertDashboardRole } from "@/lib/auth/assert-role";
 import { prisma } from "@/lib/prisma";
 import { getVendorDashboardAnalytics } from "@/lib/vendor/vendor-dashboard-analytics";
+import { getVendorReviewStatsForStore } from "@/lib/vendor/get-vendor-review-stats";
 import { radius, shadow, colors } from "@/lib/design-system";
 
 const DASHBOARD_MESSAGES: Record<string, string> = {
@@ -152,9 +153,16 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
   const totalCount = completenessItems.length;
 
   const dashboardAnalytics = await getVendorDashboardAnalytics(store.id);
-  const reviewSummary = await getVendorReviewStats();
+  const reviewSummary = await getVendorReviewStatsForStore(store.id);
 
   return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[40vh] items-center justify-center bg-[#F7F5F2] px-5">
+          <p className="text-sm text-[#7c7b77]">Loading dashboard…</p>
+        </div>
+      }
+    >
     <VendorDashboardTabs
       store={store}
       listings={listings}
@@ -194,5 +202,6 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
         />
       }
     />
+    </Suspense>
   );
 }

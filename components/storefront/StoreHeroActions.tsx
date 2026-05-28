@@ -66,11 +66,11 @@ export default function StoreHeroActions({
   }, [following, router, storeId]);
 
   return (
-    <div className="flex w-full shrink-0 flex-wrap items-center justify-end gap-2 pb-0.5 max-md:justify-start md:w-auto">
+    <div className="flex w-full shrink-0 flex-row items-center gap-2 md:w-auto md:flex-wrap md:justify-end md:pb-0.5">
       {canEditStore ? (
         <Link
           href="/dashboard/vendor/store/edit"
-          className="inline-flex h-[34px] items-center gap-1.5 rounded-[9px] px-3 text-xs font-semibold text-white transition hover:opacity-90"
+          className="inline-flex h-[34px] flex-1 items-center justify-center gap-1.5 rounded-[9px] px-3 text-xs font-semibold text-white transition hover:opacity-90 md:flex-none"
           style={{ backgroundColor: SCARLET }}
         >
           <IconEdit className="size-4" stroke={1.75} aria-hidden />
@@ -81,15 +81,15 @@ export default function StoreHeroActions({
           type="button"
           disabled={followBusy}
           onClick={() => void onFollow()}
-          className={`${glassBtn} px-3`}
+          className={`${glassBtn} min-w-0 flex-1 px-3 md:flex-none`}
           style={glassStyle}
         >
-          <IconUserPlus className="size-4" stroke={1.75} aria-hidden />
+          <IconUserPlus className="size-4 shrink-0" stroke={1.75} aria-hidden />
           {following ? "Following" : "Follow"}
         </button>
       )}
 
-      <div className="relative">
+      <div className="relative shrink-0">
         <button
           type="button"
           className={glassBtn}
@@ -136,7 +136,7 @@ export default function StoreHeroActions({
 
       <button
         type="button"
-        className={glassBtn}
+        className={`${glassBtn} shrink-0`}
         style={glassStyle}
         aria-label="Message store"
         title="Message store"
