@@ -395,7 +395,6 @@ export default function StorefrontTabs({
 
   void canEditStore;
   void hasSocialLinks;
-  void socialLinks;
 
   return (
     <>
@@ -441,6 +440,7 @@ export default function StorefrontTabs({
               products={products}
               services={services ?? []}
               openingHours={openingHours}
+              socialLinks={socialLinks}
               initialFollowing={initialSaved}
               followerCount={followerCount}
             />

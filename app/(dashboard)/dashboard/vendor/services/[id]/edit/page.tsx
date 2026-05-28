@@ -32,7 +32,7 @@ export default async function EditServicePage({ params }: Props) {
   const service = { ...core, ...vendorServiceEditFormDefaults() };
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
+    <div className="mx-auto max-w-4xl px-4 pt-6 pb-12">
       <div className="mb-6 flex items-center gap-3">
         <Link href="/dashboard/vendor/services" className="text-sm text-zinc-500 hover:text-zinc-900">
           ← Services

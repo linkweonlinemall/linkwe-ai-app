@@ -96,7 +96,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
   const parsedSocialLinks = (store.socialLinks as Record<string, string> | null) ?? {};
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-6">
+    <div className="mx-auto max-w-4xl px-6 pt-6 pb-12">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <a
@@ -147,7 +147,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Store Identity
           </h2>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-6">
             <Input
               required
               className="text-base"
@@ -202,7 +202,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Details
           </h2>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-6">
             <RegionSelect
               name="region"
               defaultValue={store.region}
@@ -299,7 +299,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Tags &amp; Policies
           </h2>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-6">
             <div>
               <p className="mb-4 text-sm text-zinc-600">
                 Add keywords that describe your store. Separate tags with commas. Example: handmade, local, organic
@@ -336,7 +336,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
               <p className="mb-4 text-sm text-zinc-600">
                 Add your social media handles so customers can find and follow you.
               </p>
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-6">
                 <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800">
                   Instagram
                   <div className="flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-white">

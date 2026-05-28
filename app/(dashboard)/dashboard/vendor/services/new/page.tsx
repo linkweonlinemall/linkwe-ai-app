@@ -80,7 +80,7 @@ export default function NewServicePage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
+    <div className="mx-auto max-w-4xl px-4 py-8">
       <div className="mb-6">
         <Link
           href="/dashboard/vendor/services"

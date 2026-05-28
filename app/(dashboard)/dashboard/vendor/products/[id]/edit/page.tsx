@@ -116,8 +116,8 @@ export default async function EditVendorProductPage({ params }: Props) {
   };
 
   return (
-    <div className="bg-[#f5f5f5] px-4 py-8 sm:px-6">
-      <div className="mx-auto max-w-2xl">
+    <div className="bg-[#f5f5f5] px-4 pt-6 pb-12 sm:px-6">
+      <div className="mx-auto max-w-4xl">
         <div className="mb-8 flex items-center gap-4">
           <Link
             href="/dashboard/vendor/products"

@@ -19,7 +19,7 @@ const SLIDES = [
     headingHighlight: 2,
     sub: "LinkWe connects you with vendors across Trinidad and Tobago. Search naturally, discover local stores, and shop with confidence.",
     primaryBtn: { label: "Shop with AI", href: "/chat" },
-    secondaryBtn: { label: "Browse all products", href: "/shop" },
+    secondaryBtn: { label: "Browse stores", href: "/stores" },
     pan: "from-left" as const,
   },
   {

@@ -4,7 +4,7 @@ import { type ReactNode } from "react";
 
 import { useSearchParams } from "next/navigation";
 
-import type { ListingStatus, Prisma, StoreStatus } from "@prisma/client";
+import type { IdVerificationStatus, ListingStatus, Prisma, StoreStatus } from "@prisma/client";
 
 import BookingsTab from "./tabs/bookings-tab";
 import ListingsTab from "./tabs/listings-tab";
@@ -81,6 +81,7 @@ export type VendorDashboardTabsProps = {
   initialAvailableNow: boolean;
   dashboardSuccessMessage: string | null;
   dashboardErrorMessage: string | null;
+  idVerificationStatus: IdVerificationStatus;
   /** Shown inside the store header card after action buttons when ID verification is approved. */
   verificationApprovedBanner?: ReactNode;
   verificationChecklist?: ReactNode;
@@ -104,6 +105,7 @@ export default function VendorDashboardTabs({
   initialAvailableNow,
   dashboardSuccessMessage,
   dashboardErrorMessage,
+  idVerificationStatus,
   verificationApprovedBanner,
   verificationChecklist,
 }: VendorDashboardTabsProps) {
@@ -138,6 +140,7 @@ export default function VendorDashboardTabs({
         completenessItems={completenessItems}
         recentOrders={recentOrders}
         reviewSummary={reviewSummary}
+        idVerificationStatus={idVerificationStatus}
         store={{
           name: store.name,
           slug: store.slug,

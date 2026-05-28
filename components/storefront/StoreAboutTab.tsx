@@ -15,6 +15,17 @@ import {
   IconTools,
   IconX,
 } from "@tabler/icons-react";
+import {
+  Check,
+  Facebook,
+  Globe,
+  Instagram,
+  Linkedin,
+  MessageCircle,
+  Sparkles,
+  Twitter,
+  Youtube,
+} from "lucide-react";
 
 import {
   formatDayHours,
@@ -60,6 +71,7 @@ type Props = {
   products: ProductPreview[];
   services: ServicePreview[];
   openingHours: WeekSchedule | null;
+  socialLinks: Record<string, string>;
   initialFollowing: boolean;
   followerCount: number;
 };
@@ -81,6 +93,37 @@ const SERVICE_TYPE_LABELS: Record<string, string> = {
   SUBSCRIPTION: "Subscription",
   VIRTUAL: "Virtual",
 };
+
+function ensureHttps(url: string) {
+  return url.startsWith("http") ? url : `https://${url}`;
+}
+
+function toTitleCase(str: string) {
+  return str.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function renderSocialIcon(key: string) {
+  switch (key) {
+    case "instagram":
+      return <Instagram style={{ color: "#E1306C" }} size={18} strokeWidth={1.75} aria-hidden />;
+    case "facebook":
+      return <Facebook style={{ color: "#1877F2" }} size={18} strokeWidth={1.75} aria-hidden />;
+    case "x":
+      return <Twitter style={{ color: "#000000" }} size={18} strokeWidth={1.75} aria-hidden />;
+    case "tiktok":
+      return <Globe style={{ color: "#000000" }} size={18} strokeWidth={1.75} aria-hidden />;
+    case "youtube":
+      return <Youtube style={{ color: "#FF0000" }} size={18} strokeWidth={1.75} aria-hidden />;
+    case "linkedin":
+      return <Linkedin style={{ color: "#0A66C2" }} size={18} strokeWidth={1.75} aria-hidden />;
+    case "whatsapp":
+      return <MessageCircle style={{ color: "#25D366" }} size={18} strokeWidth={1.75} aria-hidden />;
+    case "website":
+      return <Globe style={{ color: "#D4450A" }} size={18} strokeWidth={1.75} aria-hidden />;
+    default:
+      return null;
+  }
+}
 
 const GALLERY_GRID: Record<number, string> = {
   0: "col-start-1 row-start-1 row-span-2",
@@ -243,11 +286,54 @@ export default function StoreAboutTab({
   products,
   services,
   openingHours,
+  socialLinks,
   initialFollowing,
   followerCount,
 }: Props) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [tagsExpanded, setTagsExpanded] = useState(false);
+  const [amenitiesExpanded, setAmenitiesExpanded] = useState(false);
   const todayKey = getTodayKey();
+
+  const socialLinkItems = [
+    socialLinks.instagram?.trim()
+      ? { key: "instagram", platform: "Instagram", url: ensureHttps(socialLinks.instagram.trim()) }
+      : null,
+    socialLinks.facebook?.trim()
+      ? { key: "facebook", platform: "Facebook", url: ensureHttps(socialLinks.facebook.trim()) }
+      : null,
+    socialLinks.x?.trim()
+      ? { key: "x", platform: "X", url: ensureHttps(socialLinks.x.trim()) }
+      : null,
+    socialLinks.tiktok?.trim()
+      ? { key: "tiktok", platform: "TikTok", url: ensureHttps(socialLinks.tiktok.trim()) }
+      : null,
+    socialLinks.youtube?.trim()
+      ? { key: "youtube", platform: "YouTube", url: ensureHttps(socialLinks.youtube.trim()) }
+      : null,
+    socialLinks.linkedin?.trim()
+      ? { key: "linkedin", platform: "LinkedIn", url: ensureHttps(socialLinks.linkedin.trim()) }
+      : null,
+    socialLinks.whatsapp?.trim()
+      ? { key: "whatsapp", platform: "WhatsApp", url: ensureHttps(socialLinks.whatsapp.trim()) }
+      : null,
+    socialLinks.website?.trim()
+      ? { key: "website", platform: "Website", url: ensureHttps(socialLinks.website.trim()) }
+      : null,
+  ].filter((item): item is { key: string; platform: string; url: string } => item != null);
+
+  const amenityLimit = 5;
+  const hasMoreAmenities = store.amenities.length > amenityLimit;
+  const visibleAmenities =
+    amenitiesExpanded || !hasMoreAmenities
+      ? store.amenities
+      : store.amenities.slice(0, amenityLimit);
+  const hiddenAmenityCount = store.amenities.length - amenityLimit;
+
+  const tagLimit = 8;
+  const hasMoreTags = store.tags.length > tagLimit;
+  const visibleTags = tagsExpanded || !hasMoreTags ? store.tags : store.tags.slice(0, tagLimit);
+  const hiddenTagCount = store.tags.length - tagLimit;
 
   const galleryImages = store.images ?? [];
   const masonryImages = galleryImages.slice(0, 5);
@@ -454,21 +540,100 @@ export default function StoreAboutTab({
             )}
           </div>
 
+          {store.amenities.length > 0 ? (
+            <div className="mb-3.5 overflow-hidden rounded-xl border border-[0.5px] border-[var(--color-border-tertiary)] bg-white">
+              <div className="flex items-center gap-2 border-b border-[0.5px] border-[var(--color-border-tertiary)] px-4 py-3">
+                <Sparkles className="size-[15px] text-[var(--text-muted)]" strokeWidth={1.75} aria-hidden />
+                <h2 className="text-[13px] font-medium text-[var(--text-primary)]">Amenities</h2>
+              </div>
+              <ul>
+                {visibleAmenities.map((amenity, i) => {
+                  const label = toTitleCase(amenity.replace(/_/g, " "));
+                  return (
+                    <li
+                      key={amenity}
+                      className={`flex items-center gap-2 px-4 py-2 ${
+                        i < visibleAmenities.length - 1
+                          ? "border-b border-[0.5px] border-[var(--color-border-tertiary)]"
+                          : ""
+                      }`}
+                    >
+                      <Check className="size-3.5 shrink-0 text-[#3B6D11]" strokeWidth={2.5} aria-hidden />
+                      <span className="text-xs text-[var(--text-secondary)]">{label}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+              {hasMoreAmenities ? (
+                <div className="border-t border-[0.5px] border-[var(--color-border-tertiary)] px-4 py-3">
+                  <button
+                    type="button"
+                    className="cursor-pointer text-sm text-[var(--text-muted)] no-underline hover:underline"
+                    onClick={() => setAmenitiesExpanded((prev) => !prev)}
+                  >
+                    {amenitiesExpanded ? "Show less" : `+ ${hiddenAmenityCount} more`}
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {socialLinkItems.length > 0 ? (
+            <div className="mb-3.5 overflow-hidden rounded-xl border border-[0.5px] border-[var(--color-border-tertiary)] bg-white">
+              <div className="flex items-center gap-2 border-b border-[0.5px] border-[var(--color-border-tertiary)] px-4 py-3">
+                <Globe className="size-[15px] text-[var(--text-muted)]" strokeWidth={1.75} aria-hidden />
+                <h2 className="text-[13px] font-medium text-[var(--text-primary)]">Find us online</h2>
+              </div>
+              <ul>
+                {socialLinkItems.map(({ key, platform, url }, i) => {
+                  const isLast = i === socialLinkItems.length - 1;
+                  return (
+                    <li
+                      key={key}
+                      className={isLast ? "" : "border-b border-[0.5px] border-[var(--color-border-tertiary)]"}
+                    >
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2.5 px-4 py-3 transition-colors hover:bg-[var(--color-background-secondary)]"
+                      >
+                        <span className="shrink-0">{renderSocialIcon(key)}</span>
+                        <span className="text-[13px] font-medium text-[var(--text-primary)]">{platform}</span>
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
+
           {store.tags.length > 0 ? (
             <div className="overflow-hidden rounded-xl border border-[0.5px] border-[var(--color-border-tertiary)] bg-white">
               <div className="flex items-center gap-2 border-b border-[0.5px] border-[var(--color-border-tertiary)] px-4 py-3">
                 <IconTag className="size-[15px] text-[var(--text-muted)]" stroke={1.75} aria-hidden />
                 <h2 className="text-[13px] font-medium text-[var(--text-primary)]">Tags</h2>
               </div>
-              <div className="flex flex-wrap gap-1.5 px-4 py-3">
-                {store.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-[20px] bg-[var(--color-background-secondary)] px-2.5 py-1 text-[11px] text-[var(--text-muted)]"
+              <div className="px-4 py-3">
+                <div className="flex flex-wrap gap-1.5">
+                  {visibleTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-[20px] bg-[var(--color-background-secondary)] px-2.5 py-1 text-[11px] text-[var(--text-muted)]"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                {hasMoreTags ? (
+                  <button
+                    type="button"
+                    className="mt-2 cursor-pointer text-sm text-[var(--text-muted)] no-underline hover:underline"
+                    onClick={() => setTagsExpanded((prev) => !prev)}
                   >
-                    {tag}
-                  </span>
-                ))}
+                    {tagsExpanded ? "Show less" : `+ ${hiddenTagCount} more`}
+                  </button>
+                ) : null}
               </div>
             </div>
           ) : null}

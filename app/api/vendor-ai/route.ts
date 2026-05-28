@@ -955,7 +955,6 @@ export async function POST(req: NextRequest) {
 
         if (toolBlock.name === "get_store_summary") {
           const data = await getVendorStoreSummary()
-          console.log("REX STORE SUMMARY DATA:", JSON.stringify(data).slice(0, 200))
           return {
             content: data
               ? JSON.stringify(data)
@@ -1004,9 +1003,7 @@ export async function POST(req: NextRequest) {
             logoUrl?: string
             coverPhotoUrl?: string
           }
-          console.log("UPDATE STORE INPUT:", JSON.stringify(input))
           const result = await updateVendorStoreFields(input)
-          console.log("UPDATE STORE RESULT:", JSON.stringify(result))
           return {
             content: result.ok
               ? JSON.stringify({ ok: true, message: "Store updated successfully" })
@@ -1304,7 +1301,6 @@ If SYSTEM notes further down report an issue with attaching to a product gallery
             }
           }
           if (assistantRoundText.length > 0) {
-            console.log("REX STREAM TEXT:", assistantRoundText.slice(0, 200))
             send(JSON.stringify({ text: assistantRoundText }))
           }
 

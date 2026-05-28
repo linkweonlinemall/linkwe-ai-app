@@ -178,21 +178,6 @@ export async function runUniversalSearch(
   );
   const storeWhere = storeBaseWhere(terms, region, params.category);
 
-  console.log("[search] parsed:", {
-    rawQ,
-    terms: terms || "(empty — region-only or browse)",
-    region,
-    detectedRegion: parsed.detectedRegion,
-    type,
-    category: params.category,
-    minRating,
-    preview,
-    page,
-  });
-  console.log("[search] productWhere:", JSON.stringify(productWhere));
-  console.log("[search] serviceWhere:", JSON.stringify(serviceWhere));
-  console.log("[search] storeWhere:", JSON.stringify(storeWhere));
-
   const productRatingIds = await filterProductIdsByRating(productWhere, minRating);
   const serviceRatingIds = await filterProductIdsByRating(serviceWhere, minRating);
 
@@ -283,17 +268,6 @@ export async function runUniversalSearch(
           })
         : [],
     ]);
-
-  console.log("[search] results:", {
-    productCount,
-    serviceCount,
-    storeCount,
-    productsFetched: products.length,
-    servicesFetched: services.length,
-    storesFetched: stores.length,
-    productRatingFilter: productRatingIds?.length ?? "none",
-    serviceRatingFilter: serviceRatingIds?.length ?? "none",
-  });
 
   const productIds = [...products, ...services].map((p) => p.id);
   const storeIds = stores.map((s) => s.id);

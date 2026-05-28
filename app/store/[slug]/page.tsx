@@ -109,7 +109,15 @@ export default async function PublicStorePage({ params }: Props) {
     getUserStoreReview(store.id),
   ]);
 
-  const socialLinks = (store.socialLinks as Record<string, string> | null) ?? {};
+  const socialLinks = Object.fromEntries(
+    Object.entries(
+      store.socialLinks != null &&
+        typeof store.socialLinks === "object" &&
+        !Array.isArray(store.socialLinks)
+        ? (store.socialLinks as Record<string, string>)
+        : {},
+    ).filter(([, url]) => typeof url === "string" && url.trim().length > 0),
+  ) as Record<string, string>;
   const hasSocialLinks = Object.keys(socialLinks).length > 0;
 
   const openingHours =

@@ -248,13 +248,6 @@ export default function ProductVariantEditor({
     if (!productId.trim()) return;
     setSaving(true);
     setSaved(false);
-    console.log(
-      "Saving variants with images:",
-      variants.map((v, i) => ({
-        name: v.attributes.map((a) => a.value).join("/"),
-        images: variantImages[i] ?? [],
-      })),
-    );
     const result = await saveProductVariants(
       productId,
       variants.map(

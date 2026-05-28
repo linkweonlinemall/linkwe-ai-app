@@ -104,8 +104,8 @@ export async function findVendorServicesForAvailability(storeId: string) {
       slug: s.slug,
       category: s.category,
       serviceType: s.serviceType,
-      durationMinutes: s.serviceDuration || DEFAULT_SERVICE_AVAILABILITY.durationMinutes,
       ...DEFAULT_SERVICE_AVAILABILITY,
+      durationMinutes: s.serviceDuration || DEFAULT_SERVICE_AVAILABILITY.durationMinutes,
     }));
   }
 }

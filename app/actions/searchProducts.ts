@@ -133,8 +133,6 @@ export async function searchProducts(input: SearchInput): Promise<ChatProduct[]>
         }
       : {}
 
-  console.log("[searchProducts] query:", query, "expandedTerms:", expandedTerms)
-
   // First try with expanded search
   let products = await prisma.product.findMany({
     where: {

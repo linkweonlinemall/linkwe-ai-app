@@ -11,8 +11,6 @@ export const runtime = "nodejs";
 
 /** Unfiltered DB smoke test — use ?debug=smoke (no query required). */
 async function runSearchSmokeTest() {
-  console.log("[api/search] debug=smoke — running unfiltered findMany({ take: 5 })");
-
   try {
     const [products, stores, productTotal, storeTotal] = await Promise.all([
       prisma.product.findMany({
@@ -41,9 +39,6 @@ async function runSearchSmokeTest() {
       prisma.product.count(),
       prisma.store.count(),
     ]);
-
-    console.log("[api/search] smoke products returned:", products.length, "db total:", productTotal);
-    console.log("[api/search] smoke stores returned:", stores.length, "db total:", storeTotal);
 
     return NextResponse.json({
       debug: true,
@@ -90,7 +85,7 @@ export async function GET(request: NextRequest) {
     q,
     region: searchParams.get("region")?.trim() || undefined,
     category: searchParams.get("category")?.trim() || undefined,
-    type,
+    type: type as "products" | "services" | "stores" | "all" | undefined,
     minPrice: parseNumber(searchParams.get("minPrice")),
     maxPrice: parseNumber(searchParams.get("maxPrice")),
     rating: parseNumber(searchParams.get("rating")),
@@ -98,18 +93,9 @@ export async function GET(request: NextRequest) {
     preview: searchParams.get("preview") === "true",
   };
 
-  console.log("[api/search] request:", searchInput);
-
   try {
     const data = await runUniversalSearch(searchInput);
     const normalized = normalizeUniversalSearchResponse(data, q);
-
-    console.log(
-      "[api/search] counts:",
-      normalized.counts,
-      "total:",
-      normalized.results.total,
-    );
 
     return NextResponse.json(normalized);
   } catch (err) {

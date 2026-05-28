@@ -17,6 +17,8 @@ import {
   IconStarFilled,
   IconTrendingUp,
 } from "@tabler/icons-react";
+import { Clock, ShieldCheck } from "lucide-react";
+import type { IdVerificationStatus } from "@prisma/client";
 
 import type { VendorSplitOrder } from "@/app/(dashboard)/dashboard/vendor/components/tabs/orders-tab";
 import type { VendorDashboardAnalytics } from "@/lib/vendor/vendor-dashboard-analytics";
@@ -100,6 +102,7 @@ export default function VendorDashboardOverview(props: {
   recentOrders: VendorSplitOrder[];
   reviewSummary: ReviewSummary;
   completenessItems: ProfileRowSource[];
+  idVerificationStatus: IdVerificationStatus;
   store: {
     name: string;
     slug: string;
@@ -109,7 +112,7 @@ export default function VendorDashboardOverview(props: {
     coverPhotoUrl: string | null;
   };
 }) {
-  const { analytics, recentOrders, reviewSummary, completenessItems, store } = props;
+  const { analytics, recentOrders, reviewSummary, completenessItems, idVerificationStatus, store } = props;
 
   const { rows: profileRows, pct: profilePct } = profileRowsForCard(completenessItems);
   const overallPct = completenessItems.length
@@ -347,6 +350,28 @@ export default function VendorDashboardOverview(props: {
               </ul>
             </div>
           </div>
+
+          {idVerificationStatus === "APPROVED" ? (
+            <div className="mx-0 mb-4 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500">
+                <ShieldCheck size={16} className="text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-emerald-800">Confirmed to sell</p>
+                <p className="mt-0.5 text-xs text-emerald-600">Store verified and active</p>
+              </div>
+            </div>
+          ) : idVerificationStatus === "PENDING" ? (
+            <div className="mx-0 mb-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-400">
+                <Clock size={16} className="text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-amber-800">Verification pending</p>
+                <p className="mt-0.5 text-xs text-amber-600">We are reviewing your documents</p>
+              </div>
+            </div>
+          ) : null}
 
           {/* Quick actions */}
           <div className={`rounded-[12px] bg-white p-3.5 ${CARD_BORDER} dash-card-pad`}>

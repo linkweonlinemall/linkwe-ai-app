@@ -181,7 +181,7 @@ export default function EditServiceForm({ service }: { service: ServiceData }) {
 
       <div className="rounded-2xl border border-zinc-200 bg-white p-5">
         <p className="mb-4 text-sm font-bold text-zinc-900">Basic information</p>
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-6">
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
               Service name <span className="text-[#D4450A]">*</span>
@@ -232,7 +232,7 @@ export default function EditServiceForm({ service }: { service: ServiceData }) {
 
       <div className="rounded-2xl border border-zinc-200 bg-white p-5">
         <p className="mb-4 text-sm font-bold text-zinc-900">Pricing</p>
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-6">
           {serviceType === "QUOTE" ? (
             <>
               <div>
@@ -438,7 +438,7 @@ export default function EditServiceForm({ service }: { service: ServiceData }) {
       {serviceType === "QUOTE" ? (
         <div className="rounded-2xl border border-zinc-200 bg-white p-5">
           <p className="mb-4 text-sm font-bold text-zinc-900">Quote details</p>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-6">
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-zinc-700">Response time</label>
               <select
@@ -481,7 +481,7 @@ export default function EditServiceForm({ service }: { service: ServiceData }) {
       {serviceType === "SUBSCRIPTION" ? (
         <div className="rounded-2xl border border-zinc-200 bg-white p-5">
           <p className="mb-4 text-sm font-bold text-zinc-900">Subscription details</p>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-6">
             <div className="rounded-xl border border-purple-100 bg-purple-50 px-4 py-3">
               <p className="text-xs font-semibold text-purple-800">
                 ℹ️ The price you set above is the recurring charge per billing cycle.
@@ -561,7 +561,7 @@ export default function EditServiceForm({ service }: { service: ServiceData }) {
               <p className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-500">
                 Trial period (optional)
               </p>
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-6">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
                     Trial length (days)
@@ -603,7 +603,7 @@ export default function EditServiceForm({ service }: { service: ServiceData }) {
               <p className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-500">
                 Pause &amp; resume
               </p>
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-semibold text-zinc-900">Allow customers to pause</p>
@@ -652,7 +652,7 @@ export default function EditServiceForm({ service }: { service: ServiceData }) {
       {serviceType === "ON_DEMAND" ? (
         <div className="rounded-2xl border border-zinc-200 bg-white p-5">
           <p className="mb-4 text-sm font-bold text-zinc-900">On-demand details</p>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-6">
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
                 Estimated response time
@@ -712,7 +712,7 @@ export default function EditServiceForm({ service }: { service: ServiceData }) {
       {serviceType === "VIRTUAL" ? (
         <div className="rounded-2xl border border-zinc-200 bg-white p-5">
           <p className="mb-4 text-sm font-bold text-zinc-900">Virtual session details</p>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-6">
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-zinc-700">Platform</label>
               <select

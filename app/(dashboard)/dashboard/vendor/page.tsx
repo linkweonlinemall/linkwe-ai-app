@@ -158,6 +158,7 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
       initialAvailableNow={store.isAvailableNow}
       dashboardSuccessMessage={dashboardSuccessMessage}
       dashboardErrorMessage={dashboardErrorMessage}
+      idVerificationStatus={user.idVerificationStatus}
       verificationApprovedBanner={
         user.idVerificationStatus === "APPROVED" ? (
           <div

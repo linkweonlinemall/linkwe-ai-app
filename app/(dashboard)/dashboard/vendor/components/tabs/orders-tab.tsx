@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, MapPin } from "lucide-react";
 
 import EmptyState from "@/components/ui/empty-state";
 import { formatDate } from "@/lib/format/format-display-date-utc";
@@ -34,19 +34,25 @@ type Props = {
   splitOrders: VendorSplitOrder[];
 };
 
-const CARD_BORDER = "border-[0.5px] border-[rgba(28,28,26,0.12)]";
+const CARD_CLASS =
+  "rounded-xl border border-[rgba(28,28,26,0.08)] bg-white p-4 shadow-sm";
+
+const VIEW_ORDER_LINK_CLASS = "text-sm font-medium text-[#1C1C1A] hover:underline";
 
 function formatMinor(minor: number): string {
   return `TTD ${(minor / 100).toFixed(2)}`;
 }
 
-/** Compact pills aligned with dashboard overview palette */
+function formatRegion(region: string): string {
+  return region.replace(/_/g, " ");
+}
+
 function getStatusBadge(status: string): { label: string; className: string } {
   switch (status) {
     case "AWAITING_VENDOR_ACTION":
       return {
         label: "Action Required",
-        className: "bg-[#FAEEDA] text-[#854F0B]",
+        className: "bg-[#D4450A] text-white",
       };
     case "VENDOR_PREPARING":
       return {
@@ -93,10 +99,14 @@ function primaryItemTitle(order: VendorSplitOrder): string {
   return order.items[0]?.titleSnapshot ?? "Order";
 }
 
+function totalItemQuantity(order: VendorSplitOrder): number {
+  return order.items.reduce((sum, item) => sum + item.quantity, 0);
+}
+
 export default function OrdersTab({ splitOrders }: Props) {
   if (splitOrders.length === 0) {
     return (
-      <div className={`overflow-hidden rounded-[12px] bg-white ${CARD_BORDER}`}>
+      <div className={CARD_CLASS}>
         <EmptyState
           icon={<ClipboardList strokeWidth={1.25} className="text-current" />}
           title="No orders yet"
@@ -122,63 +132,69 @@ export default function OrdersTab({ splitOrders }: Props) {
     const badge = getStatusBadge(order.status);
     const ref = `#LW-${order.mainOrderId.slice(-8).toUpperCase()}`;
     const primary = primaryItemTitle(order);
-    const region = order.mainOrder.region?.replace(/_/g, " ") ?? "—";
+    const region = formatRegion(order.mainOrder.region ?? "—");
+    const qty = totalItemQuantity(order);
+    const needsAction = order.status === "AWAITING_VENDOR_ACTION";
+    const orderHref = `/dashboard/vendor/orders/${order.id}`;
 
     return (
-      <div key={order.id} className={`overflow-hidden rounded-[12px] bg-white ${CARD_BORDER}`}>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-[14px] md:flex-nowrap">
-          {/* Order # + date */}
-          <div className="min-w-[7.5rem] shrink-0">
-            <p className="text-[12px] font-medium tabular-nums text-[#1C1C1A]">{ref}</p>
-            <p className="mt-0.5 text-[10px] text-[#7c7b77]">{formatDate(order.createdAt)}</p>
+      <div key={order.id} className={CARD_CLASS}>
+        <div className="flex items-start gap-4">
+          {/* Column 1 — ref + date */}
+          <div className="w-40 shrink-0">
+            <p className="font-mono text-sm font-semibold text-[#1C1C1A]">{ref}</p>
+            <p className="mt-0.5 text-xs text-[var(--text-muted)]">{formatDate(order.createdAt)}</p>
           </div>
 
-          {/* Items (one line) + count badge */}
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <p className="min-w-0 flex-1 truncate text-[12px] text-[#1C1C1A]" title={order.items.map((i) => i.titleSnapshot).join(", ")}>
+          {/* Column 2 — product */}
+          <div className="flex min-w-0 flex-1 items-start gap-2">
+            <p
+              className="min-w-0 truncate font-medium text-[#1C1C1A]"
+              title={order.items.map((i) => i.titleSnapshot).join(", ")}
+            >
               {primary}
             </p>
-            {order.items.length > 1 ? (
-              <span className="shrink-0 rounded-md bg-[#F7F5F2] px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[#45443f]">
-                {order.items.length}
+            {qty > 1 ? (
+              <span className="shrink-0 rounded-full bg-[#F7F5F2] px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[#7c7b77]">
+                x{qty}
               </span>
             ) : null}
           </div>
 
-          {/* Region + order value */}
-          <div className="shrink-0 text-[12px] md:text-right">
-            <p className="truncate capitalize text-[#1C1C1A]">{region}</p>
-            <p className="font-medium tabular-nums text-[#1C1C1A]">{formatMinor(order.subtotalMinor)}</p>
-          </div>
-
-          {/* Status + View */}
-          <div className="flex shrink-0 items-center gap-2 md:gap-3">
-            <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold ${badge.className}`}>
+          {/* Column 3 — location, amount, status, view (non-action) */}
+          <div className="flex w-48 shrink-0 flex-col items-end gap-1.5 text-right">
+            <p className="flex items-center justify-end gap-1 text-sm capitalize text-[var(--text-muted)]">
+              <MapPin size={12} className="shrink-0" strokeWidth={2} aria-hidden />
+              <span className="min-w-0 truncate">{region}</span>
+            </p>
+            <p className="font-semibold tabular-nums text-[#1C1C1A]">{formatMinor(order.subtotalMinor)}</p>
+            <span
+              className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${badge.className}`}
+            >
               {badge.label}
             </span>
-            <Link
-              href={`/dashboard/vendor/orders/${order.id}`}
-              className="whitespace-nowrap rounded-lg border border-[rgba(28,28,26,0.12)] px-2.5 py-1 text-[11px] font-semibold text-[#1C1C1A] transition-colors hover:bg-[#F7F5F2]"
-            >
-              View order
-            </Link>
+            {!needsAction ? (
+              <Link href={orderHref} className={VIEW_ORDER_LINK_CLASS}>
+                View order
+              </Link>
+            ) : null}
           </div>
         </div>
 
-        {order.status === "AWAITING_VENDOR_ACTION" ? (
-          <div
-            className="flex h-8 items-center gap-2 border-t border-[rgba(133,79,11,0.15)] px-4"
-            style={{ backgroundColor: "#FAEEDA" }}
-          >
-            <span className="min-w-0 truncate text-[10px] font-medium leading-none text-[#854F0B]">
-              Action required — choose fulfillment
-            </span>
-            <Link
-              href={`/dashboard/vendor/orders/${order.id}`}
-              className="ml-auto shrink-0 text-[11px] font-semibold leading-none text-[#D4450A] underline-offset-2 hover:underline"
-            >
-              Take action
-            </Link>
+        {needsAction ? (
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-[#FFF8F0] px-4 py-2">
+            <p className="min-w-0 text-sm text-[var(--text-muted)]">Action required — choose fulfilment</p>
+            <div className="flex shrink-0 items-center gap-3">
+              <Link
+                href={orderHref}
+                className="text-sm font-medium text-[var(--scarlet)] hover:underline"
+              >
+                Take action
+              </Link>
+              <Link href={orderHref} className={VIEW_ORDER_LINK_CLASS}>
+                View order
+              </Link>
+            </div>
           </div>
         ) : null}
       </div>
@@ -191,7 +207,7 @@ export default function OrdersTab({ splitOrders }: Props) {
         <p className={`mb-2 text-[10px] font-semibold uppercase tracking-wide ${titleClass}`}>
           {title} ({orders.length})
         </p>
-        <div className="flex flex-col gap-2">{orders.map(renderOrderCard)}</div>
+        <div className="flex flex-col gap-3">{orders.map(renderOrderCard)}</div>
       </div>
     );
   }

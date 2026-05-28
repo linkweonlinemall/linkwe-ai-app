@@ -45,7 +45,9 @@ export default async function VendorOrdersPage() {
         </div>
       </div>
 
-      <OrdersTab splitOrders={splitOrders} />
+      <div className="max-w-4xl">
+        <OrdersTab splitOrders={splitOrders} />
+      </div>
     </div>
   );
 }

@@ -62,7 +62,7 @@ export default async function OrdersPage() {
         }
         dashboardHref={continueHref ?? undefined}
       />
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
             My Orders

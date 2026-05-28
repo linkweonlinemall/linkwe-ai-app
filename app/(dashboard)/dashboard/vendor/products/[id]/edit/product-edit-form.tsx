@@ -206,7 +206,7 @@ export function ProductEditForm({ product, variants = [] }: ProductEditFormProps
         </button>
       </div>
 
-      <form id="product-form" action={formAction} className="flex flex-col gap-5">
+      <form id="product-form" action={formAction} className="flex flex-col gap-6">
         <input type="hidden" name="productId" value={product.id} />
         <input type="hidden" name="existingImages" value={JSON.stringify(remainingImages)} />
         <input type="hidden" name="isDigital" value={productType === "digital" ? "true" : "false"} />
@@ -225,7 +225,7 @@ export function ProductEditForm({ product, variants = [] }: ProductEditFormProps
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Product Type
           </h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             <button
               type="button"
               onClick={() => setProductType("simple")}
@@ -301,7 +301,7 @@ export function ProductEditForm({ product, variants = [] }: ProductEditFormProps
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Product Details
           </h2>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <Input
               required
               error={fieldError("name")}
@@ -392,9 +392,9 @@ export function ProductEditForm({ product, variants = [] }: ProductEditFormProps
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Pricing &amp; Inventory
           </h2>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <input type="hidden" name="currency" value="TTD" />
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <Input
                 required
                 defaultValue={product.price}
@@ -451,7 +451,7 @@ export function ProductEditForm({ product, variants = [] }: ProductEditFormProps
             <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
               Digital file
             </h2>
-            <div className="space-y-4">
+            <div className="space-y-6">
               <input type="hidden" name="digitalFileUrl" value={digitalFileUrl} />
               <input type="hidden" name="fileType" value={digitalFileType} />
               <input type="hidden" name="fileSizeKb" value={digitalFileSizeKb ?? ""} />
@@ -538,7 +538,7 @@ export function ProductEditForm({ product, variants = [] }: ProductEditFormProps
                 />
                 <p className="mt-1 text-xs text-zinc-400">A free sample customers can access before buying</p>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-6">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-zinc-700">Download limit</label>
                   <input
@@ -605,7 +605,7 @@ export function ProductEditForm({ product, variants = [] }: ProductEditFormProps
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Images
           </h2>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="space-y-2">
               <DraggableImageGrid
                 images={remainingImages}
@@ -652,7 +652,7 @@ export function ProductEditForm({ product, variants = [] }: ProductEditFormProps
             <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
               Shipping
             </h2>
-            <div className="space-y-4">
+            <div className="space-y-6">
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -666,7 +666,7 @@ export function ProductEditForm({ product, variants = [] }: ProductEditFormProps
               {!allowDelivery ? (
                 <p className="text-xs text-zinc-500">Toggle on to enter weight and dimensions.</p>
               ) : (
-                <div className="space-y-4 border-l-2 border-[#E8820C] pl-4">
+                <div className="space-y-6 border-l-2 border-[#E8820C] pl-4">
                   <Input defaultValue={product.weight ?? ""} label="Weight" name="weight" step={0.01} type="number" />
                   <Select className="text-base" defaultValue={product.weightUnit ?? ""} label="Weight unit" name="weightUnit">
                     <option value="">Select</option>
@@ -701,7 +701,7 @@ export function ProductEditForm({ product, variants = [] }: ProductEditFormProps
             <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
               Location
             </h2>
-            <div className="space-y-4">
+            <div className="space-y-6">
               <p className="text-sm text-zinc-600">
                 Search for your address then drag the pin to fine-tune the exact pickup or origin location.
               </p>
@@ -721,7 +721,7 @@ export function ProductEditForm({ product, variants = [] }: ProductEditFormProps
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             SEO
           </h2>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <p className="text-sm text-zinc-600">
               Optional. Controls how this product appears in Google search results.
             </p>
