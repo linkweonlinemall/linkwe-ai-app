@@ -1,6 +1,60 @@
 # LinkWe — AI session context
 
+**Last updated:** 28 May 2026
+
 Reference document for assistants working in this repository. Paths are relative to the project root unless noted.
+
+---
+
+## Recent Changes (since initial context generation)
+
+Summary of notable additions and refactors. Re-scan the repo after large merges.
+
+### Universal search
+- **`/search?q=`** — Dedicated results page (`app/search/page.tsx`, `app/search/SearchPageClient.tsx`): tabs for All / Products / Services / Stores, region and price filters, mobile filter bottom sheet, redesigned result cards.
+- **`GET /api/search`** — Unified search API (`app/api/search/route.ts`) calling `lib/search/run-search.ts` with `type`, `region`, `category`, price/rating filters, pagination, and `preview` mode for nav dropdown.
+- **`lib/search/`** — `types.ts`, `run-search.ts` (split product vs service queries via `isService`), `regions.ts` (region extraction from query), `review-stats.ts`, `resolve-catalog-item.ts` (misclassified catalog rows).
+- **`components/search/SearchDropdown.tsx`** — Nav typeahead: routes products vs services by `isService` / `type`, store cards, popular searches.
+- **`components/layout/NavSearchInput.tsx`** — Desktop/mobile search UI; submits to `/search?q=`.
+- **`lib/hooks/use-search.ts`** — Client fetch + short TTL cache for preview/full search.
+- **`app/actions/search.ts`** — Popular search terms for empty state.
+
+### Public store page redesign (`/store/[slug]`)
+- **Hero** — `StorePageHero.tsx` + `StoreHeroActions.tsx`: 375px desktop / 220px mobile cover, gradient overlay, logo/meta/rating chip, follow/share/message (glass buttons), owner “Edit store”.
+- **Stats bar** — `StoreStatsBar.tsx`: products, services, rating, verified status (owner KYC approved + store active).
+- **Tabs** — `StorefrontTabs.tsx`: URL `?tab=about|store|services|reviews` (default about); **Bookings tab removed**; sticky tab bar; mobile filter bottom sheets for Store/Services tabs; desktop sticky filter sidebars.
+- **About tab** — `StoreAboutTab.tsx`: masonry gallery + lightbox, “From this store” product/service rows with cart CTA, about copy, sidebar follow card (`StoreFollowCard`), opening hours, tags.
+- **Reviews tab** — `StoreWriteReviewSection.tsx`: store-only reviews via `submitStoreReview` / `updateStoreReview`; `ReviewsList` below.
+- **Actions** — `toggleFollowStore` in `app/actions/store.ts` (uses `SavedStore`); expanded `app/actions/reviews.ts` for store reviews + vendor notification.
+
+### Layout & chrome
+- **`PublicNav.tsx`** — Glass desktop nav, `NavSearchInput` + dropdown, mobile header, bottom tabs, account drawer (Tabler icons).
+- **`SiteFooter.tsx`** — Dark footer, install strip, link columns, social icons.
+
+### Vendor availability (`/dashboard/vendor/staff`)
+- Route still under **`staff/`** but UI is **service availability** (`AvailabilityClient.tsx`): weekly hours, per-service schedules, `updateServiceAvailability` / toggle actions from `app/actions/services.ts` and `lib/services/` slot helpers.
+
+### Finance & completion
+- **`lib/finance/commission.ts`** — Plan-based commission rates (`STARTER` / `GROWTH` / `PRO`) for products vs services; `calculateEarnings` / minor-unit helpers used when releasing vendor earnings.
+- **`lib/finance/complete-booking.ts`**, **`complete-order.ts`**, **`release-earnings.ts`**, **`booking-payment.ts`** — Earnings release after completion; bookings use commission on release.
+- **`GET /api/cron/auto-complete`** — Cron (`app/api/cron/auto-complete/route.ts`) auto-completes bookings (`autoCompleteAt`) and delivered split orders; requires `CRON_SECRET` header.
+
+### Booking payments & completion
+- **`app/actions/booking.ts`** — Stripe PaymentIntents for full/deposit booking pay; `confirmBookingPayment`; integrates `lib/finance/booking-payment.ts` on success (webhook + client retry).
+- **`app/actions/bookings.ts`** — Customer `markBookingComplete` → `releaseBookingEarnings` via `lib/finance/complete-booking.ts`.
+
+### Vendor dashboard routes
+- **`lib/routes/vendor-dashboard.ts`** — Canonical paths: `VENDOR_VENDOR_ORDERS_PATH`, `VENDOR_VENDOR_FINANCE_PATH`, `VENDOR_VENDOR_MESSAGES_PATH`, `VENDOR_VENDOR_REVIEWS_PATH` (deprecated tab query aliases retained).
+
+### PWA
+- **`lib/hooks/use-pwa-install.ts`** — Global `beforeinstallprompt` capture (syncs with inline layout script), `appinstalled` / standalone detection, subscriber bumpers, `install()` promise API used by nav/footer/get-app.
+
+### Regions & data hygiene
+- **`lib/regions/region-canonical.ts`** + updates to **`tt-regions.ts`** / search region options — deduplicated Trinidad & Tobago region labels (fixes duplicate React keys).
+
+### Other storefront fixes
+- Product search API and shop flows set **`isService: false`** where appropriate; service rows tagged in universal search.
+- Store page uses **`pb-mobile-public`** / tab content **`pb-[80px]`** for bottom nav clearance.
 
 ---
 
@@ -52,8 +106,9 @@ LinkWe is a multi-vendor online marketplace for **Trinidad & Tobago**. It connec
 ### Layout & public chrome
 | Path | Purpose |
 |------|---------|
-| `components/layout/PublicNav.tsx` | Public header (desktop glass nav + search, mobile header, account drawer, bottom tabs), cart badge, PWA-aware Get app link |
-| `components/layout/SiteFooter.tsx` | Dark marketing footer (links, install strip, social) |
+| `components/layout/PublicNav.tsx` | Glass desktop nav (60px), centered `NavSearchInput`, shop/services/stores/events/AI links, notifications, cart, account drawer; mobile header + bottom tabs; optional `transparent` for store hero overlay |
+| `components/layout/NavSearchInput.tsx` | Search field + `SearchDropdown` preview; Enter navigates to `/search?q=` |
+| `components/layout/SiteFooter.tsx` | Dark `#1C1C1A` footer: brand block, PWA install strip, 4-column links, social, legal row |
 | `components/layout/FooterWrapper.tsx` | Hides footer on `/dashboard` and `/onboarding` |
 | `components/layout/HeroSlider.tsx` | Homepage hero carousel |
 | `app/layout.tsx` | Root layout: Sora font, PWA head script, SW registration, install prompt, cart provider, toaster, footer |
@@ -102,7 +157,9 @@ LinkWe is a multi-vendor online marketplace for **Trinidad & Tobago**. It connec
 | `app/service/[slug]/page.tsx` | Service detail + booking/on-demand widgets |
 | `app/(storefront)/stores/page.tsx` | Store directory |
 | `app/(storefront)/stores/[slug]/page.tsx` | Storefront listing (alternate route) |
-| `app/store/[slug]/page.tsx` | Public store page (tabs, products, map) |
+| `app/store/[slug]/page.tsx` | Public store page: hero, stats bar, `StorefrontTabs` (server data: products, services, reviews, follow state) |
+| `app/search/page.tsx` | Universal search results (`?q=` required, min 2 chars) |
+| `app/search/SearchPageClient.tsx` | Client search UI: filters, tabs, result grids |
 | `app/cart/page.tsx` | Cart review |
 | `app/checkout/page.tsx` + `app/checkout/checkout-client.tsx` | Checkout + Stripe Elements |
 | `app/order-confirmation/[orderId]/page.tsx` | Post-checkout celebration |
@@ -117,7 +174,18 @@ LinkWe is a multi-vendor online marketplace for **Trinidad & Tobago**. It connec
 | `app/get-app/page.tsx` + `app/get-app/GetAppClient.tsx` | PWA install marketing page |
 | `app/listing/[slug]/page.tsx` | Legacy/generic listing detail |
 | `app/events/page.tsx` | Events browse |
-| `components/storefront/StorefrontTabs.tsx` | Store tabs (products, about, reviews, etc.) |
+| `components/storefront/StorefrontTabs.tsx` | URL-driven tabs: About, Store, Services, Reviews (no Bookings) |
+| `components/storefront/StoreAboutTab.tsx` | About tab layout: gallery, listings preview, hours, tags |
+| `components/storefront/StorePageHero.tsx` | Full-width cover hero + identity overlay |
+| `components/storefront/StoreStatsBar.tsx` | Product/service/rating/verified stats row |
+| `components/storefront/StoreHeroActions.tsx` | Follow, share, message, edit-store actions |
+| `components/storefront/StoreFollowCard.tsx` | Dark sidebar follow CTA (`toggleFollowStore`) |
+| `components/storefront/StoreWriteReviewSection.tsx` | Store review form / edit / sign-in prompt |
+| `components/storefront/StoreProductFiltersPanel.tsx` | Store tab filter panel (desktop + sheet) |
+| `components/storefront/StoreServiceFiltersPanel.tsx` | Services tab filters (type, price, sort) |
+| `components/storefront/StoreMobileFilterSheet.tsx` | Mobile bottom sheet wrapper for tab filters |
+| `components/storefront/StoreCompactCartButton.tsx` | Inline cart add on About tab product rows |
+| `components/search/SearchDropdown.tsx` | Nav search preview dropdown |
 
 ### Admin dashboard
 | Path | Purpose |
@@ -164,7 +232,8 @@ All use `"use server"` pattern; mutations return `{ success }` / `{ error }` or 
 | `ai-vendor.ts` | Vendor AI assistant actions |
 | `assembly.ts` | Order assembly/bundling |
 | `availability.ts` | Service/product availability |
-| `booking.ts` | Bookings (slots, confirm, cancel) |
+| `booking.ts` | Bookings: slots, create/cancel, Stripe PaymentIntent pay (full/deposit), `confirmBookingPayment` |
+| `bookings.ts` | Customer marks booking complete; releases vendor earnings |
 | `cart.ts` | Listing-based cart (legacy path) |
 | `checkout.ts` | Stripe PaymentIntent, order creation, emails, notifications |
 | `courier-bank.ts` | Courier payout bank info |
@@ -183,12 +252,13 @@ All use `"use server"` pattern; mutations return `{ success }` / `{ error }` or 
 | `product-variants.ts` | Product variants |
 | `product.ts` | Product CRUD (vendor catalog) |
 | `public-stores.ts` | Public store data/actions |
-| `reviews.ts` | Customer reviews submit |
+| `reviews.ts` | Product/service/store reviews: `submitProductReview`, `submitStoreReview`, `updateStoreReview`, `getStoreReviewsNew`, `getUserStoreReview` |
+| `store.ts` | Store profile/settings + `toggleFollowStore` (SavedStore) |
+| `search.ts` | Popular search terms for search UI |
 | `searchProducts.ts` | Product search (AI + shop) |
-| `services.ts` | Service catalog actions |
+| `services.ts` | Service catalog + vendor availability (`getVendorAvailabilityPageData`, `updateServiceAvailability`) |
 | `settings.ts` | User profile/password settings |
-| `staff.ts` | Staff members for bookable services |
-| `store.ts` | Store profile/settings |
+| `staff.ts` | Staff members for bookable services (legacy; availability UI on `/dashboard/vendor/staff`) |
 | `vendor-reviews.ts` | Vendor review inbox + replies |
 | `vendor-verification.ts` | KYC / verification uploads |
 | `vendor-chat.ts` | Vendor↔customer messaging |
@@ -201,9 +271,11 @@ All use `"use server"` pattern; mutations return `{ success }` / `{ error }` or 
 |-------|---------|
 | `POST /api/chat` | Streaming Anthropic chat for shoppers; tools: product search, `add_to_cart` |
 | `POST /api/vendor-ai` | Vendor listing/product AI assistant (large route) |
-| `GET/POST /api/products/search` | Product search API |
+| `GET /api/search` | Universal search (`q`, `type`, `region`, `category`, price, `rating`, `page`, `preview`) |
+| `GET/POST /api/products/search` | Product-only search (shop/typeahead; `isService: false`) |
 | `GET/POST /api/stores/search` | Store search API |
-| `POST /api/booking-checkout` | Booking payment checkout |
+| `GET /api/cron/auto-complete` | Cron: auto-complete bookings + delivered orders (`x-cron-secret: CRON_SECRET`) |
+| `POST /api/booking-checkout` | Booking payment checkout (legacy/alternate path) |
 | `POST /api/contact` | Contact form submission |
 | `GET /api/invoice/[orderId]` | Customer order invoice PDF/stream |
 | `GET /api/vendor-invoice/[splitOrderId]` | Vendor split-order invoice |
@@ -220,7 +292,17 @@ All use `"use server"` pattern; mutations return `{ success }` / `{ error }` or 
 | `lib/design-system.ts` | TS design tokens (colors, typography, spacing) for storefront pages |
 | `public/manifest.json` | PWA manifest |
 | `public/sw.js` | Custom service worker (cache + offline fallback) |
-| `lib/hooks/use-pwa-install.ts` | PWA install prompt hook (global `beforeinstallprompt` + layout inline script) |
+| `lib/hooks/use-pwa-install.ts` | PWA install: global deferred prompt, `isInstallable` / `isInstalled`, `install()` |
+| `lib/hooks/use-search.ts` | Client universal search fetch + in-memory cache |
+| `lib/search/run-search.ts` | Server universal search orchestration |
+| `lib/search/types.ts` | `SearchProductResult`, `SearchServiceResult`, `SearchStoreResult`, response shape |
+| `lib/search/resolve-catalog-item.ts` | Classify/repair mis-tagged product vs service rows |
+| `lib/finance/commission.ts` | Vendor commission rates by plan + item type; earnings breakdown helpers |
+| `lib/finance/complete-booking.ts` | Release booking earnings after complete/auto-complete |
+| `lib/finance/complete-order.ts` | Release split-order earnings after delivery auto-complete |
+| `lib/finance/booking-payment.ts` | Stripe PI success handler for bookings |
+| `lib/routes/vendor-dashboard.ts` | Canonical vendor sub-route path constants |
+| `lib/regions/region-canonical.ts` | Canonical T&T region slug/label deduplication |
 
 ### Layouts by route group
 | Path | Purpose |
@@ -253,7 +335,8 @@ No middleware auth required (individual pages may require login for actions).
 | `/service/[slug]` | Service detail |
 | `/stores` | All stores |
 | `/stores/[slug]` | Store (storefront group) |
-| `/store/[slug]` | Store profile |
+| `/store/[slug]` | Store profile (`?tab=about\|store\|services\|reviews`) |
+| `/search` | Universal search results (`?q=`) |
 | `/events` | Events |
 | `/listing/[slug]` | Listing detail |
 | `/chat` | AI shopping assistant |
@@ -327,7 +410,7 @@ No middleware auth required (individual pages may require login for actions).
 | `/dashboard/vendor/reviews` | Reviews |
 | `/dashboard/vendor/requests` | On-demand requests |
 | `/dashboard/vendor/bookings` | Bookings calendar |
-| `/dashboard/vendor/staff` | Staff scheduling |
+| `/dashboard/vendor/staff` | Service availability editor (`AvailabilityClient`; weekly hours + per-service rules) |
 | `/dashboard/vendor/ai-assistant` | AI listing assistant |
 | `/dashboard/vendor/settings` | Vendor settings |
 
@@ -449,6 +532,8 @@ Summaries from `prisma/schema.prisma` (PostgreSQL). Many enums exist for order/s
 | `--text-disabled` | `#C4C3C0` |
 | `--card-border` | `rgba(28, 28, 26, 0.08)` |
 | `--color-border-tertiary` | `rgba(28, 28, 26, 0.12)` |
+| `--color-background-secondary` | `#f7f7f2` (store About tab cards) |
+| `--color-text-secondary` | alias → `#45443f` |
 | `--success-bg` / `--success-text` | `#dcfce7` / `#15803d` |
 | `--font-display` | `var(--font-sora), sans-serif` |
 
@@ -485,6 +570,7 @@ From `.env.example` plus variables referenced in code (set locally; **never comm
 | `NEXT_PUBLIC_MAPBOX_TOKEN` | Mapbox maps (**not in `.env.example`)** |
 | `NEXT_PUBLIC_GOOGLE_PLACES_KEY` | Google Places autocomplete (optional) |
 | `NODE_ENV` | development vs production behavior |
+| `CRON_SECRET` | Authorizes `GET /api/cron/auto-complete` (`x-cron-secret` header) |
 
 ---
 
@@ -616,8 +702,9 @@ Grouped by folder; one line each.
 - Service CRUD with booking/on-demand/subscription/quote modes.
 - Listings CRUD (parallel listing system).
 - Split-order fulfillment UI, inbound method, courier pickup.
-- Finance tab: ledger, bank details, payout requests.
-- Bookings + staff + availability editors.
+- Finance tab: ledger, bank details, payout requests; commission by `VendorSubscriptionPlan` via `lib/finance/commission.ts`.
+- **Availability** page at `/dashboard/vendor/staff` (service booking windows; replaces legacy staff-only scheduling UI).
+- Bookings inbox + Stripe pay flow for online/deposit booking payments.
 - On-demand request inbox (quote/accept/decline).
 - Reviews inbox with vendor replies.
 - Vendor AI assistant + API.
@@ -626,8 +713,9 @@ Grouped by folder; one line each.
 
 ### Customer features
 - Shop with filters/search; product PDP with variants, wishlist, reviews.
+- **Universal search** at `/search?q=` and nav dropdown preview (`/api/search`).
 - Services browse; service pages with booking and on-demand widgets.
-- Store directory and rich store pages (map, tabs).
+- Store directory and **redesigned store pages** (hero, stats, About/Store/Services/Reviews tabs, follow store, write store review).
 - Cart + Stripe checkout (`ProductCartItem`); order confirmation and order history.
 - AI shopping chat with product search and add-to-cart tool.
 - Wishlist, saved stores, bookings list, on-demand “my requests”.
@@ -644,7 +732,8 @@ Grouped by folder; one line each.
 - Checkout creates `MainOrder` + Stripe PaymentIntent (TTD minor units).
 - Webhook marks order PAID and runs `createSplitOrdersFromMainOrder`.
 - On-demand flows can use Stripe Checkout sessions (webhook updates request status).
-- Booking checkout API route for paid bookings.
+- **Bookings:** `app/actions/booking.ts` creates Stripe PaymentIntents (full or deposit); success handled in `lib/finance/booking-payment.ts`.
+- **Vendor earnings:** Held until completion; released with commission deducted (`release-earnings`, `complete-booking`, `complete-order`); cron auto-complete when `autoCompleteAt` elapses.
 
 ### Notifications
 - `createNotification` in server actions (orders, bookings, reviews, payouts, on-demand).
@@ -680,6 +769,7 @@ Grouped by folder; one line each.
 | **Broad schema, selective UI** | Models for RealEstate, Vehicle, Event, Place, FoodOutlet, Accommodation, `Service` table — not all exposed on main storefront nav. |
 | **No `TODO` flood** | Few explicit TODOs; gaps inferred from duplicate systems and stub copy rather than comments. |
 | **Cart server action** | `app/actions/cart.ts` targets listing cart; client cart store may use products — confirm when changing cart behavior. |
+| **Mobile search tab** | Bottom nav Search tab still links to `/shop#shop-search`; universal results live at `/search?q=` via header search field. |
 
 ---
 
@@ -757,10 +847,11 @@ No other paid APIs identified as required for core paths beyond optional Google 
 ## Mobile & PWA
 
 ### Mobile navigation (`PublicNav.tsx`)
-- **Desktop (md+):** Fixed 60px glass header — logo, centered search → `/shop?q=`, links (Shop, Services, Stores, Events, AI), bell, cart, avatar or Sign in.
-- **Mobile header:** Compact logo, search icon → `/shop#shop-search`, cart + avatar (logged in) or Sign in.
-- **Bottom tabs (lg hidden):** Home, Shop, Search (`/shop#shop-search`), Cart, Account — Tabler icons, scarlet active state, cart badge, `safe-area-inset-bottom` padding via `.pb-mobile-public` on pages.
-- **Account drawer (logged in):** Slide-over from right — dashboard shortcut, browse links, account links, notifications row, sign out.
+- **Desktop (md+):** Fixed 60px glass header — logo, centered `NavSearchInput` (preview dropdown → `/search?q=` on submit), links (Shop, Services, Stores, Events, AI), bell, cart, avatar or Sign in.
+- **Mobile header:** Logo, search opens overlay (`NavSearchInput` / `MobileSearchOverlay`), cart + avatar or Sign in.
+- **Bottom tabs (lg hidden):** Home, Shop, Search (shop anchor `#shop-search` on tab; field uses universal search), Cart, Account — Tabler icons, scarlet active state, cart badge, `safe-area-inset-bottom` via `.pb-mobile-public`.
+- **Transparent mode:** Store pages pass `transparent` so hero sits under nav.
+- **Account drawer (logged in):** Slide-over — dashboard, browse, account links, notifications, sign out; role pill (Vendor/Courier/Admin/Customer).
 
 ### PWA setup
 | Piece | Location |
@@ -768,7 +859,7 @@ No other paid APIs identified as required for core paths beyond optional Google 
 | **Manifest** | `public/manifest.json` — `name` LinkWe, `standalone`, `start_url` `/`, theme `#1C1C1A`, background `#F7F5F2`, icons 72–512, shortcuts Shop/Services/Orders |
 | **Service worker** | `public/sw.js` — caches `/`, `/offline`, manifest, icons; network-first fetch; push handler stub |
 | **Registration** | `components/pwa/ServiceWorkerRegistration.tsx` registers `/sw.js` on load |
-| **Install prompt** | Inline script in `app/layout.tsx` stores `window.__pwaInstallPrompt`; `lib/hooks/use-pwa-install.ts` syncs globally; `InstallPrompt.tsx` banner; `/get-app` page with install CTA + Chrome fallback copy |
+| **Install prompt** | Inline script in `app/layout.tsx` sets `window.__pwaInstallPrompt` before React; `use-pwa-install.ts` attaches listeners once, exposes `install()`; `InstallPrompt.tsx`, footer strip, nav drawer; `/get-app` page |
 | **Offline page** | `/offline` |
 
 ### Manifest summary
@@ -786,4 +877,4 @@ Standalone PWA branded LinkWe, portrait-primary, English, shopping/lifestyle cat
 
 ---
 
-*Generated from repository analysis. Re-run discovery after major refactors.*
+*Last synced 28 May 2026. Re-run discovery after major refactors.*

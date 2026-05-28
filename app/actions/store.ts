@@ -414,3 +414,52 @@ export async function reorderStoreGallery(
   );
   return { ok: true };
 }
+
+export async function toggleFollowStore(
+  storeId: string,
+): Promise<
+  { following: boolean; followerCount: number } | { error: string }
+> {
+  const trimmed = storeId?.trim();
+  if (!trimmed) {
+    return { error: "Store is required" };
+  }
+
+  const session = await getSession();
+  if (!session) {
+    return { error: "Sign in to follow stores" };
+  }
+
+  const store = await prisma.store.findUnique({
+    where: { id: trimmed },
+    select: { id: true, slug: true },
+  });
+  if (!store) {
+    return { error: "Store not found" };
+  }
+
+  try {
+    const existing = await prisma.savedStore.findUnique({
+      where: { userId_storeId: { userId: session.userId, storeId: trimmed } },
+    });
+
+    if (existing) {
+      await prisma.savedStore.delete({ where: { id: existing.id } });
+    } else {
+      await prisma.savedStore.create({
+        data: { userId: session.userId, storeId: trimmed },
+      });
+    }
+
+    const followerCount = await prisma.savedStore.count({
+      where: { storeId: trimmed },
+    });
+
+    revalidatePath(`/store/${store.slug}`);
+    revalidatePath("/saved-stores");
+
+    return { following: !existing, followerCount };
+  } catch {
+    return { error: "Could not update follow status" };
+  }
+}

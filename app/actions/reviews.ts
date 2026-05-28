@@ -118,18 +118,42 @@ export async function submitProductReview(input: {
   return { ok: true };
 }
 
-// Submit a store review
+// Submit a store-only review (not tied to a product)
+export async function submitStoreReview(
+  storeId: string,
+  rating: number,
+  body?: string,
+): Promise<{ ok: true } | { error: string }>;
 export async function submitStoreReview(input: {
   storeId: string;
   rating: number;
   title?: string;
   body?: string;
-}): Promise<{ ok: true } | { error: string }> {
+}): Promise<{ ok: true } | { error: string }>;
+export async function submitStoreReview(
+  storeIdOrInput: string | { storeId: string; rating: number; title?: string; body?: string },
+  ratingArg?: number,
+  bodyArg?: string,
+): Promise<{ ok: true } | { error: string }> {
+  const input =
+    typeof storeIdOrInput === "string"
+      ? { storeId: storeIdOrInput, rating: ratingArg ?? 0, body: bodyArg }
+      : storeIdOrInput;
+
   const session = await getSession();
   if (!session) return { error: "not_logged_in" };
+  if (session.role !== "CUSTOMER") {
+    return { error: "Only customer accounts can leave store reviews" };
+  }
 
-  if (input.rating < 1 || input.rating > 5)
+  if (input.rating < 1 || input.rating > 5) {
     return { error: "Rating must be between 1 and 5" };
+  }
+
+  const trimmedBody = input.body?.trim() ?? "";
+  if (trimmedBody.length > 1000) {
+    return { error: "Review must be 1000 characters or less" };
+  }
 
   const existing = await prisma.review.findFirst({
     where: { userId: session.userId, storeId: input.storeId, productId: null },
@@ -138,9 +162,17 @@ export async function submitStoreReview(input: {
 
   const store = await prisma.store.findUnique({
     where: { id: input.storeId },
-    select: { slug: true },
+    select: { slug: true, ownerId: true, name: true },
   });
   if (!store) return { error: "Store not found" };
+  if (store.ownerId === session.userId) {
+    return { error: "You cannot review your own store" };
+  }
+
+  const reviewer = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { fullName: true },
+  });
 
   await prisma.review.create({
     data: {
@@ -148,11 +180,59 @@ export async function submitStoreReview(input: {
       storeId: input.storeId,
       rating: input.rating,
       title: input.title?.trim() || null,
-      body: input.body?.trim() || null,
+      body: trimmedBody || null,
     },
   });
 
+  await createNotification({
+    userId: store.ownerId,
+    type: NotificationType.REVIEW_RECEIVED,
+    title: `New ${input.rating}-star store review`,
+    body: `${reviewer?.fullName ?? "A customer"} reviewed ${store.name}`,
+    linkUrl: VENDOR_DASHBOARD_REVIEWS_TAB_HREF,
+  });
+
   revalidatePath(`/store/${store.slug}`);
+  return { ok: true };
+}
+
+export async function updateStoreReview(input: {
+  reviewId: string;
+  rating: number;
+  body?: string;
+}): Promise<{ ok: true } | { error: string }> {
+  const session = await getSession();
+  if (!session) return { error: "not_logged_in" };
+
+  if (input.rating < 1 || input.rating > 5) {
+    return { error: "Rating must be between 1 and 5" };
+  }
+
+  const trimmedBody = input.body?.trim() ?? "";
+  if (trimmedBody.length > 1000) {
+    return { error: "Review must be 1000 characters or less" };
+  }
+
+  const review = await prisma.review.findFirst({
+    where: {
+      id: input.reviewId,
+      userId: session.userId,
+      productId: null,
+      storeId: { not: null },
+    },
+    select: { store: { select: { slug: true } } },
+  });
+  if (!review?.store) return { error: "Review not found" };
+
+  await prisma.review.update({
+    where: { id: input.reviewId },
+    data: {
+      rating: input.rating,
+      body: trimmedBody || null,
+    },
+  });
+
+  revalidatePath(`/store/${review.store.slug}`);
   return { ok: true };
 }
 

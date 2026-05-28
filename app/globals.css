@@ -37,6 +37,8 @@ html {
   --success-bg: #dcfce7;
   --success-text: #15803d;
   --color-border-tertiary: rgba(28, 28, 26, 0.12);
+  --color-background-secondary: #f7f7f2;
+  --color-text-secondary: #45443f;
   --font-display: var(--font-sora), sans-serif;
 }
 
