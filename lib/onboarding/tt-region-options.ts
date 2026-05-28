@@ -1,3 +1,4 @@
+import { canonicalRegionValue } from "@/lib/regions/region-canonical";
 import {
   normalizeRegion,
   REGIONS_SCHEDULE_DEEP_SOUTH_EAST,
@@ -30,7 +31,7 @@ export const TRINIDAD_ONBOARDING_REGION_OPTIONS: readonly { value: string; label
   const seen = new Set<string>();
   const unique: string[] = [];
   for (const r of merged) {
-    const v = r.trim().toLowerCase();
+    const v = canonicalRegionValue(r);
     if (!v || seen.has(v)) continue;
     seen.add(v);
     unique.push(v);

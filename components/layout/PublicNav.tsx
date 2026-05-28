@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   IconBell,
   IconBookmark,
@@ -24,6 +24,7 @@ import {
 } from "@tabler/icons-react";
 
 import { logoutAction } from "@/app/(auth)/auth-actions";
+import NavSearchInput, { MobileSearchOverlay } from "@/components/layout/NavSearchInput";
 import NotificationBell from "@/components/ui/NotificationBell";
 import { toastPWAInstalled } from "@/components/ui/pwa-installed-toast";
 import { usePWAInstall } from "@/lib/hooks/use-pwa-install";
@@ -86,7 +87,6 @@ export default function PublicNav({
 }: Props) {
   const pathname = usePathname() ?? "";
   const hash = useHashFragment();
-  const router = useRouter();
   const drawerOpen = useDrawerOpenControlled();
   const toggleDrawerCart = useCartStore((s) => s.toggleDrawer);
   const cartBumpNonce = useCartStore((s) => s.cartBumpNonce);
@@ -167,12 +167,7 @@ export default function PublicNav({
     );
   }
 
-  function handleDesktopSearchSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const q = String(fd.get("q") ?? "").trim();
-    router.push(q ? `/shop?q=${encodeURIComponent(q)}` : "/shop");
-  }
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const glassHeader =
     `${transparent ? "absolute inset-x-0 top-0 z-50" : "sticky top-0 z-40 border-b-[0.5px] border-white/10"} ` +
@@ -349,13 +344,14 @@ export default function PublicNav({
               <LogoMark desktop={false} />
             </Link>
             <div className="flex shrink-0 items-center gap-2">
-              <Link
-                href="/shop#shop-search"
+              <button
+                type="button"
+                onClick={() => setMobileSearchOpen(true)}
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-white/[0.1] text-white"
                 aria-label="Search"
               >
                 <IconSearch className="size-[20px]" stroke={1.75} aria-hidden />
-              </Link>
+              </button>
               {user ? (
                 <>
                   <button
@@ -405,22 +401,9 @@ export default function PublicNav({
           </Link>
 
           <div className="flex min-h-0 min-w-0 flex-1 justify-center px-2 lg:px-6">
-            <form className="w-full max-w-[420px] min-w-[180px]" onSubmit={handleDesktopSearchSubmit}>
-              <div className="relative flex h-[38px] items-center rounded-[10px] border-[0.5px] border-white/[0.15] bg-white/[0.10] px-4">
-                <IconSearch className="pointer-events-none absolute left-3 top-1/2 size-[17px] -translate-y-1/2 text-white/50" stroke={1.75} aria-hidden />
-                <label htmlFor="public-nav-desktop-search" className="sr-only">
-                  Search
-                </label>
-                <input
-                  id="public-nav-desktop-search"
-                  type="search"
-                  name="q"
-                  placeholder="Search products, stores, services..."
-                  className="h-full w-full border-0 bg-transparent pl-[30px] pr-2 text-sm text-white caret-white outline-none placeholder:text-[13px] placeholder:text-white/40"
-                  autoComplete="off"
-                />
-              </div>
-            </form>
+            <div className="w-full max-w-[420px] min-w-[180px]">
+              <NavSearchInput variant="desktop" inputId="public-nav-desktop-search" />
+            </div>
           </div>
 
           <div className="flex min-w-0 shrink-0 flex-nowrap items-center justify-end gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

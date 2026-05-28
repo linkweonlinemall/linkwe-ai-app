@@ -168,6 +168,10 @@ export default async function ServiceDetailPage({ params }: Props) {
             bookingSlots: {
               where: { date: { gte: new Date() } },
               select: {
+                id: true,
+                productId: true,
+                createdAt: true,
+                updatedAt: true,
                 date: true,
                 startTime: true,
                 endTime: true,

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getCart, removeFromCart, updateCartQuantity } from "@/app/actions/cart";
 import type { CartItem } from "@/lib/cart/cart-store";
@@ -40,6 +40,11 @@ export default function CartDrawer() {
   const setItems = useCartStore((s) => s.setItems);
 
   const [busyProductId, setBusyProductId] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const refresh = useCallback(async () => {
     const rows = await getCart();
@@ -86,8 +91,8 @@ export default function CartDrawer() {
         <header className="flex items-center justify-between border-b border-zinc-100 px-4 py-4">
           <div>
             <h2 className="text-lg font-semibold text-zinc-900">Your cart</h2>
-            <p className="text-xs font-medium" style={{ color: "#D4450A" }}>
-              {itemCount} {itemCount === 1 ? "item" : "items"}
+            <p className="text-xs font-medium" style={{ color: "#D4450A" }} suppressHydrationWarning>
+              {mounted ? itemCount : 0} {mounted && itemCount === 1 ? "item" : "items"}
             </p>
           </div>
           <button
