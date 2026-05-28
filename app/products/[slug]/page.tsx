@@ -5,6 +5,7 @@ import { MainOrderStatus, type ProductCondition } from "@prisma/client";
 import { Package } from "lucide-react";
 
 import ProductBuyBox from "@/components/product/ProductBuyBox";
+import ProductCollapsibleTags from "@/components/product/ProductCollapsibleTags";
 import FrequentlyBoughtTogether from "@/components/product/FrequentlyBoughtTogether";
 import ProductReviewsSection from "@/components/product/ProductReviewsSection";
 import PublicNav from "@/components/layout/PublicNav";
@@ -239,14 +240,14 @@ export default async function PublicProductPage({ params }: Props) {
   }));
 
   return (
-    <div className={`min-h-screen pb-16 ${tw.fontSans} antialiased sm:pb-0 ${tw.bgPage}`}>
+    <div className={`min-h-screen pb-28 ${tw.fontSans} antialiased md:pb-16 lg:pb-0 ${tw.bgPage}`}>
       <PublicNav
         user={session ? { name: session.fullName ?? "Account", href: dashboardHref! } : null}
         dashboardHref={dashboardHref ?? undefined}
         unreadCount={unreadCount}
       />
 
-      <div className="mx-auto max-w-7xl px-4 py-6 md:px-6 lg:px-8">
+      <div className="w-full px-8 py-6">
         <div className={`mb-4 h-1 w-16 ${radius.pill} ${tw.bgScarlet}`} />
         {/* Breadcrumb */}
         <nav className={`mb-6 flex items-center gap-2 ${typography.bodySmall} text-zinc-400`}>
@@ -268,14 +269,14 @@ export default async function PublicProductPage({ params }: Props) {
           <span className="max-w-48 truncate text-zinc-600">{product.name}</span>
         </nav>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-10">
-          {/* Left — gallery (5 cols) */}
-          <div className="min-w-0 lg:col-span-5">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_360px] lg:gap-10">
+          {/* Gallery — edge-to-edge on mobile */}
+          <div className="-mx-8 min-w-0 md:mx-0">
             <ProductGallery images={product.images} name={product.name} />
           </div>
 
-          {/* Middle — product info (4 cols) */}
-          <div className="flex min-w-0 flex-col gap-5 lg:col-span-4">
+          {/* Product info */}
+          <div className="flex min-w-0 flex-col gap-5 px-4 md:px-0">
             <div className="flex flex-wrap items-center gap-2">
               {product.category ? (
                 <span className="font-sans text-[13px] font-normal uppercase tracking-wide text-gray-600">
@@ -314,13 +315,7 @@ export default async function PublicProductPage({ params }: Props) {
             ) : null}
 
             {product.tags && product.tags.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {product.tags.map((tag) => (
-                  <span key={tag} className={`${radius.pill} bg-zinc-100 px-3 py-1 font-sans text-xs text-zinc-500`}>
-                    {tag}
-                  </span>
-                ))}
-              </div>
+              <ProductCollapsibleTags tags={product.tags} />
             ) : null}
 
             {product.description ? (
@@ -402,6 +397,22 @@ export default async function PublicProductPage({ params }: Props) {
               </div>
             </div>
 
+            {!product.hasVariants && !product.isDigital && frequentlyTogether.length > 0 ? (
+              <div className="mt-6">
+                <FrequentlyBoughtTogether
+                  currentProduct={{
+                    id: product.id,
+                    name: product.name,
+                    slug: product.slug,
+                    price: product.price,
+                    compareAtPrice: product.compareAtPrice,
+                    images: product.images,
+                  }}
+                  items={frequentlyTogether}
+                />
+              </div>
+            ) : null}
+
             {product.deliveryRegions.length > 0 ? (
               <div>
                 <h2 className={`mb-2 ${typography.caption} text-zinc-900`}>Delivery regions</h2>
@@ -419,10 +430,11 @@ export default async function PublicProductPage({ params }: Props) {
             ) : null}
           </div>
 
-          {/* Right — purchase card (3 cols) */}
-          <aside className="min-w-0 lg:col-span-3">
-            <div className="lg:sticky lg:top-24 lg:z-10 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          {/* Purchase card — full width on tablet, sidebar on desktop */}
+          <aside className="min-w-0 md:col-span-2 lg:col-span-1">
+            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm lg:sticky lg:top-24 lg:z-10">
               <ProductBuyBox
+                mobileStickyBar
                 productId={product.id}
                 productName={product.name}
                 basePrice={product.price}
@@ -460,12 +472,6 @@ export default async function PublicProductPage({ params }: Props) {
             </div>
           </aside>
         </div>
-
-        {!product.hasVariants && !product.isDigital && frequentlyTogether.length > 0 ? (
-          <section className="mt-12 border-t border-zinc-200 pt-12 md:mt-16 md:pt-16">
-            <FrequentlyBoughtTogether items={frequentlyTogether} />
-          </section>
-        ) : null}
 
         <section className="mt-12 border-t border-zinc-200 pt-12 md:mt-16 md:pt-16">
           <ProductReviewsSection

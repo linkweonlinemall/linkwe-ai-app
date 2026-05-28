@@ -1,6 +1,6 @@
 # LinkWe — AI session context
 
-**Last updated:** 28 May 2026
+**Last updated:** 28 May 2026 (end of day)
 
 Reference document for assistants working in this repository. Paths are relative to the project root unless noted.
 
@@ -10,13 +10,52 @@ Reference document for assistants working in this repository. Paths are relative
 
 Summary of notable additions and refactors. Re-scan the repo after large merges.
 
-### Universal search
-- **`/search?q=`** — Dedicated results page (`app/search/page.tsx`, `app/search/SearchPageClient.tsx`): tabs for All / Products / Services / Stores, region and price filters, mobile filter bottom sheet, redesigned result cards.
-- **`GET /api/search`** — Unified search API (`app/api/search/route.ts`) calling `lib/search/run-search.ts` with `type`, `region`, `category`, price/rating filters, pagination, and `preview` mode for nav dropdown.
-- **`lib/search/`** — `types.ts`, `run-search.ts` (split product vs service queries via `isService`), `regions.ts` (region extraction from query), `review-stats.ts`, `resolve-catalog-item.ts` (misclassified catalog rows).
+### 28 May 2026 (end of day)
+
+#### Product detail page (`/products/[slug]`)
+- **`app/products/[slug]/page.tsx`** — Full-width content shell (`w-full px-8`); 3-column grid `1fr 1.2fr 360px` with `lg:gap-10`; tablet 2-col + buy box full width; mobile single column with edge-to-edge gallery (`-mx-8`), info `px-4`.
+- **`ProductCollapsibleTags.tsx`** — Tags: 5 visible desktop / 3 mobile; “+ X more” pill; “Show less”; design-token pill styles.
+- **`FrequentlyBoughtTogether.tsx`** — Amazon-style horizontal bundle: current product (“This item”, always selected) + up to 3 same-store items with `+` / `=` dividers, checkboxes, total + “Add all to cart”; stacked on mobile; placed in info column `mt-6` below Product Details (24px gap).
+- **`ProductBuyBox.tsx`** — Optional `mobileStickyBar` prop: on `<md`, hides in-flow price/CTA and shows fixed bottom bar (price + Add to cart); PDP passes `mobileStickyBar`.
+- **`ProductGallery.tsx`** — Mobile: 60px horizontal-scroll thumbnails; desktop: 80px wrap.
+
+#### Universal search — reliability & in-page AJAX
+- **`lib/search/types.ts`** — `emptyUniversalSearchResponse()`, `normalizeUniversalSearchResponse()` so clients never see `null` `results` or undefined `total`.
+- **`GET /api/search`** — Short/invalid `q` returns empty normalized JSON; errors return empty shape (200), not broken payloads.
+- **`app/search/page.tsx`** — No redirect to `/` when `q` missing; empty `/search` allowed (popular searches / type to search).
+- **`SearchPageClient.tsx`** — Debounced `headerQuery` → `router.replace` for live URL updates; loading spinner in search bar; safe `products` / `services` / `stores` / `resultTotal` derived from normalized `data`.
+- **`lib/hooks/use-search.ts`** — Preview responses normalized before cache/state.
+
+#### Public nav & mobile chrome
+- **`PublicNav.tsx`** — `MobileSearchOverlay` for mobile search; header `overflow-visible`; store routes use `transparent` glass header over hero; bottom **Search** tab → `/search` (not shop anchor).
+- **`NavSearchInput.tsx`** — Dropdown positioning fixes; mobile full-height results panel.
+
+#### Vendor dashboard — schema lag / production DB
+- **`lib/vendor/vendor-split-order-query.ts`** — Safe `vendorSplitOrderListSelect` / detail selects (omit unmigrated columns like `earnings_released`, `completed_at` on list paths); used by vendor home + orders pages.
+- **`lib/vendor/vendor-service-query.ts`** — Safe service list/detail/availability selects + `findVendorServicesForAvailability()` fallback when availability columns missing; wired in `app/actions/services.ts` and service edit page.
+- **`scripts/neon-product-availability-columns.sql`** — Idempotent Neon migration for Product availability columns (`durationMinutes`, `bufferMinutes`, `useStoreHours`, etc.).
+- **`app/(dashboard)/dashboard/vendor/staff/page.tsx`** — Availability UI (`AvailabilityClient`): weekly store hours + per-service schedules (route still `/staff`).
+
+#### Vendor mobile nav
+- **`vendor-mobile-bottom-nav.tsx`** — **More** opens bottom sheet (services, bookings, staff/availability, store, listings, finance, reviews, settings, home, sign out) instead of linking More → settings only.
+
+#### Finance, cron, deploy
+- **`lib/finance/commission.ts`** — Plan rates (`STARTER` / `GROWTH` / `PRO`) for product vs service; `calculateEarnings`, minor-unit helpers.
+- **`GET /api/cron/auto-complete`** — Auto-complete bookings (`autoCompleteAt`) and `DELIVERED` split orders; `x-cron-secret: CRON_SECRET`.
+- **`vercel.json`** — Cron schedule `0 2 * * *` (daily 02:00 UTC).
+
+#### Shop grid (mobile)
+- **`app/shop/page.tsx`** — Product grid `grid-cols-2` on mobile, tighter card typography/buttons.
+
+---
+
+### Universal search (baseline)
+- **`/search?q=`** — Dedicated results page (`app/search/page.tsx`, `app/search/SearchPageClient.tsx`): tabs for All / Products / Services / Stores, region and price filters, mobile filter bottom sheet, redesigned result cards; supports empty `q` (no redirect).
+- **`GET /api/search`** — Unified search API (`app/api/search/route.ts`) calling `lib/search/run-search.ts` with `type`, `region`, `category`, price/rating filters, pagination, `preview` mode; always returns normalized `UniversalSearchResponse`.
+- **`lib/search/`** — `types.ts` (+ empty/normalize helpers), `run-search.ts` (split product vs service queries via `isService`), `regions.ts`, `review-stats.ts`, `resolve-catalog-item.ts`.
 - **`components/search/SearchDropdown.tsx`** — Nav typeahead: routes products vs services by `isService` / `type`, store cards, popular searches.
-- **`components/layout/NavSearchInput.tsx`** — Desktop/mobile search UI; submits to `/search?q=`.
-- **`lib/hooks/use-search.ts`** — Client fetch + short TTL cache for preview/full search.
+- **`components/layout/NavSearchInput.tsx`** — Desktop/mobile search UI; overlay on mobile; submits to `/search?q=`.
+- **`lib/hooks/use-search.ts`** — Client fetch + short TTL cache; normalizes preview payloads.
 - **`app/actions/search.ts`** — Popular search terms for empty state.
 
 ### Public store page redesign (`/store/[slug]`)
@@ -28,16 +67,16 @@ Summary of notable additions and refactors. Re-scan the repo after large merges.
 - **Actions** — `toggleFollowStore` in `app/actions/store.ts` (uses `SavedStore`); expanded `app/actions/reviews.ts` for store reviews + vendor notification.
 
 ### Layout & chrome
-- **`PublicNav.tsx`** — Glass desktop nav, `NavSearchInput` + dropdown, mobile header, bottom tabs, account drawer (Tabler icons).
+- **`PublicNav.tsx`** — Glass desktop nav (60px), `NavSearchInput` + preview dropdown, `MobileSearchOverlay`, mobile header + bottom tabs (Search → `/search`), account drawer (Tabler icons); `transparent` on `/store/[slug]` for hero overlay.
 - **`SiteFooter.tsx`** — Dark footer, install strip, link columns, social icons.
 
 ### Vendor availability (`/dashboard/vendor/staff`)
 - Route still under **`staff/`** but UI is **service availability** (`AvailabilityClient.tsx`): weekly hours, per-service schedules, `updateServiceAvailability` / toggle actions from `app/actions/services.ts` and `lib/services/` slot helpers.
 
 ### Finance & completion
-- **`lib/finance/commission.ts`** — Plan-based commission rates (`STARTER` / `GROWTH` / `PRO`) for products vs services; `calculateEarnings` / minor-unit helpers used when releasing vendor earnings.
+- **`lib/finance/commission.ts`** — `getCommissionRate`, `calculateEarnings`, `ttdToMinor` / `minorToTtd` by plan (`STARTER` / `GROWTH` / `PRO`) and item type (product vs service).
 - **`lib/finance/complete-booking.ts`**, **`complete-order.ts`**, **`release-earnings.ts`**, **`booking-payment.ts`** — Earnings release after completion; bookings use commission on release.
-- **`GET /api/cron/auto-complete`** — Cron (`app/api/cron/auto-complete/route.ts`) auto-completes bookings (`autoCompleteAt`) and delivered split orders; requires `CRON_SECRET` header.
+- **`GET /api/cron/auto-complete`** — `app/api/cron/auto-complete/route.ts`: releases earnings for bookings and `DELIVERED` split orders past `autoCompleteAt`; `x-cron-secret: CRON_SECRET`; scheduled in **`vercel.json`** at `0 2 * * *` (daily).
 
 ### Booking payments & completion
 - **`app/actions/booking.ts`** — Stripe PaymentIntents for full/deposit booking pay; `confirmBookingPayment`; integrates `lib/finance/booking-payment.ts` on success (webhook + client retry).
@@ -106,8 +145,8 @@ LinkWe is a multi-vendor online marketplace for **Trinidad & Tobago**. It connec
 ### Layout & public chrome
 | Path | Purpose |
 |------|---------|
-| `components/layout/PublicNav.tsx` | Glass desktop nav (60px), centered `NavSearchInput`, shop/services/stores/events/AI links, notifications, cart, account drawer; mobile header + bottom tabs; optional `transparent` for store hero overlay |
-| `components/layout/NavSearchInput.tsx` | Search field + `SearchDropdown` preview; Enter navigates to `/search?q=` |
+| `components/layout/PublicNav.tsx` | Glass desktop nav (60px), centered `NavSearchInput`, shop/services/stores/events/AI links, notifications, cart, account drawer; mobile header + `MobileSearchOverlay`; bottom tabs (Search → `/search`); `transparent` on store pages |
+| `components/layout/NavSearchInput.tsx` | Search field + `SearchDropdown` preview; mobile overlay; Enter / debounced navigation to `/search?q=` |
 | `components/layout/SiteFooter.tsx` | Dark `#1C1C1A` footer: brand block, PWA install strip, 4-column links, social, legal row |
 | `components/layout/FooterWrapper.tsx` | Hides footer on `/dashboard` and `/onboarding` |
 | `components/layout/HeroSlider.tsx` | Homepage hero carousel |
@@ -141,7 +180,7 @@ LinkWe is a multi-vendor online marketplace for **Trinidad & Tobago**. It connec
 | `components/vendor/vendor-dashboard-shell.tsx` | Sidebar + topbar layout wrapper |
 | `components/vendor/vendor-dashboard-sidebar.tsx` | Vendor nav links + badges |
 | `components/vendor/vendor-dashboard-topbar.tsx` | Top bar (store context) |
-| `components/vendor/vendor-mobile-bottom-nav.tsx` | Mobile vendor tabs |
+| `components/vendor/vendor-mobile-bottom-nav.tsx` | Mobile vendor tabs; **More** → bottom sheet menu (not direct `/settings`) |
 | `components/vendor/VendorDashboardOverview.tsx` | Overview metrics/cards |
 | `app/(dashboard)/dashboard/vendor/layout.tsx` | Vendor auth, business onboarding gate, shell props |
 | `app/(dashboard)/dashboard/vendor/page.tsx` | Main vendor hub (tabs: store, products, listings, etc.) |
@@ -152,14 +191,14 @@ LinkWe is a multi-vendor online marketplace for **Trinidad & Tobago**. It connec
 |------|---------|
 | `app/page.tsx` | Homepage (featured products, services, stores) |
 | `app/shop/page.tsx` | Product catalog + filters |
-| `app/products/[slug]/page.tsx` | Product detail (buy box, reviews, variants) |
+| `app/products/[slug]/page.tsx` | Product PDP: `w-full px-8`, grid `1fr 1.2fr 360px`, `ProductCollapsibleTags`, FBT in info column, `ProductBuyBox` + `mobileStickyBar` |
 | `app/services/page.tsx` | Services browse |
 | `app/service/[slug]/page.tsx` | Service detail + booking/on-demand widgets |
 | `app/(storefront)/stores/page.tsx` | Store directory |
 | `app/(storefront)/stores/[slug]/page.tsx` | Storefront listing (alternate route) |
 | `app/store/[slug]/page.tsx` | Public store page: hero, stats bar, `StorefrontTabs` (server data: products, services, reviews, follow state) |
-| `app/search/page.tsx` | Universal search results (`?q=` required, min 2 chars) |
-| `app/search/SearchPageClient.tsx` | Client search UI: filters, tabs, result grids |
+| `app/search/page.tsx` | Universal search results; `q` optional (empty state + popular terms) |
+| `app/search/SearchPageClient.tsx` | Client search: debounced header query → URL, filters, tabs, safe `resultTotal`, normalized API data |
 | `app/cart/page.tsx` | Cart review |
 | `app/checkout/page.tsx` + `app/checkout/checkout-client.tsx` | Checkout + Stripe Elements |
 | `app/order-confirmation/[orderId]/page.tsx` | Post-checkout celebration |
@@ -271,7 +310,7 @@ All use `"use server"` pattern; mutations return `{ success }` / `{ error }` or 
 |-------|---------|
 | `POST /api/chat` | Streaming Anthropic chat for shoppers; tools: product search, `add_to_cart` |
 | `POST /api/vendor-ai` | Vendor listing/product AI assistant (large route) |
-| `GET /api/search` | Universal search (`q`, `type`, `region`, `category`, price, `rating`, `page`, `preview`) |
+| `GET /api/search` | Universal search (`q`, `type`, `region`, `category`, price, `rating`, `page`, `preview`); `emptyUniversalSearchResponse` when `q` &lt; 2 or on error |
 | `GET/POST /api/products/search` | Product-only search (shop/typeahead; `isService: false`) |
 | `GET/POST /api/stores/search` | Store search API |
 | `GET /api/cron/auto-complete` | Cron: auto-complete bookings + delivered orders (`x-cron-secret: CRON_SECRET`) |
@@ -295,9 +334,13 @@ All use `"use server"` pattern; mutations return `{ success }` / `{ error }` or 
 | `lib/hooks/use-pwa-install.ts` | PWA install: global deferred prompt, `isInstallable` / `isInstalled`, `install()` |
 | `lib/hooks/use-search.ts` | Client universal search fetch + in-memory cache |
 | `lib/search/run-search.ts` | Server universal search orchestration |
-| `lib/search/types.ts` | `SearchProductResult`, `SearchServiceResult`, `SearchStoreResult`, response shape |
+| `lib/search/types.ts` | Search result types; `emptyUniversalSearchResponse`, `normalizeUniversalSearchResponse` |
 | `lib/search/resolve-catalog-item.ts` | Classify/repair mis-tagged product vs service rows |
+| `lib/vendor/vendor-split-order-query.ts` | Production-safe Prisma `select` for vendor split-order list/detail (schema lag) |
+| `lib/vendor/vendor-service-query.ts` | Production-safe service list/detail/availability queries + availability fallback |
 | `lib/finance/commission.ts` | Vendor commission rates by plan + item type; earnings breakdown helpers |
+| `scripts/neon-product-availability-columns.sql` | Idempotent Neon SQL for Product availability columns |
+| `vercel.json` | Vercel cron: `/api/cron/auto-complete` daily `0 2 * * *` |
 | `lib/finance/complete-booking.ts` | Release booking earnings after complete/auto-complete |
 | `lib/finance/complete-order.ts` | Release split-order earnings after delivery auto-complete |
 | `lib/finance/booking-payment.ts` | Stripe PI success handler for bookings |
@@ -336,7 +379,7 @@ No middleware auth required (individual pages may require login for actions).
 | `/stores` | All stores |
 | `/stores/[slug]` | Store (storefront group) |
 | `/store/[slug]` | Store profile (`?tab=about\|store\|services\|reviews`) |
-| `/search` | Universal search results (`?q=`) |
+| `/search` | Universal search results (`?q=` optional; min 2 chars to fetch) |
 | `/events` | Events |
 | `/listing/[slug]` | Listing detail |
 | `/chat` | AI shopping assistant |
@@ -410,7 +453,7 @@ No middleware auth required (individual pages may require login for actions).
 | `/dashboard/vendor/reviews` | Reviews |
 | `/dashboard/vendor/requests` | On-demand requests |
 | `/dashboard/vendor/bookings` | Bookings calendar |
-| `/dashboard/vendor/staff` | Service availability editor (`AvailabilityClient`; weekly hours + per-service rules) |
+| `/dashboard/vendor/staff` | Service availability (`AvailabilityClient`; `getVendorAvailabilityPageData`; weekly hours + per-service rules) |
 | `/dashboard/vendor/ai-assistant` | AI listing assistant |
 | `/dashboard/vendor/settings` | Vendor settings |
 
@@ -609,11 +652,12 @@ Grouped by folder; one line each.
 
 ### `product/`
 - **AddToCartButton** — PDP add-to-cart with variants.
-- **ProductBuyBox** — Price, stock, CTA block.
-- **ProductGallery** — Image gallery.
+- **ProductBuyBox** — Price, stock, variants, qty, wishlist, trust, sold-by; optional **`mobileStickyBar`** fixed bottom CTA on `<md`.
+- **ProductGallery** — Main image + zoom; mobile 60px scroll thumbnails / desktop 80px wrap.
+- **ProductCollapsibleTags** — Collapsible tag pills (5 desktop / 3 mobile default).
 - **ProductReviewsSection** — Reviews list + form hook-in.
 - **ProductTrustSignals** — Trust badges on PDP.
-- **FrequentlyBoughtTogether** — Related products strip.
+- **FrequentlyBoughtTogether** — Amazon-style bundle row (current product + same-store picks, checkboxes, add-all).
 - **VariantSelector** — Variant picker.
 
 ### `providers/`
@@ -666,7 +710,7 @@ Grouped by folder; one line each.
 - **vendor-dashboard-shell** — Vendor layout chrome.
 - **vendor-dashboard-sidebar** — Sidebar navigation.
 - **vendor-dashboard-topbar** — Top bar.
-- **vendor-mobile-bottom-nav** — Mobile vendor tabs.
+- **vendor-mobile-bottom-nav** — Mobile vendor tabs; More → bottom sheet with secondary routes + sign out.
 - **VendorDashboardOverview** — Overview widgets.
 - **VendorVerificationChecklist** — KYC checklist on dashboard.
 - **ProductVariantEditor** — Variant matrix editor.
@@ -713,7 +757,7 @@ Grouped by folder; one line each.
 
 ### Customer features
 - Shop with filters/search; product PDP with variants, wishlist, reviews.
-- **Universal search** at `/search?q=` and nav dropdown preview (`/api/search`).
+- **Universal search** at `/search` (optional `q`) and nav dropdown preview (`/api/search`); in-page debounced search on results page.
 - Services browse; service pages with booking and on-demand widgets.
 - Store directory and **redesigned store pages** (hero, stats, About/Store/Services/Reviews tabs, follow store, write store review).
 - Cart + Stripe checkout (`ProductCartItem`); order confirmation and order history.
@@ -769,7 +813,8 @@ Grouped by folder; one line each.
 | **Broad schema, selective UI** | Models for RealEstate, Vehicle, Event, Place, FoodOutlet, Accommodation, `Service` table — not all exposed on main storefront nav. |
 | **No `TODO` flood** | Few explicit TODOs; gaps inferred from duplicate systems and stub copy rather than comments. |
 | **Cart server action** | `app/actions/cart.ts` targets listing cart; client cart store may use products — confirm when changing cart behavior. |
-| **Mobile search tab** | Bottom nav Search tab still links to `/shop#shop-search`; universal results live at `/search?q=` via header search field. |
+| **Schema vs production DB** | Vendor split-order / service availability queries use safe `select` lists when Neon lags `schema.prisma`; run `scripts/neon-product-availability-columns.sql` when availability columns missing. |
+| **PDP width** | Product page uses `w-full px-8` (no `max-w-*` on main shell); perceived narrowness may be from grid `1fr 1.2fr 360px` (image column ~30% of flexible width). |
 
 ---
 
@@ -848,9 +893,9 @@ No other paid APIs identified as required for core paths beyond optional Google 
 
 ### Mobile navigation (`PublicNav.tsx`)
 - **Desktop (md+):** Fixed 60px glass header — logo, centered `NavSearchInput` (preview dropdown → `/search?q=` on submit), links (Shop, Services, Stores, Events, AI), bell, cart, avatar or Sign in.
-- **Mobile header:** Logo, search opens overlay (`NavSearchInput` / `MobileSearchOverlay`), cart + avatar or Sign in.
-- **Bottom tabs (lg hidden):** Home, Shop, Search (shop anchor `#shop-search` on tab; field uses universal search), Cart, Account — Tabler icons, scarlet active state, cart badge, `safe-area-inset-bottom` via `.pb-mobile-public`.
-- **Transparent mode:** Store pages pass `transparent` so hero sits under nav.
+- **Mobile header:** Logo, search opens **`MobileSearchOverlay`** (`NavSearchInput`), cart + avatar or Sign in.
+- **Bottom tabs (lg hidden):** Home, Shop, **Search → `/search`**, Cart, Account — Tabler icons, scarlet active state, cart badge, `safe-area-inset-bottom` via `.pb-mobile-public`.
+- **Transparent mode:** `/store/[slug]` sets `transparent` on nav so hero sits under glass header.
 - **Account drawer (logged in):** Slide-over — dashboard, browse, account links, notifications, sign out; role pill (Vendor/Courier/Admin/Customer).
 
 ### PWA setup
@@ -877,4 +922,4 @@ Standalone PWA branded LinkWe, portrait-primary, English, shopping/lifestyle cat
 
 ---
 
-*Last synced 28 May 2026. Re-run discovery after major refactors.*
+*Last synced 28 May 2026 (end of day). Re-run discovery after major refactors.*

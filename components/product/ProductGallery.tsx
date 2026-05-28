@@ -59,7 +59,7 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
         <div
           role="tablist"
           aria-label={`${name} thumbnails`}
-          className="mt-3 flex max-w-full flex-wrap gap-2"
+          className="hide-scrollbar mt-3 flex max-w-full gap-2 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible"
         >
           {orderedUnique.map((img, i) => (
             <button
@@ -67,7 +67,7 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
               type="button"
               onClick={() => setSelectedIdx(i)}
               aria-label={`View image ${i + 1}`}
-              className={`h-20 w-20 shrink-0 snap-start overflow-hidden rounded-md border-2 bg-zinc-50 transition-all ${
+              className={`h-[60px] w-[60px] shrink-0 snap-start overflow-hidden rounded-lg border-2 bg-zinc-50 transition-all md:h-20 md:w-20 md:rounded-md ${
                 safeIdx === i ? "border-[#D4450A] shadow-sm" : "border-zinc-200 hover:border-zinc-400"
               }`}
               aria-current={safeIdx === i ? "true" : undefined}

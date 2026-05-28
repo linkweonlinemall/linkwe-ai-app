@@ -48,6 +48,8 @@ type Props = {
   isDigital: boolean;
   digitalMeta: DigitalMeta | null;
   initialWishlisted: boolean;
+  /** Fixed bottom bar on small screens with price + add to cart */
+  mobileStickyBar?: boolean;
 };
 
 export default function ProductBuyBox({
@@ -66,6 +68,7 @@ export default function ProductBuyBox({
   isDigital,
   digitalMeta,
   initialWishlisted,
+  mobileStickyBar = false,
 }: Props) {
   const [activeVariant, setActiveVariant] = useState<Variant | null>(null);
   const [allSelected, setAllSelected] = useState(!hasVariants);
@@ -97,8 +100,8 @@ export default function ProductBuyBox({
 
   return (
     <div className="flex w-full flex-col font-sans">
-      {/* 1 Price */}
-      <div className="mb-3">
+      {/* 1 Price — duplicated in mobile sticky bar when enabled */}
+      <div className={`mb-3 ${mobileStickyBar ? "max-md:hidden" : ""}`}>
         <p className="text-[36px] font-semibold leading-none tracking-tight text-[#D4450A]">
           TTD {price.toFixed(2)}
         </p>
@@ -179,7 +182,7 @@ export default function ProductBuyBox({
       </div>
 
       {/* 6 Add to cart */}
-      <div className="mb-3 w-full min-w-0">
+      <div className={`mb-3 w-full min-w-0 ${mobileStickyBar ? "max-md:hidden" : ""}`}>
         <AddToCartButton
           productId={productId}
           productName={productName}
@@ -189,6 +192,24 @@ export default function ProductBuyBox({
           disabled={hasVariants && !allSelected}
         />
       </div>
+
+      {mobileStickyBar ? (
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-200 bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)] md:hidden">
+          <div className="mx-auto flex w-full items-center gap-4 px-8">
+            <p className="shrink-0 text-base font-medium text-[#D4450A]">TTD {price.toFixed(2)}</p>
+            <div className="min-w-0 flex-1">
+              <AddToCartButton
+                productId={productId}
+                productName={productName}
+                variantId={activeVariant?.id}
+                stock={stock}
+                quantity={effectiveQty}
+                disabled={hasVariants && !allSelected}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {isDigital && digitalMeta ? (
         <div className="mb-6 space-y-2 border-t border-gray-200 pt-4 font-sans text-sm text-zinc-600">

@@ -42,7 +42,89 @@ function mapCartRows(rows: Awaited<ReturnType<typeof getCart>>): CartItem[] {
   }));
 }
 
-export default function FrequentlyBoughtTogether({ items }: { items: Item[] }) {
+function PlusDivider() {
+  return (
+    <span
+      className="flex shrink-0 items-center justify-center self-center px-1 text-2xl font-light text-[var(--text-muted)] md:px-2"
+      aria-hidden
+    >
+      +
+    </span>
+  );
+}
+
+function EqualsDivider() {
+  return (
+    <span
+      className="flex shrink-0 items-center justify-center self-center px-1 text-2xl font-light text-[var(--text-muted)] md:px-2"
+      aria-hidden
+    >
+      =
+    </span>
+  );
+}
+
+function FbtProductCard({
+  item,
+  label,
+  checked,
+  disabled,
+  onCheckedChange,
+}: {
+  item: Item;
+  label?: string;
+  checked: boolean;
+  disabled?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
+}) {
+  const inputId = `fbt-${item.id}`;
+
+  return (
+    <div className="relative flex w-full min-w-0 flex-col items-center text-center md:w-[140px] md:shrink-0">
+      <div className="absolute left-0 top-0 z-10 md:left-1 md:top-1">
+        <input
+          id={inputId}
+          type="checkbox"
+          checked={checked}
+          disabled={disabled}
+          onChange={(e) => onCheckedChange?.(e.target.checked)}
+          className="size-[18px] rounded border-zinc-300 text-[#D4450A] focus:ring-[#D4450A] disabled:cursor-default"
+          aria-label={label ? `${label}: ${item.name}` : item.name}
+        />
+      </div>
+      {label ? (
+        <p className="mb-1.5 w-full text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+          {label}
+        </p>
+      ) : (
+        <div className="mb-1.5 h-[14px] w-full" aria-hidden />
+      )}
+      <Link
+        href={`/products/${item.slug}`}
+        className="block h-[120px] w-[120px] shrink-0 overflow-hidden rounded-lg bg-zinc-100"
+      >
+        {item.images[0] ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={item.images[0]} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-zinc-300">—</div>
+        )}
+      </Link>
+      <Link href={`/products/${item.slug}`} className="mt-2 block w-full min-w-0 px-1">
+        <span className="line-clamp-2 text-[12px] leading-snug text-[var(--text-primary)]">{item.name}</span>
+      </Link>
+      <p className="mt-1.5 text-[13px] font-medium text-[#D4450A]">TTD {item.price.toFixed(2)}</p>
+    </div>
+  );
+}
+
+export default function FrequentlyBoughtTogether({
+  currentProduct,
+  items,
+}: {
+  currentProduct: Item;
+  items: Item[];
+}) {
   const router = useRouter();
   const setItems = useCartStore((s) => s.setItems);
   const openDrawer = useCartStore((s) => s.openDrawer);
@@ -55,15 +137,15 @@ export default function FrequentlyBoughtTogether({ items }: { items: Item[] }) {
 
   const pickedList = useMemo(() => items.filter((p) => picked[p.id]), [items, picked]);
 
-  const total = pickedList.reduce((s, p) => s + p.price, 0);
-  const pickedCount = pickedList.length;
+  const total = currentProduct.price + pickedList.reduce((s, p) => s + p.price, 0);
+  const selectedCount = 1 + pickedList.length;
 
   async function handleAddTogether() {
-    if (pickedCount === 0) return;
     setError(null);
     setLoading(true);
     try {
-      for (const p of pickedList) {
+      const toAdd = [currentProduct, ...pickedList];
+      for (const p of toAdd) {
         const r = await addToCart(p.id, 1, null);
         if (!r.ok) {
           if (r.error === "not_logged_in") {
@@ -85,61 +167,40 @@ export default function FrequentlyBoughtTogether({ items }: { items: Item[] }) {
   if (items.length === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-6 font-sans shadow-sm">
+    <div className="rounded-[12px] border-[0.5px] border-[var(--color-border-tertiary)] bg-white p-5 font-sans">
       <h2 className="text-sm font-bold uppercase tracking-wide text-zinc-900">Frequently bought together</h2>
-      <ul className="mt-5 space-y-4">
-        {items.map((p) => {
-          const inputId = `fbt-${p.id}`;
-          return (
-            <li key={p.id} className="flex gap-3">
-              <input
-                id={inputId}
-                type="checkbox"
-                checked={picked[p.id] ?? false}
-                onChange={(e) => setPicked((prev) => ({ ...prev, [p.id]: e.target.checked }))}
-                className="mt-5 size-[18px] shrink-0 rounded border-zinc-300 text-[#D4450A] focus:ring-[#D4450A]"
-              />
-              <Link
-                href={`/products/${p.slug}`}
-                className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-xl bg-zinc-100"
-              >
-                {p.images[0] ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={p.images[0]} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-zinc-300">—</div>
-                )}
-              </Link>
-              <div className="min-w-0 flex-1 py-1">
-                <label htmlFor={inputId} className="block cursor-pointer">
-                  <span className="line-clamp-2 text-sm font-semibold leading-snug text-zinc-900">
-                    {p.name}
-                  </span>
-                </label>
-                <Link href={`/products/${p.slug}`} className="mt-1 inline-block text-xs font-medium text-[#D4450A] hover:underline">
-                  View product
-                </Link>
-                <div className="mt-2 flex flex-wrap items-baseline gap-2">
-                  <span className="text-base font-black text-[#D4450A]">TTD {p.price.toFixed(2)}</span>
-                  {p.compareAtPrice && p.compareAtPrice > p.price ? (
-                    <span className="text-xs text-zinc-400 line-through">TTD {p.compareAtPrice.toFixed(2)}</span>
-                  ) : null}
-                </div>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-      <div className="mt-6 border-t border-zinc-100 pt-5">
+
+      <div className="mt-5 flex flex-col items-stretch gap-3 md:flex-row md:flex-wrap md:items-center md:justify-start md:gap-2">
+        <FbtProductCard item={currentProduct} label="This item" checked disabled />
+
+        {items.map((p) => (
+          <div key={p.id} className="flex flex-col items-stretch gap-3 md:flex-row md:items-center">
+            <PlusDivider />
+            <FbtProductCard
+              item={p}
+              checked={picked[p.id] ?? false}
+              onCheckedChange={(next) => setPicked((prev) => ({ ...prev, [p.id]: next }))}
+            />
+          </div>
+        ))}
+
+        <div className="hidden md:flex md:items-center">
+          <EqualsDivider />
+        </div>
+      </div>
+
+      <div className="mt-5 border-t border-[var(--color-border-tertiary)] pt-5">
+        <p className="text-[12px] text-[var(--text-muted)]">
+          {selectedCount} item{selectedCount === 1 ? "" : "s"} selected
+        </p>
+        <p className="mt-1 text-base font-medium text-[var(--text-primary)]">TTD {total.toFixed(2)}</p>
         <button
           type="button"
-          disabled={loading || pickedCount === 0}
+          disabled={loading}
           onClick={() => void handleAddTogether()}
-          className="h-11 w-full rounded-xl bg-[#D4450A] text-sm font-bold text-white transition-opacity hover:opacity-92 disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:opacity-70"
+          className="mt-4 flex h-11 w-full items-center justify-center rounded-lg bg-[#D4450A] text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:opacity-70"
         >
-          {loading
-            ? "Adding…"
-            : `Add ${pickedCount || "—"} to cart — TTD ${total.toFixed(2)}`}
+          {loading ? "Adding…" : "Add all to cart"}
         </button>
         {error ? <p className="mt-2 text-center text-xs text-red-600">{error}</p> : null}
       </div>
