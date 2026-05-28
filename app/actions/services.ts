@@ -5,6 +5,10 @@ import { BookingPaymentMode, QuotePriceType } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth/session";
+import {
+  findVendorServicesForAvailability,
+  vendorServiceListSelect,
+} from "@/lib/vendor/vendor-service-query";
 
 function slugify(text: string): string {
   return text
@@ -598,45 +602,11 @@ export async function getVendorAvailabilityPageData() {
   });
   if (!store) return null;
 
-  // Vendor bookable services are persisted on Product (isService: true), not the dormant Service table.
-  const services = await prisma.product.findMany({
-    where: { storeId: store.id, isService: true, isArchived: false },
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      category: true,
-      serviceType: true,
-      serviceDuration: true,
-      durationMinutes: true,
-      bufferMinutes: true,
-      maxPerDay: true,
-      useStoreHours: true,
-      availableDays: true,
-      availableFrom: true,
-      availableTo: true,
-      isAvailable: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const services = await findVendorServicesForAvailability(store.id);
 
   return {
     openingHours: store.openingHours,
-    services: services.map((s) => ({
-      id: s.id,
-      name: s.name,
-      slug: s.slug,
-      category: s.category,
-      serviceType: s.serviceType,
-      durationMinutes: s.durationMinutes || s.serviceDuration || 60,
-      bufferMinutes: s.bufferMinutes,
-      maxPerDay: s.maxPerDay,
-      useStoreHours: s.useStoreHours,
-      availableDays: s.availableDays,
-      availableFrom: s.availableFrom,
-      availableTo: s.availableTo,
-      isAvailable: s.isAvailable,
-    })),
+    services,
   };
 }
 

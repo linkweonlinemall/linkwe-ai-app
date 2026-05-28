@@ -4,6 +4,10 @@ import { redirect } from "next/navigation";
 import EditServiceForm from "./EditServiceForm";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import {
+  vendorServiceDetailSelect,
+  vendorServiceEditFormDefaults,
+} from "@/lib/vendor/vendor-service-query";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -18,44 +22,14 @@ export default async function EditServicePage({ params }: Props) {
   });
   if (!store) redirect("/dashboard/vendor/services");
 
-  const service = await prisma.product.findFirst({
+  const core = await prisma.product.findFirst({
     where: { id, storeId: store.id, isService: true },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      category: true,
-      serviceType: true,
-      serviceLocation: true,
-      price: true,
-      serviceDuration: true,
-      requiresDeposit: true,
-      depositAmount: true,
-      bookingPaymentMode: true,
-      tags: true,
-      isPublished: true,
-      images: true,
-      responseTime: true,
-      minimumQuoteAmount: true,
-      siteVisitRequired: true,
-      subscriptionInterval: true,
-      sessionsIncluded: true,
-      subscriptionCancellationDays: true,
-      subscriptionTrialPeriod: true,
-      subscriptionTrialPrice: true,
-      subscriptionCanPause: true,
-      subscriptionPauseMaxWeeks: true,
-      travelFee: true,
-      serviceRadius: true,
-      estimatedResponseMins: true,
-      virtualPlatform: true,
-      virtualMeetingInfo: true,
-      maxGroupSize: true,
-      quotePriceType: true,
-    },
+    select: vendorServiceDetailSelect,
   });
 
-  if (!service) redirect("/dashboard/vendor/services");
+  if (!core) redirect("/dashboard/vendor/services");
+
+  const service = { ...core, ...vendorServiceEditFormDefaults() };
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
