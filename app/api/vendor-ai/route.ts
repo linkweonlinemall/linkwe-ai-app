@@ -21,6 +21,13 @@ import {
   getVendorStoreSummary,
   updateVendorStoreFields,
 } from "@/app/actions/ai-vendor-store"
+import {
+  createEvent as createEventAction,
+  updateEvent as updateEventAction,
+  createTicketType as createTicketTypeAction,
+  publishEvent as publishEventAction,
+  getVendorEvents,
+} from "@/app/actions/events"
 import { getSession } from "@/lib/auth/session"
 import { VENDOR_SYSTEM_PROMPT } from "@/lib/chat/vendorSystemPrompt"
 import { prisma } from "@/lib/prisma"
@@ -412,6 +419,146 @@ const GET_BOOKINGS_SUMMARY_TOOL: Anthropic.Tool = {
   },
 }
 
+const GET_VENDOR_EVENTS_TOOL: Anthropic.Tool = {
+  name: "get_vendor_events",
+  description:
+    "Returns all events for the vendor's store with ticket counts and revenue. Use when the vendor asks about their events, fetes, concerts, or any event they are hosting.",
+  input_schema: {
+    type: "object",
+    properties: {},
+    required: [],
+  },
+}
+
+const GET_EVENT_DETAILS_TOOL: Anthropic.Tool = {
+  name: "get_event_details",
+  description:
+    "Returns full details of a specific event including all fields, ticket types, and ticket counts. Use when you need to inspect a specific event before editing or publishing.",
+  input_schema: {
+    type: "object",
+    properties: {
+      eventId: { type: "string", description: "The event ID" },
+    },
+    required: ["eventId"],
+  },
+}
+
+const CREATE_EVENT_TOOL: Anthropic.Tool = {
+  name: "create_event",
+  description:
+    "Creates a new event draft for the vendor's store. Use when the vendor asks to create an event, fete, party, concert, or any ticketed event.",
+  input_schema: {
+    type: "object",
+    properties: {
+      title: { type: "string", description: "Event title (required)" },
+      category: { type: "string", description: "Event category value e.g. all_inclusive_fete, soca_carnival, food_fair" },
+      startDate: { type: "string", description: "Start date as YYYY-MM-DD (required)" },
+      startTime: { type: "string", description: "Start time as HH:MM e.g. 20:00 (required)" },
+      venueName: { type: "string" },
+      address: { type: "string" },
+      region: { type: "string", description: "T&T region e.g. port_of_spain, san_fernando" },
+      description: { type: "string" },
+      isOnline: { type: "boolean" },
+      capacity: { type: "number" },
+      dressCode: { type: "string" },
+      ageRestriction: { type: "string", description: "e.g. 18+ or All ages" },
+      refundPolicyType: { type: "string", enum: ["FULL", "PARTIAL", "NONE"] },
+    },
+    required: ["title", "category", "startDate", "startTime"],
+  },
+}
+
+const UPDATE_EVENT_TOOL: Anthropic.Tool = {
+  name: "update_event",
+  description:
+    "Updates fields on an existing event. Only pass fields that should change. Use after get_event_details to see current values.",
+  input_schema: {
+    type: "object",
+    properties: {
+      eventId: { type: "string", description: "The event ID to update" },
+      title: { type: "string" },
+      category: { type: "string" },
+      startDate: { type: "string", description: "YYYY-MM-DD" },
+      startTime: { type: "string", description: "HH:MM" },
+      endDate: { type: "string", description: "YYYY-MM-DD" },
+      endTime: { type: "string", description: "HH:MM" },
+      description: { type: "string" },
+      venueName: { type: "string" },
+      address: { type: "string" },
+      region: { type: "string" },
+      isOnline: { type: "boolean" },
+      capacity: { type: "number" },
+      dressCode: { type: "string" },
+      ageRestriction: { type: "string" },
+      refundPolicyType: { type: "string", enum: ["FULL", "PARTIAL", "NONE"] },
+      refundCutoffHours: { type: "number" },
+    },
+    required: ["eventId"],
+  },
+}
+
+const CREATE_TICKET_TYPE_TOOL: Anthropic.Tool = {
+  name: "create_ticket_type",
+  description:
+    "Adds a ticket type to an event. Always call this after creating an event. Use for General Admission, VIP, Early Bird, Table tickets, etc.",
+  input_schema: {
+    type: "object",
+    properties: {
+      eventId: { type: "string", description: "The event ID" },
+      name: { type: "string", description: "Ticket tier name e.g. General Admission, VIP, Early Bird" },
+      price: { type: "number", description: "Price in TTD — use 0 for free events" },
+      quantity: { type: "number", description: "Total tickets available" },
+      description: { type: "string" },
+      perks: { type: "string", description: "What is included e.g. Open bar, VIP lounge access" },
+      maxPerOrder: { type: "number", description: "Max tickets per order — default 10" },
+      saleStartDate: { type: "string", description: "ISO date string" },
+      saleEnds: { type: "string", description: "ISO date string" },
+    },
+    required: ["eventId", "name", "price", "quantity"],
+  },
+}
+
+const UPLOAD_EVENT_COVER_TOOL: Anthropic.Tool = {
+  name: "upload_event_cover_image",
+  description:
+    "Sets the cover image for an event from an already-uploaded URL. Use when the vendor has uploaded an image and wants it set as the event cover.",
+  input_schema: {
+    type: "object",
+    properties: {
+      eventId: { type: "string", description: "The event ID" },
+      imageUrl: { type: "string", description: "https:// URL of the uploaded image" },
+    },
+    required: ["eventId", "imageUrl"],
+  },
+}
+
+const UPLOAD_EVENT_GALLERY_TOOL: Anthropic.Tool = {
+  name: "upload_event_gallery_image",
+  description:
+    "Appends an image to an event's gallery (max 6 images). Use when the vendor uploads additional photos for their event.",
+  input_schema: {
+    type: "object",
+    properties: {
+      eventId: { type: "string", description: "The event ID" },
+      imageUrl: { type: "string", description: "https:// URL of the uploaded image" },
+    },
+    required: ["eventId", "imageUrl"],
+  },
+}
+
+const PUBLISH_EVENT_TOOL: Anthropic.Tool = {
+  name: "publish_event",
+  description:
+    "Publishes an event so it is visible to the public. Always confirm with the vendor before calling this. Validates that title, startDate, coverImage, and at least one visible ticket type exist.",
+  input_schema: {
+    type: "object",
+    properties: {
+      eventId: { type: "string", description: "The event ID to publish" },
+    },
+    required: ["eventId"],
+  },
+}
+
 const VENDOR_TOOLS: Anthropic.Tool[] = [
   CREATE_PRODUCT_TOOL,
   CREATE_SERVICE_TOOL,
@@ -432,6 +579,14 @@ const VENDOR_TOOLS: Anthropic.Tool[] = [
   UNPUBLISH_PRODUCT_TOOL,
   DELETE_PRODUCT_TOOL,
   GET_BOOKINGS_SUMMARY_TOOL,
+  GET_VENDOR_EVENTS_TOOL,
+  GET_EVENT_DETAILS_TOOL,
+  CREATE_EVENT_TOOL,
+  UPDATE_EVENT_TOOL,
+  CREATE_TICKET_TYPE_TOOL,
+  PUBLISH_EVENT_TOOL,
+  UPLOAD_EVENT_COVER_TOOL,
+  UPLOAD_EVENT_GALLERY_TOOL,
 ]
 
 /** Body messages: string or Anthropic user content (text + image blocks). */
@@ -459,12 +614,17 @@ export async function POST(req: NextRequest) {
   const body = (await req.json()) as {
     messages?: IncomingMessage[]
     focusProductId?: string | null
+    focusEventId?: string | null
     uploadedImageUrls?: string[]
   }
   const messages: IncomingMessage[] = body.messages ?? []
   const focusProductIdFromBody =
     typeof body.focusProductId === "string"
       ? body.focusProductId.trim()
+      : null
+  const focusEventIdFromBody =
+    typeof body.focusEventId === "string"
+      ? body.focusEventId.trim()
       : null
   const uploadedImageUrlsPayload = Array.isArray(body.uploadedImageUrls)
     ? body.uploadedImageUrls.filter(
@@ -488,7 +648,9 @@ export async function POST(req: NextRequest) {
         content: string
         productId?: string
         focusProductId?: string
+        focusEventId?: string
         galleryUpdate?: { productId: string; images: string[] }
+        eventGalleryUpdate?: { eventId: string }
       }> => {
         if (toolBlock.name === "create_product") {
           const raw = toolBlock.input as Record<string, unknown>
@@ -1168,6 +1330,141 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        // ─── Event tools ────────────────────────────────────────────────
+
+        if (toolBlock.name === "get_vendor_events") {
+          const events = await getVendorEvents(store.id)
+          const summary = events.map((e) => ({
+            id: e.id,
+            title: e.title,
+            slug: e.slug,
+            status: e.status,
+            startDate: e.startDate,
+            category: e.category,
+            ticketTypes: e.ticketTypes.map((t) => ({
+              name: t.name,
+              price: t.price,
+              quantity: t.quantity,
+              quantitySold: t.quantitySold,
+            })),
+            totalTicketsSold: e._count.tickets,
+            totalRevenue: e.ticketTypes.reduce(
+              (s, t) => s + Number(t.price) * t.quantitySold,
+              0
+            ),
+          }))
+          return { content: JSON.stringify({ events: summary }) }
+        }
+
+        if (toolBlock.name === "get_event_details") {
+          const { eventId } = toolBlock.input as { eventId: string }
+          const event = await prisma.event.findFirst({
+            where: { id: eventId, storeId: store.id },
+            include: {
+              ticketTypes: true,
+              _count: { select: { tickets: true } },
+            },
+          })
+          if (!event) {
+            return { content: JSON.stringify({ error: "Event not found." }) }
+          }
+          return { content: JSON.stringify(event), focusEventId: eventId }
+        }
+
+        if (toolBlock.name === "create_event") {
+          const input = toolBlock.input as Record<string, unknown>
+          const fd = new FormData()
+          for (const [k, v] of Object.entries(input)) {
+            if (v !== undefined && v !== null) fd.set(k, String(v))
+          }
+          const result = await createEventAction(fd)
+          if ("error" in result) return { content: JSON.stringify({ error: result.error }) }
+          return {
+            content: JSON.stringify({
+              success: true,
+              eventId: result.eventId,
+              editUrl: `/dashboard/vendor/events/${result.eventId}/edit`,
+              ticketsUrl: `/dashboard/vendor/events/${result.eventId}/tickets`,
+            }),
+          }
+        }
+
+        if (toolBlock.name === "update_event") {
+          const input = toolBlock.input as Record<string, unknown>
+          const { eventId, ...fields } = input as { eventId: string } & Record<string, unknown>
+          const fd = new FormData()
+          for (const [k, v] of Object.entries(fields)) {
+            if (v !== undefined && v !== null) fd.set(k, String(v))
+          }
+          const result = await updateEventAction(eventId, fd)
+          if ("error" in result) return { content: JSON.stringify({ error: result.error }) }
+          return { content: JSON.stringify({ success: true }) }
+        }
+
+        if (toolBlock.name === "create_ticket_type") {
+          const input = toolBlock.input as Record<string, unknown>
+          const { eventId, ...fields } = input as { eventId: string } & Record<string, unknown>
+          const fd = new FormData()
+          for (const [k, v] of Object.entries(fields)) {
+            if (v !== undefined && v !== null) fd.set(k, String(v))
+          }
+          const result = await createTicketTypeAction(eventId, fd)
+          if ("error" in result) return { content: JSON.stringify({ error: result.error }) }
+          return {
+            content: JSON.stringify({
+              success: true,
+              ticketTypeId: result.ticketTypeId,
+            }),
+          }
+        }
+
+        if (toolBlock.name === "publish_event") {
+          const { eventId } = toolBlock.input as { eventId: string }
+          const result = await publishEventAction(eventId)
+          if ("error" in result) return { content: JSON.stringify({ error: result.error }) }
+          return { content: JSON.stringify({ success: true }) }
+        }
+
+        if (toolBlock.name === "upload_event_cover_image") {
+          const { eventId, imageUrl } = toolBlock.input as { eventId: string; imageUrl: string }
+          if (!imageUrl.startsWith("https://")) {
+            return { content: JSON.stringify({ error: "imageUrl must start with https://" }) }
+          }
+          const fd = new FormData()
+          fd.set("coverImage", imageUrl)
+          const result = await updateEventAction(eventId, fd)
+          if ("error" in result) return { content: JSON.stringify({ error: result.error }) }
+          return { content: JSON.stringify({ success: true, message: "Cover image updated" }) }
+        }
+
+        if (toolBlock.name === "upload_event_gallery_image") {
+          const { eventId, imageUrl } = toolBlock.input as { eventId: string; imageUrl: string }
+          if (!imageUrl.startsWith("https://")) {
+            return { content: JSON.stringify({ error: "imageUrl must start with https://" }) }
+          }
+          // Fetch current gallery images
+          const event = await prisma.event.findFirst({
+            where: { id: eventId, storeId: store.id },
+            select: { galleryImages: true },
+          })
+          if (!event) return { content: JSON.stringify({ error: "Event not found." }) }
+          if (event.galleryImages.length >= 6) {
+            return { content: JSON.stringify({ error: "Gallery is full — maximum 6 images allowed." }) }
+          }
+          const updated = [...event.galleryImages, imageUrl]
+          const fd = new FormData()
+          fd.set("galleryImages", JSON.stringify(updated))
+          const result = await updateEventAction(eventId, fd)
+          if ("error" in result) return { content: JSON.stringify({ error: result.error }) }
+          return {
+            content: JSON.stringify({
+              success: true,
+              message: "Image added to gallery",
+              galleryCount: updated.length,
+            }),
+          }
+        }
+
         return {
           content: JSON.stringify({
             ok: false,
@@ -1228,9 +1525,46 @@ If SYSTEM notes further down report an issue with attaching to a product gallery
             } else {
               extra += `\n[System: The ${n} image(s) uploaded to the CDN successfully, but auto-attaching to the focused product failed: ${attach.error}. Acknowledge the uploads first, then offer to attach these URLs with attach_product_images or help the vendor pick a listing.]\n`
             }
+          } else if (focusEventIdFromBody) {
+            // Auto-attach images to the focused event
+            const focusedEvent = await prisma.event.findFirst({
+              where: { id: focusEventIdFromBody, storeId: store.id },
+              select: { galleryImages: true, coverImage: true },
+            })
+            if (focusedEvent) {
+              const [coverUrl, ...galleryUrls] = uploadedImageUrlsPayload
+              const fd = new FormData()
+              // Set cover if not already set
+              if (!focusedEvent.coverImage && coverUrl) {
+                fd.set("coverImage", coverUrl)
+              }
+              // Append to gallery (up to 6 total)
+              const existing = focusedEvent.galleryImages ?? []
+              const toAdd = (!focusedEvent.coverImage ? galleryUrls : uploadedImageUrlsPayload)
+              const combined = [...existing, ...toAdd].slice(0, 6)
+              if (combined.length > existing.length) {
+                fd.set("galleryImages", JSON.stringify(combined))
+              }
+              const hasUpdates = fd.has("coverImage") || fd.has("galleryImages")
+              if (hasUpdates) {
+                await updateEventAction(focusEventIdFromBody, fd)
+                extra += `\n[System: Images were auto-attached to event_id="${focusEventIdFromBody}".`
+                if (!focusedEvent.coverImage && coverUrl) {
+                  extra += ` Cover image set to URL 1.`
+                }
+                if (combined.length > existing.length) {
+                  extra += ` Gallery now has ${combined.length} image(s).`
+                }
+                extra += `]\n`
+                send(JSON.stringify({ eventGalleryUpdate: { eventId: focusEventIdFromBody } }))
+                galleryUpdateSent = true
+              }
+            } else {
+              extra += `\n[System: focusEventId="${focusEventIdFromBody}" was set but the event was not found. Acknowledge the uploads then ask which event to attach them to.]\n`
+            }
           } else {
             extra +=
-              "\nIf you know which draft product the vendor is updating, use attach_product_images with that product_id.\n"
+              "\nIf you know which draft product the vendor is updating, use attach_product_images with that product_id.\nIf the vendor mentions an event, use upload_event_cover_image or upload_event_gallery_image with the correct eventId.\n"
           }
           systemPrompt = VENDOR_SYSTEM_PROMPT + extra
         }
@@ -1324,8 +1658,14 @@ If SYSTEM notes further down report an issue with attaching to a product gallery
             if (out.focusProductId) {
               send(JSON.stringify({ focusProductId: out.focusProductId }))
             }
+            if (out.focusEventId) {
+              send(JSON.stringify({ focusEventId: out.focusEventId }))
+            }
             if (out.galleryUpdate) {
               send(JSON.stringify({ galleryUpdate: out.galleryUpdate }))
+            }
+            if (out.eventGalleryUpdate) {
+              send(JSON.stringify({ eventGalleryUpdate: out.eventGalleryUpdate }))
             }
             userToolResults.push({
               type: "tool_result",

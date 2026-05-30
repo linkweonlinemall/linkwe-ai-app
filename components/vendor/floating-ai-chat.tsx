@@ -112,9 +112,8 @@ export default function FloatingAIChat() {
   >([])
   const [showHistory, setShowHistory] = useState(false)
   const [createdProductId, setCreatedProductId] = useState<string | null>(null)
-  const [focusedProductId, setFocusedProductId] = useState<string | null>(
-    null
-  )
+  const [focusedProductId, setFocusedProductId] = useState<string | null>(null)
+  const [focusedEventId, setFocusedEventId] = useState<string | null>(null)
   const [attachedPreviews, setAttachedPreviews] = useState<string[]>([])
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -253,6 +252,7 @@ export default function FloatingAIChat() {
           body: JSON.stringify({
             messages: apiMessages,
             focusProductId: focusedProductId ?? undefined,
+            focusEventId: focusedEventId ?? undefined,
             uploadedImageUrls:
               uploadedUrls.length > 0 ? uploadedUrls : undefined,
           }),
@@ -286,11 +286,13 @@ export default function FloatingAIChat() {
               const parsed = JSON.parse(data) as {
                 productId?: string
                 focusProductId?: string
+                focusEventId?: string
                 text?: string
                 galleryUpdate?: {
                   productId: string
                   images: string[]
                 }
+                eventGalleryUpdate?: { eventId: string }
               }
               if (parsed.productId) {
                 setCreatedProductId(parsed.productId)
@@ -298,6 +300,8 @@ export default function FloatingAIChat() {
               }
               if (parsed.focusProductId)
                 setFocusedProductId(parsed.focusProductId)
+              if (parsed.focusEventId)
+                setFocusedEventId(parsed.focusEventId)
               if (parsed.text) {
                 assistantText += parsed.text
                 setMessages((prev) =>

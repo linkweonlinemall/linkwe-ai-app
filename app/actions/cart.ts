@@ -150,3 +150,104 @@ export async function updateCartQuantity(productId: string, quantity: number): P
 
   revalidatePath("/cart");
 }
+
+export async function addEventTicketToCart(
+  ticketTypeId: string,
+  quantity: number,
+  userId: string,
+): Promise<{
+  ok: boolean;
+  cartItemId?: string;
+  totalPrice?: number;
+  error?: string;
+  code?: string;
+}> {
+  if (!userId) return { ok: false, error: "not_logged_in", code: "not_logged_in" };
+  if (!Number.isFinite(quantity) || quantity < 1) {
+    return { ok: false, error: "Invalid quantity.", code: "invalid_quantity" };
+  }
+  const qty = Math.floor(quantity);
+
+  const ticketType = await prisma.eventTicketType.findUnique({
+    where: { id: ticketTypeId },
+    select: {
+      id: true,
+      name: true,
+      price: true,
+      quantity: true,
+      quantitySold: true,
+      maxPerOrder: true,
+      isVisible: true,
+      saleStartDate: true,
+      saleEnds: true,
+      event: { select: { status: true, title: true } },
+    },
+  });
+
+  if (!ticketType) return { ok: false, error: "Ticket type not found.", code: "ticket_type_not_found" };
+  if (ticketType.event.status !== "PUBLISHED") return { ok: false, error: "This event is not available.", code: "event_not_published" };
+  if (!ticketType.isVisible) return { ok: false, error: "These tickets are not on sale.", code: "not_visible" };
+
+  const now = new Date();
+  if (ticketType.saleStartDate && ticketType.saleStartDate > now) {
+    return { ok: false, error: "Ticket sales have not started yet.", code: "sale_not_started" };
+  }
+  if (ticketType.saleEnds && ticketType.saleEnds < now) {
+    return { ok: false, error: "Ticket sales have ended.", code: "sale_ended" };
+  }
+
+  const available = ticketType.quantity - ticketType.quantitySold;
+  if (available < qty) {
+    return {
+      ok: false,
+      error: available <= 0 ? "These tickets are sold out." : `Only ${available} ticket(s) remaining.`,
+      code: "insufficient_tickets",
+    };
+  }
+  if (qty > ticketType.maxPerOrder) {
+    return {
+      ok: false,
+      error: `Maximum ${ticketType.maxPerOrder} tickets per order.`,
+      code: "exceeds_max_per_order",
+    };
+  }
+
+  const existing = await prisma.eventTicketCartItem.findFirst({
+    where: { userId, ticketTypeId },
+    select: { id: true, quantity: true },
+  });
+
+  let cartItemId: string;
+  if (existing) {
+    const newQty = existing.quantity + qty;
+    if (newQty > ticketType.maxPerOrder) {
+      return {
+        ok: false,
+        error: `You already have ${existing.quantity} in your cart. Maximum is ${ticketType.maxPerOrder}.`,
+        code: "exceeds_max_per_order",
+      };
+    }
+    if (newQty > available) {
+      return { ok: false, error: `Only ${available} ticket(s) remaining.`, code: "insufficient_tickets" };
+    }
+    const updated = await prisma.eventTicketCartItem.update({
+      where: { id: existing.id },
+      data: { quantity: newQty },
+      select: { id: true },
+    });
+    cartItemId = updated.id;
+  } else {
+    const created = await prisma.eventTicketCartItem.create({
+      data: { userId, ticketTypeId, quantity: qty, unitPrice: ticketType.price },
+      select: { id: true },
+    });
+    cartItemId = created.id;
+  }
+
+  revalidatePath("/cart");
+  return {
+    ok: true,
+    cartItemId,
+    totalPrice: ticketType.price * qty,
+  };
+}

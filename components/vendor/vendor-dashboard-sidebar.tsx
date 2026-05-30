@@ -16,6 +16,7 @@ import {
   IconSettings,
   IconShoppingBag,
   IconStar,
+  IconTicket,
   IconTools,
   IconUsers,
 } from "@tabler/icons-react";
@@ -82,6 +83,7 @@ export default function VendorDashboardSidebar({
     { href: "/dashboard/vendor", label: "Dashboard", Icon: IconLayoutDashboard, exact: true },
     { href: "/dashboard/vendor/products", label: "Products", Icon: IconPackage },
     { href: "/dashboard/vendor/services", label: "My Services", Icon: IconTools },
+    { href: "/dashboard/vendor/events", label: "Events", Icon: IconTicket },
     { href: "/dashboard/vendor/bookings", label: "Bookings", Icon: IconCalendarEvent },
     {
       href: "/dashboard/vendor/requests",

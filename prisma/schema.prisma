@@ -58,6 +58,8 @@ model User {
   savedStores           SavedStore[]
   customerRequests      OnDemandRequest[]     @relation("CustomerRequests")
   notifications         Notification[]
+  tickets               Ticket[]
+  eventTicketCartItems  EventTicketCartItem[]
 
   @@index([email])
   @@index([createdAt])
@@ -1291,6 +1293,26 @@ enum OnDemandRequestStatus {
   CANCELLED
 }
 
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+enum TicketStatus {
+  VALID
+  USED
+  CANCELLED
+  REFUNDED
+}
+
+enum RefundPolicyType {
+  FULL
+  PARTIAL
+  NONE
+}
+
 model Product {
   id                    String            @id @default(cuid())
   storeId               String
@@ -1782,10 +1804,23 @@ model Event {
   metaTitle             String?
   metaDescription       String?
 
+  status                EventStatus       @default(DRAFT)
+  eventType             String            @default("SINGLE")
+  coverImage            String?
+  galleryImages         String[]
+  streamUrl             String?
+  hasSeating            Boolean           @default(false)
+  lineup                Json?
+  refundPolicyType      RefundPolicyType  @default(FULL)
+  refundCutoffHours     Int               @default(48)
+
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
 
   ticketTypes           EventTicketType[]
+  tickets               Ticket[]
+  promoCodes            EventPromoCode[]
+  waitlist              EventWaitlist[]
 
   @@index([storeId])
   @@index([isPublished])
@@ -1803,10 +1838,96 @@ model EventTicketType {
   quantitySold  Int       @default(0)
   description   String?
   saleEnds      DateTime?
+  saleStartDate DateTime?
+  maxPerOrder   Int       @default(10)
+  perks         String?
+  validDays     Json?
+  isVisible     Boolean   @default(true)
+  color         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  tickets       Ticket[]
+  cartItems     EventTicketCartItem[]
+
   @@index([eventId])
+}
+
+model EventTicketCartItem {
+  id           String          @id @default(cuid())
+  userId       String          @map("user_id")
+  ticketTypeId String          @map("ticket_type_id")
+  quantity     Int             @default(1)
+  unitPrice    Float           @map("unit_price")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticketType   EventTicketType @relation(fields: [ticketTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, ticketTypeId])
+  @@index([userId])
+  @@map("event_ticket_cart_items")
+}
+
+model Ticket {
+  id              String       @id @default(cuid())
+  ticketNumber    String       @unique
+  qrToken         String       @unique
+  eventId         String
+  ticketTypeId    String
+  userId          String
+  orderId         String?
+  holderName      String
+  holderEmail     String
+  status          TicketStatus @default(VALID)
+  checkedInAt     DateTime?
+  checkedInBy     String?
+  transferredToId String?
+  validDays       Json?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  event      Event           @relation(fields: [eventId], references: [id])
+  ticketType EventTicketType @relation(fields: [ticketTypeId], references: [id])
+  user       User            @relation(fields: [userId], references: [id])
+
+  @@index([eventId])
+  @@index([userId])
+  @@index([qrToken])
+  @@index([ticketNumber])
+  @@map("tickets")
+}
+
+model EventPromoCode {
+  id            String    @id @default(cuid())
+  eventId       String
+  code          String
+  discountType  String
+  discountValue Float
+  maxUses       Int?
+  usedCount     Int       @default(0)
+  expiresAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  event Event @relation(fields: [eventId], references: [id])
+
+  @@unique([eventId, code])
+  @@index([eventId])
+  @@map("event_promo_codes")
+}
+
+model EventWaitlist {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String?
+  email     String
+  createdAt DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id])
+
+  @@unique([eventId, email])
+  @@index([eventId])
+  @@map("event_waitlist")
 }
 
 model Place {

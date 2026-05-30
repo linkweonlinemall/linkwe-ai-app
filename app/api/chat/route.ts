@@ -1,9 +1,10 @@
 import { NextRequest } from "next/server"
 import Anthropic from "@anthropic-ai/sdk"
-import { addToCart } from "@/app/actions/cart"
+import { addToCart, addEventTicketToCart } from "@/app/actions/cart"
 import { searchProducts } from "@/app/actions/searchProducts"
 import type { ChatProduct } from "@/lib/chat/types"
-import { LINKWE_SYSTEM_PROMPT } from "@/lib/chat/systemPrompt"
+import { LINKWE_SYSTEM_PROMPT, SEARCH_EVENTS_TOOL } from "@/lib/chat/systemPrompt"
+import { prisma } from "@/lib/prisma"
 
 const client = new Anthropic()
 
@@ -123,6 +124,30 @@ const ADD_MULTIPLE_TO_CART_TOOL: Anthropic.Tool = {
       },
     },
     required: ["items"],
+  },
+}
+
+const ADD_EVENT_TICKETS_TO_CART_TOOL: Anthropic.Tool = {
+  name: "add_event_tickets_to_cart",
+  description:
+    "Adds event tickets to the customer's cart. Use this when the customer asks to buy or reserve tickets for an event. Always confirm the ticket type, quantity, and total price with the customer before calling this tool.",
+  input_schema: {
+    type: "object",
+    properties: {
+      eventId: {
+        type: "string",
+        description: "The ID of the event",
+      },
+      ticketTypeId: {
+        type: "string",
+        description: "The ID of the EventTicketType to purchase",
+      },
+      quantity: {
+        type: "number",
+        description: "Number of tickets to add (must be at least 1)",
+      },
+    },
+    required: ["eventId", "ticketTypeId", "quantity"],
   },
 }
 
@@ -332,7 +357,7 @@ Start your response with one short sentence, then paste the code block above exa
             model: "claude-sonnet-4-5",
             max_tokens: 4096,
             system: systemWithContext,
-            tools: [ADD_TO_CART_TOOL, ADD_MULTIPLE_TO_CART_TOOL],
+            tools: [ADD_TO_CART_TOOL, ADD_MULTIPLE_TO_CART_TOOL, SEARCH_EVENTS_TOOL as Anthropic.Tool, ADD_EVENT_TICKETS_TO_CART_TOOL],
             tool_choice: { type: "auto" },
             messages: currentMessages,
           })
@@ -459,6 +484,189 @@ Start your response with one short sentence, then paste the code block above exa
                     succeeded.length > 0 &&
                     failed.length > 0,
                 })
+                toolResultBlocks.push({
+                  type: "tool_result" as const,
+                  tool_use_id: toolBlock.id,
+                  content: toolResultContent,
+                })
+              } else if (toolBlock.name === "search_events") {
+                const input = toolBlock.input as {
+                  query?: string
+                  category?: string
+                  region?: string
+                  dateFilter?: "this_week" | "this_weekend" | "this_month" | "upcoming"
+                }
+
+                const now = new Date()
+                let startDateFilter: { gte?: Date; lte?: Date } = { gte: now }
+
+                if (input.dateFilter === "this_week") {
+                  const end = new Date(now)
+                  end.setDate(now.getDate() + 7)
+                  startDateFilter = { gte: now, lte: end }
+                } else if (input.dateFilter === "this_weekend") {
+                  const day = now.getDay()
+                  const daysUntilSat = day === 0 ? 6 : 6 - day
+                  const sat = new Date(now)
+                  sat.setDate(now.getDate() + daysUntilSat)
+                  sat.setHours(0, 0, 0, 0)
+                  const sun = new Date(sat)
+                  sun.setDate(sat.getDate() + 1)
+                  sun.setHours(23, 59, 59, 999)
+                  startDateFilter = { gte: sat, lte: sun }
+                } else if (input.dateFilter === "this_month") {
+                  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+                  startDateFilter = { gte: now, lte: end }
+                }
+
+                const q = (input.query ?? "").trim()
+                const searchWhere = q.length > 0
+                  ? {
+                      OR: [
+                        { title: { contains: q, mode: "insensitive" as const } },
+                        { category: { contains: q, mode: "insensitive" as const } },
+                        { venueName: { contains: q, mode: "insensitive" as const } },
+                        { description: { contains: q, mode: "insensitive" as const } },
+                      ],
+                    }
+                  : {}
+
+                try {
+                  const events = await prisma.event.findMany({
+                    where: {
+                      status: "PUBLISHED",
+                      startDate: startDateFilter,
+                      ...(input.category ? { category: { contains: input.category, mode: "insensitive" as const } } : {}),
+                      ...(input.region ? { region: { contains: input.region, mode: "insensitive" as const } } : {}),
+                      ...searchWhere,
+                    },
+                    select: {
+                      id: true,
+                      title: true,
+                      slug: true,
+                      category: true,
+                      startDate: true,
+                      venueName: true,
+                      region: true,
+                      coverImage: true,
+                      ticketTypes: {
+                        select: {
+                          id: true,
+                          name: true,
+                          price: true,
+                          quantity: true,
+                          quantitySold: true,
+                          saleStartDate: true,
+                          saleEnds: true,
+                          isVisible: true,
+                          perks: true,
+                          maxPerOrder: true,
+                        },
+                      },
+                    },
+                    orderBy: { startDate: "asc" },
+                    take: 8,
+                  })
+
+                  const nowTs = new Date()
+                  const results = events.map((e) => {
+                    const visibleTypes = e.ticketTypes.filter((t) => t.isVisible)
+                    const available = visibleTypes.some(
+                      (t) =>
+                        t.quantitySold < t.quantity &&
+                        (t.saleEnds === null || t.saleEnds > nowTs)
+                    )
+                    return {
+                      id: e.id,
+                      title: e.title,
+                      slug: e.slug,
+                      category: e.category,
+                      startDate: e.startDate,
+                      venueName: e.venueName,
+                      region: e.region,
+                      coverImage: e.coverImage,
+                      url: `/events/${e.slug}`,
+                      available,
+                      minPrice:
+                        visibleTypes.length > 0
+                          ? Math.min(...visibleTypes.map((t) => Number(t.price)))
+                          : 0,
+                      ticketTypes: visibleTypes.map((t) => ({
+                        id: t.id,
+                        name: t.name,
+                        price: t.price,
+                        quantity: t.quantity,
+                        quantitySold: t.quantitySold,
+                        saleStartDate: t.saleStartDate,
+                        saleEnds: t.saleEnds,
+                        isVisible: t.isVisible,
+                        perks: t.perks,
+                        maxPerOrder: t.maxPerOrder,
+                        soldOut: t.quantitySold >= t.quantity,
+                        remaining: t.quantity - t.quantitySold,
+                      })),
+                    }
+                  })
+
+                  toolResultBlocks.push({
+                    type: "tool_result" as const,
+                    tool_use_id: toolBlock.id,
+                    content: JSON.stringify({ events: results, total: results.length }),
+                  })
+                } catch {
+                  toolResultBlocks.push({
+                    type: "tool_result" as const,
+                    tool_use_id: toolBlock.id,
+                    content: JSON.stringify({ events: [], total: 0, error: "Failed to search events." }),
+                  })
+                }
+              } else if (toolBlock.name === "add_event_tickets_to_cart") {
+                const input = toolBlock.input as {
+                  eventId?: string
+                  ticketTypeId?: string
+                  quantity?: number
+                }
+                let toolResultContent: string
+
+                if (!input.ticketTypeId || !input.eventId) {
+                  toolResultContent = JSON.stringify({ ok: false, error: "eventId and ticketTypeId are required." })
+                } else {
+                  // Verify ticketType belongs to the event
+                  const ticketCheck = await prisma.eventTicketType.findFirst({
+                    where: { id: input.ticketTypeId, eventId: input.eventId },
+                    select: { id: true, name: true, price: true },
+                  })
+                  if (!ticketCheck) {
+                    toolResultContent = JSON.stringify({ ok: false, error: "Ticket type not found for this event.", code: "not_found" })
+                  } else {
+                    // Get session for userId — route has no session context, use prisma directly from cookie header
+                    // We use the server action which re-reads the session internally
+                    const qty = input.quantity != null && Number.isFinite(input.quantity) && input.quantity > 0
+                      ? Math.floor(input.quantity)
+                      : 1
+
+                    // Import session here to get userId
+                    const { getSession } = await import("@/lib/auth/session")
+                    const session = await getSession()
+                    if (!session) {
+                      toolResultContent = JSON.stringify({ ok: false, error: "Customer must be signed in to buy tickets.", code: "not_logged_in" })
+                    } else {
+                      const result = await addEventTicketToCart(input.ticketTypeId, qty, session.userId)
+                      if (result.ok) {
+                        toolResultContent = JSON.stringify({
+                          ok: true,
+                          cartItemId: result.cartItemId,
+                          totalPrice: result.totalPrice,
+                          currency: "TTD",
+                          checkoutUrl: "/checkout",
+                          message: `Added ${qty} × ${ticketCheck.name} to cart. Total: TTD ${(result.totalPrice ?? 0).toFixed(2)}.`,
+                        })
+                      } else {
+                        toolResultContent = JSON.stringify({ ok: false, error: result.error, code: result.code })
+                      }
+                    }
+                  }
+                }
                 toolResultBlocks.push({
                   type: "tool_result" as const,
                   tool_use_id: toolBlock.id,

@@ -9,6 +9,7 @@ export type UploadFolder =
   | "real-estate"
   | "vehicles"
   | "events"
+  | "events/lineup"
   | "places"
   | "food-outlets"
   | "accommodations"

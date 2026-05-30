@@ -35,6 +35,7 @@ import HomeFeaturedStoreCard from "@/components/home/HomeFeaturedStoreCard";
 import HeroSlider from "@/components/layout/HeroSlider";
 import PublicNav from "@/components/layout/PublicNav";
 import WishlistButton from "@/components/ui/WishlistButton";
+import { EventCard, type EventCardData } from "@/components/events/EventCard";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { PRODUCT_CATEGORIES } from "@/lib/categories";
 import { colors, css, radius, shadow, spacing, typography, tw } from "@/lib/design-system";
@@ -245,6 +246,36 @@ export default async function Home() {
     prisma.store.count({ where: { status: "ACTIVE" } }),
     prisma.product.count({ where: { isPublished: true } }),
   ]);
+
+  // Upcoming events
+  const upcomingEvents = await prisma.event.findMany({
+    where: {
+      status: "PUBLISHED",
+      startDate: { gte: new Date() },
+    },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      category: true,
+      startDate: true,
+      coverImage: true,
+      venueName: true,
+      region: true,
+      isOnline: true,
+      store: { select: { name: true, slug: true, logoUrl: true } },
+      ticketTypes: {
+        select: {
+          price: true,
+          quantity: true,
+          quantitySold: true,
+          isVisible: true,
+        },
+      },
+    },
+    orderBy: { startDate: "asc" },
+    take: 6,
+  });
 
   const TOP_CATEGORIES = PRODUCT_CATEGORIES.slice(0, 14);
 
@@ -575,6 +606,39 @@ export default async function Home() {
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
               {featuredStoreCards.map((store) => (
                 <HomeFeaturedStoreCard key={store.id} store={store} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Upcoming events */}
+      {upcomingEvents.length > 0 && (
+        <section className={`${tw.bgPage} py-20 md:py-28`}>
+          <div className="mx-auto max-w-screen-xl px-4 sm:px-6">
+            <div className="mb-8 flex items-center justify-between gap-4">
+              <div>
+                <p className={`mb-1 text-xs font-bold uppercase tracking-widest ${tw.textScarlet}`}>
+                  Get tickets
+                </p>
+                <h2 className="font-sans text-2xl font-bold text-[#1C1C1A]">
+                  Upcoming Events
+                </h2>
+              </div>
+              <Link
+                href="/events"
+                className="flex shrink-0 items-center gap-1.5 text-sm font-semibold text-[#D4450A] transition-opacity hover:opacity-80"
+              >
+                View all events →
+              </Link>
+            </div>
+
+            {/* Horizontal scroll on mobile, 3-col grid on desktop */}
+            <div className="scrollbar-hide -mx-4 flex gap-5 overflow-x-auto px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0">
+              {(upcomingEvents as EventCardData[]).map((event) => (
+                <div key={event.id} className="w-72 shrink-0 lg:w-auto">
+                  <EventCard event={event} />
+                </div>
               ))}
             </div>
           </div>

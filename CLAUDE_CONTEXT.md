@@ -1,6 +1,6 @@
 # LinkWe — AI session context
 
-**Last updated:** 28 May 2026 (end of day)
+**Last updated:** 30 May 2026 (end of day)
 
 Reference document for assistants working in this repository. Paths are relative to the project root unless noted.
 
@@ -9,6 +9,32 @@ Reference document for assistants working in this repository. Paths are relative
 ## Recent Changes (since initial context generation)
 
 Summary of notable additions and refactors. Re-scan the repo after large merges.
+
+### 30 May 2026 — Events & Ticketing system (Steps 1–3)
+
+**Active phase:** Pre-launch + Events & Ticketing build in progress.
+
+#### Events system — completed
+- **Schema** (`prisma/schema.prisma`) — `Event`, `EventTicketType`, `Ticket`, `EventPromoCode`, `EventWaitlist` models; `lineup Json?` field on `Event` stores performer array.
+- **Vendor event management** — Create (`app/(dashboard)/dashboard/vendor/events/new/page.tsx`), edit (`EditEventForm.tsx`), publish flow, bulk event listing (`app/(dashboard)/dashboard/vendor/events/page.tsx`).
+- **Ticket types editor** — Inline editor with colour swatches inside the event form; `EventTicketType` rows saved via server actions.
+- **Entertainment & Lineup** — `components/events/LineupEditor.tsx`: inline add-performer form with Cloudinary photo upload (`uploadLineupImage` server action, folder `events/lineup`), circular previews, type badges. Edit and new forms both include the section.
+- **Public events discovery** — `app/events/page.tsx`: dark hero with Cloudinary background image (`https://res.cloudinary.com/dosxxjwnh/image/upload/v1780164845/events-hero_bfhevo.png`), category filters, region filter, AJAX keyword search, `EventCard` grid.
+- **Public event detail page** — `app/events/[slug]/page.tsx`: full-bleed 520px hero, quick-info strip, About section, Entertainment & Lineup section, gallery, ticket purchase card (`TicketPurchaseCard`), share button, organiser card.
+- **Lineup lightbox** — `components/events/LineupLightbox.tsx`: clickable performer grid; fullscreen `87vw × 87vh` overlay with bottom-gradient name/role/badge overlay, ESC + backdrop-click to close.
+- **Nav & homepage** — Events link added to main public nav and homepage feature sections.
+- **Rex (vendor AI)** — 6 new event management tools: `create_event`, `update_event`, `publish_event`, `list_events`, `create_ticket_type`, `delete_ticket_type`.
+- **Zara (customer AI)** — Events awareness added to system prompt (`lib/chat/systemPrompt.ts`); `search_events` tool in `app/api/chat/route.ts` queries published events by keyword, category, region, and date filter.
+
+#### Still to build — Events
+- **Step 4:** Ticket purchase Stripe integration (payment intent, webhook, order record)
+- **Step 5:** QR ticket delivery and PDF ticket generation
+- **Step 6:** Offline QR scanner for vendor door check-in
+- **Step 7:** Event products and services integration (merchandise, add-ons)
+- **Step 8:** Promo codes, waitlist auto-promotion, ticket transfer between customers
+- **Zara ticket-to-cart flow** — Let Zara add event tickets to cart and initiate checkout
+
+---
 
 ### 28 May 2026 (end of day)
 
@@ -810,7 +836,9 @@ Grouped by folder; one line each.
 | **Services notify** | `ServicesLaunchNotifyModal` uses `mailto:` — no waitlist API. |
 | **Footer/legal** | “Cookie policy” links to `/privacy`; About/Careers → `/contact`; social URLs may be marketing placeholders. |
 | **Legacy uploads** | `lib/listing/local-listing-upload.ts` supports old `/uploads/listings` local files alongside Cloudinary. |
-| **Broad schema, selective UI** | Models for RealEstate, Vehicle, Event, Place, FoodOutlet, Accommodation, `Service` table — not all exposed on main storefront nav. |
+| **Broad schema, selective UI** | Models for RealEstate, Vehicle, Place, FoodOutlet, Accommodation — not yet exposed on main storefront nav. Events are live. |
+| **Events — Stripe not wired** | `TicketPurchaseCard` UI exists but ticket checkout (Step 4) not yet implemented; purchase buttons are placeholders. |
+| **Events — QR / PDF** | No QR code generation or PDF ticket delivery yet (Steps 5–6). |
 | **No `TODO` flood** | Few explicit TODOs; gaps inferred from duplicate systems and stub copy rather than comments. |
 | **Cart server action** | `app/actions/cart.ts` targets listing cart; client cart store may use products — confirm when changing cart behavior. |
 | **Schema vs production DB** | Vendor split-order / service availability queries use safe `select` lists when Neon lags `schema.prisma`; run `scripts/neon-product-availability-columns.sql` when availability columns missing. |
@@ -852,8 +880,8 @@ Grouped by folder; one line each.
 ### AI chat (customer)
 - **Route:** `POST /api/chat` streams Anthropic messages.
 - **Model:** `claude-sonnet-4-5`.
-- **Tools:** `search_products` (via `searchProducts` action), `add_to_cart` (via `addToCart` action).
-- **Prompt:** `lib/chat/systemPrompt.ts` (Trinidad-local tone, outfit queries).
+- **Tools:** `search_products` (via `searchProducts` action), `add_to_cart` (via `addToCart` action), `search_events` (queries published events by keyword, category, region, dateFilter).
+- **Prompt:** `lib/chat/systemPrompt.ts` (Trinidad-local tone, outfit queries, events awareness).
 - **UI:** `components/chat/ShoppingChat.tsx`.
 
 ### AI (vendor)
