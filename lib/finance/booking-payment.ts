@@ -118,11 +118,14 @@ export async function handleBookingPaymentIntentSucceeded(
     ? BookingStatus.PENDING
     : BookingStatus.CONFIRMED;
 
-  if (
+  // Idempotency guard: true only on the first successful webhook delivery.
+  // Stripe retries on 500 would otherwise re-send confirmation emails.
+  const isFirstProcessing =
     booking.status !== nextStatus ||
     booking.amountPaid == null ||
-    booking.autoCompleteAt == null
-  ) {
+    booking.autoCompleteAt == null;
+
+  if (isFirstProcessing) {
     await prisma.productBooking.update({
       where: { id: bookingId },
       data: {
@@ -131,35 +134,42 @@ export async function handleBookingPaymentIntentSucceeded(
         autoCompleteAt,
       },
     });
-  }
 
-  if (nextStatus === BookingStatus.CONFIRMED) {
-    await sendBookingConfirmationEmails(bookingId, booking.customerId);
-  }
+    if (nextStatus === BookingStatus.CONFIRMED) {
+      await sendBookingConfirmationEmails(bookingId, booking.customerId);
+    }
 
-  await createNotification({
-    userId: booking.customerId,
-    type: NotificationType.BOOKING_CONFIRMED,
-    title: "Payment received",
-    body: "Your booking payment was successful.",
-    linkUrl: "/bookings",
-  });
-
-  if (booking.product.store.ownerId) {
     await createNotification({
-      userId: booking.product.store.ownerId,
+      userId: booking.customerId,
       type: NotificationType.BOOKING_CONFIRMED,
-      title: "New paid booking",
-      body: `TTD ${amountPaid.toFixed(2)} paid online`,
-      linkUrl: "/dashboard/vendor/bookings",
+      title: "Payment received",
+      body: "Your booking payment was successful.",
+      linkUrl: "/bookings",
     });
+
+    if (booking.product.store.ownerId) {
+      await createNotification({
+        userId: booking.product.store.ownerId,
+        type: NotificationType.BOOKING_CONFIRMED,
+        title: "New paid booking",
+        body: `TTD ${amountPaid.toFixed(2)} paid online`,
+        linkUrl: "/dashboard/vendor/bookings",
+      });
+    }
   }
 
   revalidateBookingPaths(booking.product.slug);
 }
 
 function revalidateBookingPaths(serviceSlug: string) {
-  revalidatePath(`/service/${serviceSlug}`);
-  revalidatePath("/bookings");
-  revalidatePath("/booking-confirmation");
+  // revalidatePath throws E263 ("static generation store missing") when called
+  // from a webhook Route Handler that has no incremental-cache store.
+  // Cache revalidation is best-effort here — it must never crash the payment flow.
+  for (const path of [`/service/${serviceSlug}`, "/bookings", "/booking-confirmation"]) {
+    try {
+      revalidatePath(path);
+    } catch {
+      // silently ignored — cache will expire naturally
+    }
+  }
 }
