@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { assertDashboardRole } from "@/lib/auth/assert-role";
@@ -21,6 +20,7 @@ export default async function AdminVerificationPage() {
       id: true,
       fullName: true,
       email: true,
+      phone: true,
       idDocumentUrl: true,
       idVerificationStatus: true,
       idVerifiedAt: true,
@@ -34,7 +34,30 @@ export default async function AdminVerificationPage() {
         },
       },
       storesOwned: {
-        select: { name: true, slug: true },
+        select: {
+          name: true,
+          slug: true,
+          description: true,
+          categoryId: true,
+          region: true,
+          logoUrl: true,
+          tagline: true,
+          tags: true,
+          openingHours: true,
+          status: true,
+          images: {
+            select: { url: true, position: true },
+            orderBy: { position: "asc" as const },
+          },
+          products: {
+            select: { id: true, name: true, isPublished: true },
+            take: 10,
+            orderBy: { createdAt: "desc" as const },
+          },
+          _count: {
+            select: { products: true },
+          },
+        },
         take: 1,
       },
     },
@@ -45,29 +68,7 @@ export default async function AdminVerificationPage() {
   const reviewed = vendors.filter((v) => v.idVerificationStatus !== "PENDING");
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
-      <Link
-        href="/dashboard/admin"
-        className="mb-6 inline-flex items-center gap-1.5 text-sm text-zinc-500 transition-colors hover:text-zinc-800"
-      >
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          aria-hidden
-        >
-          <polyline points="15 18 9 12 15 6" />
-        </svg>
-        Back to dashboard
-      </Link>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-zinc-900">ID Verification</h1>
-        <p className="mt-1 text-sm text-zinc-500">Review and approve vendor identity documents</p>
-      </div>
-
+    <div className="p-6">
       <VerificationClient pending={pending} reviewed={reviewed} />
     </div>
   );

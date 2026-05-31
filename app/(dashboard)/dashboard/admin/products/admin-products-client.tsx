@@ -64,7 +64,7 @@ function toQueryString(full: Props["query"]): string {
 }
 
 export default function AdminProductsClient({
-  adminName,
+  adminName: _adminName,
   stores,
   initial,
   query,
@@ -155,54 +155,7 @@ export default function AdminProductsClient({
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5]">
-      <header className="flex h-14 items-center justify-between bg-[#1C1C1A] px-6">
-        <div className="flex items-center gap-3">
-          <span className="text-xl font-bold text-[#D4450A]">LinkWe</span>
-          <span className="text-zinc-500" aria-hidden>
-            /
-          </span>
-          <span className="text-sm text-zinc-400">Admin Panel</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-zinc-300">{adminName}</span>
-          <Link
-            href="/dashboard/admin"
-            className="text-xs text-zinc-400 hover:text-white"
-          >
-            ← Admin home
-          </Link>
-        </div>
-      </header>
-
-      <nav
-        className="flex w-full min-w-0 overflow-x-auto whitespace-nowrap border-b bg-white px-2"
-        style={{ borderColor: "var(--card-border)" }}
-      >
-        <div className="mx-auto flex w-max min-w-0 max-w-7xl items-center gap-1">
-          <Link
-            href="/dashboard/admin"
-            className="flex shrink-0 items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap text-zinc-500 transition-colors hover:text-zinc-800"
-          >
-            Overview
-          </Link>
-          <Link
-            href="/dashboard/admin?tab=orders"
-            className="flex shrink-0 items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap text-zinc-500 transition-colors hover:text-zinc-800"
-          >
-            Orders
-          </Link>
-          <Link
-            href="/dashboard/admin/products"
-            className="flex shrink-0 items-center gap-2 border-b-2 border-[#D4450A] px-4 py-3 text-sm font-medium whitespace-nowrap text-[#D4450A]"
-            style={{ color: "var(--scarlet)" }}
-          >
-            Products
-          </Link>
-        </div>
-      </nav>
-
-      <div className="mx-auto max-w-7xl p-6">
+    <div className="mx-auto max-w-7xl p-6">
         <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-lg font-semibold text-zinc-900">All products</h1>
@@ -495,7 +448,6 @@ export default function AdminProductsClient({
             )}
           </div>
         </div>
-      </div>
 
       {detail ? (
         <div

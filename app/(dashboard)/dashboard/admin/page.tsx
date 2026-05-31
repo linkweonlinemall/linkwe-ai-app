@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 
 import AdminDashboard from "./components/admin-dashboard";
@@ -10,8 +11,8 @@ export default async function AdminDashboardPage() {
   assertDashboardRole(session, "ADMIN");
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5]">
+    <Suspense fallback={<div className="p-8 text-sm text-zinc-400">Loading…</div>}>
       <AdminDashboard adminName={session.fullName ?? "Admin"} />
-    </div>
+    </Suspense>
   );
 }

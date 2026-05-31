@@ -167,127 +167,218 @@ export default function CustomersTab() {
             No customers yet. Customers will appear here when they register.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px] text-sm">
-              <thead>
-                <tr className="border-b border-zinc-200 bg-zinc-50 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                  <th className="px-4 py-3">Customer</th>
-                  <th className="px-4 py-3">Region</th>
-                  <th className="px-4 py-3 text-right">Orders</th>
-                  <th className="px-4 py-3 text-right">Total Spent</th>
-                  <th className="px-4 py-3">Joined</th>
-                  <th className="px-4 py-3">Last Order</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((c) => {
-                  const spend = getTotalSpend(c);
-                  const border = getSpendBorderColor(spend);
-                  const lastOrder = c.mainOrders[0];
-                  return (
-                    <Fragment key={c.id}>
-                      <tr
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => setExpandedCustomer((prev) => (prev === c.id ? null : c.id))}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ")
-                            setExpandedCustomer((prev) => (prev === c.id ? null : c.id));
-                        }}
-                        className="cursor-pointer border-b border-zinc-100 transition-colors hover:bg-zinc-50"
-                        style={{ borderLeftWidth: 4, borderLeftColor: border, borderLeftStyle: "solid" }}
-                      >
-                        <td className="px-4 py-3">
-                          <p className="font-semibold text-zinc-900">{c.fullName}</p>
-                          <p className="text-xs text-zinc-500">{c.email}</p>
-                        </td>
-                        <td className="px-4 py-3 capitalize text-zinc-700">{c.region?.replace(/_/g, " ") ?? "—"}</td>
-                        <td className="px-4 py-3 text-right font-mono text-zinc-900">{c.mainOrders.length}</td>
-                        <td className="px-4 py-3 text-right font-mono font-semibold text-zinc-900">
-                          {formatTTD(spend)}
-                        </td>
-                        <td className="px-4 py-3 text-zinc-600">{formatJoined(c.createdAt)}</td>
-                        <td className="px-4 py-3 text-zinc-600">
-                          {lastOrder ? (
-                            <>
-                              <span className="text-zinc-900">{relativeTime(lastOrder.createdAt)}</span>
-                              <p className="text-xs text-zinc-400">
-                                {lastOrder.referenceNumber ?? `#${lastOrder.id.slice(-8).toUpperCase()}`}
-                              </p>
-                            </>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                      </tr>
-                      {expandedCustomer === c.id ? (
-                        <tr className="bg-zinc-50">
-                          <td colSpan={6} className="px-4 pb-4 pt-0">
-                            <p className="mb-2 mt-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                              Order history
-                            </p>
-                            {c.mainOrders.length === 0 ? (
-                              <p className="text-xs text-zinc-500">No completed orders yet.</p>
+          <>
+            {/* ── Desktop table (unchanged) ── */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[800px] text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-200 bg-zinc-50 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    <th className="px-4 py-3">Customer</th>
+                    <th className="px-4 py-3">Region</th>
+                    <th className="px-4 py-3 text-right">Orders</th>
+                    <th className="px-4 py-3 text-right">Total Spent</th>
+                    <th className="px-4 py-3">Joined</th>
+                    <th className="px-4 py-3">Last Order</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((c) => {
+                    const spend = getTotalSpend(c);
+                    const border = getSpendBorderColor(spend);
+                    const lastOrder = c.mainOrders[0];
+                    return (
+                      <Fragment key={c.id}>
+                        <tr
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setExpandedCustomer((prev) => (prev === c.id ? null : c.id))}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ")
+                              setExpandedCustomer((prev) => (prev === c.id ? null : c.id));
+                          }}
+                          className="cursor-pointer border-b border-zinc-100 transition-colors hover:bg-zinc-50"
+                          style={{ borderLeftWidth: 4, borderLeftColor: border, borderLeftStyle: "solid" }}
+                        >
+                          <td className="px-4 py-3">
+                            <p className="font-semibold text-zinc-900">{c.fullName}</p>
+                            <p className="text-xs text-zinc-500">{c.email}</p>
+                          </td>
+                          <td className="px-4 py-3 capitalize text-zinc-700">{c.region?.replace(/_/g, " ") ?? "—"}</td>
+                          <td className="px-4 py-3 text-right font-mono text-zinc-900">{c.mainOrders.length}</td>
+                          <td className="px-4 py-3 text-right font-mono font-semibold text-zinc-900">
+                            {formatTTD(spend)}
+                          </td>
+                          <td className="px-4 py-3 text-zinc-600">{formatJoined(c.createdAt)}</td>
+                          <td className="px-4 py-3 text-zinc-600">
+                            {lastOrder ? (
+                              <>
+                                <span className="text-zinc-900">{relativeTime(lastOrder.createdAt)}</span>
+                                <p className="text-xs text-zinc-400">
+                                  {lastOrder.referenceNumber ?? `#${lastOrder.id.slice(-8).toUpperCase()}`}
+                                </p>
+                              </>
                             ) : (
-                              <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
-                                <table className="w-full text-xs">
-                                  <thead>
-                                    <tr className="border-b border-zinc-100 bg-zinc-50 text-left text-zinc-500">
-                                      <th className="px-3 py-2">Ref</th>
-                                      <th className="px-3 py-2">Status</th>
-                                      <th className="px-3 py-2 text-right">Total</th>
-                                      <th className="px-3 py-2">Date</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {c.mainOrders.map((o) => {
-                                      const col = getStatusColor(o.status);
-                                      return (
-                                        <tr key={o.id} className="border-b border-zinc-50 last:border-0">
-                                          <td className="px-3 py-2">
-                                            <span
-                                              className="mr-2 inline-block h-2 w-2 rounded-full"
-                                              style={{ backgroundColor: col }}
-                                            />
-                                            {o.referenceNumber ?? o.id.slice(-8).toUpperCase()}
-                                          </td>
-                                          <td className="px-3 py-2">
-                                            <span
-                                              className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                                              style={{
-                                                color: col,
-                                                backgroundColor: `${col}18`,
-                                              }}
-                                            >
-                                              {o.status.replace(/_/g, " ")}
-                                            </span>
-                                          </td>
-                                          <td className="px-3 py-2 text-right font-mono">{formatTTD(o.totalMinor)}</td>
-                                          <td className="px-3 py-2 text-zinc-600">
-                                            {new Date(o.createdAt).toLocaleString("en-TT", {
-                                              day: "numeric",
-                                              month: "short",
-                                              year: "numeric",
-                                              hour: "2-digit",
-                                              minute: "2-digit",
-                                            })}
-                                          </td>
-                                        </tr>
-                                      );
-                                    })}
-                                  </tbody>
-                                </table>
-                              </div>
+                              "—"
                             )}
                           </td>
                         </tr>
-                      ) : null}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        {expandedCustomer === c.id ? (
+                          <tr className="bg-zinc-50">
+                            <td colSpan={6} className="px-4 pb-4 pt-0">
+                              <p className="mb-2 mt-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                                Order history
+                              </p>
+                              {c.mainOrders.length === 0 ? (
+                                <p className="text-xs text-zinc-500">No completed orders yet.</p>
+                              ) : (
+                                <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
+                                  <table className="w-full text-xs">
+                                    <thead>
+                                      <tr className="border-b border-zinc-100 bg-zinc-50 text-left text-zinc-500">
+                                        <th className="px-3 py-2">Ref</th>
+                                        <th className="px-3 py-2">Status</th>
+                                        <th className="px-3 py-2 text-right">Total</th>
+                                        <th className="px-3 py-2">Date</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {c.mainOrders.map((o) => {
+                                        const col = getStatusColor(o.status);
+                                        return (
+                                          <tr key={o.id} className="border-b border-zinc-50 last:border-0">
+                                            <td className="px-3 py-2">
+                                              <span
+                                                className="mr-2 inline-block h-2 w-2 rounded-full"
+                                                style={{ backgroundColor: col }}
+                                              />
+                                              {o.referenceNumber ?? o.id.slice(-8).toUpperCase()}
+                                            </td>
+                                            <td className="px-3 py-2">
+                                              <span
+                                                className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                                                style={{
+                                                  color: col,
+                                                  backgroundColor: `${col}18`,
+                                                }}
+                                              >
+                                                {o.status.replace(/_/g, " ")}
+                                              </span>
+                                            </td>
+                                            <td className="px-3 py-2 text-right font-mono">{formatTTD(o.totalMinor)}</td>
+                                            <td className="px-3 py-2 text-zinc-600">
+                                              {new Date(o.createdAt).toLocaleString("en-TT", {
+                                                day: "numeric",
+                                                month: "short",
+                                                year: "numeric",
+                                                hour: "2-digit",
+                                                minute: "2-digit",
+                                              })}
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ) : null}
+                      </Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* ── Mobile stacked cards (same data, same handlers) ── */}
+            <div className="md:hidden">
+              {filtered.map((c) => {
+                const spend = getTotalSpend(c);
+                const border = getSpendBorderColor(spend);
+                const isExpanded = expandedCustomer === c.id;
+                return (
+                  <div key={c.id}>
+                    {/* Card row */}
+                    <button
+                      type="button"
+                      onClick={() => setExpandedCustomer((prev) => (prev === c.id ? null : c.id))}
+                      className="w-full border-b border-zinc-100 px-4 py-3 text-left transition-colors hover:bg-zinc-50"
+                      style={{ borderLeft: `4px solid ${border}` }}
+                    >
+                      <p className="font-semibold text-zinc-900">{c.fullName}</p>
+                      <p className="text-xs text-zinc-500">{c.email}</p>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                        <span className="capitalize text-zinc-600">
+                          {c.region?.replace(/_/g, " ") ?? "—"}
+                        </span>
+                        <span className="text-zinc-500">
+                          {c.mainOrders.length} order{c.mainOrders.length !== 1 ? "s" : ""}
+                        </span>
+                        <span className="font-mono font-semibold text-zinc-900">
+                          {formatTTD(spend)}
+                        </span>
+                      </div>
+                    </button>
+
+                    {/* Expanded order history — stacked cards, no inner table */}
+                    {isExpanded ? (
+                      <div className="border-b border-zinc-100 bg-zinc-50 px-4 pb-4 pt-3">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                          Order history
+                        </p>
+                        {c.mainOrders.length === 0 ? (
+                          <p className="text-xs text-zinc-500">No completed orders yet.</p>
+                        ) : (
+                          <div className="flex flex-col gap-2">
+                            {c.mainOrders.map((o) => {
+                              const col = getStatusColor(o.status);
+                              return (
+                                <div
+                                  key={o.id}
+                                  className="rounded-xl border border-zinc-200 bg-white p-3"
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-1.5">
+                                      <span
+                                        className="inline-block h-2 w-2 shrink-0 rounded-full"
+                                        style={{ backgroundColor: col }}
+                                      />
+                                      <span className="text-xs font-medium text-zinc-700">
+                                        {o.referenceNumber ?? o.id.slice(-8).toUpperCase()}
+                                      </span>
+                                    </div>
+                                    <span className="font-mono text-xs font-semibold text-zinc-900">
+                                      {formatTTD(o.totalMinor)}
+                                    </span>
+                                  </div>
+                                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                                    <span
+                                      className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                                      style={{ color: col, backgroundColor: `${col}18` }}
+                                    >
+                                      {o.status.replace(/_/g, " ")}
+                                    </span>
+                                    <span className="text-[11px] text-zinc-400">
+                                      {new Date(o.createdAt).toLocaleString("en-TT", {
+                                        day: "numeric",
+                                        month: "short",
+                                        year: "numeric",
+                                      })}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
     </div>

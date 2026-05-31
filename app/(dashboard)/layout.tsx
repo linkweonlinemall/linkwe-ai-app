@@ -23,10 +23,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const hdrs = await headers();
   const pathname = hdrs.get("x-pathname") ?? "";
   const isVendorShell = pathname.startsWith("/dashboard/vendor");
+  const isAdminShell = pathname.startsWith("/dashboard/admin");
 
   if (isVendorShell) {
     return (
       <div className="flex h-dvh min-h-0 flex-col overflow-hidden bg-[#F7F5F2]">
+        <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
+      </div>
+    );
+  }
+
+  if (isAdminShell) {
+    return (
+      <div className="flex h-dvh min-h-0 flex-col overflow-hidden bg-[#F5F5F5]">
         <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
       </div>
     );

@@ -42,7 +42,7 @@ const ID_STATUS_COLORS: Record<string, string> = {
   UNSUBMITTED: "bg-zinc-100 text-zinc-500",
   PENDING: "bg-amber-50 text-amber-700",
   APPROVED: "bg-emerald-50 text-emerald-700",
-  REJECTED: "bg-red-50 text-red-600",
+  REJECTED: "bg-[#FFF1ED] text-[#D4450A]",
 };
 
 export default function AdminStoresClient({
@@ -282,7 +282,8 @@ export default function AdminStoresClient({
               key={store.id}
               className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm"
             >
-              <div className="flex items-start gap-4">
+              {/* ── Top row: checkbox + logo + name (+ pills/metadata/actions inline on desktop) ── */}
+              <div className="flex items-start gap-3 md:gap-4">
                 <input
                   checked={selected.includes(store.id)}
                   className="mt-1 rounded"
@@ -306,29 +307,28 @@ export default function AdminStoresClient({
                 </div>
 
                 <div className="min-w-0 flex-1">
+                  {/* Name — max 2 lines on mobile so it never crowds the row */}
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-semibold text-zinc-900">{store.name}</p>
+                    <p className="line-clamp-2 font-semibold text-zinc-900 md:line-clamp-none">
+                      {store.name}
+                    </p>
+                    {/* Status pills — desktop only; mobile renders them in the block below */}
                     <span
-                      className={`
-                      rounded-full px-2 py-0.5 text-[10px] font-bold
-                      ${STATUS_COLORS[store.status] ?? "bg-zinc-100 text-zinc-600"}
-                    `}
+                      className={`hidden rounded-full px-2 py-0.5 text-[10px] font-bold md:inline-flex ${STATUS_COLORS[store.status] ?? "bg-zinc-100 text-zinc-600"}`}
                     >
                       {store.status.replace(/_/g, " ")}
                     </span>
                     <span
-                      className={`
-                      rounded-full px-2 py-0.5 text-[10px]
-                      ${ID_STATUS_COLORS[store.owner.idVerificationStatus] ?? "bg-zinc-100 text-zinc-500"}
-                    `}
+                      className={`hidden rounded-full px-2 py-0.5 text-[10px] md:inline-flex ${ID_STATUS_COLORS[store.owner.idVerificationStatus] ?? "bg-zinc-100 text-zinc-500"}`}
                     >
                       ID: {store.owner.idVerificationStatus.replace(/_/g, " ")}
                     </span>
                   </div>
-                  <p className="mt-0.5 text-xs text-zinc-500">
+                  {/* Desktop-only: owner/email + metadata below name */}
+                  <p className="mt-0.5 hidden text-xs text-zinc-500 md:block">
                     {store.owner.fullName} · {store.owner.email}
                   </p>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-4 text-xs text-zinc-400">
+                  <div className="mt-1.5 hidden flex-wrap items-center gap-4 text-xs text-zinc-400 md:flex">
                     <span>/{store.slug}</span>
                     {store.region ? <span>📍 {store.region}</span> : null}
                     <span>📦 {store._count.products} products</span>
@@ -336,24 +336,19 @@ export default function AdminStoresClient({
                   </div>
                 </div>
 
-                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                {/* Desktop-only: actions right column */}
+                <div className="hidden shrink-0 flex-wrap items-center gap-2 md:flex">
                   <Link
                     href={`/store/${store.slug}`}
                     target="_blank"
-                    className="
-                      rounded-lg border border-zinc-200 px-3 py-1.5 text-xs text-zinc-600
-                      transition-colors hover:bg-zinc-50
-                    "
+                    className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs text-zinc-600 transition-colors hover:bg-zinc-50"
                   >
                     View store
                   </Link>
                   <select
                     value={store.status}
                     disabled={loading === store.id || loading === "bulk"}
-                    className="
-                      rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs
-                      focus:outline-none
-                    "
+                    className="rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs focus:outline-none"
                     onChange={(e) => handleStatusChange(store.id, e.target.value)}
                   >
                     <option value="DRAFT">Draft</option>
@@ -364,10 +359,79 @@ export default function AdminStoresClient({
                     type="button"
                     title="Delete store"
                     disabled={loading === store.id || loading === "bulk"}
-                    className="
-                      rounded-lg p-1.5 text-zinc-400 transition-colors
-                      hover:bg-red-50 hover:text-red-500
-                    "
+                    className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                    onClick={() => handleDelete(store.id, store.name)}
+                  >
+                    <svg
+                      aria-hidden
+                      fill="none"
+                      height="14"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                      width="14"
+                    >
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6l-1 14H6L5 6" />
+                      <path d="M10 11v6M14 11v6" />
+                      <path d="M9 6V4h6v2" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* ── Mobile-only: pills + metadata block + actions row ── */}
+              <div className="mt-2 md:hidden">
+                {/* Status pills */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${STATUS_COLORS[store.status] ?? "bg-zinc-100 text-zinc-600"}`}
+                  >
+                    {store.status.replace(/_/g, " ")}
+                  </span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] ${ID_STATUS_COLORS[store.owner.idVerificationStatus] ?? "bg-zinc-100 text-zinc-500"}`}
+                  >
+                    ID: {store.owner.idVerificationStatus.replace(/_/g, " ")}
+                  </span>
+                </div>
+
+                {/* Metadata — clean stacked block */}
+                <div className="mt-2 text-xs">
+                  <p className="font-medium text-zinc-700">{store.owner.fullName}</p>
+                  <p className="text-zinc-400">{store.owner.email}</p>
+                  <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-zinc-400">
+                    <span>/{store.slug}</span>
+                    {store.region ? <span>📍 {store.region}</span> : null}
+                    <span>📦 {store._count.products} products</span>
+                    <span>📅 {formatDate(store.createdAt)}</span>
+                  </div>
+                </div>
+
+                {/* Actions row — full-width, delete visually separated */}
+                <div className="mt-3 flex items-center gap-2 border-t border-zinc-100 pt-3">
+                  <Link
+                    href={`/store/${store.slug}`}
+                    target="_blank"
+                    className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-center text-xs text-zinc-600 transition-colors hover:bg-zinc-50"
+                  >
+                    View store
+                  </Link>
+                  <select
+                    value={store.status}
+                    disabled={loading === store.id || loading === "bulk"}
+                    className="flex-1 rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs focus:outline-none"
+                    onChange={(e) => handleStatusChange(store.id, e.target.value)}
+                  >
+                    <option value="DRAFT">Draft</option>
+                    <option value="PENDING_APPROVAL">Pending approval</option>
+                    <option value="ACTIVE">Active</option>
+                  </select>
+                  <button
+                    type="button"
+                    title="Delete store"
+                    disabled={loading === store.id || loading === "bulk"}
+                    className="ml-1 rounded-lg border border-red-100 bg-red-50 p-2.5 text-red-400 transition-colors hover:bg-red-100 hover:text-red-600 disabled:opacity-50"
                     onClick={() => handleDelete(store.id, store.name)}
                   >
                     <svg

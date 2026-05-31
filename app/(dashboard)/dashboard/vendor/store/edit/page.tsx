@@ -6,13 +6,12 @@ import { updateStore } from "@/app/actions/store";
 import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
 import OpeningHoursEditor from "@/components/vendor/OpeningHoursEditor";
 import Input from "@/components/ui/Input";
-import Select from "@/components/ui/Select";
 import RegionSelect from "@/components/ui/RegionSelect";
 import Textarea from "@/components/ui/Textarea";
+import CategoryPicker from "@/components/ui/CategoryPicker";
 import GalleryUploadWrapper from "./gallery-upload-wrapper";
 import StoreAmenitiesPicker from "./store-amenities-picker";
 import { getSession } from "@/lib/auth/session";
-import { STORE_CATEGORIES } from "@/lib/categories";
 import { prisma } from "@/lib/prisma";
 
 type TimeSlot = { from: string; to: string };
@@ -209,17 +208,12 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
               required
               label="Operating region"
             />
-            <Select required className="text-base" defaultValue={store.categoryId} label="Category" name="categoryId">
-              <option value="">Select…</option>
-              {!STORE_CATEGORIES.some((c) => c.value === store.categoryId) ? (
-                <option value={store.categoryId ?? ""}>
-                  Current ({store.categoryId})
-                </option>
-              ) : null}
-              {STORE_CATEGORIES.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
-              ))}
-            </Select>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+                Category <span className="text-[#D4450A]">*</span>
+              </label>
+              <CategoryPicker name="categoryId" value={store.categoryId ?? ""} />
+            </div>
             <Textarea
               className="min-h-[120px] text-base"
               defaultValue={store.description ?? ""}

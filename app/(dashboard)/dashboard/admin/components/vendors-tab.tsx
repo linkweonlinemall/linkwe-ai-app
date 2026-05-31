@@ -276,122 +276,201 @@ export default function VendorsTab() {
 
             <div className="flex flex-col gap-4">
               {payoutRequests.map((req) => {
-                const canApprove =
-                  !!req.store.owner?.bankDetails &&
-                  calcPayoutBalance(req).available >= req.amountMinor;
+                const bal = calcPayoutBalance(req);
+                const hasBankDetails = !!req.store.owner?.bankDetails;
+                const balanceCovered = bal.available >= req.amountMinor;
+                const remaining = bal.available - req.amountMinor;
+                const canApprove = hasBankDetails && balanceCovered;
                 const isApproving = approvingId === req.id;
 
                 return (
                   <div
                     key={req.id}
-                    className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm"
+                    className="rounded-2xl border border-zinc-200 bg-white shadow-sm"
+                    style={{ borderLeft: `4px solid ${canApprove ? "#1B8C5A" : "#D4450A"}` }}
                   >
-                    <div
-                      className="h-1.5 w-full"
-                      style={{
-                        backgroundColor: canApprove ? "#1B8C5A" : "#E8820C",
-                      }}
-                    />
+                    {/* ── Card body ────────────────────────────────────── */}
+                    <div className="px-5 pb-4 pt-5">
 
-                    <div className="flex items-center gap-4 px-5 py-4">
-                      <input
-                        type="checkbox"
-                        checked={selectedPayouts.has(req.id)}
-                        onChange={() => {
-                          setSelectedPayouts((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(req.id)) next.delete(req.id);
-                            else next.add(req.id);
-                            return next;
-                          });
-                        }}
-                        className="shrink-0 rounded"
-                        onClick={(e) => e.stopPropagation()}
-                      />
-
-                      <div
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-                        style={{ backgroundColor: "#1C1C1A" }}
-                      >
-                        {req.store.name.charAt(0).toUpperCase()}
+                      {/* Row 1: Identity (left) + Amount (right) */}
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex min-w-0 items-start gap-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedPayouts.has(req.id)}
+                            onChange={() => {
+                              setSelectedPayouts((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(req.id)) next.delete(req.id);
+                                else next.add(req.id);
+                                return next;
+                              });
+                            }}
+                            className="mt-1 shrink-0 rounded"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <div
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+                            style={{ backgroundColor: "#1C1C1A" }}
+                          >
+                            {req.store.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-bold text-zinc-900">{req.store.name}</p>
+                            <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-zinc-400">
+                              <span>{relativeTime(req.requestedAt)}</span>
+                              <span className="text-zinc-300">·</span>
+                              <span className="capitalize">{req.store.region?.replace(/_/g, " ")}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="text-[11px] font-medium text-zinc-400">Payout requested</p>
+                          <p className="mt-0.5 text-2xl font-bold" style={{ color: "#D4450A" }}>
+                            {formatTTD(req.amountMinor)}
+                          </p>
+                        </div>
                       </div>
 
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold text-zinc-900">{req.store.name}</p>
-                        <div className="mt-0.5 flex items-center gap-2">
-                          <span className="text-xs text-zinc-400">{relativeTime(req.requestedAt)}</span>
-                          <span className="text-zinc-300">·</span>
-                          <span className="text-xs capitalize text-zinc-400">
-                            {req.store.region?.replace(/_/g, " ")}
+                      {/* Row 2: Coverage & readiness pills */}
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {balanceCovered ? (
+                          <span
+                            className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                            style={{ backgroundColor: "#F0FDF4", color: "#1B8C5A" }}
+                          >
+                            ✓ Covered by balance · {formatTTD(req.amountMinor)} of {formatTTD(bal.available)} available · {formatTTD(remaining)} remaining
                           </span>
-                          {req.store.owner?.bankDetails ? (
-                            <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500">
-                              {req.store.owner.bankDetails.bankName}
+                        ) : (
+                          <span
+                            className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                            style={{ backgroundColor: "#FEF0EC", color: "#D4450A" }}
+                          >
+                            ✗ Exceeds balance — only {formatTTD(bal.available)} available
+                          </span>
+                        )}
+                        {hasBankDetails ? (
+                          <span
+                            className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                            style={{ backgroundColor: "#F0FDF4", color: "#1B8C5A" }}
+                          >
+                            ✓ Bank details valid
+                          </span>
+                        ) : (
+                          <span
+                            className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                            style={{ backgroundColor: "#FEF0EC", color: "#D4450A" }}
+                          >
+                            ✗ Bank details missing
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Row 3: Action row */}
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 pt-3">
+                        <div className="flex items-center gap-3">
+                          {req.store.owner?.bankDetails?.accountNumber ? (
+                            <span className="text-xs text-zinc-500">
+                              {req.store.owner.bankDetails.bankName} · ••••{req.store.owner.bankDetails.accountNumber.slice(-4)}
                             </span>
                           ) : (
-                            <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs text-red-500">
-                              No bank
-                            </span>
+                            <span className="text-xs text-zinc-400">No bank on file</span>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => setExpandedPayout(expandedPayout === req.id ? null : req.id)}
+                            className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-700"
+                          >
+                            {expandedPayout === req.id ? "Hide details ↑" : "View details ↓"}
+                          </button>
                         </div>
-                      </div>
-
-                      <div className="hidden shrink-0 flex-col items-end sm:flex">
-                        <p className="text-xs text-zinc-400">Available balance</p>
-                        <p className="mt-0.5 text-sm font-semibold text-zinc-900">
-                          {formatTTD(calcPayoutBalance(req).available)}
-                        </p>
-                      </div>
-
-                      <div className="h-10 w-px shrink-0 bg-zinc-100" />
-
-                      <div className="shrink-0 text-right">
-                        <p className="mb-0.5 text-xs text-zinc-400">Request</p>
-                        <p className="text-xl font-bold" style={{ color: "#D4450A" }}>
-                          {formatTTD(req.amountMinor)}
-                        </p>
-                      </div>
-
-                      <div className="flex shrink-0 flex-col gap-1">
-                        <div className="flex items-center gap-1.5">
-                          <div
-                            className="h-2 w-2 shrink-0 rounded-full"
-                            style={{
-                              backgroundColor: !!req.store.owner?.bankDetails ? "#1B8C5A" : "#DC2626",
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setRejectingId(req.id)}
+                            className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                          >
+                            Reject
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setApprovingId(req.id);
+                              setApproveError(null);
+                              const result = await approvePayoutRequest(req.id);
+                              if (result.ok) {
+                                setExpandedPayout(null);
+                                setRefreshKey((k) => k + 1);
+                              } else {
+                                setApproveError({
+                                  id: req.id,
+                                  message: approveErrorMessage(result.error),
+                                });
+                              }
+                              setApprovingId(null);
                             }}
-                          />
-                          <span className="text-xs text-zinc-400">Bank</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <div
-                            className="h-2 w-2 shrink-0 rounded-full"
-                            style={{
-                              backgroundColor:
-                                calcPayoutBalance(req).available >= req.amountMinor ? "#1B8C5A" : "#DC2626",
-                            }}
-                          />
-                          <span className="text-xs text-zinc-400">Balance</span>
+                            disabled={!canApprove || approvingId === req.id}
+                            className="rounded-lg px-4 py-2 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                            style={{ backgroundColor: "#D4450A" }}
+                          >
+                            {isApproving ? "Approving..." : "Review & approve →"}
+                          </button>
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => setExpandedPayout(expandedPayout === req.id ? null : req.id)}
-                        className={`shrink-0 rounded-xl border px-4 py-2 text-xs font-semibold transition-all ${
-                          expandedPayout === req.id
-                            ? "border-zinc-900 bg-zinc-900 text-white"
-                            : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400"
-                        }`}
-                      >
-                        {expandedPayout === req.id ? "Close ↑" : "Review ↓"}
-                      </button>
+                      {/* Approve error */}
+                      {approveError?.id === req.id ? (
+                        <p className="mt-2 text-xs text-red-600">{approveError.message}</p>
+                      ) : null}
+
+                      {/* Rejection input — inline below action row */}
+                      {rejectingId === req.id ? (
+                        <div className="mt-3 flex flex-col gap-2">
+                          <input
+                            type="text"
+                            value={rejectReason}
+                            onChange={(e) => setRejectReason(e.target.value)}
+                            placeholder="Reason for rejection..."
+                            className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm outline-none ring-zinc-300 focus:ring-2"
+                            autoFocus
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRejectingId(null);
+                                setRejectReason("");
+                              }}
+                              className="flex-1 rounded-xl border border-zinc-200 py-2 text-sm text-zinc-600 transition-colors hover:bg-zinc-50"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              disabled={!rejectReason.trim()}
+                              onClick={async () => {
+                                await rejectPayoutRequest(req.id, rejectReason.trim());
+                                setRejectingId(null);
+                                setRejectReason("");
+                                setExpandedPayout(null);
+                                setRefreshKey((k) => k + 1);
+                              }}
+                              className="flex-1 rounded-xl py-2 text-sm font-semibold text-white transition-colors disabled:opacity-50"
+                              style={{ backgroundColor: "#DC2626" }}
+                            >
+                              Confirm Reject
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
 
+                    {/* ── Expanded detail panel (info only) ───────────── */}
                     {expandedPayout === req.id ? (
                       <div className="border-t border-zinc-100 px-5 pb-5 pt-4">
                         <div className="mb-4 grid grid-cols-2 gap-4">
                           <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-4">
-                            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                            <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
                               Pay to
                             </p>
                             {req.store.owner?.bankDetails ? (
@@ -415,40 +494,36 @@ export default function VendorsTab() {
                           </div>
 
                           <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-4">
-                            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                            <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
                               Account balance
                             </p>
                             <div className="flex flex-col gap-2">
                               <div className="flex justify-between text-xs">
                                 <span className="text-zinc-500">Total earned</span>
                                 <span className="font-medium text-emerald-600">
-                                  +{formatTTD(calcPayoutBalance(req).credits)}
+                                  +{formatTTD(bal.credits)}
                                 </span>
                               </div>
                               <div className="flex justify-between text-xs">
                                 <span className="text-zinc-500">Deductions</span>
                                 <span className="font-medium text-red-500">
-                                  -{formatTTD(calcPayoutBalance(req).debits)}
+                                  -{formatTTD(bal.debits)}
                                 </span>
                               </div>
                               <div className="mt-1 flex justify-between border-t border-zinc-200 pt-2 text-xs">
                                 <span className="font-semibold text-zinc-700">Available</span>
                                 <span className="font-bold text-zinc-900">
-                                  {formatTTD(calcPayoutBalance(req).available)}
+                                  {formatTTD(bal.available)}
                                 </span>
                               </div>
                               <div className="flex justify-between text-xs">
                                 <span className="text-zinc-500">After payout</span>
                                 <span
                                   className={`font-medium ${
-                                    calcPayoutBalance(req).available - req.amountMinor >= 0
-                                      ? "text-zinc-600"
-                                      : "text-red-500"
+                                    remaining >= 0 ? "text-zinc-600" : "text-red-500"
                                   }`}
                                 >
-                                  {formatTTD(
-                                    Math.max(0, calcPayoutBalance(req).available - req.amountMinor),
-                                  )}
+                                  {formatTTD(Math.max(0, remaining))}
                                 </span>
                               </div>
                             </div>
@@ -502,105 +577,22 @@ export default function VendorsTab() {
                           </div>
                         </details>
 
-                        <div className="mb-4 flex items-center gap-4 rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-3">
+                        <div className="flex items-center gap-4 rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-3">
                           {[
-                            { ok: !!req.store.owner?.bankDetails, label: "Bank details on file" },
-                            {
-                              ok: calcPayoutBalance(req).available >= req.amountMinor,
-                              label: "Balance covers request",
-                            },
+                            { ok: hasBankDetails, label: "Bank details on file" },
+                            { ok: balanceCovered, label: "Balance covers request" },
                             { ok: true, label: "Oldest pending first (FIFO)" },
                           ].map((check) => (
                             <div key={check.label} className="flex items-center gap-1.5">
-                              <span
-                                className={`text-sm ${check.ok ? "text-emerald-500" : "text-red-500"}`}
-                              >
+                              <span className={`text-sm ${check.ok ? "text-emerald-500" : "text-red-500"}`}>
                                 {check.ok ? "✓" : "✗"}
                               </span>
-                              <span
-                                className={`text-xs ${check.ok ? "text-zinc-600" : "font-medium text-red-600"}`}
-                              >
+                              <span className={`text-xs ${check.ok ? "text-zinc-600" : "font-medium text-red-600"}`}>
                                 {check.label}
                               </span>
                             </div>
                           ))}
                         </div>
-
-                        {rejectingId === req.id ? (
-                          <div className="flex flex-col gap-2">
-                            <input
-                              type="text"
-                              value={rejectReason}
-                              onChange={(e) => setRejectReason(e.target.value)}
-                              placeholder="Reason for rejection..."
-                              className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm outline-none ring-zinc-300 focus:ring-2"
-                              autoFocus
-                            />
-                            <div className="flex gap-2">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setRejectingId(null);
-                                  setRejectReason("");
-                                }}
-                                className="flex-1 rounded-xl border border-zinc-200 py-2 text-sm text-zinc-600 transition-colors hover:bg-zinc-50"
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                type="button"
-                                disabled={!rejectReason.trim()}
-                                onClick={async () => {
-                                  await rejectPayoutRequest(req.id, rejectReason.trim());
-                                  setRejectingId(null);
-                                  setRejectReason("");
-                                  setExpandedPayout(null);
-                                  setRefreshKey((k) => k + 1);
-                                }}
-                                className="flex-1 rounded-xl py-2 text-sm font-semibold text-white transition-colors disabled:opacity-50"
-                                style={{ backgroundColor: "#DC2626" }}
-                              >
-                                Confirm Reject
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex flex-wrap items-center gap-3">
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                setApprovingId(req.id);
-                                setApproveError(null);
-                                const result = await approvePayoutRequest(req.id);
-                                if (result.ok) {
-                                  setExpandedPayout(null);
-                                  setRefreshKey((k) => k + 1);
-                                } else {
-                                  setApproveError({
-                                    id: req.id,
-                                    message: approveErrorMessage(result.error),
-                                  });
-                                }
-                                setApprovingId(null);
-                              }}
-                              disabled={!canApprove || approvingId === req.id}
-                              className="rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-                              style={{ backgroundColor: "#1B8C5A" }}
-                            >
-                              {isApproving ? "Approving..." : "✓ Approve Payout"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setRejectingId(req.id)}
-                              className="rounded-xl border-2 border-red-300 px-4 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50"
-                            >
-                              Reject
-                            </button>
-                            {approveError?.id === req.id ? (
-                              <p className="ml-2 text-xs text-red-600">{approveError.message}</p>
-                            ) : null}
-                          </div>
-                        )}
                       </div>
                     ) : null}
                   </div>
@@ -688,7 +680,7 @@ export default function VendorsTab() {
                         className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${
                           p.status === "APPROVED"
                             ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                            : "border-red-200 bg-red-50 text-red-600"
+                            : "border-[#FECFBE] bg-[#FFF1ED] text-[#D4450A]"
                         }`}
                       >
                         {p.status === "APPROVED" ? "Approved" : "Rejected"}

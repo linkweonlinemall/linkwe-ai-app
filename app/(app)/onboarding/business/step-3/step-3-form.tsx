@@ -1,11 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import Input from "@/components/ui/Input";
 import RegionSelect from "@/components/ui/RegionSelect";
-import Select from "@/components/ui/Select";
-import { STORE_CATEGORY_OPTIONS } from "@/lib/onboarding/store-categories";
+import CategoryPicker from "@/components/ui/CategoryPicker";
 import { saveBusinessOnboardingStep3, type BusinessOnboardingState } from "../actions";
 
 type Props = {
@@ -71,6 +70,7 @@ export function BusinessStep3Form({
   defaultTagline,
 }: Props) {
   const [state, formAction, pending] = useActionState(saveBusinessOnboardingStep3, {} as BusinessOnboardingState);
+  const [categoryId, setCategoryId] = useState(defaultCategoryId);
 
   return (
     <form className="flex flex-col gap-4" action={formAction}>
@@ -84,14 +84,12 @@ export function BusinessStep3Form({
         placeholder="my-store"
         type="text"
       />
-      <Select required className="text-base" defaultValue={defaultCategoryId} label="Category" name="categoryId">
-        <option value="">Select…</option>
-        {STORE_CATEGORY_OPTIONS.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.label}
-          </option>
-        ))}
-      </Select>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium text-zinc-700">
+          Category <span className="text-[#D4450A]">*</span>
+        </label>
+        <CategoryPicker name="categoryId" value={categoryId} onChange={setCategoryId} />
+      </div>
       <RegionSelect name="region" defaultValue={defaultRegion} required label="Store region" />
       <Input
         required

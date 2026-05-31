@@ -1,9 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Fragment, useEffect, useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 import OverviewTab from "./overview-tab";
 import OrdersTab from "./orders-tab";
@@ -142,162 +140,17 @@ type Props = {
 };
 
 export default function AdminDashboard({ adminName: _adminName }: Props) {
-  const pathname = usePathname();
-  const productsNavActive = pathname?.startsWith("/dashboard/admin/products") ?? false;
-  const storesNavActive = pathname?.startsWith("/dashboard/admin/stores") ?? false;
-  const verificationNavActive = pathname?.startsWith("/dashboard/admin/verification") ?? false;
-  const [activeTab, setActiveTab] = useState<TabId>("overview");
+  const searchParams = useSearchParams();
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tab = params.get("tab");
-    if (tab && isTabId(tab)) {
-      setActiveTab(tab);
-    }
-  }, []);
-
-  useEffect(() => {
-    const syncTabFromUrl = () => {
-      const params = new URLSearchParams(window.location.search);
-      const tab = params.get("tab");
-      if (tab && isTabId(tab)) setActiveTab(tab);
-    };
-    window.addEventListener("popstate", syncTabFromUrl);
-    return () => window.removeEventListener("popstate", syncTabFromUrl);
-  }, []);
-
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    url.searchParams.set("tab", activeTab);
-    window.history.replaceState({}, "", url.toString());
-  }, [activeTab]);
+  const activeTab: TabId = (() => {
+    const t = searchParams.get("tab");
+    return t && isTabId(t) ? t : "overview";
+  })();
 
   const placeholderIcon = TAB_CONFIG.find((t) => t.id === activeTab)?.icon ?? null;
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5]">
-      <nav
-        className="flex w-full min-w-0 overflow-x-auto whitespace-nowrap border-b bg-white px-2"
-        style={{ borderColor: "var(--card-border)" }}
-      >
-        <div className="mx-auto flex w-max min-w-0 max-w-7xl items-center gap-1">
-          {TAB_CONFIG.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <Fragment key={tab.id}>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className="flex shrink-0 items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-150 relative"
-                  style={{
-                    color: isActive ? "var(--scarlet)" : "var(--text-muted)",
-                    borderBottom: isActive ? "2px solid var(--scarlet)" : "2px solid transparent",
-                  }}
-                >
-                  {tab.icon}
-                  {tab.label}
-                </button>
-                {tab.id === "overview" ? (
-                  <div className="mx-1 h-5 w-px shrink-0 bg-zinc-200" aria-hidden />
-                ) : null}
-                {tab.id === "orders" ? (
-                  <div className="mx-1 h-5 w-px shrink-0 bg-zinc-200" aria-hidden />
-                ) : null}
-                {tab.id === "vendors" ? (
-                  <div className="mx-1 h-5 w-px shrink-0 bg-zinc-200" aria-hidden />
-                ) : null}
-              </Fragment>
-            );
-          })}
-          <div className="mx-1 h-5 w-px shrink-0 bg-zinc-200" aria-hidden />
-          <Link
-            href="/dashboard/admin/products"
-            className="flex shrink-0 items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-150 relative"
-            style={{
-              color: productsNavActive ? "var(--scarlet)" : "var(--text-muted)",
-              borderBottom: productsNavActive
-                ? "2px solid var(--scarlet)"
-                : "2px solid transparent",
-            }}
-          >
-            <svg
-              className="h-4 w-4 shrink-0"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              aria-hidden
-            >
-              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <path d="M16 10a4 4 0 0 1-8 0" />
-            </svg>
-            Products
-          </Link>
-          <Link
-            href="/dashboard/admin/stores"
-            className="flex shrink-0 items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-150 relative"
-            style={{
-              color: storesNavActive ? "var(--scarlet)" : "var(--text-muted)",
-              borderBottom: storesNavActive
-                ? "2px solid var(--scarlet)"
-                : "2px solid transparent",
-            }}
-          >
-            <svg
-              aria-hidden
-              className="h-4 w-4 shrink-0"
-              fill="none"
-              height="16"
-              stroke="currentColor"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-              width="16"
-            >
-              <path d="M3 21h18" />
-              <path d="M5 21V8l9-6 9 6v13" />
-              <path d="M9 21v-6h6v6" />
-            </svg>
-            Stores
-          </Link>
-          <Link
-            href="/dashboard/admin/verification"
-            style={{
-              color: verificationNavActive ? "var(--scarlet)" : "var(--text-muted)",
-              borderBottom: verificationNavActive ? "2px solid var(--scarlet)" : "2px solid transparent",
-            }}
-            className="flex shrink-0 items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors duration-150 relative"
-          >
-            <svg
-              className="h-4 w-4 shrink-0"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              aria-hidden
-            >
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
-            Verification
-          </Link>
-        </div>
-      </nav>
-
-      <div className="flex justify-start border-b border-zinc-200 bg-white px-4 py-3 sm:justify-end sm:px-6">
-        <Link
-          href="/dashboard/admin/settings"
-          className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 hover:border-[#D4450A] hover:text-[#D4450A] transition-colors"
-        >
-          <span>⚙️</span>
-          Account & password
-        </Link>
-      </div>
-
-      <div className="p-6" style={{ backgroundColor: "var(--surface)" }}>
+    <div className="p-6" style={{ backgroundColor: "var(--surface)" }}>
         {activeTab === "overview" && <OverviewTab />}
         {activeTab === "orders" && <OrdersTab />}
         {activeTab === "warehouse" && <WarehouseTab />}
@@ -325,6 +178,5 @@ export default function AdminDashboard({ adminName: _adminName }: Props) {
           </div>
         )}
       </div>
-    </div>
   );
 }

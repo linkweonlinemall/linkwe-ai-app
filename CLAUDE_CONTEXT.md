@@ -1,6 +1,6 @@
 # LinkWe — AI session context
 
-**Last updated:** 30 May 2026 (end of day)
+**Last updated:** 31 May 2026 (mobile pass)
 
 Reference document for assistants working in this repository. Paths are relative to the project root unless noted.
 
@@ -10,9 +10,78 @@ Reference document for assistants working in this repository. Paths are relative
 
 Summary of notable additions and refactors. Re-scan the repo after large merges.
 
+### 31 May 2026 — Admin dashboard mobile optimisation (complete)
+
+All admin tabs made mobile-responsive (Kyle uses admin on phone). Method: one component at a time, screenshot-verified at 375px. Rule held throughout: **desktop (`>=md`) untouched; mobile (`<md`) branches PRESENTATION ONLY** — never fork list/data logic into a separate mobile component (prevents the received-count / readiness-calc drift seen earlier in the desktop pass).
+
+**Shell + nav** — `admin-shell.tsx`. Desktop: fixed ~220px sidebar unchanged. Mobile: sidebar hidden, hamburger in header opens a slide-out left drawer with full grouped nav (Operations / Catalog / People / System). Tap link = navigate + close; backdrop / ESC close. Bottom bar rejected: 13 destinations across 4 groups exceed bottom-bar capacity.
+
+**Leaflet z-index bug fixed** — Leaflet map rendered on top of the open drawer (Leaflet sets high z-index on panes / zoom control). Fix: raised drawer/backdrop above Leaflet (`z-[1100]` backdrop, `z-[1200]` panel); did NOT lower Leaflet globally.
+
+**Tab-by-tab (all table → stacked-card reflows unless noted):**
+
+| Tab | File | Mobile change |
+|---|---|---|
+| Orders | `orders-tab.tsx` | Rows → stacked cards; expand panel stacks (Line items / Vendor Fulfillment / Financials); INVARIANT preserved (SHIPPED+ always shows N-of-N) |
+| Warehouse | `warehouse-tab.tsx` | Rows → cards; bay badge + method pill + drop-off(blue)/courier(red) accent; Mark-as-Received intact |
+| Users | `admin-users-client.tsx` | Rows → cards; JOINED date (was clipped) fully visible; Active pill + Suspend/Delete inline |
+| Verification | `verification-client.tsx` | **Drill-down** (not stacked): full-width queue → tap vendor → full-screen dossier with `← Queue` back control. Approve/Reject visible at top (were cut off). Checklist / ID doc / gallery / bank / products all stack; lightbox reused. `mobileView` state drives which panel shows; auto-select does NOT trigger `setMobileView("dossier")`. |
+| Stores | `admin-stores-client.tsx` | Card-internal cleanup (not full reflow): name `line-clamp-2`; View/status/delete on own row below; metadata grouped; delete kept visually distinct (red `bg-red-50`) |
+| Map | `map-tab.tsx` | Sizing polish: stat cards → 2×2 grid (flex-col on mobile, icon above value, no label-wrapping); map `h-[55vh] md:h-[580px]`; inner div `height: 100%`; `invalidateSize` on init |
+| Customers | `customers-tab.tsx` | Rows → cards; Total Spent (was clipped off right edge) fully visible |
+| Couriers | `couriers-tab.tsx` | Rows → cards; Balance (was clipped) fully visible; green active accent (`#1B8C5A`) preserved; All Couriers / Payout Requests tab pair preserved; expanded detail panel inner tables wrapped in `overflow-x-auto` |
+
+**Pattern used in every table reflow:**
+1. `<div className="hidden overflow-x-auto md:block">` wraps the desktop table (unchanged).
+2. `<div className="md:hidden">` sibling contains the mobile card list.
+3. Both read the same filtered/sorted array and call the same handlers — zero logic duplication.
+
+**Recurring lesson (reaffirmed):** anything keyed off `?tab=` or status counts must use reactive reads and ONE shared calculation feeding all consumers; branch presentation at the breakpoint, never fork the logic.
+
+**Still open (non-blocking):**
+- Verification bank-reveal reset on mobile: need to confirm switching vendors actually re-masks. If it carries over, one-line patch (`setRevealAccountNumber(false)` is already in every row click; may need verification on device).
+- Verification CSV/PDF exports still contain full account numbers — masking is screen-only. Data-handling decision pending.
+- Minor: blue focus ring on tapped Customers cards — folds into a future polish pass.
+
+---
+
+### 31 May 2026 — Admin dashboard redesign (complete)
+
+Full visual + structural redesign of `/dashboard/admin` to LinkWe brand. Unified shell + per-tab passes.
+
+**Shared shell** — `app/(dashboard)/dashboard/admin/layout.tsx` renders `admin-shell.tsx`: dark `#1C1C1A` header (LinkWe logo, scarlet ADMIN pill, single account dropdown), grouped left sidebar (Operations / Catalog / People / System). All admin pages inherit it; per-page headers removed; parent `(dashboard)/layout.tsx` skips its header on admin paths via `isAdminShell`. Active state via `usePathname()` + `useSearchParams()` (derived, not effect-based). Content area scrolls (`overflow-y-auto`) within the locked `dvh` parent. URLs unchanged (mix of `?tab=` and `/admin/x`).
+
+**Overview (Command Center)** — three bands: Needs Attention (conditional action cards, scarlet/amber/blue tints, hidden when count 0, all-clear state) → Today (4 metric cards + 4-stage pipeline cards, calm zeros) → Platform (recent orders + totals, black panel removed, neutral quick-actions w/ one scarlet primary).
+
+**Orders (fulfillment cockpit)** — `app/(dashboard)/dashboard/admin/components/orders-tab.tsx`. Rows show "X of N received" + readiness label + staleness ("Open Xd" scarlet past 48 h) + destination region; full-row floods → left-edge accents. Four groups: Needs action (`READY_TO_SHIP`, `PACKING_COMPLETE`) / Waiting on vendors / In motion (`SHIPPED`, `CUSTOMER_RECEIVED`) / Completed. Two received-count definitions: display (`COURIER_ASSIGNED` onward) vs engine `recalculateMainOrderStatus` (`AT_WAREHOUSE` onward) — intentional two-step intake. Labels "In transit to warehouse" / "Awaiting check-in" distinguish. INVARIANT GUARD: `SHIPPED`/`CUSTOMER_RECEIVED`/`DELIVERED`/`COMPLETED` always show N of N. `DRAFT`/`PENDING_PAYMENT` excluded at query level (`app/actions/admin-orders.ts`). Expand panel reorganised; existing Bundle & dispatch / Mark complete preserved.
+
+**Warehouse / Bay Map** — `warehouse-tab.tsx` / `bay-map-tab.tsx`. Row floods → left-edge accents (matches Orders); scarlet selection; time-in-bay/age urgency escalates to scarlet past threshold.
+
+**Vendors (payouts)** — `vendors-tab.tsx`. Decision-first payout cards: request amount as visual anchor, coverage line ("covered by balance · $X remaining · bank valid"), masked account (last-4). Existing approve/reject preserved.
+
+**Verification (vendor eligibility dossier)** — `admin/verification/verification-client.tsx` + `page.tsx`. Queue + scrollable sectioned panel:
+- Readiness checklist (N/8 checks, real data, amber warnings for gaps)
+- Identity (ID doc + click-to-zoom lightbox, name/email/phone)
+- Store profile (logo, name, slug, tagline, desc, category, region, tags, opening hours, status pill)
+- Gallery (thumbnails, clickable lightbox)
+- Bank (masked + reveal toggle, resets on vendor switch)
+- Products (up to 10 inline + "+N more" computed from `_count.products - shown`, total shown in header)
+
+Single shared `vendorReadiness(vendor)` function drives the sidebar badge (`N/8`), the "Ready" filter tab count (all-8-pass), and the dossier checklist header — they can never disagree. Query expanded read-only (`User.phone` + full `storesOwned` fields + `_count`); no schema migration needed. Zoom overlay generalised to `zoomUrl: string | null` so ID doc and gallery images share one lightbox.
+
+**Recurring lesson:** anything keyed off `?tab=` or status counts must use reactive reads (`useSearchParams`) and shared calculations, not one-time/duplicated logic — bit us 3× on Orders/shell, once on Verification sidebar.
+
+**Deferred (noted, not done):**
+- CSV/PDF exports still contain full account numbers — masking is screen-only.
+- Orders "all received but not auto-advanced to `READY_TO_SHIP`" — confirmed intended (warehouse check-in is a separate manual step), not a bug.
+
+---
+
 ### 30 May 2026 — Events & Ticketing system (Steps 1–3)
 
-**Active phase:** Pre-launch + Events & Ticketing build in progress.
+**Active phase:** Pre-launch + Admin tooling + Events & Ticketing build in progress.
+
+**Current task:** Admin dashboard redesign to match LinkWe brand identity (scarlet `#D4450A`, dark nav `#1C1C1A`, Sora font, white cards with subtle borders).
 
 #### Events system — completed
 - **Schema** (`prisma/schema.prisma`) — `Event`, `EventTicketType`, `Ticket`, `EventPromoCode`, `EventWaitlist` models; `lineup Json?` field on `Event` stores performer array.
@@ -26,13 +95,23 @@ Summary of notable additions and refactors. Re-scan the repo after large merges.
 - **Rex (vendor AI)** — 6 new event management tools: `create_event`, `update_event`, `publish_event`, `list_events`, `create_ticket_type`, `delete_ticket_type`.
 - **Zara (customer AI)** — Events awareness added to system prompt (`lib/chat/systemPrompt.ts`); `search_events` tool in `app/api/chat/route.ts` queries published events by keyword, category, region, and date filter.
 
-#### Still to build — Events
+#### Admin & platform improvements — completed (30 May 2026 evening)
+- **Admin user management** — `app/(dashboard)/dashboard/admin/users/page.tsx` + `admin-users-client.tsx` + `admin-user-detail.tsx`: full user table with search, role filter pills (All/Customers/Vendors/Couriers/Admins), paginated 20/page. Clickable row opens a slide-over detail panel with role-specific stats: vendors see store performance (earnings, orders, pending orders, products, bookings, on-demand requests, avg review rating); customers see activity (orders placed, total spent, bookings, requests, reviews written); couriers see region/vehicle info. Bulk select with header checkbox, bulk suspend and bulk delete (skips users with orders, returns skipped list with reasons). Single-row inline suspend/unsuspend and two-step delete confirmation. "Users" nav link added to admin nav bar (same pattern as Products/Stores/Verification).
+- **Category picker redesign** — `components/ui/CategoryPicker.tsx`: visual emoji grid replacing the old `<select>` dropdown in vendor onboarding step 3 (`app/(app)/onboarding/business/step-3/step-3-form.tsx`) and store edit page (`app/(dashboard)/dashboard/vendor/store/edit/page.tsx`). `grid-cols-3 gap-2`, 27 categories across 6 groups (Retail & Products, Food & Hospitality, Services, Events & Entertainment, Real Estate & Vehicles, Other), scarlet selected state, group headings, hidden input for form submission.
+- **`suspended` field on User** — Added `suspended Boolean @default(false)` to `User` model in `prisma/schema.prisma`; migration `20260530220000_add_user_suspended` applied. Server actions: `suspendUser`, `unsuspendUser`, `bulkSuspendUsers`, `bulkDeleteUsers` in `app/actions/admin-users.ts`.
+- **Production Neon database synced** — All pending migrations applied to production (Neon) via `npx prisma migrate deploy` including `add_events_ticketing_system`, `add_event_lineup`, `add_event_ticket_cart`, and `add_user_suspended`.
+- **Pre-launch production push** — Successful deploy to production resolving homepage crash (`Invalid prisma.event.findMany() invocation`).
+
+#### Still to build
 - **Step 4:** Ticket purchase Stripe integration (payment intent, webhook, order record)
 - **Step 5:** QR ticket delivery and PDF ticket generation
 - **Step 6:** Offline QR scanner for vendor door check-in
 - **Step 7:** Event products and services integration (merchandise, add-ons)
 - **Step 8:** Promo codes, waitlist auto-promotion, ticket transfer between customers
-- **Zara ticket-to-cart flow** — Let Zara add event tickets to cart and initiate checkout
+- **Vendor subscription tiers and billing** — STARTER / GROWTH / PRO tier upgrade flow
+- **Vendor onboarding tour** — Guided first-run experience after store setup
+- **Live messaging** — Real-time customer ↔ vendor chat (currently `VendorChat` model exists but basic)
+- **Social timeline** — Vendor posts and customer activity feed
 
 ---
 
@@ -261,6 +340,9 @@ LinkWe is a multi-vendor online marketplace for **Trinidad & Tobago**. It connec
 | `app/(dashboard)/dashboard/admin/products/page.tsx` | Product moderation |
 | `app/(dashboard)/dashboard/admin/listings/page.tsx` | Listing moderation |
 | `app/(dashboard)/dashboard/admin/verification/page.tsx` | ID verification queue |
+| `app/(dashboard)/dashboard/admin/users/page.tsx` | User management — search, role filters, suspend, delete |
+| `app/(dashboard)/dashboard/admin/users/admin-users-client.tsx` | Interactive table with checkboxes, bulk actions, row click to open panel |
+| `app/(dashboard)/dashboard/admin/users/admin-user-detail.tsx` | Slide-over detail panel with role-specific stats |
 | `app/(dashboard)/dashboard/admin/settings/page.tsx` | Admin settings (e.g. password manager) |
 
 ### Courier dashboard
@@ -280,6 +362,7 @@ All use `"use server"` pattern; mutations return `{ success }` / `{ error }` or 
 | `admin-bays.ts` | Warehouse dock bays |
 | `admin-couriers.ts` | Courier admin ops |
 | `admin-customers.ts` | Customer admin |
+| `admin-users.ts` | User management: `getAdminUsers` (paginated, search, role filter, includes store data), `getAdminUserDetail` (role-specific stats: vendor earnings/orders/bookings/reviews, customer spend/bookings, courier info), `suspendUser`, `unsuspendUser`, `deleteUser`, `bulkSuspendUsers`, `bulkDeleteUsers` |
 | `admin-delete.ts` | Admin deletions |
 | `admin-listings.ts` | Listing moderation |
 | `admin-map.ts` | Admin map data |
@@ -499,6 +582,7 @@ No middleware auth required (individual pages may require login for actions).
 | `/dashboard/admin/products` | Products |
 | `/dashboard/admin/listings` | Listings |
 | `/dashboard/admin/verification` | ID verification |
+| `/dashboard/admin/users` | User management |
 | `/dashboard/admin/settings` | Admin settings |
 
 ### API (see table above)
@@ -719,6 +803,7 @@ Grouped by folder; one line each.
 
 ### `ui/`
 - **Button**, **Input**, **Textarea**, **Select**, **Label**, **Card**, **Badge** — Form primitives.
+- **CategoryPicker** — Visual emoji grid category selector (`grid-cols-3`, 27 categories, 6 groups, scarlet selected state); used in vendor onboarding step 3 and store edit page; props: `name`, `value`, `onChange?`.
 - **empty-state** — Empty state illustration block.
 - **NotificationBell** — In-app notifications dropdown.
 - **WishlistButton** — Toggle wishlist heart.
@@ -797,6 +882,7 @@ Grouped by folder; one line each.
 - Admin metrics/overview.
 - Admin password manager (settings).
 - Warehouse/bays/courier admin actions (server actions exist).
+- **User management** at `/dashboard/admin/users` — full user table (search, role filters, pagination), clickable rows open a slide-over panel with role-specific stats, bulk suspend/delete with skip logic, suspend/unsuspend per-user.
 
 ### Payment flow
 - Checkout creates `MainOrder` + Stripe PaymentIntent (TTD minor units).

@@ -16,6 +16,9 @@ function relativeTime(date: Date | string | null): string {
   return `${mins}m`;
 }
 
+/** Bay occupied longer than this is flagged stale — same 48h convention as Orders. */
+const BAY_STALE_THRESHOLD_MS = 48 * 60 * 60 * 1000;
+
 export default function BayMapTab() {
   const [bays, setBays] = useState<Bay[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -136,23 +139,27 @@ export default function BayMapTab() {
           {bays.map((bay) => {
             const isSelected = selectedBay === bay.bayNumber;
             const occupied = bay.isOccupied && bay.splitOrder;
+            const bayAgeMs = bay.assignedAt
+              ? Date.now() - new Date(bay.assignedAt).getTime()
+              : 0;
+            const isBayStale = occupied !== null && occupied !== false && bayAgeMs > BAY_STALE_THRESHOLD_MS;
 
             return (
               <button
                 type="button"
                 key={bay.bayNumber}
                 onClick={() => setSelectedBay(isSelected ? null : bay.bayNumber)}
-                className="relative rounded-xl p-3 text-left transition-all duration-200 hover:shadow-md"
+                className="relative rounded-xl p-3 text-left outline-none transition-all duration-200 hover:shadow-md focus-visible:ring-2 focus-visible:ring-[#D4450A]"
                 style={{
                   backgroundColor: occupied
                     ? isSelected
                       ? "#FEE2E2"
                       : "#FEF2EE"
                     : isSelected
-                      ? "#DCFCE7"
+                      ? "#FEF0EC"
                       : "#F7F7F6",
                   border: isSelected
-                    ? `2px solid ${occupied ? "#D4450A" : "#15803D"}`
+                    ? "2px solid #D4450A"
                     : `1px solid ${occupied ? "#FBB9A5" : "var(--card-border-subtle)"}`,
                   minHeight: 100,
                   width: "100%",
@@ -182,9 +189,14 @@ export default function BayMapTab() {
                     >
                       {bay.splitOrder.referenceNumber ?? bay.splitOrder.id.slice(-6).toUpperCase()}
                     </p>
-                    <p className="mt-1 text-[11px]" style={{ color: "#E8820C" }}>
-                      {bay.assignedAt ? relativeTime(bay.assignedAt) : ""}
-                    </p>
+                    {bay.assignedAt ? (
+                      <p
+                        className={`mt-1 text-[11px]${isBayStale ? " font-semibold" : ""}`}
+                        style={{ color: isBayStale ? "#D4450A" : "#E8820C" }}
+                      >
+                        {relativeTime(bay.assignedAt)}
+                      </p>
+                    ) : null}
                   </div>
                 ) : (
                   <p className="text-xs font-medium" style={{ color: "#15803D" }}>
@@ -289,7 +301,20 @@ export default function BayMapTab() {
                       >
                         Time in bay
                       </p>
-                      <p style={{ color: "#E8820C" }}>{bay.assignedAt ? relativeTime(bay.assignedAt) : "—"}</p>
+                      {(() => {
+                        const ageMs = bay.assignedAt
+                          ? Date.now() - new Date(bay.assignedAt).getTime()
+                          : 0;
+                        const stale = bay.assignedAt && ageMs > BAY_STALE_THRESHOLD_MS;
+                        return (
+                          <p
+                            className={stale ? "font-semibold" : ""}
+                            style={{ color: stale ? "#D4450A" : "#E8820C" }}
+                          >
+                            {bay.assignedAt ? relativeTime(bay.assignedAt) : "—"}
+                          </p>
+                        );
+                      })()}
                     </div>
                   </div>
                 ) : (

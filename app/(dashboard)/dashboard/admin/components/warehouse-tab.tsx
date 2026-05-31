@@ -294,7 +294,7 @@ export default function WarehouseTab() {
           Courier pickup
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: "#FAEEDA" }} />
+          <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: "#E8820C" }} />
           Waiting over 2 hours
         </span>
       </div>
@@ -359,7 +359,213 @@ export default function WarehouseTab() {
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl bg-white" style={{ border: "1px solid var(--card-border)" }}>
+        <>
+          {/* ── Mobile card list (<md) ── */}
+          <div className="overflow-hidden rounded-xl md:hidden" style={{ border: "1px solid var(--card-border)" }}>
+            {filteredRows.map((row) => {
+              const wait      = getWaitTime(row.createdAt);
+              const isLongWait = wait.isLong;
+              const isSelected = selectedRows.has(row.id);
+              const isDropoff  = row.vendorInboundMethod === "VENDOR_DROPOFF";
+              const isCourier  = row.vendorInboundMethod === "PICKUP_REQUESTED";
+              const isDoneRow  = selectedStatus === "RECEIVED";
+              const edgeColor  = isLongWait ? "#E8820C" : isDropoff ? "#1A7FB5" : isCourier ? "#D4450A" : "transparent";
+              const itemsPreview = row.items.slice(0, 2).map((i) => `${i.quantity}× ${i.titleSnapshot}`).join(", ");
+              const extraItems   = row.items.length - 2;
+
+              return (
+                <Fragment key={`m-${row.id}`}>
+                  {/* Tappable card */}
+                  <div
+                    className={`relative border-b border-zinc-100 px-4 py-3 transition-colors${isDoneRow ? " opacity-70" : ""}`}
+                    style={{
+                      borderLeft: `3px solid ${edgeColor}`,
+                      backgroundColor: isSelected ? "#EFF6FF" : "#FFFFFF",
+                    }}
+                    onClick={(e) => {
+                      const target = e.target as HTMLElement;
+                      if (target.closest('input[type="checkbox"]') || target.closest("button")) return;
+                      setExpandedRow((prev) => (prev === row.id ? null : row.id));
+                    }}
+                  >
+                    {/* Line 1: checkbox + ref + caret  ·  bay badge + method pill */}
+                    <div className="mb-1.5 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleRow(row.id)}
+                            className="rounded"
+                          />
+                        </div>
+                        <span className="font-mono text-xs font-semibold text-zinc-700">
+                          {row.referenceNumber ?? row.id.slice(-8).toUpperCase()}
+                        </span>
+                        <svg
+                          width="12" height="12" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" strokeWidth="2"
+                          className={`shrink-0 text-zinc-400 transition-transform duration-150 ${expandedRow === row.id ? "rotate-180" : ""}`}
+                          aria-hidden
+                        >
+                          <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        {row.bayNumber != null ? (
+                          <span
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[10px] font-bold text-white"
+                            style={{ backgroundColor: "var(--scarlet)" }}
+                          >
+                            {row.bayNumber}
+                          </span>
+                        ) : null}
+                        {isDropoff ? (
+                          <span
+                            className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+                            style={{ backgroundColor: "#EFF8FF", color: "#1A7FB5" }}
+                          >
+                            Drop off
+                          </span>
+                        ) : (
+                          <span
+                            className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+                            style={{ backgroundColor: "#FFF7ED", color: "#E8820C" }}
+                          >
+                            Courier
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {/* Line 2: vendor name */}
+                    <p className="mb-0.5 pl-5 text-xs font-semibold text-zinc-900">{row.store.name}</p>
+                    {/* Line 3: items preview */}
+                    <p className="line-clamp-1 min-w-0 pl-5 text-[10px] text-zinc-500">
+                      {itemsPreview}
+                      {extraItems > 0 ? <span className="text-zinc-400"> +{extraItems} more</span> : null}
+                    </p>
+                    {/* Age/wait */}
+                    <p className={`mt-0.5 pl-5 text-[10px] ${isLongWait ? "font-semibold text-amber-600" : "text-zinc-400"}`}>
+                      {wait.label}
+                    </p>
+                  </div>
+
+                  {/* Mobile expand panel — stacked, no inner tables */}
+                  {expandedRow === row.id ? (
+                    <div className="border-b border-zinc-200 bg-zinc-50 px-4 py-4">
+
+                      {/* Items — stacked cards */}
+                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Items</p>
+                      <ul className="mb-4 flex flex-col gap-1.5">
+                        {row.items.map((item) => (
+                          <li key={item.id} className="flex items-start justify-between gap-3 rounded-lg border border-zinc-100 bg-white px-3 py-2">
+                            <div className="min-w-0">
+                              <p className="text-xs font-medium text-zinc-800">{item.titleSnapshot}</p>
+                              <p className="text-[10px] text-zinc-500">qty {item.quantity}</p>
+                            </div>
+                            <span className="shrink-0 font-mono text-xs text-zinc-900">
+                              {formatTTD(item.unitPriceMinor * item.quantity)}
+                            </span>
+                          </li>
+                        ))}
+                        <li className="flex items-center justify-between px-1 pt-1">
+                          <span className="text-[10px] font-semibold text-zinc-500">Subtotal</span>
+                          <span className="font-mono text-xs font-bold" style={{ color: "#D4450A" }}>
+                            {formatTTD(row.subtotalMinor)}
+                          </span>
+                        </li>
+                      </ul>
+
+                      {/* Order info + Arrival info — two panels, stacked */}
+                      <div className="flex flex-col gap-3">
+                        <div>
+                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Order info</p>
+                          <div className="flex flex-col gap-2 rounded-xl border border-zinc-100 bg-white px-3 py-2.5">
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="text-[10px] text-zinc-400">Main order</span>
+                              <span className="font-mono text-xs text-zinc-900">{row.mainOrder.referenceNumber ?? "—"}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="text-[10px] text-zinc-400">Customer</span>
+                              <span className="text-xs font-medium text-zinc-900">{row.mainOrder.buyer.fullName}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="text-[10px] text-zinc-400">Region</span>
+                              <span className="text-xs capitalize text-zinc-700">
+                                {row.mainOrder.region?.replace(/_/g, " ") ?? "—"}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="text-[10px] text-zinc-400">Split ref</span>
+                              <span className="font-mono text-xs text-zinc-700">
+                                {row.referenceNumber ?? row.id.slice(-8).toUpperCase()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Arrival info</p>
+                          <div className="flex flex-col gap-2 rounded-xl border border-zinc-100 bg-white px-3 py-2.5">
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="text-[10px] text-zinc-400">Method</span>
+                              <span className="text-xs font-medium text-zinc-900">
+                                {isDropoff ? "Vendor drop off" : "Courier pickup"}
+                              </span>
+                            </div>
+                            {(() => {
+                              const inboundLeg = row.inboundShipment ?? row.legacyInboundShipment;
+                              return inboundLeg?.courier ? (
+                                <div className="flex items-center justify-between gap-4">
+                                  <span className="text-[10px] text-zinc-400">Courier</span>
+                                  <span className="text-xs font-medium text-zinc-900">{inboundLeg.courier.fullName}</span>
+                                </div>
+                              ) : null;
+                            })()}
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="text-[10px] text-zinc-400">Status</span>
+                              <span className="text-xs font-medium text-zinc-900">{getStatusLabel(row.status)}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="text-[10px] text-zinc-400">Waiting</span>
+                              <span className={`text-xs font-medium ${isLongWait ? "text-amber-600" : "text-zinc-900"}`}>
+                                {wait.label}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action row */}
+                      {selectedStatus === "INCOMING" ? (
+                        <div className="mt-4 flex flex-col gap-2 border-t border-zinc-200 pt-4">
+                          <button
+                            type="button"
+                            onClick={() => setSingleModal(row as SplitOrderRow)}
+                            className="w-full rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:opacity-90"
+                            style={{ backgroundColor: "#D4450A" }}
+                          >
+                            Mark as Received
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setExpandedRow(null)}
+                            className="w-full rounded-xl border border-zinc-200 px-4 py-2 text-sm text-zinc-600 transition-colors hover:bg-zinc-50"
+                          >
+                            Close
+                          </button>
+                        </div>
+                      ) : null}
+
+                    </div>
+                  ) : null}
+                </Fragment>
+              );
+            })}
+          </div>
+
+          {/* ── Desktop table (md+) ── */}
+          <div className="hidden overflow-hidden rounded-xl bg-white md:block" style={{ border: "1px solid var(--card-border)" }}>
           <table className="w-full text-sm">
             <thead>
               <tr
@@ -408,18 +614,16 @@ export default function WarehouseTab() {
 
                 const isDropoff = row.vendorInboundMethod === "VENDOR_DROPOFF";
                 const isCourier = row.vendorInboundMethod === "PICKUP_REQUESTED";
+                const isDoneRow = selectedStatus === "RECEIVED";
 
-                const rowBg = isSelected
-                  ? "bg-orange-50"
-                  : isLongWait && isDropoff
-                    ? "bg-[#FFF3E0]"
-                    : isLongWait && isCourier
-                      ? "bg-[#FFF0F0]"
-                      : isDropoff
-                        ? "bg-[#F0F7FF]"
-                        : isCourier
-                          ? "bg-white"
-                          : "bg-white";
+                // Long-wait amber edge takes priority over method edge.
+                const edgeColor = isLongWait
+                  ? "#E8820C"
+                  : isDropoff
+                    ? "#1A7FB5"
+                    : isCourier
+                      ? "#D4450A"
+                      : "transparent";
 
                 return (
                   <Fragment key={row.id}>
@@ -429,13 +633,10 @@ export default function WarehouseTab() {
                         if (target.closest('input[type="checkbox"]') || target.closest("button")) return;
                         setExpandedRow((prev) => (prev === row.id ? null : row.id));
                       }}
-                      className={`cursor-pointer border-b border-zinc-100 transition-colors ${rowBg} hover:bg-orange-50/50`}
+                      className={`cursor-pointer border-b border-zinc-100 text-zinc-800 transition-colors hover:brightness-[0.985]${isDoneRow ? " opacity-70" : ""}`}
                       style={{
-                        borderLeft: isDropoff
-                          ? "3px solid #1A7FB5"
-                          : isCourier
-                            ? "3px solid #D4450A"
-                            : "3px solid transparent",
+                        borderLeft: `3px solid ${edgeColor}`,
+                        backgroundColor: isSelected ? "#EFF6FF" : "#FFFFFF",
                       }}
                     >
                     <td className="py-3 pl-4">
@@ -486,15 +687,15 @@ export default function WarehouseTab() {
                     <td className="px-3 py-3">
                       {row.vendorInboundMethod === "VENDOR_DROPOFF" ? (
                         <span
-                          className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-                          style={{ backgroundColor: "#E6F1FB", color: "#0C447C" }}
+                          className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                          style={{ backgroundColor: "#EFF8FF", color: "#1A7FB5" }}
                         >
                           Drop off
                         </span>
                       ) : (
                         <span
-                          className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-                          style={{ backgroundColor: "#FAEEDA", color: "#633806" }}
+                          className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                          style={{ backgroundColor: "#FFF7ED", color: "#E8820C" }}
                         >
                           Courier
                         </span>
@@ -694,7 +895,8 @@ export default function WarehouseTab() {
               })}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
 
       {recentlyReceived.length > 0 ? (
@@ -740,15 +942,15 @@ export default function WarehouseTab() {
             <div className="mb-4 flex gap-2">
               {singleModal.vendorInboundMethod === "VENDOR_DROPOFF" ? (
                 <span
-                  className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-                  style={{ backgroundColor: "#E6F1FB", color: "#0C447C" }}
+                  className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                  style={{ backgroundColor: "#EFF8FF", color: "#1A7FB5" }}
                 >
                   Drop off
                 </span>
               ) : (
                 <span
-                  className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-                  style={{ backgroundColor: "#FAEEDA", color: "#633806" }}
+                  className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                  style={{ backgroundColor: "#FFF7ED", color: "#E8820C" }}
                 >
                   Courier pickup
                 </span>

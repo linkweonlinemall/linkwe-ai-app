@@ -262,7 +262,8 @@ export default function CouriersTab() {
           </div>
 
           <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
-            <div className="overflow-x-auto">
+            {/* ── Desktop table (unchanged) ── */}
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[880px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-zinc-100 bg-zinc-50">
@@ -512,6 +513,222 @@ export default function CouriersTab() {
                 </tbody>
               </table>
             </div>
+
+            {/* ── Mobile stacked cards (same data, same handlers) ── */}
+            <div className="md:hidden">
+              {filteredCouriers.map((c) => {
+                const isActive = c.courierLocation?.isActive === true;
+                const zone = c.region ? getShippingZone(c.region) : "—";
+                const balance = calcCourierBalance(c);
+                const isExpanded = expandedCourier === c.id;
+                return (
+                  <div key={c.id}>
+                    {/* Card row */}
+                    <div
+                      className="border-b border-zinc-50 px-4 py-3"
+                      style={{ borderLeft: `4px solid ${isActive ? "#1B8C5A" : "#E4E4E7"}` }}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-bold text-zinc-900">{c.fullName}</p>
+                          <p className="text-xs text-zinc-400">{c.email}</p>
+                          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                            <span className="capitalize text-zinc-600">
+                              {c.region?.replace(/_/g, " ") ?? "—"}
+                            </span>
+                            <span className="text-zinc-500">{zone.replace(/_/g, " ")}</span>
+                            <span className="text-zinc-600">{c._count.shipments} jobs</span>
+                            <span className="font-medium text-zinc-900">{formatTTD(balance)}</span>
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 flex-col items-end gap-1.5">
+                          <span
+                            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                              isActive ? "bg-emerald-50 text-emerald-700" : "bg-zinc-100 text-zinc-500"
+                            }`}
+                          >
+                            {isActive ? "Active" : "Offline"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedCourier(expandedCourier === c.id ? null : c.id)
+                            }
+                            className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
+                          >
+                            {isExpanded ? "Hide" : "Details"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Expanded detail panel */}
+                    {isExpanded ? (
+                      <div className="border-b border-zinc-100 bg-zinc-50/80 px-4 py-4">
+                        <div className="flex flex-col gap-5">
+                          {/* Performance */}
+                          <div>
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                              Performance
+                            </p>
+                            <div className="grid grid-cols-3 gap-2">
+                              <div className="rounded-xl border border-zinc-200 bg-white p-3">
+                                <p className="text-[11px] text-zinc-500">Pickups</p>
+                                <p className="mt-1 text-lg font-bold text-zinc-900">
+                                  {c.completedInboundJobs ?? 0}
+                                </p>
+                              </div>
+                              <div className="rounded-xl border border-zinc-200 bg-white p-3">
+                                <p className="text-[11px] text-zinc-500">Zone</p>
+                                <p className="mt-1 text-sm font-bold text-zinc-900">
+                                  {modeZone(c.shipments.map((s) => s.region))}
+                                </p>
+                              </div>
+                              <div className="rounded-xl border border-zinc-200 bg-white p-3">
+                                <p className="text-[11px] text-zinc-500">Since</p>
+                                <p className="mt-1 text-sm font-bold text-zinc-900">
+                                  {new Date(c.createdAt).toLocaleDateString("en-TT", {
+                                    month: "short",
+                                    year: "numeric",
+                                  })}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Recent jobs — scrolls horizontally if status pills are wide */}
+                          <div>
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                              Recent jobs
+                            </p>
+                            <div className="overflow-x-auto">
+                              <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
+                                <table className="w-full text-xs">
+                                  <thead>
+                                    <tr className="border-b border-zinc-100 bg-zinc-50">
+                                      <th className="px-3 py-2 text-left font-semibold text-zinc-500">Date</th>
+                                      <th className="px-3 py-2 text-left font-semibold text-zinc-500">Region</th>
+                                      <th className="px-3 py-2 text-left font-semibold text-zinc-500">Status</th>
+                                      <th className="px-3 py-2 text-right font-semibold text-zinc-500">Earned</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {c.shipments.slice(0, 10).map((s) => {
+                                      const life = shipmentLifecycle(s);
+                                      const earnedEntry = c.courierLedger.find(
+                                        (e) =>
+                                          e.shipmentId === s.id && e.entryType === "PICKUP_EARNING",
+                                      );
+                                      return (
+                                        <tr key={s.id} className="border-b border-zinc-50">
+                                          <td className="px-3 py-2 text-zinc-600">
+                                            {new Date(s.createdAt).toLocaleDateString("en-TT")}
+                                          </td>
+                                          <td className="px-3 py-2 capitalize text-zinc-600">
+                                            {s.region?.replace(/_/g, " ") ?? "—"}
+                                          </td>
+                                          <td className="px-3 py-2">
+                                            <span
+                                              className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium text-white"
+                                              style={{ backgroundColor: getStatusColor(life) }}
+                                            >
+                                              {life.replace(/_/g, " ")}
+                                            </span>
+                                          </td>
+                                          <td className="px-3 py-2 text-right font-mono text-zinc-700">
+                                            {earnedEntry ? formatTTD(earnedEntry.amountMinor) : "—"}
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                                {c.shipments.length === 0 ? (
+                                  <p className="p-4 text-center text-sm text-zinc-500">
+                                    No inbound jobs yet
+                                  </p>
+                                ) : null}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Bank details */}
+                          <div>
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                              Bank details
+                            </p>
+                            <div className="rounded-xl border border-zinc-100 bg-white p-4">
+                              {c.courierBankDetails ? (
+                                <div className="flex flex-col gap-1.5">
+                                  <p className="text-sm font-bold text-zinc-900">
+                                    {c.courierBankDetails.bankName}
+                                  </p>
+                                  <p className="text-sm text-zinc-700">
+                                    {c.courierBankDetails.accountName}
+                                  </p>
+                                  <p className="font-mono text-sm text-zinc-600">
+                                    ****{c.courierBankDetails.accountNumber.slice(-4)}
+                                  </p>
+                                  <span className="mt-1 inline-flex w-fit rounded-full bg-zinc-200 px-2 py-0.5 text-xs font-medium uppercase text-zinc-600">
+                                    {c.courierBankDetails.accountType}
+                                  </span>
+                                </div>
+                              ) : (
+                                <p className="text-sm text-red-500">No bank details</p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Earnings ledger — scrolls horizontally if description is long */}
+                          <div>
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                              Earnings ledger
+                            </p>
+                            <div className="overflow-x-auto">
+                              <div className="overflow-hidden rounded-xl border border-zinc-100 bg-white">
+                                <table className="w-full text-xs">
+                                  <thead>
+                                    <tr className="border-b border-zinc-100 bg-zinc-50">
+                                      <th className="px-3 py-2 text-left font-semibold text-zinc-500">Date</th>
+                                      <th className="px-3 py-2 text-left font-semibold text-zinc-500">Type</th>
+                                      <th className="px-3 py-2 text-left font-semibold text-zinc-500">Description</th>
+                                      <th className="px-3 py-2 text-right font-semibold text-zinc-500">Amount</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {c.courierLedger.slice(0, 10).map((e) => {
+                                      const isCredit = e.entryType === "PICKUP_EARNING";
+                                      return (
+                                        <tr key={e.id} className="border-b border-zinc-50">
+                                          <td className="px-3 py-2 text-zinc-500">
+                                            {new Date(e.createdAt).toLocaleDateString("en-TT")}
+                                          </td>
+                                          <td className="px-3 py-2 text-zinc-600">{e.entryType}</td>
+                                          <td className="px-3 py-2 text-zinc-600">{e.description}</td>
+                                          <td
+                                            className={`px-3 py-2 text-right font-mono font-medium ${
+                                              isCredit ? "text-emerald-600" : "text-red-500"
+                                            }`}
+                                          >
+                                            {isCredit ? "+" : "-"}
+                                            {formatTTD(e.amountMinor)}
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+
             {filteredCouriers.length === 0 ? (
               <p className="p-8 text-center text-sm text-zinc-500">No couriers match your search.</p>
             ) : null}

@@ -32,8 +32,7 @@ export default async function AdminSettingsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] px-4 py-8 sm:px-6">
-      <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-zinc-900">Admin settings</h1>
           <p className="mt-1 text-sm text-zinc-500">
@@ -86,6 +85,5 @@ export default async function AdminSettingsPage() {
           </div>
         </div>
       </div>
-    </div>
   );
 }

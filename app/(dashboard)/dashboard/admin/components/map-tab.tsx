@@ -87,6 +87,8 @@ export default function MapTab() {
       }).addTo(map);
       leafletMapRef.current = map;
       setLeafletReady(true);
+      // Ensure tiles render correctly for the CSS-driven container height
+      setTimeout(() => map.invalidateSize(), 200);
     });
   }, [mapReady]);
 
@@ -279,7 +281,8 @@ export default function MapTab() {
         </div>
       </div>
 
-      <div className="mb-5 grid grid-cols-4 gap-3">
+      {/* 4-across on desktop; 2×2 grid on mobile so labels never wrap */}
+      <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
         {[
           {
             label: "Active Couriers",
@@ -308,33 +311,34 @@ export default function MapTab() {
         ].map((card) => (
           <div
             key={card.label}
-            className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm"
+            className="flex flex-col gap-1.5 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm md:flex-row md:items-center md:gap-3 md:p-4"
           >
             <div
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-base md:h-10 md:w-10 md:text-lg"
               style={{ backgroundColor: `${card.color}15` }}
             >
               {card.icon}
             </div>
             <div>
-              <p className="text-2xl font-bold text-zinc-900">{card.value}</p>
-              <p className="mt-0.5 text-xs text-zinc-500">{card.label}</p>
+              <p className="text-xl font-bold text-zinc-900 md:text-2xl">{card.value}</p>
+              <p className="text-[11px] text-zinc-500 md:mt-0.5 md:text-xs">{card.label}</p>
             </div>
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+        {/* Height: comfortable viewport fill on mobile; fixed 580px on desktop */}
         <div
-          className="relative overflow-hidden rounded-2xl border border-zinc-200 shadow-sm lg:col-span-3"
-          style={{ height: "580px" }}
+          className="relative h-[55vh] overflow-hidden rounded-2xl border border-zinc-200 shadow-sm md:h-[580px] lg:col-span-3"
         >
           {loading && !mapData ? (
             <div className="absolute inset-0 z-10 flex h-full items-center justify-center bg-zinc-50">
               <p className="text-sm text-zinc-400">Loading map...</p>
             </div>
           ) : null}
-          <div ref={mapRef} style={{ height: "580px", width: "100%" }} />
+          {/* mapRef div fills the container — Leaflet reads its dimensions */}
+          <div ref={mapRef} style={{ height: "100%", width: "100%" }} />
         </div>
 
         <div className="flex flex-col gap-3 overflow-y-auto lg:col-span-1" style={{ maxHeight: "580px" }}>

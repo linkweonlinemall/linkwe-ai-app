@@ -187,7 +187,9 @@ export async function getAdminOrders(filters?: {
 
   return prisma.mainOrder.findMany({
     where: {
-      ...(filters?.status ? { status: filters.status } : { status: { not: "PENDING_PAYMENT" } }),
+      ...(filters?.status
+        ? { status: filters.status }
+        : { status: { notIn: ["DRAFT", "PENDING_PAYMENT"] as MainOrderStatus[] } }),
       ...(filters?.search
         ? {
             OR: [
