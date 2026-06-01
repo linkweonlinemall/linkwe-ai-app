@@ -461,12 +461,19 @@ export default function ShoppingChat({
 
   const [input, setInput] = useState("")
   const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const forceScrollRef = useRef(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+    const el = messagesContainerRef.current
+    if (!el) return
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= 100
+    if (forceScrollRef.current || isNearBottom) {
+      el.scrollTop = el.scrollHeight
+      forceScrollRef.current = false
+    }
   }, [messages, isLoading])
 
   async function openChat(id: string) {
@@ -485,6 +492,7 @@ export default function ShoppingChat({
         })
       }
     }
+    forceScrollRef.current = true
     setMessages(mapped)
     setShowHistory(false)
   }
@@ -512,6 +520,7 @@ export default function ShoppingChat({
     if ((!trimmed && !imagePreview) || isLoading) return
 
     const messageText = trimmed || "Find me products that match this image"
+    forceScrollRef.current = true
     void sendMessage(messageText, imagePreview ?? undefined)
 
     setInput("")
@@ -620,7 +629,7 @@ export default function ShoppingChat({
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4">
         {/* Empty state */}
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-8 px-3 text-center">
@@ -758,7 +767,6 @@ export default function ShoppingChat({
             ))}
 
             {isLoading ? <TypingIndicator /> : null}
-            <div ref={bottomRef} />
           </div>
         )}
       </div>
