@@ -61,6 +61,7 @@ model User {
   notifications         Notification[]
   tickets               Ticket[]
   eventTicketCartItems  EventTicketCartItem[]
+  ticketOrders          TicketOrder[]
 
   @@index([email])
   @@index([createdAt])
@@ -895,6 +896,7 @@ enum NotificationType {
   REVIEW_RECEIVED
   PAYOUT_PROCESSED
   GENERAL
+  TICKET_PURCHASED
 }
 
 enum UserRole {
@@ -1306,6 +1308,13 @@ enum TicketStatus {
   USED
   CANCELLED
   REFUNDED
+}
+
+enum TicketOrderStatus {
+  PENDING_PAYMENT
+  PAID
+  FAILED
+  CANCELLED
 }
 
 enum RefundPolicyType {
@@ -1822,6 +1831,7 @@ model Event {
   tickets               Ticket[]
   promoCodes            EventPromoCode[]
   waitlist              EventWaitlist[]
+  ticketOrders          TicketOrder[]
 
   @@index([storeId])
   @@index([isPublished])
@@ -1891,6 +1901,7 @@ model Ticket {
   event      Event           @relation(fields: [eventId], references: [id])
   ticketType EventTicketType @relation(fields: [ticketTypeId], references: [id])
   user       User            @relation(fields: [userId], references: [id])
+  ticketOrder TicketOrder?   @relation(fields: [orderId], references: [id])
 
   @@index([eventId])
   @@index([userId])
@@ -1929,6 +1940,27 @@ model EventWaitlist {
   @@unique([eventId, email])
   @@index([eventId])
   @@map("event_waitlist")
+}
+
+model TicketOrder {
+  id                    String            @id @default(cuid())
+  reference             String            @unique
+  userId                String
+  eventId               String
+  status                TicketOrderStatus @default(PENDING_PAYMENT)
+  subtotal              Int
+  total                 Int
+  stripePaymentIntentId String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id])
+  event   Event    @relation(fields: [eventId], references: [id])
+  tickets Ticket[]
+
+  @@index([userId])
+  @@index([eventId])
+  @@map("ticket_orders")
 }
 
 model Place {

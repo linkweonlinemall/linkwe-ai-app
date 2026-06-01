@@ -252,6 +252,32 @@ export function onDemandDeclinedCustomerEmail(data: {
   };
 }
 
+export function ticketConfirmationEmail(data: {
+  customerName: string;
+  eventTitle: string;
+  orderRef: string;
+  ticketCount: number;
+  totalTTD: number;
+  myTicketsUrl: string;
+}) {
+  const content = `
+    ${heading("Your tickets are confirmed!")}
+    ${para(`Hi ${data.customerName}, your ticket purchase was successful.`)}
+    ${infoBox([
+      { label: "Event", value: data.eventTitle },
+      { label: "Order", value: `#${data.orderRef}` },
+      { label: "Tickets", value: `${data.ticketCount} ticket${data.ticketCount !== 1 ? "s" : ""}` },
+      { label: "Total", value: data.totalTTD === 0 ? "Free" : `TTD ${data.totalTTD.toFixed(2)}` },
+    ])}
+    ${para("Your tickets are saved to your account. You can view and share them from your tickets page.")}
+    ${btn("View my tickets", data.myTicketsUrl)}
+  `;
+  return {
+    subject: `Tickets confirmed — ${data.eventTitle}`,
+    html: wrap(content, `Your tickets for ${data.eventTitle} are confirmed`),
+  };
+}
+
 export function newReviewVendorEmail(data: {
   vendorName: string;
   reviewerName: string;
