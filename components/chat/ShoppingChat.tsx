@@ -38,6 +38,48 @@ const assistantMarkdownComponents: Partial<Components> = {
       {children}
     </a>
   ),
+  p: ({ children }) => (
+    <p style={{ marginBottom: "16px", lineHeight: "1.75", color: "var(--text-secondary)" }}>
+      {children}
+    </p>
+  ),
+  strong: ({ children }) => (
+    <strong style={{ color: "#D4450A", fontWeight: 700 }}>{children}</strong>
+  ),
+  ul: ({ children }) => (
+    <ul style={{ margin: "12px 0 16px 0", paddingLeft: "20px" }}>{children}</ul>
+  ),
+  ol: ({ children }) => (
+    <ol style={{ margin: "12px 0 16px 0", paddingLeft: "20px" }}>{children}</ol>
+  ),
+  li: ({ children }) => (
+    <li style={{ marginBottom: "8px", lineHeight: "1.7", color: "var(--text-secondary)" }}>
+      {children}
+    </li>
+  ),
+  h1: ({ children }) => (
+    <h1 style={{ fontWeight: 700, color: "var(--text-primary)", marginBottom: "10px", marginTop: "20px", fontSize: "18px" }}>
+      {children}
+    </h1>
+  ),
+  h2: ({ children }) => (
+    <h2 style={{ fontWeight: 700, color: "var(--text-primary)", marginBottom: "10px", marginTop: "18px", fontSize: "16px" }}>
+      {children}
+    </h2>
+  ),
+  h3: ({ children }) => (
+    <h3 style={{ fontWeight: 600, color: "var(--text-primary)", marginBottom: "8px", marginTop: "14px", fontSize: "14px" }}>
+      {children}
+    </h3>
+  ),
+  code: ({ children }) => (
+    <code style={{ backgroundColor: "rgba(0,0,0,0.06)", padding: "2px 6px", borderRadius: "4px", fontSize: "12px", color: "#D4450A" }}>
+      {children}
+    </code>
+  ),
+  hr: () => (
+    <hr style={{ borderColor: "var(--card-border)", margin: "20px 0" }} />
+  ),
 }
 
 function linkifyText(text: string): string {
@@ -671,11 +713,10 @@ export default function ShoppingChat({
                             return (
                               <div
                                 key={i}
-                                className="mb-2 inline-block max-w-full rounded-2xl rounded-tl-sm bg-white px-4 py-2.5 text-sm"
+                                className="prose prose-sm mb-2 max-w-full rounded-2xl rounded-tl-sm bg-white px-4 py-2.5 text-sm"
                                 style={{
                                   border: "1px solid var(--card-border)",
                                   color: "var(--text-secondary)",
-                                  whiteSpace: "pre-wrap",
                                 }}
                               >
                                 <ReactMarkdown components={assistantMarkdownComponents}>
@@ -699,11 +740,10 @@ export default function ShoppingChat({
                         })
                       ) : (
                         <div
-                          className="inline-block max-w-full rounded-2xl rounded-tl-sm bg-white px-4 py-2.5 text-sm"
+                          className="prose prose-sm max-w-full rounded-2xl rounded-tl-sm bg-white px-4 py-2.5 text-sm"
                           style={{
                             border: "1px solid var(--card-border)",
                             color: "var(--text-secondary)",
-                            whiteSpace: "pre-wrap",
                           }}
                         >
                           <ReactMarkdown components={assistantMarkdownComponents}>

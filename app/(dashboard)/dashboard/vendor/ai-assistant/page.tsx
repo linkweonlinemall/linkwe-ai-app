@@ -954,14 +954,14 @@ export default function VendorAIAssistantPage() {
                         ))}
                       </div>
                     ) : null}
-                    <div className="prose prose-invert prose-sm max-w-none [&_p]:mb-2 [&_p:last-child]:mb-0">
+                    <div className="prose prose-invert prose-sm max-w-none">
                       <ReactMarkdown
                         components={{
                           p: ({ children }) => (
                             <p
                               style={{
-                                marginBottom: "12px",
-                                lineHeight: "1.7",
+                                marginBottom: "16px",
+                                lineHeight: "1.75",
                                 color: "#e4e4e7",
                               }}
                             >
@@ -978,7 +978,7 @@ export default function VendorAIAssistantPage() {
                           ul: ({ children }) => (
                             <ul
                               style={{
-                                margin: "10px 0 12px 0",
+                                margin: "12px 0 16px 0",
                                 paddingLeft: "20px",
                               }}
                             >
@@ -988,7 +988,7 @@ export default function VendorAIAssistantPage() {
                           ol: ({ children }) => (
                             <ol
                               style={{
-                                margin: "10px 0 12px 0",
+                                margin: "12px 0 16px 0",
                                 paddingLeft: "20px",
                               }}
                             >
@@ -998,8 +998,8 @@ export default function VendorAIAssistantPage() {
                           li: ({ children }) => (
                             <li
                               style={{
-                                marginBottom: "6px",
-                                lineHeight: "1.6",
+                                marginBottom: "8px",
+                                lineHeight: "1.7",
                                 color: "#e4e4e7",
                               }}
                             >
@@ -1011,8 +1011,8 @@ export default function VendorAIAssistantPage() {
                               style={{
                                 fontWeight: 700,
                                 color: "#ffffff",
-                                marginBottom: "8px",
-                                marginTop: "16px",
+                                marginBottom: "10px",
+                                marginTop: "20px",
                                 fontSize: "18px",
                               }}
                             >
@@ -1024,8 +1024,8 @@ export default function VendorAIAssistantPage() {
                               style={{
                                 fontWeight: 700,
                                 color: "#ffffff",
-                                marginBottom: "8px",
-                                marginTop: "14px",
+                                marginBottom: "10px",
+                                marginTop: "18px",
                                 fontSize: "16px",
                               }}
                             >
@@ -1037,8 +1037,8 @@ export default function VendorAIAssistantPage() {
                               style={{
                                 fontWeight: 600,
                                 color: "#ffffff",
-                                marginBottom: "6px",
-                                marginTop: "12px",
+                                marginBottom: "8px",
+                                marginTop: "14px",
                                 fontSize: "14px",
                               }}
                             >
@@ -1062,7 +1062,7 @@ export default function VendorAIAssistantPage() {
                             <hr
                               style={{
                                 borderColor: "rgba(255,255,255,0.1)",
-                                margin: "16px 0",
+                                margin: "20px 0",
                               }}
                             />
                           ),
