@@ -43,19 +43,6 @@ type ApiUserContent =
         }
     >
 
-function stripMarkdown(input: string): string {
-  let s = input
-  s = s.replace(/\*\*([^*]+)\*\*/g, "$1")
-  s = s.replace(/\*([^*]+)\*/g, "$1")
-  s = s.replace(/__([^_]+)__/g, "$1")
-  s = s.replace(/_([^_]+)_/g, "$1")
-  s = s.replace(/~~([^~]+)~~/g, "$1")
-  s = s.replace(/^#{1,6}\s*/gm, "")
-  s = s.replace(/^[-*+]\s+/gm, "")
-  s = s.replace(/^\d+\.\s+/gm, "")
-  s = s.replace(/`{1,3}[^`]*`{1,3}/g, "")
-  return s.trim()
-}
 
 const ACCEPT_CHAT_IMAGES =
   "image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
@@ -135,7 +122,6 @@ export default function VendorAIAssistantPage() {
   const [startImages, setStartImages] = useState<string[]>([])
   const [startImagePreviews, setStartImagePreviews] = useState<string[]>([])
   const [uploadingStart, setUploadingStart] = useState(false)
-  const [inputFocused, setInputFocused] = useState(false)
   const [activeTab, setActiveTab] = useState<"assistant" | "bulk">("assistant")
   const [chatId, setChatId] = useState<string | null>(null)
   const [chatList, setChatList] = useState<
@@ -148,7 +134,6 @@ export default function VendorAIAssistantPage() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const chatFileInputRef = useRef<HTMLInputElement>(null)
-  const selectionRef = useRef({ start: 0, end: 0 })
   const sendMessageRef = useRef<
     (overrideMessage?: string) => void | Promise<void>
   >(() => {})
@@ -208,63 +193,6 @@ export default function VendorAIAssistantPage() {
   useEffect(() => {
     adjustTextareaHeight()
   }, [input, adjustTextareaHeight])
-
-  const updateSelection = () => {
-    const el = inputRef.current
-    if (!el) return
-    selectionRef.current = {
-      start: el.selectionStart ?? 0,
-      end: el.selectionEnd ?? 0,
-    }
-  }
-
-  const insertAtCursor = (insert: string) => {
-    const el = inputRef.current
-    if (!el) {
-      setInput((v) => v + insert)
-      return
-    }
-    const { start, end } = selectionRef.current
-    const v = input
-    const next = v.slice(0, start) + insert + v.slice(end)
-    setInput(next)
-    const pos = start + insert.length
-    requestAnimationFrame(() => {
-      el.focus()
-      el.setSelectionRange(pos, pos)
-      selectionRef.current = { start: pos, end: pos }
-      adjustTextareaHeight()
-    })
-  }
-
-  const wrapSelection = (before: string, after: string, placeholder: string) => {
-    const el = inputRef.current
-    const { start, end } = selectionRef.current
-    const v = input
-    const selected = v.slice(start, end)
-    const core = selected || placeholder
-    const next = v.slice(0, start) + before + core + after + v.slice(end)
-    setInput(next)
-    const endPos = start + before.length + core.length + after.length
-    requestAnimationFrame(() => {
-      if (el) {
-        el.focus()
-        if (selected) {
-          el.setSelectionRange(endPos, endPos)
-        } else {
-          el.setSelectionRange(
-            start + before.length,
-            start + before.length + placeholder.length
-          )
-        }
-        selectionRef.current = {
-          start: el.selectionStart ?? 0,
-          end: el.selectionEnd ?? 0,
-        }
-        adjustTextareaHeight()
-      }
-    })
-  }
 
   const handleSend = useCallback(
     async (overrideMessage?: string) => {
@@ -1256,61 +1184,6 @@ export default function VendorAIAssistantPage() {
             flexShrink: 0,
           }}
         >
-          {inputFocused ? (
-            <div
-              className="mb-1 flex w-fit gap-1 rounded-full border px-2 py-1"
-              style={{
-                borderColor: CARD_BORDER_STYLE.borderColor,
-                backgroundColor: "rgba(255,255,255,0.04)",
-              }}
-            >
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => wrapSelection("**", "**", "text")}
-                className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-zinc-300 hover:bg-[rgba(255,255,255,0.08)] hover:text-white"
-                title="Bold"
-              >
-                B
-              </button>
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => wrapSelection("*", "*", "text")}
-                className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-zinc-300 italic hover:bg-[rgba(255,255,255,0.08)] hover:text-white"
-                title="Italic"
-              >
-                I
-              </button>
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => insertAtCursor("\n- ")}
-                className="flex h-6 w-6 items-center justify-center rounded-full text-xs text-zinc-300 hover:bg-[rgba(255,255,255,0.08)] hover:text-white"
-                title="Bullet list"
-              >
-                •
-              </button>
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => insertAtCursor("\n1. ")}
-                className="flex h-6 w-6 items-center justify-center rounded-full text-xs text-zinc-300 hover:bg-[rgba(255,255,255,0.08)] hover:text-white"
-                title="Numbered list"
-              >
-                1.
-              </button>
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => setInput((v) => stripMarkdown(v))}
-                className="flex h-6 w-6 items-center justify-center rounded-full text-xs text-zinc-300 hover:bg-[rgba(255,255,255,0.08)] hover:text-white"
-                title="Clear formatting"
-              >
-                ×
-              </button>
-            </div>
-          ) : null}
           {/* Hidden file input for chat-attach paperclip */}
           <input
             ref={chatFileInputRef}
@@ -1400,19 +1273,8 @@ export default function VendorAIAssistantPage() {
               value={input}
               onChange={(e) => {
                 setInput(e.target.value)
-                updateSelection()
                 e.target.style.height = "auto"
                 e.target.style.height = `${Math.max(44, e.target.scrollHeight)}px`
-              }}
-              onKeyUp={updateSelection}
-              onSelect={updateSelection}
-              onFocus={() => {
-                setInputFocused(true)
-                updateSelection()
-              }}
-              onBlur={() => {
-                setInputFocused(false)
-                updateSelection()
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
