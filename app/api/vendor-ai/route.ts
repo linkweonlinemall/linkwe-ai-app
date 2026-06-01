@@ -8,6 +8,7 @@ import {
 } from "@/app/actions/ai-vendor-update"
 import {
   addProductImagesFromUrls,
+  isTrustedHostedImageUrl,
   removeProductImageAtIndex,
   replaceProductImageAtIndex,
   reorderProductGalleryValidated,
@@ -1427,8 +1428,13 @@ export async function POST(req: NextRequest) {
 
         if (toolBlock.name === "upload_event_cover_image") {
           const { eventId, imageUrl } = toolBlock.input as { eventId: string; imageUrl: string }
-          if (!imageUrl.startsWith("https://")) {
-            return { content: JSON.stringify({ error: "imageUrl must start with https://" }) }
+          if (!isTrustedHostedImageUrl(imageUrl)) {
+            return {
+              content: JSON.stringify({
+                error:
+                  "imageUrl must be an uploaded Cloudinary image (res.cloudinary.com). Ask the vendor to upload the image via the paperclip icon first — do not invent or guess a URL.",
+              }),
+            }
           }
           const fd = new FormData()
           fd.set("coverImage", imageUrl)
@@ -1439,8 +1445,13 @@ export async function POST(req: NextRequest) {
 
         if (toolBlock.name === "upload_event_gallery_image") {
           const { eventId, imageUrl } = toolBlock.input as { eventId: string; imageUrl: string }
-          if (!imageUrl.startsWith("https://")) {
-            return { content: JSON.stringify({ error: "imageUrl must start with https://" }) }
+          if (!isTrustedHostedImageUrl(imageUrl)) {
+            return {
+              content: JSON.stringify({
+                error:
+                  "imageUrl must be an uploaded Cloudinary image (res.cloudinary.com). Ask the vendor to upload the image via the paperclip icon first — do not invent or guess a URL.",
+              }),
+            }
           }
           // Fetch current gallery images
           const event = await prisma.event.findFirst({

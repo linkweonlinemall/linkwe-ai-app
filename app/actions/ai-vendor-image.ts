@@ -11,7 +11,7 @@ import { uploadFile } from "@/lib/uploads/upload"
 
 const ALLOWED_CHAT_MIME = new Set(["image/jpeg", "image/png", "image/webp"])
 
-function isTrustedHostedImageUrl(url: string): boolean {
+export function isTrustedHostedImageUrl(url: string): boolean {
   try {
     const u = new URL(url)
     return (
