@@ -1,6 +1,6 @@
 # LinkWe — AI session context
 
-**Last updated:** 31 May 2026 (mobile pass)
+**Last updated:** 1 June 2026 (tickets Step 4, payment fixes, AI chat improvements)
 
 Reference document for assistants working in this repository. Paths are relative to the project root unless noted.
 
@@ -9,6 +9,42 @@ Reference document for assistants working in this repository. Paths are relative
 ## Recent Changes (since initial context generation)
 
 Summary of notable additions and refactors. Re-scan the repo after large merges.
+
+### 1 June 2026 — Tickets Step 4, payment fixes, AI chat improvements (complete)
+
+#### Events & Ticketing — Step 4 complete
+- **Stripe ticket purchase flow** (`app/actions/ticket-checkout.ts`, `components/events/TicketPurchaseCard.tsx`) — inline Stripe Elements on `/events/[slug]`; creates `TicketOrder` + `Ticket` records; `PaymentIntent` with `ticketOrderId` metadata.
+- **Webhook** (`app/api/webhooks/stripe/route.ts`) — branches on `metadata.ticketOrderId`; handled by `handleTicketOrderPaid`; idempotent (status guard prevents double-processing on retries); no `revalidatePath` in webhook context.
+- **New schema** — `TicketOrder` model, `TicketOrderStatus` enum (`PENDING` → `PAID` → `CANCELLED`), `TICKET_PURCHASED` notification type, `Ticket.orderId` relation. Migration `20260531212600_add_ticket_order` applied to production via manual SQL in Neon editor (see migration drift note below).
+- **Email** — `ticketConfirmationEmail` template in `lib/email/templates.ts`.
+- **Ticket purchases run on a SEPARATE rail** — no `MainOrder`/`SplitOrder`/warehouse involvement.
+
+**Still TODO (ticketing):**
+- Step 5: `/my-tickets` page (currently 404 placeholder), QR codes, PDF tickets
+- Step 6: Offline QR scanner for vendor door check-in
+- Step 7: Event products/services on event page
+- Step 8: Promo codes, waitlist auto-promotion, ticket transfer
+
+#### Booking/service payments — production bugs fixed
+- **Root causes of "stuck on processing":** wrong Stripe webhook URL (307 redirect), missing `STRIPE_WEBHOOK_SECRET` in Vercel, `revalidatePath` crash inside webhook context (E263), AND production DB missing columns from migration `20260518180000_add_completion_and_earnings`.
+- **Fixes:** webhook URL now `https://www.linkweonlinemall.com/api/webhooks/stripe`; `STRIPE_WEBHOOK_SECRET` set in Vercel env; `revalidatePath` calls wrapped in `try/catch` in `lib/finance/booking-payment.ts`; booking webhook made idempotent (status guard).
+
+#### AI chat improvements (Rex + Zara)
+- **Image URL validation** — `isTrustedHostedImageUrl` extracted to `lib/images/trusted-host.ts` (not a `"use server"` file); `upload_event_cover_image` and `upload_event_gallery_image` tool handlers in `app/api/vendor-ai/route.ts` now reject non-Cloudinary URLs; Rex system prompt updated. Rex can no longer save hallucinated/broken image URLs.
+- **Markdown spacing** — paragraph `marginBottom`, `lineHeight`, and list/heading spacing improved in all three chat components.
+- **Real token streaming** — `app/api/vendor-ai/route.ts` and `app/api/chat/route.ts` now emit text deltas via `messageStream.on("text", ...)` instead of buffering to final message.
+- **Typewriter display buffer** — all three chat components (`floating-ai-chat.tsx`, `ai-assistant/page.tsx`, `ShoppingChat.tsx`) buffer received deltas in `buf.pending` and drain at 5/10/20 chars per `requestAnimationFrame` (adaptive). `finalized` guard prevents double-finalization on error. No backend changes.
+- **Zara products loading placeholder** — incomplete ` ```products``` ` blocks masked behind "Finding products for you…" while streaming; `isStreaming: true` held throughout drain; `isStreaming: false` only set in `doFinalize` after last char displayed.
+- **Full-page Rex image upload** — `app/(dashboard)/dashboard/vendor/ai-assistant/page.tsx` now has mid-conversation image attach: paperclip button, thumbnail strip above input, `uploadVendorChatImages` upload, base64 vision content to Anthropic, `focusEventId` state wired. Reuses existing server action; no new upload pipeline.
+- **Formatting toolbar removed** — vestigial B/I/bullet/numbered/clear toolbar removed from full-page Rex input along with all dead helpers (`stripMarkdown`, `insertAtCursor`, `wrapSelection`, `selectionRef`, `updateSelection`, `inputFocused`).
+
+#### Open risks / TODO before public launch ⚠️
+- **SECURITY — MUST ACTION:** Neon production `DATABASE_URL` was exposed and must be **ROTATED** (Neon → reset `neondb_owner` password → update `DATABASE_URL` in Vercel → redeploy). Mark done once rotated.
+- **MIGRATION DRIFT:** migrations `20260518180000_add_completion_and_earnings` and `20260531212600_add_ticket_order` were applied to production via manual SQL in Neon editor, NOT via `prisma migrate deploy`. Prisma's `_prisma_migrations` records may be out of sync. Reconcile before launch (`prisma migrate resolve`) so a future migrate doesn't attempt a destructive reset. **NEVER run `prisma migrate dev/reset` against production.**
+- Webhook catch block returns full error message + stack (added for debugging) — trim before production hardening.
+- Zara's `quantitySold` increment uses `.catch(console.error)` (logs and continues) — potential oversell path under high volume; harden before heavy ticket sales.
+
+---
 
 ### 31 May 2026 — Admin dashboard mobile optimisation (complete)
 
@@ -103,7 +139,7 @@ Single shared `vendorReadiness(vendor)` function drives the sidebar badge (`N/8`
 - **Pre-launch production push** — Successful deploy to production resolving homepage crash (`Invalid prisma.event.findMany() invocation`).
 
 #### Still to build
-- **Step 4:** Ticket purchase Stripe integration (payment intent, webhook, order record)
+- ~~**Step 4:** Ticket purchase Stripe integration (payment intent, webhook, order record)~~ — **COMPLETE** (see 1 June 2026)
 - **Step 5:** QR ticket delivery and PDF ticket generation
 - **Step 6:** Offline QR scanner for vendor door check-in
 - **Step 7:** Event products and services integration (merchandise, add-ons)
