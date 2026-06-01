@@ -261,6 +261,67 @@ function usePersistedChat(
 
       const apiMessages: MessageParam[] = [...messages.map((m) => chatMessageToApiParam(m)), newUserApi]
 
+      let fullContent = ""
+      const buf = { pending: "", done: false, displayed: "" }
+      let rafHandle = -1
+      let finalized = false
+
+      const doFinalize = () => {
+        if (finalized) return
+        finalized = true
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? {
+                  ...m,
+                  content: fullContent,
+                  segments: parseAssistantMessage(fullContent),
+                  isStreaming: false,
+                }
+              : m
+          )
+        )
+        setIsLoading(false)
+        if (isLoggedIn && resolvedChatId && fullContent) {
+          void saveVendorChatMessage(resolvedChatId, "assistant", fullContent)
+        }
+        if (
+          fullContent.toLowerCase().includes("added") &&
+          fullContent.toLowerCase().includes("cart")
+        ) {
+          void getCart()
+            .then((cartItems) => setItems(mapRows(cartItems)))
+            .catch(() => {})
+        }
+      }
+
+      const drain = () => {
+        if (buf.pending.length > 0) {
+          const n =
+            buf.pending.length > 200 ? 20 : buf.pending.length > 50 ? 10 : 5
+          buf.displayed += buf.pending.slice(0, n)
+          buf.pending = buf.pending.slice(n)
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId
+                ? {
+                    ...m,
+                    content: buf.displayed,
+                    segments: parseAssistantMessage(buf.displayed),
+                    isStreaming: true,
+                  }
+                : m
+            )
+          )
+        }
+        if (!buf.done || buf.pending.length > 0) {
+          rafHandle = requestAnimationFrame(drain)
+        } else {
+          doFinalize()
+        }
+      }
+      rafHandle = requestAnimationFrame(drain)
+
       try {
         const res = await fetch("/api/chat", {
           method: "POST",
@@ -270,7 +331,6 @@ function usePersistedChat(
 
         const reader = res.body?.getReader()
         const decoder = new TextDecoder()
-        let fullContent = ""
 
         stream: while (reader) {
           const { done, value } = await reader.read()
@@ -292,17 +352,7 @@ function usePersistedChat(
               }
               if (parsed.text) {
                 fullContent += parsed.text
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantId
-                      ? {
-                          ...m,
-                          content: fullContent,
-                          segments: parseAssistantMessage(fullContent),
-                        }
-                      : m
-                  )
-                )
+                buf.pending += parsed.text
               }
             } catch {
               // skip malformed chunk
@@ -310,35 +360,11 @@ function usePersistedChat(
           }
         }
 
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId
-              ? {
-                  ...m,
-                  content: fullContent,
-                  segments: parseAssistantMessage(fullContent),
-                  isStreaming: false,
-                }
-              : m
-          )
-        )
-
-        if (isLoggedIn && resolvedChatId && fullContent) {
-          await saveVendorChatMessage(resolvedChatId, "assistant", fullContent)
-        }
-
-        if (
-          fullContent.toLowerCase().includes("added") &&
-          fullContent.toLowerCase().includes("cart")
-        ) {
-          try {
-            const cartItems = await getCart()
-            setItems(mapRows(cartItems))
-          } catch {}
-        }
+        buf.done = true
       } catch (err) {
+        cancelAnimationFrame(rafHandle)
+        finalized = true
         console.error("Chat error:", err)
-      } finally {
         setIsLoading(false)
       }
     },

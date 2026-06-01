@@ -245,6 +245,47 @@ export default function FloatingAIChat() {
         { role: "user" as const, content: messageContent },
       ]
 
+      let fullText = ""
+      let assistantIdRef = ""
+      const buf = { pending: "", done: false, displayed: "" }
+      let rafHandle = -1
+      let finalized = false
+
+      const doFinalize = () => {
+        if (finalized) return
+        finalized = true
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantIdRef ? { ...m, content: fullText } : m
+          )
+        )
+        setLoading(false)
+        setTimeout(() => inputRef.current?.focus(), 50)
+        if (currentChatId && fullText) {
+          void saveVendorChatMessage(currentChatId, "assistant", fullText)
+        }
+      }
+
+      const drain = () => {
+        if (buf.pending.length > 0) {
+          const n =
+            buf.pending.length > 200 ? 20 : buf.pending.length > 50 ? 10 : 5
+          buf.displayed += buf.pending.slice(0, n)
+          buf.pending = buf.pending.slice(n)
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantIdRef ? { ...m, content: buf.displayed } : m
+            )
+          )
+        }
+        if (!buf.done || buf.pending.length > 0) {
+          rafHandle = requestAnimationFrame(drain)
+        } else {
+          doFinalize()
+        }
+      }
+      rafHandle = requestAnimationFrame(drain)
+
       try {
         const res = await fetch("/api/vendor-ai", {
           method: "POST",
@@ -259,18 +300,22 @@ export default function FloatingAIChat() {
         })
 
         const reader = res.body?.getReader()
-        if (!reader) return
+        if (!reader) {
+          cancelAnimationFrame(rafHandle)
+          finalized = true
+          setLoading(false)
+          setTimeout(() => inputRef.current?.focus(), 50)
+          return
+        }
 
-        let assistantText = ""
-        const assistantId = Date.now().toString() + "-a"
+        assistantIdRef = Date.now().toString() + "-a"
         setMessages((prev) => [
           ...prev,
           {
-            id: assistantId,
+            id: assistantIdRef,
             role: "assistant",
             content: "",
-            images:
-              uploadedUrls.length > 0 ? [...uploadedUrls] : undefined,
+            images: uploadedUrls.length > 0 ? [...uploadedUrls] : undefined,
           },
         ])
 
@@ -303,12 +348,8 @@ export default function FloatingAIChat() {
               if (parsed.focusEventId)
                 setFocusedEventId(parsed.focusEventId)
               if (parsed.text) {
-                assistantText += parsed.text
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantId ? { ...m, content: assistantText } : m
-                  )
-                )
+                fullText += parsed.text
+                buf.pending += parsed.text
               }
             } catch {
               // ignore parse errors in stream
@@ -316,14 +357,10 @@ export default function FloatingAIChat() {
           }
         }
 
-        if (currentChatId && assistantText) {
-          await saveVendorChatMessage(
-            currentChatId,
-            "assistant",
-            assistantText
-          )
-        }
+        buf.done = true
       } catch {
+        cancelAnimationFrame(rafHandle)
+        finalized = true
         setMessages((prev) => [
           ...prev,
           {
@@ -332,7 +369,6 @@ export default function FloatingAIChat() {
             content: "Something went wrong. Please try again.",
           },
         ])
-      } finally {
         setLoading(false)
         setTimeout(() => inputRef.current?.focus(), 50)
       }

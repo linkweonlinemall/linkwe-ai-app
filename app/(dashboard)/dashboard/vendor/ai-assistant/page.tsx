@@ -355,6 +355,48 @@ export default function VendorAIAssistantPage() {
         { role: "user", content: lastUserContent },
       ]
 
+      let full = ""
+      const buf = { pending: "", done: false, displayed: "" }
+      let rafHandle = -1
+      let finalized = false
+
+      const doFinalize = () => {
+        if (finalized) return
+        finalized = true
+        setMessages((prev) =>
+          prev.map((m) => (m.id === assistantId ? { ...m, content: full } : m))
+        )
+        setLoading(false)
+        setTimeout(() => inputRef.current?.focus(), 50)
+        void (async () => {
+          try {
+            await saveVendorChatMessage(saveChatId, "assistant", full)
+          } catch (e) {
+            console.error("saveVendorChatMessage assistant", e)
+          }
+        })()
+      }
+
+      const drain = () => {
+        if (buf.pending.length > 0) {
+          const n =
+            buf.pending.length > 200 ? 20 : buf.pending.length > 50 ? 10 : 5
+          buf.displayed += buf.pending.slice(0, n)
+          buf.pending = buf.pending.slice(n)
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId ? { ...m, content: buf.displayed } : m
+            )
+          )
+        }
+        if (!buf.done || buf.pending.length > 0) {
+          rafHandle = requestAnimationFrame(drain)
+        } else {
+          doFinalize()
+        }
+      }
+      rafHandle = requestAnimationFrame(drain)
+
       try {
         await saveVendorChatMessage(saveChatId, "user", userMsg.content)
         const res = await fetch("/api/vendor-ai", {
@@ -369,13 +411,15 @@ export default function VendorAIAssistantPage() {
         })
 
         if (res.status === 401) {
+          cancelAnimationFrame(rafHandle)
+          finalized = true
+          setLoading(false)
           router.replace("/")
           return
         }
 
         const reader = res.body?.getReader()
         const decoder = new TextDecoder()
-        let full = ""
 
         stream: while (reader) {
           const { done, value } = await reader.read()
@@ -417,16 +461,14 @@ export default function VendorAIAssistantPage() {
                 }
               }
               if (p.error) {
-                full += `\n[Error: ${p.error}]`
+                const errChunk = `\n[Error: ${p.error}]`
+                full += errChunk
+                buf.pending += errChunk
                 break stream
               }
               if (p.text) {
                 full += p.text
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantId ? { ...m, content: full } : m
-                  )
-                )
+                buf.pending += p.text
               }
             } catch {
               // ignore
@@ -434,17 +476,10 @@ export default function VendorAIAssistantPage() {
           }
         }
 
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId ? { ...m, content: full } : m
-          )
-        )
-        try {
-          await saveVendorChatMessage(saveChatId, "assistant", full)
-        } catch (logErr) {
-          console.error("saveVendorChatMessage assistant", logErr)
-        }
+        buf.done = true
       } catch (e) {
+        cancelAnimationFrame(rafHandle)
+        finalized = true
         console.error(e)
         const errText = "Something went wrong. Please try again."
         setMessages((prev) =>
@@ -452,12 +487,13 @@ export default function VendorAIAssistantPage() {
             m.id === assistantId ? { ...m, content: errText } : m
           )
         )
-        try {
-          await saveVendorChatMessage(saveChatId, "assistant", errText)
-        } catch (logErr) {
-          console.error("saveVendorChatMessage assistant (error)", logErr)
-        }
-      } finally {
+        void (async () => {
+          try {
+            await saveVendorChatMessage(saveChatId, "assistant", errText)
+          } catch (logErr) {
+            console.error("saveVendorChatMessage assistant (error)", logErr)
+          }
+        })()
         setLoading(false)
         setTimeout(() => inputRef.current?.focus(), 50)
       }
