@@ -8,19 +8,9 @@ import {
   getCloudinaryEnvStatus,
 } from "@/lib/uploads/cloudinary-config"
 import { uploadFile } from "@/lib/uploads/upload"
+import { isTrustedHostedImageUrl } from "@/lib/images/trusted-host"
 
 const ALLOWED_CHAT_MIME = new Set(["image/jpeg", "image/png", "image/webp"])
-
-export function isTrustedHostedImageUrl(url: string): boolean {
-  try {
-    const u = new URL(url)
-    return (
-      u.protocol === "https:" && u.hostname.toLowerCase().endsWith("cloudinary.com")
-    )
-  } catch {
-    return false
-  }
-}
 
 export async function uploadProductImage(
   productId: string,

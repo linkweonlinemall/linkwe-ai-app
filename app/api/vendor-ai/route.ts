@@ -8,12 +8,12 @@ import {
 } from "@/app/actions/ai-vendor-update"
 import {
   addProductImagesFromUrls,
-  isTrustedHostedImageUrl,
   removeProductImageAtIndex,
   replaceProductImageAtIndex,
   reorderProductGalleryValidated,
   setProductCoverImage,
 } from "@/app/actions/ai-vendor-image"
+import { isTrustedHostedImageUrl } from "@/lib/images/trusted-host"
 import { createProductFromAIRaw } from "@/app/actions/ai-vendor"
 import {
   getVendorInventoryAlerts,
