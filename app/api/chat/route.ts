@@ -353,7 +353,7 @@ Start your response with one short sentence, then paste the code block above exa
         let continueLoop = true
 
         while (continueLoop) {
-          const response = await client.messages.create({
+          const messageStream = client.messages.stream({
             model: "claude-sonnet-4-5",
             max_tokens: 4096,
             system: systemWithContext,
@@ -361,6 +361,11 @@ Start your response with one short sentence, then paste the code block above exa
             tool_choice: { type: "auto" },
             messages: currentMessages,
           })
+
+          // Stream each text delta immediately as it arrives
+          messageStream.on("text", (delta) => send(JSON.stringify({ text: delta })))
+
+          const response = await messageStream.finalMessage()
 
           if (response.stop_reason === "tool_use") {
             const toolBlocks = response.content.filter(
@@ -694,11 +699,7 @@ Start your response with one short sentence, then paste the code block above exa
             ]
           } else {
             continueLoop = false
-            for (const block of response.content) {
-              if (block.type === "text") {
-                send(JSON.stringify({ text: block.text }))
-              }
-            }
+            // Text already sent via delta events — do not re-send
           }
         }
 

@@ -1637,17 +1637,10 @@ If SYSTEM notes further down report an issue with attaching to a product gallery
             messages: currentMessages,
           })
 
-          const final = await messageStream.finalMessage()
+          // Stream each text delta immediately as it arrives
+          messageStream.on("text", (delta) => send(JSON.stringify({ text: delta })))
 
-          let assistantRoundText = ""
-          for (const block of final.content) {
-            if (block.type === "text" && typeof block.text === "string") {
-              assistantRoundText += block.text
-            }
-          }
-          if (assistantRoundText.length > 0) {
-            send(JSON.stringify({ text: assistantRoundText }))
-          }
+          const final = await messageStream.finalMessage()
 
           if (final.stop_reason !== "tool_use") {
             break
