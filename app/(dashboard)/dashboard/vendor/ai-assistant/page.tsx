@@ -143,8 +143,11 @@ export default function VendorAIAssistantPage() {
   >([])
   const [loadingChats, setLoadingChats] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [attachedPreviews, setAttachedPreviews] = useState<string[]>([])
+  const [focusedEventId, setFocusedEventId] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const chatFileInputRef = useRef<HTMLInputElement>(null)
   const selectionRef = useRef({ start: 0, end: 0 })
   const sendMessageRef = useRef<
     (overrideMessage?: string) => void | Promise<void>
@@ -269,7 +272,8 @@ export default function VendorAIAssistantPage() {
       const isFirstInThread = !messages.some((m) => m.role === "user")
       const previewCount = startImagePreviews.length
       const canSendWithImages = isFirstInThread && previewCount > 0
-      if (!canSendWithImages && !text) return
+      const chatPreviewSnapshot = [...attachedPreviews]
+      if (!canSendWithImages && !text && chatPreviewSnapshot.length === 0) return
       if (loading || !allowed) return
 
       const hasStartPreviews = isFirstInThread && previewCount > 0
@@ -311,6 +315,35 @@ export default function VendorAIAssistantPage() {
         setStartImages([])
       }
 
+      let chatUploadedUrls: string[] = []
+      if (chatPreviewSnapshot.length > 0) {
+        const fd = new FormData()
+        for (let i = 0; i < chatPreviewSnapshot.length; i++) {
+          const dataUrl = chatPreviewSnapshot[i]!
+          const blob = await fetch(dataUrl).then((r) => r.blob())
+          const ext =
+            blob.type === "image/png" ? "png" : blob.type === "image/webp" ? "webp" : "jpg"
+          fd.append(
+            "images",
+            new File([blob], `chat-${i}.${ext}`, { type: blob.type || "image/jpeg" })
+          )
+        }
+        const up = await uploadVendorChatImages(fd)
+        if (!up.ok) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: crypto.randomUUID(),
+              role: "assistant",
+              content: up.error ?? "Could not upload images. Use JPG, PNG, or WebP under 12MB.",
+            },
+          ])
+          return
+        }
+        chatUploadedUrls = up.urls
+        setAttachedPreviews([])
+      }
+
       const textForApi =
         text ||
         (hasStartPreviews
@@ -318,19 +351,20 @@ export default function VendorAIAssistantPage() {
           : "")
 
       const finalContent: string = text
+      const allUploadedUrls = [...heroUploadedUrls, ...chatUploadedUrls]
       const displayText =
-        previewsForApi.length > 0 || heroUploadedUrls.length > 0
-          ? textForApi
+        previewsForApi.length > 0 || allUploadedUrls.length > 0 || chatPreviewSnapshot.length > 0
+          ? textForApi || text
           : finalContent
 
       const userMsg: ChatMsg = {
         id: crypto.randomUUID(),
         role: "user",
         content: displayText,
-        ...(heroUploadedUrls.length > 0
-          ? { images: [...heroUploadedUrls] }
-          : previewsForApi.length > 0
-            ? { images: [...previewsForApi] }
+        ...(allUploadedUrls.length > 0
+          ? { images: allUploadedUrls }
+          : previewsForApi.length > 0 || chatPreviewSnapshot.length > 0
+            ? { images: [...previewsForApi, ...chatPreviewSnapshot] }
             : {}),
       }
       const assistantId = crypto.randomUUID()
@@ -338,9 +372,7 @@ export default function VendorAIAssistantPage() {
         id: assistantId,
         role: "assistant",
         content: "",
-        ...(heroUploadedUrls.length > 0
-          ? { images: [...heroUploadedUrls] }
-          : {}),
+        ...(allUploadedUrls.length > 0 ? { images: allUploadedUrls } : {}),
       }
 
       let saveChatId = chatId
@@ -361,10 +393,14 @@ export default function VendorAIAssistantPage() {
       setLoading(true)
       requestAnimationFrame(() => adjustTextareaHeight())
 
+      const allPreviews = [
+        ...(isFirstInThread && previewsForApi.length > 0 ? previewsForApi : []),
+        ...chatPreviewSnapshot,
+      ]
       let lastUserContent: ApiUserContent
-      if (isFirstInThread && previewsForApi.length > 0) {
+      if (allPreviews.length > 0) {
         lastUserContent = [
-          ...previewsForApi.map((dataUrl) => {
+          ...allPreviews.map((dataUrl) => {
             const comma = dataUrl.indexOf(",")
             const rest = comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl
             const meta = comma >= 0 ? dataUrl.slice(0, comma) : "data:image/jpeg;base64"
@@ -379,7 +415,7 @@ export default function VendorAIAssistantPage() {
               },
             }
           }),
-          { type: "text" as const, text: textForApi },
+          { type: "text" as const, text: textForApi || text },
         ]
       } else {
         lastUserContent = text
@@ -399,8 +435,8 @@ export default function VendorAIAssistantPage() {
           body: JSON.stringify({
             messages: apiMessages,
             focusProductId: focusedProductId ?? undefined,
-            uploadedImageUrls:
-              heroUploadedUrls.length > 0 ? heroUploadedUrls : undefined,
+            focusEventId: focusedEventId ?? undefined,
+            uploadedImageUrls: allUploadedUrls.length > 0 ? allUploadedUrls : undefined,
           }),
         })
 
@@ -427,6 +463,7 @@ export default function VendorAIAssistantPage() {
                 error?: string
                 productId?: string
                 focusProductId?: string
+                focusEventId?: string
                 galleryUpdate?: {
                   productId: string
                   images: string[]
@@ -436,6 +473,7 @@ export default function VendorAIAssistantPage() {
                 setProductImages(p.galleryUpdate.images)
               }
               if (p.focusProductId) setFocusedProductId(p.focusProductId)
+              if (p.focusEventId) setFocusedEventId(p.focusEventId)
               if (p.productId) {
                 setCreatedProductId(p.productId)
                 setFocusedProductId(p.productId)
@@ -503,9 +541,11 @@ export default function VendorAIAssistantPage() {
       input,
       router,
       startImagePreviews,
+      attachedPreviews,
       adjustTextareaHeight,
       chatId,
       focusedProductId,
+      focusedEventId,
     ]
   )
 
@@ -1271,7 +1311,89 @@ export default function VendorAIAssistantPage() {
               </button>
             </div>
           ) : null}
+          {/* Hidden file input for chat-attach paperclip */}
+          <input
+            ref={chatFileInputRef}
+            type="file"
+            accept={ACCEPT_CHAT_IMAGES}
+            multiple
+            className="hidden"
+            onChange={async (e) => {
+              const files = Array.from(e.target.files ?? [])
+              e.target.value = ""
+              const allowed = files.filter((f) =>
+                ["image/jpeg", "image/png", "image/webp"].includes(f.type)
+              )
+              const dataUrls = await Promise.all(
+                allowed.map(
+                  (f) =>
+                    new Promise<string>((res) => {
+                      const reader = new FileReader()
+                      reader.onload = () => res(reader.result as string)
+                      reader.readAsDataURL(f)
+                    })
+                )
+              )
+              const compressed = await Promise.all(
+                dataUrls.map((d) => compressImage(d))
+              )
+              setAttachedPreviews((prev) => [...prev, ...compressed])
+            }}
+          />
+
+          {/* Thumbnail preview strip for attached images */}
+          {attachedPreviews.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {attachedPreviews.map((src, i) => (
+                <div key={i} className="relative">
+                  <img
+                    src={src}
+                    alt=""
+                    className="h-14 w-14 rounded-lg object-cover"
+                    style={{ border: "1px solid rgba(255,255,255,0.1)" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAttachedPreviews((prev) =>
+                        prev.filter((_, j) => j !== i)
+                      )
+                    }
+                    className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-zinc-700 text-[10px] text-white hover:bg-zinc-600"
+                    title="Remove"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="flex gap-2">
+            {/* Paperclip / attach button */}
+            <button
+              type="button"
+              onClick={() => chatFileInputRef.current?.click()}
+              disabled={loading}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-zinc-400 transition-colors hover:bg-[rgba(255,255,255,0.06)] hover:text-zinc-200 disabled:opacity-40"
+              style={{ border: "1px solid rgba(255,255,255,0.1)", backgroundColor: "#0F1117" }}
+              title="Attach images (JPG, PNG, WebP)"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+              </svg>
+            </button>
+
             <textarea
               ref={inputRef}
               rows={1}
@@ -1312,6 +1434,7 @@ export default function VendorAIAssistantPage() {
               disabled={
                 loading ||
                 (!input.trim() &&
+                  attachedPreviews.length === 0 &&
                   !(
                     !messages.some((m) => m.role === "user") &&
                     startImagePreviews.length > 0
