@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, useCallback, type ChangeEvent, type Dispatch, type KeyboardEvent, type SetStateAction } from "react"
+import { useState, useRef, useEffect, useCallback, Fragment, type ChangeEvent, type Dispatch, type KeyboardEvent, type SetStateAction } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages"
@@ -86,6 +86,47 @@ function linkifyText(text: string): string {
   return text.replace(
     /(https?:\/\/[^\s)]+)/g,
     (url) => `[${url}](${url})`
+  )
+}
+
+/**
+ * While a ```products block is open (not yet closed during streaming),
+ * strip it from the end of the text so raw JSON isn't shown to the user.
+ * Returns the cleaned text and a flag indicating a placeholder should render.
+ */
+function stripOpenProductsBlock(text: string): { cleaned: string; hadOpenBlock: boolean } {
+  const openIdx = text.lastIndexOf("```products")
+  if (openIdx === -1) return { cleaned: text, hadOpenBlock: false }
+  // If a closing ``` follows the opening marker the block is complete — leave it
+  if (text.slice(openIdx + "```products".length).includes("```")) {
+    return { cleaned: text, hadOpenBlock: false }
+  }
+  return { cleaned: text.slice(0, openIdx).trimEnd(), hadOpenBlock: true }
+}
+
+function ProductsLoadingPlaceholder() {
+  return (
+    <div
+      className="mb-2 flex items-center gap-2.5 rounded-2xl rounded-tl-sm bg-white px-4 py-3 text-sm"
+      style={{ border: "1px solid var(--card-border)" }}
+    >
+      <div
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs"
+        style={{ backgroundColor: "var(--scarlet)", color: "white" }}
+      >
+        🛍
+      </div>
+      <span style={{ color: "var(--text-muted)" }}>Finding products for you</span>
+      <span className="flex gap-1">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="inline-block h-1.5 w-1.5 animate-bounce rounded-full"
+            style={{ backgroundColor: "var(--text-faint)", animationDelay: `${i * 0.15}s` }}
+          />
+        ))}
+      </span>
+    </div>
   )
 }
 
@@ -719,19 +760,30 @@ export default function ShoppingChat({
                       {message.segments && message.segments.length > 0 ? (
                         message.segments.map((seg, i) => {
                           if (seg.type === "text") {
+                            let displayContent = seg.content
+                            let showPlaceholder = false
+                            if (message.isStreaming) {
+                              const { cleaned, hadOpenBlock } = stripOpenProductsBlock(seg.content)
+                              displayContent = cleaned
+                              showPlaceholder = hadOpenBlock
+                            }
                             return (
-                              <div
-                                key={i}
-                                className="prose prose-sm mb-2 max-w-full rounded-2xl rounded-tl-sm bg-white px-4 py-2.5 text-sm"
-                                style={{
-                                  border: "1px solid var(--card-border)",
-                                  color: "var(--text-secondary)",
-                                }}
-                              >
-                                <ReactMarkdown components={assistantMarkdownComponents}>
-                                  {linkifyText(seg.content)}
-                                </ReactMarkdown>
-                              </div>
+                              <Fragment key={i}>
+                                {displayContent ? (
+                                  <div
+                                    className="prose prose-sm mb-2 max-w-full rounded-2xl rounded-tl-sm bg-white px-4 py-2.5 text-sm"
+                                    style={{
+                                      border: "1px solid var(--card-border)",
+                                      color: "var(--text-secondary)",
+                                    }}
+                                  >
+                                    <ReactMarkdown components={assistantMarkdownComponents}>
+                                      {linkifyText(displayContent)}
+                                    </ReactMarkdown>
+                                  </div>
+                                ) : null}
+                                {showPlaceholder ? <ProductsLoadingPlaceholder /> : null}
+                              </Fragment>
                             )
                           }
                           if (seg.type === "products") {
@@ -747,19 +799,33 @@ export default function ShoppingChat({
                           }
                           return null
                         })
-                      ) : (
-                        <div
-                          className="prose prose-sm max-w-full rounded-2xl rounded-tl-sm bg-white px-4 py-2.5 text-sm"
-                          style={{
-                            border: "1px solid var(--card-border)",
-                            color: "var(--text-secondary)",
-                          }}
-                        >
-                          <ReactMarkdown components={assistantMarkdownComponents}>
-                            {linkifyText(message.content)}
-                          </ReactMarkdown>
-                        </div>
-                      )}
+                      ) : (() => {
+                        let displayContent = message.content
+                        let showPlaceholder = false
+                        if (message.isStreaming) {
+                          const { cleaned, hadOpenBlock } = stripOpenProductsBlock(message.content)
+                          displayContent = cleaned
+                          showPlaceholder = hadOpenBlock
+                        }
+                        return (
+                          <>
+                            {displayContent ? (
+                              <div
+                                className="prose prose-sm max-w-full rounded-2xl rounded-tl-sm bg-white px-4 py-2.5 text-sm"
+                                style={{
+                                  border: "1px solid var(--card-border)",
+                                  color: "var(--text-secondary)",
+                                }}
+                              >
+                                <ReactMarkdown components={assistantMarkdownComponents}>
+                                  {linkifyText(displayContent)}
+                                </ReactMarkdown>
+                              </div>
+                            ) : null}
+                            {showPlaceholder ? <ProductsLoadingPlaceholder /> : null}
+                          </>
+                        )
+                      })()}
                     </div>
                   </div>
                 )}
