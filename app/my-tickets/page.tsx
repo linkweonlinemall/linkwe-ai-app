@@ -7,6 +7,7 @@ import { getSession } from "@/lib/auth/session";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { prisma } from "@/lib/prisma";
 import { icn } from "@/lib/iconography";
+import { generateTicketQRCodeDataURL } from "@/lib/tickets/qr-code";
 import PublicNav from "@/components/layout/PublicNav";
 
 export const metadata: Metadata = {
@@ -81,6 +82,18 @@ export default async function MyTicketsPage() {
 
   const continueHref = userRecord ? getRoleDashboardPath(userRecord.role) : null;
 
+  const ticketsWithQr = await Promise.all(
+    tickets.map(async (ticket) => {
+      let qrDataUrl: string | null = null;
+      try {
+        qrDataUrl = await generateTicketQRCodeDataURL(ticket.qrToken);
+      } catch {
+        qrDataUrl = null;
+      }
+      return { ...ticket, qrDataUrl };
+    }),
+  );
+
   return (
     <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
       <PublicNav
@@ -132,7 +145,7 @@ export default async function MyTicketsPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            {tickets.map((ticket) => {
+            {ticketsWithQr.map((ticket) => {
               const status =
                 STATUS_STYLES[ticket.status as string] ?? STATUS_STYLES.VALID;
               const accentColor = ticket.ticketType?.color ?? "#D4450A";
@@ -281,37 +294,48 @@ export default async function MyTicketsPage() {
                       backgroundColor: "#FAFAFA",
                     }}
                   >
-                    {/* QR placeholder — Step 5b */}
                     <div className="flex items-center gap-2">
-                      <div
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
-                        style={{ backgroundColor: "#F4F4F5" }}
-                        aria-hidden
-                      >
-                        <svg
-                          width="20"
-                          height="20"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="#A1A1AA"
-                          strokeWidth="1.5"
-                          aria-hidden
-                        >
-                          <rect x="3" y="3" width="7" height="7" rx="1" />
-                          <rect x="14" y="3" width="7" height="7" rx="1" />
-                          <rect x="3" y="14" width="7" height="7" rx="1" />
-                          <rect x="5" y="5" width="3" height="3" fill="#A1A1AA" stroke="none" />
-                          <rect x="16" y="5" width="3" height="3" fill="#A1A1AA" stroke="none" />
-                          <rect x="5" y="16" width="3" height="3" fill="#A1A1AA" stroke="none" />
-                          <rect x="14" y="14" width="3" height="3" rx="0.5" />
-                          <rect x="19" y="14" width="2" height="2" rx="0.5" />
-                          <rect x="19" y="18" width="2" height="3" rx="0.5" />
-                          <rect x="14" y="19" width="3" height="2" rx="0.5" />
-                        </svg>
-                      </div>
-                      <span className="text-xs" style={{ color: "var(--text-faint)" }}>
-                        QR code coming soon
-                      </span>
+                      {ticket.qrDataUrl ? (
+                        <img
+                          src={ticket.qrDataUrl}
+                          alt={`Check-in QR for ticket ${ticket.ticketNumber}`}
+                          width={64}
+                          height={64}
+                          className="h-16 w-16 shrink-0 rounded-lg bg-white"
+                        />
+                      ) : (
+                        <>
+                          <div
+                            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg"
+                            style={{ backgroundColor: "#F4F4F5" }}
+                            aria-hidden
+                          >
+                            <svg
+                              width="20"
+                              height="20"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="#A1A1AA"
+                              strokeWidth="1.5"
+                              aria-hidden
+                            >
+                              <rect x="3" y="3" width="7" height="7" rx="1" />
+                              <rect x="14" y="3" width="7" height="7" rx="1" />
+                              <rect x="3" y="14" width="7" height="7" rx="1" />
+                              <rect x="5" y="5" width="3" height="3" fill="#A1A1AA" stroke="none" />
+                              <rect x="16" y="5" width="3" height="3" fill="#A1A1AA" stroke="none" />
+                              <rect x="5" y="16" width="3" height="3" fill="#A1A1AA" stroke="none" />
+                              <rect x="14" y="14" width="3" height="3" rx="0.5" />
+                              <rect x="19" y="14" width="2" height="2" rx="0.5" />
+                              <rect x="19" y="18" width="2" height="3" rx="0.5" />
+                              <rect x="14" y="19" width="3" height="2" rx="0.5" />
+                            </svg>
+                          </div>
+                          <span className="text-xs" style={{ color: "var(--text-faint)" }}>
+                            QR unavailable
+                          </span>
+                        </>
+                      )}
                     </div>
 
                     {/* PDF download placeholder — Step 5c */}

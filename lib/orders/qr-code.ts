@@ -1,8 +1,9 @@
 import QRCode from "qrcode";
 
+import { getAppBaseUrl } from "@/lib/app-base-url";
+
 export async function generateOrderQRCodeDataURL(orderId: string): Promise<string> {
-  const appUrl =
-    process.env.NEXT_PUBLIC_BASE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = getAppBaseUrl();
   const orderUrl = `${appUrl}/orders/${orderId}`;
 
   const dataUrl = await QRCode.toDataURL(orderUrl, {
@@ -18,7 +19,6 @@ export async function generateOrderQRCodeDataURL(orderId: string): Promise<strin
 }
 
 export function getOrderUrl(orderId: string): string {
-  const appUrl =
-    process.env.NEXT_PUBLIC_BASE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = getAppBaseUrl();
   return `${appUrl}/orders/${orderId}`;
 }

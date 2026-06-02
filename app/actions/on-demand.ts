@@ -425,7 +425,7 @@ export async function confirmOnDemandRequest(
         apiVersion: "2024-06-20",
       });
 
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
+      const baseUrl = BASE_URL;
       const price =
         request.quotedPrice && request.quotedPrice > 0 ? request.quotedPrice : 1;
 
