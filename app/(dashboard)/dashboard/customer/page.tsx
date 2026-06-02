@@ -12,6 +12,7 @@ import {
   Package,
   Settings,
   ShoppingBag,
+  Ticket,
 } from "lucide-react";
 
 import { assertDashboardRole } from "@/lib/auth/assert-role";
@@ -177,6 +178,7 @@ export default async function CustomerDashboardPage() {
     { label: "Services", href: "/services", Icon: ConciergeBell },
     { label: "My requests", href: "/my-requests", Icon: ClipboardList },
     { label: "My orders", href: "/orders", Icon: Package },
+    { label: "My tickets", href: "/my-tickets", Icon: Ticket },
     { label: "Bookings", href: "/bookings", Icon: Calendar },
     { label: "Wishlist", href: "/wishlist", Icon: Heart },
     { label: "Saved stores", href: "/saved-stores", Icon: Bookmark },
