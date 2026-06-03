@@ -402,6 +402,13 @@ export default function VendorEventsPage() {
                       Tickets
                     </Link>
                     <Link
+                      href={`/dashboard/vendor/events/${event.id}/checkin`}
+                      className="text-xs font-medium hover:underline"
+                      style={{ color: "#D4450A" }}
+                    >
+                      Check in
+                    </Link>
+                    <Link
                       href={`/dashboard/vendor/events/${event.id}/edit`}
                       className="text-xs font-medium hover:underline"
                       style={{ color: "var(--blue)" }}

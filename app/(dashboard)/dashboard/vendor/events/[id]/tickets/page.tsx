@@ -58,7 +58,7 @@ export default async function TicketTypesPage({ params }: Props) {
           ← Back to event
         </Link>
         <div className="flex items-start justify-between gap-4">
-          <div>
+          <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-bold text-zinc-900">Ticket types</h1>
             <p className="mt-1 truncate text-sm text-zinc-500">{event.title}</p>
             <p className="text-xs text-zinc-400">
@@ -70,8 +70,15 @@ export default async function TicketTypesPage({ params }: Props) {
               })}
             </p>
           </div>
+          <div className="flex shrink-0 flex-col items-end gap-2">
+          <Link
+            href={`/dashboard/vendor/events/${id}/checkin`}
+            className="rounded-xl bg-[#D4450A] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+          >
+            Scan tickets / Check in
+          </Link>
           <span
-            className="mt-1 inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+            className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
             style={{
               backgroundColor:
                 event.status === "PUBLISHED"
@@ -89,6 +96,7 @@ export default async function TicketTypesPage({ params }: Props) {
           >
             {event.status}
           </span>
+          </div>
         </div>
       </div>
 

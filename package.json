@@ -37,6 +37,7 @@
     "cloudinary": "^2.9.0",
     "csv-parse": "^6.2.1",
     "exceljs": "^4.4.0",
+    "html5-qrcode": "^2.3.8",
     "jose": "^6.2.2",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.468.0",

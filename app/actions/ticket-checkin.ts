@@ -40,6 +40,7 @@ export type TicketCheckInLookup =
       checkedInAt: Date | null;
       holderName: string;
       ticketTypeName: string;
+      eventId: string;
       event: {
         title: string;
         startDate: Date;
@@ -106,6 +107,7 @@ export async function getTicketForCheckIn(qrToken: string): Promise<TicketCheckI
     checkedInAt: ticket.checkedInAt,
     holderName: ticket.holderName,
     ticketTypeName: ticket.ticketType.name,
+    eventId: ticket.event.id,
     event: {
       title: ticket.event.title,
       startDate: ticket.event.startDate,
