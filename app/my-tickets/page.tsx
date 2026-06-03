@@ -338,18 +338,16 @@ export default async function MyTicketsPage() {
                       )}
                     </div>
 
-                    {/* PDF download placeholder — Step 5c */}
-                    <button
-                      type="button"
-                      disabled
-                      className="cursor-not-allowed rounded-lg px-3 py-1.5 text-xs font-medium opacity-40"
+                    <a
+                      href={`/api/ticket-pdf/${ticket.id}`}
+                      className="rounded-lg px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-80"
                       style={{
                         backgroundColor: "#F4F4F5",
                         color: "var(--text-muted)",
                       }}
                     >
                       Download PDF
-                    </button>
+                    </a>
                   </div>
                 </div>
               );
