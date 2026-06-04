@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { CalendarDays, X, Trash2, Globe, EyeOff } from "lucide-react";
+import { CalendarDays, X, Trash2, Globe, EyeOff, MoreVertical, ScanLine } from "lucide-react";
 import {
   getVendorEventsForCurrentUser,
   deleteEvent,
@@ -29,12 +29,136 @@ function formatEventDate(date: Date): string {
   });
 }
 
+function EventRowActionsMenu({
+  event,
+  isPending,
+  open,
+  onOpenChange,
+  onPublishToggle,
+  onDelete,
+}: {
+  event: EventItem;
+  isPending: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onPublishToggle: (event: EventItem) => void;
+  onDelete: (eventId: string, title: string) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onOpenChange(false);
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onOpenChange(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open, onOpenChange]);
+
+  const menuItemClass =
+    "flex min-h-[44px] w-full items-center gap-2.5 px-4 text-sm font-medium text-[#1C1C1A] transition-colors hover:bg-[#F7F7F6]";
+
+  return (
+    <div className="relative shrink-0" ref={ref}>
+      <button
+        type="button"
+        onClick={() => onOpenChange(!open)}
+        className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-zinc-200 text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
+        aria-label={`Actions for ${event.title}`}
+        aria-expanded={open}
+        aria-haspopup="menu"
+      >
+        <MoreVertical className="h-5 w-5 shrink-0" aria-hidden />
+      </button>
+
+      {open ? (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-50 mt-1 w-56 overflow-hidden rounded-xl border border-zinc-200 bg-white py-1 shadow-lg"
+        >
+          <Link
+            role="menuitem"
+            href={`/dashboard/vendor/events/${event.id}/tickets`}
+            onClick={() => onOpenChange(false)}
+            className={menuItemClass}
+          >
+            Tickets
+          </Link>
+          <Link
+            role="menuitem"
+            href={`/dashboard/vendor/events/${event.id}/checkin`}
+            onClick={() => onOpenChange(false)}
+            className={`${menuItemClass} text-[#D4450A] hover:bg-[#FEF0EB]`}
+          >
+            <ScanLine className="h-4 w-4 shrink-0" aria-hidden />
+            Check in
+          </Link>
+          <Link
+            role="menuitem"
+            href={`/dashboard/vendor/events/${event.id}/edit`}
+            onClick={() => onOpenChange(false)}
+            className={menuItemClass}
+          >
+            Edit
+          </Link>
+          <button
+            type="button"
+            role="menuitem"
+            disabled={isPending}
+            onClick={() => {
+              onOpenChange(false);
+              onPublishToggle(event);
+            }}
+            className={`${menuItemClass} disabled:opacity-40 ${
+              event.status === "PUBLISHED" ? "text-zinc-600" : "text-[#15803D]"
+            }`}
+          >
+            {event.status === "PUBLISHED" ? (
+              <>
+                <EyeOff className="h-4 w-4 shrink-0" aria-hidden />
+                Unpublish
+              </>
+            ) : (
+              <>
+                <Globe className="h-4 w-4 shrink-0" aria-hidden />
+                Publish
+              </>
+            )}
+          </button>
+          <div className="mx-3 my-1 h-px bg-zinc-100" aria-hidden />
+          <button
+            type="button"
+            role="menuitem"
+            disabled={isPending}
+            onClick={() => {
+              onOpenChange(false);
+              onDelete(event.id, event.title);
+            }}
+            className="flex min-h-[44px] w-full items-center gap-2.5 px-4 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-40"
+          >
+            <Trash2 className="h-4 w-4 shrink-0" aria-hidden />
+            Delete
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function VendorEventsPage() {
   const [events, setEvents] = useState<EventItem[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [openMenuEventId, setOpenMenuEventId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoadError(false);
@@ -301,139 +425,108 @@ export default function VendorEventsPage() {
               return (
                 <div
                   key={event.id}
-                  className={`flex flex-col gap-3 px-4 py-4 transition-colors md:grid md:grid-cols-12 md:items-center md:gap-4 md:px-5 ${
+                  className={`px-4 py-4 transition-colors md:grid md:grid-cols-12 md:items-center md:gap-4 md:px-5 ${
                     checked ? "bg-orange-50/60" : "hover:bg-zinc-50/60"
                   }`}
                   style={{ borderBottom: "1px solid var(--card-border-subtle)" }}
                 >
-                  {/* Checkbox + thumbnail */}
-                  <div className="flex items-center gap-2.5 md:col-span-1">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleOne(event.id)}
-                      className="h-4 w-4 cursor-pointer rounded border-zinc-300 accent-[#D4450A]"
-                      aria-label={`Select ${event.title}`}
-                    />
-                    <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-zinc-100">
-                      {event.coverImage ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={event.coverImage}
-                          alt={event.title}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div
-                          className="flex h-full w-full items-center justify-center text-xs font-bold"
-                          style={{ color: "var(--text-disabled)" }}
-                        >
-                          {event.title.charAt(0)}
-                        </div>
-                      )}
+                  <div className="flex w-full items-center gap-2.5 md:contents">
+                    {/* Checkbox + thumbnail */}
+                    <div className="flex shrink-0 items-center gap-2.5 md:col-span-1">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleOne(event.id)}
+                        className="h-4 w-4 cursor-pointer rounded border-zinc-300 accent-[#D4450A]"
+                        aria-label={`Select ${event.title}`}
+                      />
+                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-zinc-100">
+                        {event.coverImage ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={event.coverImage}
+                            alt={event.title}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div
+                            className="flex h-full w-full items-center justify-center text-xs font-bold"
+                            style={{ color: "var(--text-disabled)" }}
+                          >
+                            {event.title.charAt(0)}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Title + category */}
-                  <div className="flex min-w-0 flex-1 flex-col md:col-span-4">
-                    <p
-                      className="truncate text-sm font-medium"
-                      style={{ color: "var(--text-primary)" }}
-                    >
-                      {event.title}
-                    </p>
-                    <span className="mt-0.5 text-xs capitalize text-zinc-400">
-                      {event.category?.replace(/_/g, " ")}
-                      {event.isOnline
-                        ? " · Online"
-                        : event.region
-                          ? ` · ${event.region}`
-                          : ""}
-                    </span>
-                    {/* Mobile: date + status */}
-                    <div className="mt-1.5 flex items-center gap-2 md:hidden">
-                      <span className="text-xs text-zinc-500">
+                    {/* Title + category */}
+                    <div className="min-w-0 flex-1 md:col-span-4">
+                      <p
+                        className="truncate text-sm font-medium"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {event.title}
+                      </p>
+                      <span className="mt-0.5 block text-xs capitalize text-zinc-400">
+                        {event.category?.replace(/_/g, " ")}
+                        {event.isOnline
+                          ? " · Online"
+                          : event.region
+                            ? ` · ${event.region}`
+                            : ""}
+                      </span>
+                      <p className="mt-1 text-xs text-zinc-500 md:hidden">
+                        {formatEventDate(event.startDate)}
+                        <span className="text-zinc-300"> · </span>
+                        {totalSold} / {totalQty || "—"} sold
+                      </p>
+                    </div>
+
+                    {/* Date */}
+                    <div className="hidden md:block md:col-span-2">
+                      <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
                         {formatEventDate(event.startDate)}
                       </span>
+                    </div>
+
+                    {/* Tickets sold */}
+                    <div className="hidden md:block md:col-span-2">
+                      <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
+                        {totalSold} / {totalQty || "—"}
+                      </span>
+                      <span className="ml-1 text-xs text-zinc-400">
+                        ({event.ticketTypes.length} type
+                        {event.ticketTypes.length !== 1 ? "s" : ""})
+                      </span>
+                    </div>
+
+                    {/* Status badge — desktop column */}
+                    <div className="hidden md:flex md:col-span-1 md:items-center">
                       <span
-                        className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+                        className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
                         style={{ backgroundColor: badge.bg, color: badge.color }}
                       >
                         {badge.label}
                       </span>
                     </div>
-                  </div>
 
-                  {/* Date */}
-                  <div className="hidden md:block md:col-span-2">
-                    <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
-                      {formatEventDate(event.startDate)}
-                    </span>
-                  </div>
-
-                  {/* Tickets sold */}
-                  <div className="hidden md:block md:col-span-2">
-                    <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
-                      {totalSold} / {totalQty || "—"}
-                    </span>
-                    <span className="ml-1 text-xs text-zinc-400">
-                      ({event.ticketTypes.length} type
-                      {event.ticketTypes.length !== 1 ? "s" : ""})
-                    </span>
-                  </div>
-
-                  {/* Status badge */}
-                  <div className="hidden md:block md:col-span-1">
-                    <span
-                      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
-                      style={{ backgroundColor: badge.bg, color: badge.color }}
-                    >
-                      {badge.label}
-                    </span>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-3 md:col-span-2 md:justify-end">
-                    <Link
-                      href={`/dashboard/vendor/events/${event.id}/tickets`}
-                      className="text-xs font-medium hover:underline"
-                      style={{ color: "var(--blue)" }}
-                    >
-                      Tickets
-                    </Link>
-                    <Link
-                      href={`/dashboard/vendor/events/${event.id}/checkin`}
-                      className="text-xs font-medium hover:underline"
-                      style={{ color: "#D4450A" }}
-                    >
-                      Check in
-                    </Link>
-                    <Link
-                      href={`/dashboard/vendor/events/${event.id}/edit`}
-                      className="text-xs font-medium hover:underline"
-                      style={{ color: "var(--blue)" }}
-                    >
-                      Edit
-                    </Link>
-                    <button
-                      type="button"
-                      disabled={isPending}
-                      onClick={() => handlePublishToggle(event)}
-                      className="text-xs font-medium hover:underline disabled:opacity-40"
-                      style={{
-                        color: event.status === "PUBLISHED" ? "var(--text-muted)" : "#15803D",
-                      }}
-                    >
-                      {event.status === "PUBLISHED" ? "Unpublish" : "Publish"}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={isPending}
-                      onClick={() => handleDelete(event.id, event.title)}
-                      className="text-xs font-medium text-red-500 hover:underline disabled:opacity-40"
-                    >
-                      Delete
-                    </button>
+                    {/* Status (mobile) + actions menu */}
+                    <div className="flex shrink-0 items-center gap-2 md:col-span-2 md:justify-end">
+                      <span
+                        className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium md:hidden"
+                        style={{ backgroundColor: badge.bg, color: badge.color }}
+                      >
+                        {badge.label}
+                      </span>
+                      <EventRowActionsMenu
+                        event={event}
+                        isPending={isPending}
+                        open={openMenuEventId === event.id}
+                        onOpenChange={(next) => setOpenMenuEventId(next ? event.id : null)}
+                        onPublishToggle={handlePublishToggle}
+                        onDelete={handleDelete}
+                      />
+                    </div>
                   </div>
                 </div>
               );
