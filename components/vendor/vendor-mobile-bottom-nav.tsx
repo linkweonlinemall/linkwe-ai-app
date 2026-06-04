@@ -20,6 +20,7 @@ import {
   IconSettings,
   IconShoppingBag,
   IconStar,
+  IconTicket,
   IconTools,
 } from "@tabler/icons-react";
 
@@ -39,6 +40,7 @@ type MoreNavItem = {
 const MORE_ITEMS: MoreNavItem[] = [
   { href: "/dashboard/vendor/services", label: "My Services", Icon: IconTools },
   { href: "/dashboard/vendor/bookings", label: "Bookings", Icon: IconCalendarEvent },
+  { href: "/dashboard/vendor/events", label: "Events", Icon: IconTicket },
   { href: "/dashboard/vendor/requests", label: "Requests", Icon: IconBolt },
   { href: "/dashboard/vendor/staff", label: "Staff/Availability", Icon: IconClock },
   { href: "/dashboard/vendor?tab=store", label: "Store", Icon: IconBuildingStore },
