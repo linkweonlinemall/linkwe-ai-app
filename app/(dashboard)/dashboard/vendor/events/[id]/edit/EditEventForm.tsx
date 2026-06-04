@@ -12,6 +12,7 @@ import {
 import RichTextEditor from "@/components/ui/RichTextEditor";
 import { TT_REGIONS } from "@/lib/regions/tt-regions";
 import LineupEditor, { type Performer } from "@/components/events/LineupEditor";
+import { TRINIDAD_TIMEZONE, ymdInTrinidad } from "@/lib/timezone/trinidad";
 
 export const EVENT_CATEGORIES: { group: string; options: { value: string; label: string }[] }[] = [
   {
@@ -146,15 +147,24 @@ function getImageUrl(img: unknown): string {
 
 function toDateInputValue(iso: string | null | undefined): string {
   if (!iso) return "";
-  return iso.slice(0, 10);
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return ymdInTrinidad(d);
 }
 
 function toTimeInputValue(iso: string | null | undefined): string {
   if (!iso) return "";
-  // ISO: "2026-06-15T20:00:00.000Z" — use local portion
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "";
-  return d.toISOString().slice(11, 16);
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TRINIDAD_TIMEZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(d);
+  const hour = parts.find((p) => p.type === "hour")?.value ?? "00";
+  const minute = parts.find((p) => p.type === "minute")?.value ?? "00";
+  return `${hour}:${minute}`;
 }
 
 export type EventFormData = {

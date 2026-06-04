@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
+import { slotInstantTrinidad } from "@/lib/timezone/trinidad";
 import { prisma } from "@/lib/prisma";
 import { uploadFile } from "@/lib/uploads/upload";
 
@@ -75,8 +76,7 @@ function optDate(formData: FormData, key: string): Date | null {
 
 function combineDateAndTime(dateStr: string, timeStr: string): Date | null {
   if (!dateStr) return null;
-  const combined = timeStr ? `${dateStr}T${timeStr}` : `${dateStr}T00:00`;
-  const d = new Date(combined);
+  const d = slotInstantTrinidad(dateStr, timeStr || "00:00");
   return isNaN(d.getTime()) ? null : d;
 }
 

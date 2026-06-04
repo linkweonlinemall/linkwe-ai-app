@@ -1,11 +1,21 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import type { Prisma, TicketStatus } from "@prisma/client";
 
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
 const PAGE_SIZE = 25;
+
+export type EventTicketTypeSales = {
+  ticketTypeId: string;
+  name: string;
+  linkweSold: number;
+  externalSold: number;
+  realTotal: number;
+  capacity: number;
+};
 
 export type EventTicketCounts = {
   valid: number;
@@ -14,6 +24,13 @@ export type EventTicketCounts = {
   refunded: number;
   issued: number;
   checkedIn: number;
+  linkweSoldTotal: number;
+  externalSoldTotal: number;
+  realTotalSold: number;
+  /** Sum of EventTicketType.quantity — tickets put up for sale */
+  ticketsAvailable: number;
+  eventCapacity: number | null;
+  byType: EventTicketTypeSales[];
 };
 
 export type AttendeeStatusFilter =
@@ -128,13 +145,90 @@ export async function getEventTicketCounts(
   const auth = await assertVendorOwnsEvent(eventId);
   if ("error" in auth) return auth;
 
-  const grouped = await prisma.ticket.groupBy({
-    by: ["status"],
-    where: { eventId: auth.eventId },
-    _count: { _all: true },
+  const [grouped, event, ticketTypes] = await Promise.all([
+    prisma.ticket.groupBy({
+      by: ["status"],
+      where: { eventId: auth.eventId },
+      _count: { _all: true },
+    }),
+    prisma.event.findUnique({
+      where: { id: auth.eventId },
+      select: { capacity: true },
+    }),
+    prisma.eventTicketType.findMany({
+      where: { eventId: auth.eventId },
+      select: {
+        id: true,
+        name: true,
+        quantity: true,
+        quantitySold: true,
+        externalSold: true,
+      },
+      orderBy: { price: "asc" },
+    }),
+  ]);
+
+  const checkIn = countsFromGroupBy(grouped);
+
+  const byType: EventTicketTypeSales[] = ticketTypes.map((t) => {
+    const linkweSold = t.quantitySold;
+    const externalSold = t.externalSold;
+    return {
+      ticketTypeId: t.id,
+      name: t.name,
+      linkweSold,
+      externalSold,
+      realTotal: linkweSold + externalSold,
+      capacity: t.quantity,
+    };
   });
 
-  return { counts: countsFromGroupBy(grouped) };
+  const linkweSoldTotal = byType.reduce((s, t) => s + t.linkweSold, 0);
+  const externalSoldTotal = byType.reduce((s, t) => s + t.externalSold, 0);
+  const ticketsAvailable = byType.reduce((s, t) => s + t.capacity, 0);
+
+  return {
+    counts: {
+      ...checkIn,
+      linkweSoldTotal,
+      externalSoldTotal,
+      realTotalSold: linkweSoldTotal + externalSoldTotal,
+      ticketsAvailable,
+      eventCapacity: event?.capacity ?? null,
+      byType,
+    },
+  };
+}
+
+export async function setExternalSold(
+  eventId: string,
+  ticketTypeId: string,
+  count: number,
+): Promise<{ success: true } | { error: string }> {
+  const auth = await assertVendorOwnsEvent(eventId);
+  if ("error" in auth) return auth;
+
+  const trimmedTypeId = ticketTypeId?.trim();
+  if (!trimmedTypeId) return { error: "Ticket type not found" };
+
+  if (!Number.isFinite(count) || !Number.isInteger(count) || count < 0) {
+    return { error: "Count must be a whole number of zero or more" };
+  }
+
+  const ticketType = await prisma.eventTicketType.findFirst({
+    where: { id: trimmedTypeId, eventId: auth.eventId },
+    select: { id: true },
+  });
+  if (!ticketType) return { error: "Ticket type not found for this event" };
+
+  await prisma.eventTicketType.update({
+    where: { id: ticketType.id },
+    data: { externalSold: count },
+  });
+
+  revalidatePath(`/dashboard/vendor/events/${auth.eventId}/attendees`);
+
+  return { success: true };
 }
 
 export async function searchEventTickets(

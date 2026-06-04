@@ -6,9 +6,11 @@ import { checkInTicket } from "@/app/actions/ticket-checkin";
 import {
   getEventTicketCounts,
   searchEventTickets,
+  setExternalSold,
   type AttendeeStatusFilter,
   type AttendeeTicketRow,
   type EventTicketCounts,
+  type EventTicketTypeSales,
 } from "@/app/actions/event-attendees";
 
 type TicketsPage = {
@@ -239,7 +241,61 @@ export function AttendeesDashboard({
           <CountChip label="Cancelled" value={counts.cancelled} />
           <CountChip label="Refunded" value={counts.refunded} />
         </div>
+
+        <div className="mt-5 space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            Sales & capacity (informational)
+          </p>
+          <div className="grid gap-3 sm:grid-cols-1">
+            <SalesStatBlock title="Sold so far">
+              <p className="text-sm leading-relaxed text-zinc-700">
+                <span className="font-bold text-[#D4450A]">{counts.linkweSoldTotal}</span>
+                <span className="text-zinc-500"> on LinkWe</span>
+                <span className="text-zinc-400"> + </span>
+                <span className="font-bold text-[#D4450A]">{counts.externalSoldTotal}</span>
+                <span className="text-zinc-500"> external / door</span>
+                <span className="text-zinc-400"> = </span>
+                <span className="font-bold text-[#1C1C1A]">{counts.realTotalSold}</span>
+                <span className="text-zinc-500"> sold</span>
+              </p>
+            </SalesStatBlock>
+            <SalesStatBlock title="Tickets sold vs available">
+              <p className="text-2xl font-bold tracking-tight text-[#1C1C1A]">
+                <span className="text-[#D4450A]">{counts.realTotalSold}</span>
+                <span className="text-zinc-400"> of </span>
+                {counts.ticketsAvailable}
+                <span className="ml-1 text-base font-semibold text-zinc-500">tickets sold</span>
+              </p>
+              <p className="mt-1 text-xs text-zinc-500">
+                Of the tickets you put up for sale across all types
+              </p>
+            </SalesStatBlock>
+            {counts.eventCapacity != null ? (
+              <SalesStatBlock title="Venue capacity">
+                <p className="text-2xl font-bold tracking-tight text-[#1C1C1A]">
+                  <span className="text-[#D4450A]">{counts.realTotalSold}</span>
+                  <span className="text-zinc-400"> of </span>
+                  {counts.eventCapacity}
+                  <span className="ml-1 text-base font-semibold text-zinc-500">capacity</span>
+                </p>
+                <p className="mt-1 text-xs text-zinc-500">How full the venue is (all sales sources)</p>
+              </SalesStatBlock>
+            ) : null}
+          </div>
+          <p className="text-xs leading-relaxed text-zinc-400">
+            Check-in counts above are LinkWe tickets only. External/door sales are tracking only —
+            they don&apos;t block LinkWe sales or affect payouts.
+          </p>
+        </div>
       </section>
+
+      <ExternalSalesSection
+        eventId={eventId}
+        byType={counts.byType}
+        onSaved={async () => {
+          await refreshCounts();
+        }}
+      />
 
       {/* Search + filter */}
       <section className="space-y-3">
@@ -363,6 +419,147 @@ export function AttendeesDashboard({
           </button>
         ) : null}
       </section>
+    </div>
+  );
+}
+
+function ExternalSalesSection({
+  eventId,
+  byType,
+  onSaved,
+}: {
+  eventId: string;
+  byType: EventTicketTypeSales[];
+  onSaved: () => Promise<void>;
+}) {
+  if (byType.length === 0) return null;
+
+  return (
+    <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+      <h2 className="text-sm font-bold text-[#1C1C1A]">External / door sales</h2>
+      <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+        Tickets sold outside LinkWe (cash, door, other platforms). Informational only — does not
+        affect payouts, checkout, or tickets remaining on the public event page.
+      </p>
+      <ul className="mt-4 space-y-3">
+        {byType.map((row) => (
+          <ExternalSoldRow key={row.ticketTypeId} eventId={eventId} row={row} onSaved={onSaved} />
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function ExternalSoldRow({
+  eventId,
+  row,
+  onSaved,
+}: {
+  eventId: string;
+  row: EventTicketTypeSales;
+  onSaved: () => Promise<void>;
+}) {
+  const [value, setValue] = useState(String(row.externalSold));
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setValue(String(row.externalSold));
+  }, [row.externalSold]);
+
+  async function handleSave() {
+    const trimmed = value.trim();
+    if (trimmed === "") {
+      setError("Enter a whole number (0 or more)");
+      return;
+    }
+    const parsed = parseInt(trimmed, 10);
+    if (!Number.isFinite(parsed) || parsed < 0 || String(parsed) !== trimmed) {
+      setError("Enter a whole number (0 or more)");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    setSaved(false);
+
+    const result = await setExternalSold(eventId, row.ticketTypeId, parsed);
+    setSaving(false);
+
+    if ("error" in result) {
+      setError(result.error);
+      return;
+    }
+
+    setSaved(true);
+    await onSaved();
+    setTimeout(() => setSaved(false), 2500);
+  }
+
+  const parsedPreview = parseInt(value, 10);
+  const previewExternal =
+    Number.isFinite(parsedPreview) && parsedPreview >= 0 ? parsedPreview : row.externalSold;
+  const previewReal = row.linkweSold + previewExternal;
+
+  return (
+    <li className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="font-semibold text-[#1C1C1A]">{row.name}</p>
+          <p className="mt-0.5 text-xs text-zinc-500">
+            LinkWe sold: {row.linkweSold} · Real total:{" "}
+            <span className="font-medium text-zinc-700">{previewReal}</span>
+            {row.capacity > 0 ? ` / ${row.capacity} capacity` : null}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="sr-only" htmlFor={`external-${row.ticketTypeId}`}>
+            External sold for {row.name}
+          </label>
+          <input
+            id={`external-${row.ticketTypeId}`}
+            type="number"
+            min={0}
+            step={1}
+            inputMode="numeric"
+            value={value}
+            onChange={(e) => {
+              setValue(e.target.value);
+              setSaved(false);
+              setError(null);
+            }}
+            className="min-h-[44px] w-24 rounded-xl border border-zinc-200 bg-white px-3 text-center text-base font-semibold text-[#1C1C1A] focus:border-[#D4450A] focus:outline-none focus:ring-2 focus:ring-[#D4450A]/20"
+          />
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={saving}
+            className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-xl bg-[#D4450A] px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            {saving ? "…" : "Save"}
+          </button>
+        </div>
+      </div>
+      {error ? <p className="mt-2 text-xs font-medium text-red-600">{error}</p> : null}
+      {saved ? (
+        <p className="mt-2 text-xs font-medium text-emerald-700">Saved</p>
+      ) : null}
+    </li>
+  );
+}
+
+function SalesStatBlock({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-zinc-100 bg-zinc-50/80 px-4 py-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">{title}</p>
+      <div className="mt-2">{children}</div>
     </div>
   );
 }

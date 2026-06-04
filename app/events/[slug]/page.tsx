@@ -24,6 +24,10 @@ import { categoryLabel } from "@/components/events/EventCard";
 import LineupLightbox from "@/components/events/LineupLightbox";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
+import {
+  formatEventDateLong,
+  formatEventTime,
+} from "@/lib/events/format-datetime";
 import { prisma } from "@/lib/prisma";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -40,23 +44,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: event.description?.replace(/<[^>]+>/g, "").slice(0, 160) ?? undefined,
     openGraph: event.coverImage ? { images: [event.coverImage] } : undefined,
   };
-}
-
-function formatFullDate(date: Date): string {
-  return new Date(date).toLocaleDateString("en-TT", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function formatTime(date: Date): string {
-  return new Date(date).toLocaleTimeString("en-TT", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
 }
 
 // Icon wrapper used in quick strip and section headings
@@ -113,8 +100,8 @@ export default async function EventDetailPage({ params }: Props) {
     0,
   );
 
-  const eventDate = formatFullDate(event.startDate);
-  const eventTime = formatTime(event.startDate);
+  const eventDate = formatEventDateLong(event.startDate);
+  const eventTime = formatEventTime(event.startDate);
 
   // Quick strip items — only include if value exists
   const quickStripItems = [

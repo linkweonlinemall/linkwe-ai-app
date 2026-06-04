@@ -7,6 +7,11 @@ import {
   Image,
 } from "@react-pdf/renderer";
 
+import {
+  formatEventDateLong,
+  formatEventTime,
+} from "@/lib/events/format-datetime";
+
 const NAVY = "#0D3B6E";
 const SCARLET = "#D4450A";
 const DARK = "#1C1C1A";
@@ -204,23 +209,6 @@ const styles = StyleSheet.create({
   },
 });
 
-function formatEventDate(date: Date): string {
-  return new Date(date).toLocaleDateString("en-TT", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function formatEventTime(date: Date): string {
-  return new Date(date).toLocaleTimeString("en-TT", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-}
-
 function formatMinor(minor: number): string {
   return `TTD ${(minor / 100).toFixed(2)}`;
 }
@@ -285,7 +273,7 @@ export function TicketDocument({ ticket, qrCodeDataUrl, logoDataUrl }: Props) {
           <View style={styles.metaRow}>
             <Text style={styles.metaLabel}>Date</Text>
             <Text style={styles.metaValue}>
-              {formatEventDate(ticket.event.startDate)} · {formatEventTime(ticket.event.startDate)}
+              {formatEventDateLong(ticket.event.startDate)} · {formatEventTime(ticket.event.startDate)}
             </Text>
           </View>
 

@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { MapPin, Clock } from "lucide-react";
 
+import {
+  formatEventCalendarDay,
+  formatEventTime,
+} from "@/lib/events/format-datetime";
+
 export type EventCardData = {
   id: string;
   title: string;
@@ -33,22 +38,6 @@ export function categoryLabel(value: string | null): string {
     .join(" ");
 }
 
-function formatDate(date: Date): { day: string; month: string } {
-  const d = new Date(date);
-  return {
-    day: d.toLocaleDateString("en-TT", { day: "numeric" }),
-    month: d.toLocaleDateString("en-TT", { month: "short" }).toUpperCase(),
-  };
-}
-
-function formatTime(date: Date): string {
-  return new Date(date).toLocaleTimeString("en-TT", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-}
-
 function getPrice(ticketTypes: EventCardData["ticketTypes"]): {
   label: string;
   kind: "price" | "free" | "soldout";
@@ -68,8 +57,8 @@ type EventCardProps = {
 };
 
 export function EventCard({ event, featured = false }: EventCardProps) {
-  const { day, month } = formatDate(event.startDate);
-  const timeStr = formatTime(event.startDate);
+  const { day, month } = formatEventCalendarDay(event.startDate);
+  const timeStr = formatEventTime(event.startDate);
   const { label: priceLabel, kind } = getPrice(event.ticketTypes);
   const cat = categoryLabel(event.category);
   const soldOut = kind === "soldout";

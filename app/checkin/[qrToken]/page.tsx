@@ -1,28 +1,15 @@
 import Link from "next/link";
 
 import { getTicketForCheckIn } from "@/app/actions/ticket-checkin";
+import {
+  formatEventDateLong,
+  formatEventTime,
+} from "@/lib/events/format-datetime";
 import { CheckInAdmitPanel } from "./CheckInAdmitPanel";
 
 export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ qrToken: string }> };
-
-function formatEventDate(date: Date): string {
-  return new Date(date).toLocaleDateString("en-TT", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function formatEventTime(date: Date): string {
-  return new Date(date).toLocaleTimeString("en-TT", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-}
 
 function formatCheckedInAt(date: Date | null): string {
   if (!date) return "unknown time";
@@ -103,7 +90,7 @@ export default async function CheckInPage({ params }: Props) {
                 {lookup.event.title}
               </h1>
               <p className="text-base text-zinc-600">
-                {formatEventDate(lookup.event.startDate)} · {formatEventTime(lookup.event.startDate)}
+                {formatEventDateLong(lookup.event.startDate)} · {formatEventTime(lookup.event.startDate)}
               </p>
               <p className="text-sm font-medium text-zinc-500">{lookup.event.venueLabel}</p>
             </div>

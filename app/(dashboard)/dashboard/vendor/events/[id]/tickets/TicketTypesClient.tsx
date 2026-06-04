@@ -7,6 +7,7 @@ import {
   deleteTicketType,
   publishEvent,
 } from "@/app/actions/events";
+import { formatEventDateCompact } from "@/lib/events/format-datetime";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -41,9 +42,7 @@ const COLOR_PRESETS = [
 function fmtDate(iso: string | null | undefined): string {
   if (!iso) return "";
   const d = new Date(iso);
-  return isNaN(d.getTime())
-    ? ""
-    : d.toLocaleDateString("en-TT", { day: "numeric", month: "short", year: "numeric" });
+  return isNaN(d.getTime()) ? "" : formatEventDateCompact(d);
 }
 
 function toDatetimeLocal(iso: string | null | undefined): string {

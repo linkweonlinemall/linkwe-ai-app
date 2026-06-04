@@ -1,4 +1,6 @@
 import Link from "next/link";
+
+import { formatEventDateLong } from "@/lib/events/format-datetime";
 import { redirect } from "next/navigation";
 
 import { getSession } from "@/lib/auth/session";
@@ -37,12 +39,7 @@ export default async function EventCheckInPage({ params }: Props) {
       </Link>
       <h1 className="text-2xl font-bold sm:text-3xl">Check in — {event.title}</h1>
       <p className="mt-1 text-sm text-zinc-500">
-        {new Date(event.startDate).toLocaleDateString("en-TT", {
-          weekday: "long",
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        })}
+        {formatEventDateLong(event.startDate)}
         {event.venueName ? ` · ${event.venueName}` : ""}
       </p>
 

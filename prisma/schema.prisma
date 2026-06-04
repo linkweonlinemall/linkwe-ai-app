@@ -1847,6 +1847,7 @@ model EventTicketType {
   price         Float
   quantity      Int
   quantitySold  Int       @default(0)
+  externalSold  Int       @default(0)
   description   String?
   saleEnds      DateTime?
   saleStartDate DateTime?

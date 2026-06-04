@@ -20,6 +20,7 @@ import {
   unpublishEvent,
   bulkUpdateEventStatus,
 } from "@/app/actions/events";
+import { formatEventDateCompact } from "@/lib/events/format-datetime";
 import { icn } from "@/lib/iconography";
 
 type EventItem = Awaited<ReturnType<typeof getVendorEventsForCurrentUser>>[number];
@@ -30,14 +31,6 @@ const STATUS_BADGE: Record<string, { label: string; bg: string; color: string }>
   CANCELLED: { label: "Cancelled", bg: "#FEE2E2", color: "#DC2626" },
   COMPLETED: { label: "Completed", bg: "#FEF3C7", color: "#D97706" },
 };
-
-function formatEventDate(date: Date): string {
-  return new Date(date).toLocaleDateString("en-TT", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 const EVENT_MENU_WIDTH = 224;
 const EVENT_MENU_GAP = 4;
@@ -573,7 +566,7 @@ export default function VendorEventsPage() {
                             : ""}
                       </span>
                       <p className="mt-1 text-xs text-zinc-500 md:hidden">
-                        {formatEventDate(event.startDate)}
+                        {formatEventDateCompact(event.startDate)}
                         <span className="text-zinc-300"> · </span>
                         {totalSold} / {totalQty || "—"} sold
                       </p>
@@ -582,7 +575,7 @@ export default function VendorEventsPage() {
                     {/* Date */}
                     <div className="hidden md:block md:col-span-2">
                       <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
-                        {formatEventDate(event.startDate)}
+                        {formatEventDateCompact(event.startDate)}
                       </span>
                     </div>
 

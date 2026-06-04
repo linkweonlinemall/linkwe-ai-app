@@ -9,6 +9,10 @@ import { prisma } from "@/lib/prisma";
 import { icn } from "@/lib/iconography";
 import { generateTicketQRCodeDataURL } from "@/lib/tickets/qr-code";
 import PublicNav from "@/components/layout/PublicNav";
+import {
+  formatEventDateShort,
+  formatEventTime,
+} from "@/lib/events/format-datetime";
 
 export const metadata: Metadata = {
   title: "My Tickets",
@@ -21,23 +25,6 @@ const STATUS_STYLES: Record<string, { label: string; bg: string; text: string }>
   CANCELLED: { label: "Cancelled", bg: "#FEE2E2", text: "#991B1B" },
   REFUNDED: { label: "Refunded", bg: "#FEF3C7", text: "#92400E" },
 };
-
-function formatEventDate(date: Date): string {
-  return new Date(date).toLocaleDateString("en-TT", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function formatEventTime(date: Date): string {
-  return new Date(date).toLocaleTimeString("en-TT", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-}
 
 function formatMinor(minor: number): string {
   return `TTD ${(minor / 100).toFixed(2)}`;
@@ -151,7 +138,7 @@ export default async function MyTicketsPage() {
               const accentColor = ticket.ticketType?.color ?? "#D4450A";
 
               return (
-                <div
+                <article
                   key={ticket.id}
                   className="overflow-hidden rounded-2xl bg-white"
                   style={{
@@ -159,7 +146,7 @@ export default async function MyTicketsPage() {
                     boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
                   }}
                 >
-                  {/* Event cover + details */}
+                  {/* Event cover + details — event page link stays separate */}
                   <div className="flex gap-4 p-4 sm:p-5">
                     {/* Cover image */}
                     {ticket.event.coverImage ? (
@@ -198,7 +185,7 @@ export default async function MyTicketsPage() {
                           style={{ color: "var(--text-muted)" }}
                         >
                           <Calendar className="size-3 shrink-0" strokeWidth={2} />
-                          {formatEventDate(ticket.event.startDate)}{" "}
+                          {formatEventDateShort(ticket.event.startDate)}{" "}
                           · {formatEventTime(ticket.event.startDate)}
                         </span>
 
@@ -240,6 +227,10 @@ export default async function MyTicketsPage() {
                     </div>
                   </div>
 
+                  <Link
+                    href={`/my-tickets/${ticket.id}`}
+                    className="block transition-colors hover:bg-zinc-50/80 active:bg-zinc-100"
+                  >
                   {/* Ticket meta row */}
                   <div
                     className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5"
@@ -338,18 +329,40 @@ export default async function MyTicketsPage() {
                       )}
                     </div>
 
-                    <a
-                      href={`/api/ticket-pdf/${ticket.id}`}
-                      className="rounded-lg px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-80"
+                    <span
+                      className="rounded-lg px-3 py-1.5 text-xs font-medium"
                       style={{
                         backgroundColor: "#F4F4F5",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      View ticket →
+                    </span>
+                  </div>
+
+                  <div
+                    className="flex min-h-[44px] items-center justify-center border-t border-[var(--card-border-subtle)] px-4 py-2 text-sm font-semibold text-[#D4450A]"
+                    style={{ backgroundColor: "#FEF0EB" }}
+                  >
+                    View full ticket & QR
+                  </div>
+                  </Link>
+
+                  <div
+                    className="flex justify-end border-t px-4 py-2 sm:px-5"
+                    style={{ borderColor: "var(--card-border-subtle)" }}
+                  >
+                    <a
+                      href={`/api/ticket-pdf/${ticket.id}`}
+                      className="inline-flex min-h-[44px] items-center rounded-lg px-3 py-2 text-xs font-medium transition-opacity hover:opacity-80"
+                      style={{
                         color: "var(--text-muted)",
                       }}
                     >
                       Download PDF
                     </a>
                   </div>
-                </div>
+                </article>
               );
             })}
           </div>

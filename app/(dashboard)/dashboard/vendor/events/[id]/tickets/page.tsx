@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+
+import { formatEventDateLong } from "@/lib/events/format-datetime";
 import { ScanLine, Users } from "lucide-react";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -79,12 +81,7 @@ export default async function TicketTypesPage({ params }: Props) {
             <h1 className="text-2xl font-bold text-zinc-900">Ticket types</h1>
             <p className="mt-1 truncate text-sm text-zinc-500">{event.title}</p>
             <p className="text-xs text-zinc-400">
-              {new Date(event.startDate).toLocaleDateString("en-TT", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
+              {formatEventDateLong(event.startDate)}
             </p>
           </div>
           <span

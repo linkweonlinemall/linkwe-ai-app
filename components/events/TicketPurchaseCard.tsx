@@ -19,6 +19,11 @@ import {
 } from "lucide-react";
 
 import { createTicketPaymentIntent } from "@/app/actions/ticket-checkout";
+import {
+  formatEventDateCard,
+  formatEventSaleDate,
+  formatEventTimeCard,
+} from "@/lib/events/format-datetime";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -47,21 +52,66 @@ type Props = {
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-function formatCardDate(date: Date): string {
-  return new Date(date).toLocaleDateString("en-TT", {
-    weekday: "short",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+const INCLUSIONS_LONG_CHAR_THRESHOLD = 140;
+const INCLUSIONS_LONG_LINE_THRESHOLD = 4;
+
+function inclusionLineCount(perks: string | null, description: string | null): number {
+  const text = [perks?.trim(), description?.trim()].filter(Boolean).join("\n");
+  if (!text) return 0;
+  return text.split(/\r?\n/).length;
 }
 
-function formatCardTime(date: Date): string {
-  return new Date(date).toLocaleTimeString("en-TT", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
+function isLongInclusions(perks: string | null, description: string | null): boolean {
+  const text = [perks?.trim(), description?.trim()].filter(Boolean).join("\n");
+  if (!text) return false;
+  return (
+    text.length > INCLUSIONS_LONG_CHAR_THRESHOLD ||
+    inclusionLineCount(perks, description) > INCLUSIONS_LONG_LINE_THRESHOLD
+  );
+}
+
+function TicketTypeInclusions({
+  perks,
+  description,
+}: {
+  perks: string | null;
+  description: string | null;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const perksText = perks?.trim() ?? "";
+  const descriptionText = description?.trim() ?? "";
+  if (!perksText && !descriptionText) return null;
+
+  const long = isLongInclusions(perks, description);
+  const collapsed = long && !expanded;
+
+  return (
+    <div className="mb-3">
+      <div className={collapsed ? "line-clamp-4 overflow-hidden" : undefined}>
+        {perksText ? (
+          <p className="whitespace-pre-line text-sm leading-relaxed text-zinc-600">{perks}</p>
+        ) : null}
+        {descriptionText ? (
+          <p
+            className={`whitespace-pre-line text-xs leading-relaxed text-zinc-500 ${
+              perksText ? "mt-2" : ""
+            }`}
+          >
+            {description}
+          </p>
+        ) : null}
+      </div>
+      {long ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-1.5 text-xs font-semibold text-[#D4450A] hover:underline"
+        >
+          {expanded ? "Show less" : "Show all"}
+        </button>
+      ) : null}
+    </div>
+  );
 }
 
 // ── Stripe payment sub-form ────────────────────────────────────────────────────
@@ -164,7 +214,7 @@ function CardHeader({
       <div className="flex items-center gap-2 text-sm text-white/70">
         <CalendarDays className="size-4 shrink-0" aria-hidden />
         <span>
-          {formatCardDate(startDate)} · {formatCardTime(startDate)}
+          {formatEventDateCard(startDate)} · {formatEventTimeCard(startDate)}
         </span>
       </div>
       <p className="mt-2 text-base font-bold text-white">{subtitle}</p>
@@ -359,13 +409,8 @@ export function TicketPurchaseCard({
                   )}
 
                   {/* Name + price row */}
-                  <div className="mb-3 flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-base font-bold text-[#1C1C1A]">{t.name}</p>
-                      {t.perks && (
-                        <p className="mt-1 line-clamp-2 text-xs text-zinc-500">{t.perks}</p>
-                      )}
-                    </div>
+                  <div className="mb-2 flex items-start justify-between gap-3">
+                    <p className="min-w-0 flex-1 text-base font-bold text-[#1C1C1A]">{t.name}</p>
                     <div className="shrink-0 text-right">
                       <p className="text-xl font-extrabold text-[#1C1C1A]">
                         {t.price === 0 ? "Free" : `TTD ${t.price.toFixed(2)}`}
@@ -374,14 +419,13 @@ export function TicketPurchaseCard({
                     </div>
                   </div>
 
+                  <TicketTypeInclusions perks={t.perks} description={t.description} />
+
                   {/* Status / stepper row */}
                   {status === "not_started" && (
                     <p className="text-xs font-semibold text-amber-600">
                       Sales open{" "}
-                      {new Date(t.saleStartDate!).toLocaleDateString("en-TT", {
-                        day: "numeric",
-                        month: "short",
-                      })}
+                      {formatEventSaleDate(new Date(t.saleStartDate!))}
                     </p>
                   )}
                   {status === "ended" && (
