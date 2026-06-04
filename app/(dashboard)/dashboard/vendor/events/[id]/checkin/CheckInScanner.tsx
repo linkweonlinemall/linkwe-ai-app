@@ -82,6 +82,11 @@ function isCameraPermissionOrMissingError(err: unknown): boolean {
   return false;
 }
 
+function formatCameraError(err: unknown): string {
+  const named = err as { name?: string; message?: string };
+  return `${named?.name ?? "Error"}: ${named?.message ?? String(err)}`;
+}
+
 async function waitForScannerMount(elementId: string, maxFrames = 8): Promise<boolean> {
   for (let i = 0; i < maxFrames; i++) {
     if (document.getElementById(elementId)) return true;
@@ -101,6 +106,7 @@ export function CheckInScanner({ eventId, eventTitle }: Props) {
   const [admitted, setAdmitted] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [manualToken, setManualToken] = useState("");
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const scannerRef = useRef<import("html5-qrcode").Html5Qrcode | null>(null);
@@ -170,6 +176,7 @@ export function CheckInScanner({ eventId, eventTitle }: Props) {
 
     const startCamera = async (isRetry: boolean) => {
       try {
+        setCameraError(null);
         const { Html5Qrcode } = await import("html5-qrcode");
         if (cancelled) return;
 
@@ -201,6 +208,9 @@ export function CheckInScanner({ eventId, eventTitle }: Props) {
 
         await stopScannerRef.current();
 
+        const errorText = formatCameraError(err);
+        setCameraError(errorText);
+
         if (isCameraPermissionOrMissingError(err)) {
           setView("camera_unavailable");
           return;
@@ -231,6 +241,7 @@ export function CheckInScanner({ eventId, eventTitle }: Props) {
     setAdmitted(false);
     setActionError(null);
     setManualToken("");
+    setCameraError(null);
     setView("scanning");
     setScanGeneration((n) => n + 1);
   }
@@ -284,6 +295,11 @@ export function CheckInScanner({ eventId, eventTitle }: Props) {
     lookup.status === "VALID" &&
     !admitted;
 
+  const getUserMediaStatus =
+    typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia
+      ? "available"
+      : "MISSING";
+
   return (
     <div className="space-y-6">
       {view === "scanning" ? (
@@ -300,6 +316,12 @@ export function CheckInScanner({ eventId, eventTitle }: Props) {
           <p className="mt-1 text-sm text-amber-800">
             Allow camera access for this site, or enter a token manually below.
           </p>
+          <p className="mt-2 text-xs font-mono text-amber-800">
+            getUserMedia: {getUserMediaStatus}
+          </p>
+          {cameraError ? (
+            <p className="mt-2 break-all text-xs font-mono text-amber-700">{cameraError}</p>
+          ) : null}
         </div>
       ) : null}
 
