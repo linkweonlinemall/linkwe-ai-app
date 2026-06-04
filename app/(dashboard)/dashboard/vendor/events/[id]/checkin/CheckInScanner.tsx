@@ -50,6 +50,46 @@ function formatCheckedInAt(date: Date | string | null | undefined): string {
   });
 }
 
+function isCameraPermissionOrMissingError(err: unknown): boolean {
+  if (err instanceof DOMException) {
+    return (
+      err.name === "NotAllowedError" ||
+      err.name === "NotFoundError" ||
+      err.name === "SecurityError"
+    );
+  }
+  if (typeof err === "string") {
+    const lower = err.toLowerCase();
+    return (
+      lower.includes("notallowed") ||
+      lower.includes("permission denied") ||
+      lower.includes("permission") ||
+      lower.includes("requested device not found")
+    );
+  }
+  if (err instanceof Error) {
+    if (err.name === "NotAllowedError" || err.name === "NotFoundError") {
+      return true;
+    }
+    const lower = err.message.toLowerCase();
+    return (
+      lower.includes("notallowed") ||
+      lower.includes("permission denied") ||
+      lower.includes("permission") ||
+      lower.includes("requested device not found")
+    );
+  }
+  return false;
+}
+
+async function waitForScannerMount(elementId: string, maxFrames = 8): Promise<boolean> {
+  for (let i = 0; i < maxFrames; i++) {
+    if (document.getElementById(elementId)) return true;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  }
+  return !!document.getElementById(elementId);
+}
+
 export function CheckInScanner({ eventId, eventTitle }: Props) {
   const reactId = useId();
   const elementId = `${SCANNER_ELEMENT_ID}-${reactId.replace(/:/g, "")}`;
@@ -65,6 +105,7 @@ export function CheckInScanner({ eventId, eventTitle }: Props) {
 
   const scannerRef = useRef<import("html5-qrcode").Html5Qrcode | null>(null);
   const processingRef = useRef(false);
+  const stopScannerRef = useRef<() => Promise<void>>(async () => {});
 
   const stopScanner = useCallback(async () => {
     const instance = scannerRef.current;
@@ -74,17 +115,23 @@ export function CheckInScanner({ eventId, eventTitle }: Props) {
       if (instance.isScanning) {
         await instance.stop();
       }
+    } catch {
+      /* start() may not have finished — safe to ignore */
+    }
+    try {
       instance.clear();
     } catch {
-      /* ignore stop races */
+      /* DOM may already be torn down */
     }
   }, []);
+
+  stopScannerRef.current = stopScanner;
 
   const processToken = useCallback(
     async (token: string) => {
       if (processingRef.current) return;
       processingRef.current = true;
-      await stopScanner();
+      await stopScannerRef.current();
 
       setForeignQr(false);
       setAdmitted(false);
@@ -94,17 +141,18 @@ export function CheckInScanner({ eventId, eventTitle }: Props) {
       const result = await getTicketForCheckIn(token);
       setLookup(result);
     },
-    [stopScanner],
+    [],
   );
 
-  const handleDecoded = useCallback(
-    async (decodedText: string) => {
+  const handleDecodedRef = useRef<(decodedText: string) => void>(() => {});
+  handleDecodedRef.current = (decodedText: string) => {
+    void (async () => {
       if (processingRef.current) return;
 
       const token = parseCheckInToken(decodedText);
       if (!token) {
         processingRef.current = true;
-        await stopScanner();
+        await stopScannerRef.current();
         setForeignQr(true);
         setLookup(null);
         setView("result");
@@ -112,19 +160,24 @@ export function CheckInScanner({ eventId, eventTitle }: Props) {
       }
 
       await processToken(token);
-    },
-    [processToken, stopScanner],
-  );
+    })();
+  };
 
   useEffect(() => {
     if (view !== "scanning") return;
 
     let cancelled = false;
 
-    (async () => {
+    const startCamera = async (isRetry: boolean) => {
       try {
         const { Html5Qrcode } = await import("html5-qrcode");
         if (cancelled) return;
+
+        const mounted = await waitForScannerMount(elementId);
+        if (cancelled) return;
+        if (!mounted) {
+          throw new Error(`Scanner mount node #${elementId} not found`);
+        }
 
         const instance = new Html5Qrcode(elementId);
         scannerRef.current = instance;
@@ -133,25 +186,43 @@ export function CheckInScanner({ eventId, eventTitle }: Props) {
           { facingMode: "environment" },
           { fps: 10, qrbox: { width: 260, height: 260 } },
           (text) => {
-            void handleDecoded(text);
+            handleDecodedRef.current(text);
           },
           () => {
             /* per-frame decode miss — ignore */
           },
         );
-      } catch {
-        if (!cancelled) {
-          await stopScanner();
+      } catch (err) {
+        console.error(
+          `[checkin-scanner] camera start failed${isRetry ? " (retry)" : ""}:`,
+          err,
+        );
+        if (cancelled) return;
+
+        await stopScannerRef.current();
+
+        if (isCameraPermissionOrMissingError(err)) {
           setView("camera_unavailable");
+          return;
         }
+
+        if (!isRetry) {
+          console.error("[checkin-scanner] retrying camera start after transient error");
+          await startCamera(true);
+          return;
+        }
+
+        setView("camera_unavailable");
       }
-    })();
+    };
+
+    void startCamera(false);
 
     return () => {
       cancelled = true;
-      void stopScanner();
+      void stopScannerRef.current();
     };
-  }, [view, scanGeneration, elementId, handleDecoded, stopScanner]);
+  }, [view, scanGeneration]);
 
   function handleScanNext() {
     processingRef.current = false;
