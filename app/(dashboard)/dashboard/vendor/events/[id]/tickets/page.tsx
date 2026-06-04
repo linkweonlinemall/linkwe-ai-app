@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { ScanLine, Users } from "lucide-react";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { TicketTypesClient } from "./TicketTypesClient";
@@ -57,6 +58,22 @@ export default async function TicketTypesPage({ params }: Props) {
         >
           ← Back to event
         </Link>
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <Link
+            href={`/dashboard/vendor/events/${id}/attendees`}
+            className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border-2 border-[#D4450A] bg-white px-4 py-3 text-sm font-semibold text-[#D4450A] transition-colors hover:bg-[#FEF0EB] sm:w-auto"
+          >
+            <Users className="h-5 w-5 shrink-0" aria-hidden />
+            View attendees
+          </Link>
+          <Link
+            href={`/dashboard/vendor/events/${id}/checkin`}
+            className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-[#D4450A] px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 sm:w-auto"
+          >
+            <ScanLine className="h-5 w-5 shrink-0" aria-hidden />
+            Check in — scan tickets
+          </Link>
+        </div>
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-bold text-zinc-900">Ticket types</h1>
@@ -70,15 +87,8 @@ export default async function TicketTypesPage({ params }: Props) {
               })}
             </p>
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-2">
-          <Link
-            href={`/dashboard/vendor/events/${id}/checkin`}
-            className="rounded-xl bg-[#D4450A] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
-          >
-            Scan tickets / Check in
-          </Link>
           <span
-            className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+            className="inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
             style={{
               backgroundColor:
                 event.status === "PUBLISHED"
@@ -96,7 +106,6 @@ export default async function TicketTypesPage({ params }: Props) {
           >
             {event.status}
           </span>
-          </div>
         </div>
       </div>
 

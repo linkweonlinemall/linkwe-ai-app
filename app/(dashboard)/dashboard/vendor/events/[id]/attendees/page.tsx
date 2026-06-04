@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { getEventTicketCounts, searchEventTickets } from "@/app/actions/event-attendees";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { CheckInScanner } from "./CheckInScanner";
+
+import { AttendeesDashboard } from "./AttendeesDashboard";
 
 export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ id: string }> };
 
-export default async function EventCheckInPage({ params }: Props) {
+export default async function EventAttendeesPage({ params }: Props) {
   const { id } = await params;
 
   const session = await getSession();
@@ -27,15 +29,24 @@ export default async function EventCheckInPage({ params }: Props) {
   });
   if (!event) redirect("/dashboard/vendor/events");
 
+  const [countsResult, ticketsResult] = await Promise.all([
+    getEventTicketCounts(event.id),
+    searchEventTickets(event.id, { q: "", status: "all", page: 1 }),
+  ]);
+
+  if ("error" in countsResult || "error" in ticketsResult) {
+    redirect("/dashboard/vendor/events");
+  }
+
   return (
-    <div className="mx-auto max-w-lg px-4 py-8 text-[#1C1C1A]">
+    <div className="mx-auto max-w-3xl px-4 py-8 text-[#1C1C1A]">
       <Link
         href={`/dashboard/vendor/events/${id}/tickets`}
         className="mb-4 inline-block text-sm font-medium text-zinc-500 hover:text-[#D4450A]"
       >
         ← Back to tickets
       </Link>
-      <h1 className="text-2xl font-bold sm:text-3xl">Check in — {event.title}</h1>
+      <h1 className="text-2xl font-bold sm:text-3xl">Attendees — {event.title}</h1>
       <p className="mt-1 text-sm text-zinc-500">
         {new Date(event.startDate).toLocaleDateString("en-TT", {
           weekday: "long",
@@ -46,15 +57,22 @@ export default async function EventCheckInPage({ params }: Props) {
         {event.venueName ? ` · ${event.venueName}` : ""}
       </p>
 
-      <Link
-        href={`/dashboard/vendor/events/${id}/attendees`}
-        className="mt-4 inline-flex min-h-[44px] w-full items-center justify-center rounded-xl border-2 border-[#D4450A] bg-white px-4 py-3 text-sm font-semibold text-[#D4450A] transition-colors hover:bg-[#FEF0EB] sm:w-auto"
-      >
-        View attendees
-      </Link>
+      <div className="mt-6 flex flex-wrap gap-2">
+        <Link
+          href={`/dashboard/vendor/events/${id}/checkin`}
+          className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-[#D4450A] px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+        >
+          Open scanner
+        </Link>
+      </div>
 
       <div className="mt-6">
-        <CheckInScanner eventId={event.id} eventTitle={event.title} />
+        <AttendeesDashboard
+          eventId={event.id}
+          eventTitle={event.title}
+          initialCounts={countsResult.counts}
+          initialTickets={ticketsResult}
+        />
       </div>
     </div>
   );

@@ -3,7 +3,16 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { CalendarDays, X, Trash2, Globe, EyeOff, MoreVertical, ScanLine } from "lucide-react";
+import {
+  CalendarDays,
+  X,
+  Trash2,
+  Globe,
+  EyeOff,
+  MoreVertical,
+  ScanLine,
+  Users,
+} from "lucide-react";
 import {
   getVendorEventsForCurrentUser,
   deleteEvent,
@@ -153,6 +162,15 @@ function EventRowActionsMenu({
         className={menuItemClass}
       >
         Tickets
+      </Link>
+      <Link
+        role="menuitem"
+        href={`/dashboard/vendor/events/${event.id}/attendees`}
+        onClick={() => onOpenChange(false)}
+        className={menuItemClass}
+      >
+        <Users className="h-4 w-4 shrink-0" aria-hidden />
+        Attendees
       </Link>
       <Link
         role="menuitem"
