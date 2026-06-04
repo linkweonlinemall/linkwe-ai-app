@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { CalendarDays, X, Trash2, Globe, EyeOff, MoreVertical, ScanLine } from "lucide-react";
 import {
@@ -29,6 +30,42 @@ function formatEventDate(date: Date): string {
   });
 }
 
+const EVENT_MENU_WIDTH = 224;
+const EVENT_MENU_GAP = 4;
+const EVENT_MENU_VIEWPORT_PAD = 8;
+const EVENT_MENU_ESTIMATED_HEIGHT = 280;
+
+function computeEventMenuPosition(
+  button: HTMLElement,
+  menuHeight: number,
+): { top: number; left: number } {
+  const rect = button.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  let left = rect.right - EVENT_MENU_WIDTH;
+  let top = rect.bottom + EVENT_MENU_GAP;
+
+  if (left < EVENT_MENU_VIEWPORT_PAD) {
+    left = rect.left;
+  }
+  if (left + EVENT_MENU_WIDTH > vw - EVENT_MENU_VIEWPORT_PAD) {
+    left = vw - EVENT_MENU_WIDTH - EVENT_MENU_VIEWPORT_PAD;
+  }
+  if (left < EVENT_MENU_VIEWPORT_PAD) {
+    left = EVENT_MENU_VIEWPORT_PAD;
+  }
+
+  if (top + menuHeight > vh - EVENT_MENU_VIEWPORT_PAD) {
+    top = rect.top - menuHeight - EVENT_MENU_GAP;
+  }
+  if (top < EVENT_MENU_VIEWPORT_PAD) {
+    top = EVENT_MENU_VIEWPORT_PAD;
+  }
+
+  return { top, left };
+}
+
 function EventRowActionsMenu({
   event,
   isPending,
@@ -44,30 +81,141 @@ function EventRowActionsMenu({
   onPublishToggle: (event: EventItem) => void;
   onDelete: (eventId: string, title: string) => void;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const updateMenuPosition = useCallback(() => {
+    const button = buttonRef.current;
+    if (!button || !open) return;
+    const menuHeight = menuRef.current?.offsetHeight ?? EVENT_MENU_ESTIMATED_HEIGHT;
+    setMenuPosition(computeEventMenuPosition(button, menuHeight));
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setMenuPosition(null);
+      return;
+    }
+    updateMenuPosition();
+  }, [open, updateMenuPosition]);
 
   useEffect(() => {
     if (!open) return;
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onOpenChange(false);
+      const target = e.target as Node;
+      if (buttonRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      onOpenChange(false);
     }
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") onOpenChange(false);
     }
+    function handleScrollOrResize() {
+      updateMenuPosition();
+    }
     document.addEventListener("mousedown", handleClick);
     document.addEventListener("keydown", handleKey);
+    window.addEventListener("resize", handleScrollOrResize);
+    window.addEventListener("scroll", handleScrollOrResize, true);
     return () => {
       document.removeEventListener("mousedown", handleClick);
       document.removeEventListener("keydown", handleKey);
+      window.removeEventListener("resize", handleScrollOrResize);
+      window.removeEventListener("scroll", handleScrollOrResize, true);
     };
-  }, [open, onOpenChange]);
+  }, [open, onOpenChange, updateMenuPosition]);
 
   const menuItemClass =
     "flex min-h-[44px] w-full items-center gap-2.5 px-4 text-sm font-medium text-[#1C1C1A] transition-colors hover:bg-[#F7F7F6]";
 
-  return (
-    <div className="relative shrink-0" ref={ref}>
+  const menuPanel = open ? (
+    <div
+      ref={menuRef}
+      role="menu"
+      style={{
+        position: "fixed",
+        top: menuPosition?.top ?? 0,
+        left: menuPosition?.left ?? 0,
+        width: EVENT_MENU_WIDTH,
+        visibility: menuPosition ? "visible" : "hidden",
+      }}
+      className="z-[200] overflow-hidden rounded-xl border border-zinc-200 bg-white py-1 shadow-lg"
+    >
+      <Link
+        role="menuitem"
+        href={`/dashboard/vendor/events/${event.id}/tickets`}
+        onClick={() => onOpenChange(false)}
+        className={menuItemClass}
+      >
+        Tickets
+      </Link>
+      <Link
+        role="menuitem"
+        href={`/dashboard/vendor/events/${event.id}/checkin`}
+        onClick={() => onOpenChange(false)}
+        className={`${menuItemClass} text-[#D4450A] hover:bg-[#FEF0EB]`}
+      >
+        <ScanLine className="h-4 w-4 shrink-0" aria-hidden />
+        Check in
+      </Link>
+      <Link
+        role="menuitem"
+        href={`/dashboard/vendor/events/${event.id}/edit`}
+        onClick={() => onOpenChange(false)}
+        className={menuItemClass}
+      >
+        Edit
+      </Link>
       <button
+        type="button"
+        role="menuitem"
+        disabled={isPending}
+        onClick={() => {
+          onOpenChange(false);
+          onPublishToggle(event);
+        }}
+        className={`${menuItemClass} disabled:opacity-40 ${
+          event.status === "PUBLISHED" ? "text-zinc-600" : "text-[#15803D]"
+        }`}
+      >
+        {event.status === "PUBLISHED" ? (
+          <>
+            <EyeOff className="h-4 w-4 shrink-0" aria-hidden />
+            Unpublish
+          </>
+        ) : (
+          <>
+            <Globe className="h-4 w-4 shrink-0" aria-hidden />
+            Publish
+          </>
+        )}
+      </button>
+      <div className="mx-3 my-1 h-px bg-zinc-100" aria-hidden />
+      <button
+        type="button"
+        role="menuitem"
+        disabled={isPending}
+        onClick={() => {
+          onOpenChange(false);
+          onDelete(event.id, event.title);
+        }}
+        className="flex min-h-[44px] w-full items-center gap-2.5 px-4 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-40"
+      >
+        <Trash2 className="h-4 w-4 shrink-0" aria-hidden />
+        Delete
+      </button>
+    </div>
+  ) : null;
+
+  return (
+    <div className="shrink-0">
+      <button
+        ref={buttonRef}
         type="button"
         onClick={() => onOpenChange(!open)}
         className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-zinc-200 text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
@@ -78,76 +226,7 @@ function EventRowActionsMenu({
         <MoreVertical className="h-5 w-5 shrink-0" aria-hidden />
       </button>
 
-      {open ? (
-        <div
-          role="menu"
-          className="absolute right-0 top-full z-50 mt-1 w-56 overflow-hidden rounded-xl border border-zinc-200 bg-white py-1 shadow-lg"
-        >
-          <Link
-            role="menuitem"
-            href={`/dashboard/vendor/events/${event.id}/tickets`}
-            onClick={() => onOpenChange(false)}
-            className={menuItemClass}
-          >
-            Tickets
-          </Link>
-          <Link
-            role="menuitem"
-            href={`/dashboard/vendor/events/${event.id}/checkin`}
-            onClick={() => onOpenChange(false)}
-            className={`${menuItemClass} text-[#D4450A] hover:bg-[#FEF0EB]`}
-          >
-            <ScanLine className="h-4 w-4 shrink-0" aria-hidden />
-            Check in
-          </Link>
-          <Link
-            role="menuitem"
-            href={`/dashboard/vendor/events/${event.id}/edit`}
-            onClick={() => onOpenChange(false)}
-            className={menuItemClass}
-          >
-            Edit
-          </Link>
-          <button
-            type="button"
-            role="menuitem"
-            disabled={isPending}
-            onClick={() => {
-              onOpenChange(false);
-              onPublishToggle(event);
-            }}
-            className={`${menuItemClass} disabled:opacity-40 ${
-              event.status === "PUBLISHED" ? "text-zinc-600" : "text-[#15803D]"
-            }`}
-          >
-            {event.status === "PUBLISHED" ? (
-              <>
-                <EyeOff className="h-4 w-4 shrink-0" aria-hidden />
-                Unpublish
-              </>
-            ) : (
-              <>
-                <Globe className="h-4 w-4 shrink-0" aria-hidden />
-                Publish
-              </>
-            )}
-          </button>
-          <div className="mx-3 my-1 h-px bg-zinc-100" aria-hidden />
-          <button
-            type="button"
-            role="menuitem"
-            disabled={isPending}
-            onClick={() => {
-              onOpenChange(false);
-              onDelete(event.id, event.title);
-            }}
-            className="flex min-h-[44px] w-full items-center gap-2.5 px-4 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-40"
-          >
-            <Trash2 className="h-4 w-4 shrink-0" aria-hidden />
-            Delete
-          </button>
-        </div>
-      ) : null}
+      {mounted && menuPanel ? createPortal(menuPanel, document.body) : null}
     </div>
   );
 }
