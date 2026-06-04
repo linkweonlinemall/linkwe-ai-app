@@ -9,6 +9,7 @@ import {
 } from "@/app/actions/ticket-checkin";
 
 const SCANNER_ELEMENT_ID = "vendor-checkin-qr-reader";
+const DEBUG_LOG_MAX = 15;
 
 type View = "scanning" | "result" | "camera_unavailable";
 
@@ -107,14 +108,27 @@ export function CheckInScanner({ eventId, eventTitle }: Props) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [manualToken, setManualToken] = useState("");
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [debugLog, setDebugLog] = useState<string[]>([]);
   const [isPending, startTransition] = useTransition();
 
   const scannerRef = useRef<import("html5-qrcode").Html5Qrcode | null>(null);
   const processingRef = useRef(false);
+  const decodeLoggedRef = useRef(false);
   const stopScannerRef = useRef<() => Promise<void>>(async () => {});
+  const pushLogRef = useRef<(message: string) => void>(() => {});
+
+  const pushLog = useCallback((message: string) => {
+    const ts = new Date().toISOString().slice(11, 23);
+    setDebugLog((prev) => [...prev, `${ts} ${message}`].slice(-DEBUG_LOG_MAX));
+  }, []);
+
+  pushLogRef.current = pushLog;
 
   const stopScanner = useCallback(async () => {
     const instance = scannerRef.current;
+    pushLogRef.current(
+      `stopScanner called (isScanning=${instance?.isScanning ?? "n/a"}, hasInstance=${!!instance})`,
+    );
     scannerRef.current = null;
     if (!instance) return;
     try {
@@ -172,39 +186,60 @@ export function CheckInScanner({ eventId, eventTitle }: Props) {
   useEffect(() => {
     if (view !== "scanning") return;
 
+    const log = (message: string) => pushLogRef.current(message);
+    log(`effect run (view=${view}, gen=${scanGeneration})`);
+
     let cancelled = false;
 
     const startCamera = async (isRetry: boolean) => {
       try {
         setCameraError(null);
+        if (isRetry) log(`startCamera retry (gen=${scanGeneration})`);
+
         const { Html5Qrcode } = await import("html5-qrcode");
-        if (cancelled) return;
+        log("import done");
+        if (cancelled) {
+          log("aborted after import (cancelled)");
+          return;
+        }
 
         const mounted = await waitForScannerMount(elementId);
-        if (cancelled) return;
+        log(mounted ? "mount node found" : "mount node MISSING");
+        if (cancelled) {
+          log("aborted after mount wait (cancelled)");
+          return;
+        }
         if (!mounted) {
           throw new Error(`Scanner mount node #${elementId} not found`);
         }
 
         const instance = new Html5Qrcode(elementId);
         scannerRef.current = instance;
+        log("Html5Qrcode constructed");
 
+        log("start() called");
         await instance.start(
           { facingMode: "environment" },
           { fps: 10, qrbox: { width: 260, height: 260 } },
           (text) => {
+            if (!decodeLoggedRef.current) {
+              decodeLoggedRef.current = true;
+              pushLogRef.current("decode callback fired (first)");
+            }
             handleDecodedRef.current(text);
           },
           () => {
             /* per-frame decode miss — ignore */
           },
         );
+        log("start() resolved — streaming");
       } catch (err) {
-        console.error(
-          `[checkin-scanner] camera start failed${isRetry ? " (retry)" : ""}:`,
-          err,
-        );
-        if (cancelled) return;
+        log(`catch: ${formatCameraError(err)}${isRetry ? " (retry)" : ""}`);
+        console.error(`[checkin-scanner] camera start failed${isRetry ? " (retry)" : ""}:`, err);
+        if (cancelled) {
+          log("catch ignored (cancelled)");
+          return;
+        }
 
         await stopScannerRef.current();
 
@@ -218,6 +253,7 @@ export function CheckInScanner({ eventId, eventTitle }: Props) {
 
         if (!isRetry) {
           console.error("[checkin-scanner] retrying camera start after transient error");
+          log("scheduling retry");
           await startCamera(true);
           return;
         }
@@ -226,13 +262,15 @@ export function CheckInScanner({ eventId, eventTitle }: Props) {
       }
     };
 
+    decodeLoggedRef.current = false;
     void startCamera(false);
 
     return () => {
+      log("effect cleanup running");
       cancelled = true;
       void stopScannerRef.current();
     };
-  }, [view, scanGeneration]);
+  }, [view, scanGeneration, elementId]);
 
   function handleScanNext() {
     processingRef.current = false;
@@ -242,8 +280,13 @@ export function CheckInScanner({ eventId, eventTitle }: Props) {
     setActionError(null);
     setManualToken("");
     setCameraError(null);
+    decodeLoggedRef.current = false;
     setView("scanning");
-    setScanGeneration((n) => n + 1);
+    setScanGeneration((n) => {
+      const next = n + 1;
+      pushLog(`scan next → gen=${next}`);
+      return next;
+    });
   }
 
   function handleManualSubmit(e: React.FormEvent) {
@@ -362,6 +405,21 @@ export function CheckInScanner({ eventId, eventTitle }: Props) {
           onScanNext={handleScanNext}
         />
       ) : null}
+
+      <div className="mt-4 max-h-40 overflow-y-auto rounded-lg border border-zinc-300 bg-zinc-100 p-2">
+        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+          Debug sequence (last {DEBUG_LOG_MAX})
+        </p>
+        {debugLog.length === 0 ? (
+          <p className="font-mono text-[10px] text-zinc-400">—</p>
+        ) : (
+          debugLog.map((line, index) => (
+            <p key={`${index}-${line}`} className="font-mono text-[10px] leading-snug text-zinc-700">
+              {line}
+            </p>
+          ))
+        )}
+      </div>
     </div>
   );
 }
