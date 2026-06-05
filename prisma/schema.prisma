@@ -1897,6 +1897,7 @@ model Ticket {
   checkedInBy     String?
   transferredToId String?
   validDays       Json?
+  pricePaidMinor    Int          @default(0) @map("price_paid_minor")
   refundedAt      DateTime?    @map("refunded_at")
   refundAmountMinor Int?       @map("refund_amount_minor")
   stripeRefundId  String?      @map("stripe_refund_id")

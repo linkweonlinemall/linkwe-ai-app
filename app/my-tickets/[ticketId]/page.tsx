@@ -19,6 +19,7 @@ import {
   formatEventTime,
 } from "@/lib/events/format-datetime";
 import { generateTicketQRCodeDataURL } from "@/lib/tickets/qr-code";
+import { ticketPaidMinor } from "@/lib/tickets/ticket-paid-minor";
 import { prisma } from "@/lib/prisma";
 
 type Props = { params: Promise<{ ticketId: string }> };
@@ -354,9 +355,9 @@ export default async function MyTicketDetailPage({ params }: Props) {
               {ticket.ticketType.name}
               <span className="font-normal text-zinc-600">
                 ·{" "}
-                {ticket.ticketType.price === 0
+                {ticketPaidMinor(ticket) === 0
                   ? "Free"
-                  : `TTD ${ticket.ticketType.price.toFixed(2)}`}
+                  : formatMinor(ticketPaidMinor(ticket))}
               </span>
             </div>
             {ticket.ticketType.perks ? (
@@ -393,6 +394,16 @@ export default async function MyTicketDetailPage({ params }: Props) {
                 </dt>
                 <dd className="font-mono font-bold text-[#D4450A]">{ticket.ticketNumber}</dd>
               </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                  Ticket price
+                </dt>
+                <dd className="font-semibold text-[#1C1C1A]">
+                  {ticketPaidMinor(ticket) === 0
+                    ? "Free"
+                    : formatMinor(ticketPaidMinor(ticket))}
+                </dd>
+              </div>
               {ticket.ticketOrder ? (
                 <div>
                   <dt className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
@@ -401,7 +412,9 @@ export default async function MyTicketDetailPage({ params }: Props) {
                   <dd className="font-semibold text-[#1C1C1A]">
                     #{ticket.ticketOrder.reference}
                   </dd>
-                  <dd className="text-zinc-600">{formatMinor(ticket.ticketOrder.total)}</dd>
+                  <dd className="text-zinc-600">
+                    Order total {formatMinor(ticket.ticketOrder.total)}
+                  </dd>
                 </div>
               ) : null}
             </dl>

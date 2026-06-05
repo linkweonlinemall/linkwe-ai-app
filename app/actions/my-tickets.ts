@@ -13,6 +13,7 @@ export type CustomerTicketDetail = {
   status: TicketStatus;
   checkedInAt: Date | null;
   qrToken: string;
+  pricePaidMinor: number;
   ticketType: {
     name: string;
     color: string | null;
@@ -74,6 +75,7 @@ export async function getCustomerTicketById(
       status: true,
       checkedInAt: true,
       qrToken: true,
+      pricePaidMinor: true,
       ticketType: {
         select: {
           name: true,
@@ -132,6 +134,7 @@ export async function getCustomerTicketById(
     status: ticket.status,
     checkedInAt: ticket.checkedInAt,
     qrToken: ticket.qrToken,
+    pricePaidMinor: ticket.pricePaidMinor,
     ticketType: {
       name: ticket.ticketType.name,
       color: ticket.ticketType.color,

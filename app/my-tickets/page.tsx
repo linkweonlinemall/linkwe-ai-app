@@ -8,6 +8,7 @@ import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { prisma } from "@/lib/prisma";
 import { icn } from "@/lib/iconography";
 import { generateTicketQRCodeDataURL } from "@/lib/tickets/qr-code";
+import { ticketPaidMinor } from "@/lib/tickets/ticket-paid-minor";
 import PublicNav from "@/components/layout/PublicNav";
 import {
   formatEventDateShort,
@@ -251,7 +252,7 @@ export default async function MyTicketsPage() {
                       <span className="text-xs" style={{ color: "var(--text-muted)" }}>
                         {ticket.holderName}
                       </span>
-                      {ticket.ticketOrder && (
+                      {ticket.ticketOrder ? (
                         <span className="text-xs" style={{ color: "var(--text-muted)" }}>
                           Order{" "}
                           <span
@@ -260,10 +261,13 @@ export default async function MyTicketsPage() {
                           >
                             #{ticket.ticketOrder.reference}
                           </span>
-                          {" · "}
-                          {formatMinor(ticket.ticketOrder.total)}
                         </span>
-                      )}
+                      ) : null}
+                      <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                        {ticketPaidMinor(ticket) === 0
+                          ? "Free"
+                          : formatMinor(ticketPaidMinor(ticket))}
+                      </span>
                     </div>
 
                     <span

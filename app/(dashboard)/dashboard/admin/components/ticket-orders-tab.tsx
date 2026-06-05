@@ -4,6 +4,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 
 import { getAdminTicketOrders } from "@/app/actions/admin-ticket-orders";
 import { refundTicket } from "@/app/actions/ticket-refund";
+import { ticketPaidMinor } from "@/lib/tickets/ticket-paid-minor";
 
 type TicketOrder = Awaited<ReturnType<typeof getAdminTicketOrders>>[number];
 type TicketRow = TicketOrder["tickets"][number];
@@ -13,10 +14,6 @@ function formatTTD(minor: number): string {
     style: "currency",
     currency: "TTD",
   });
-}
-
-function formatTTDFromPrice(price: number): string {
-  return formatTTD(Math.round(price * 100));
 }
 
 function relativeTime(date: Date | string): string {
@@ -117,7 +114,7 @@ export default function TicketOrdersTab() {
 
   function openRefundModal(order: TicketOrder, ticket: TicketRow) {
     setRefundTarget({ order, ticket });
-    setRefundAmountDollars(ticket.ticketType.price.toFixed(2));
+    setRefundAmountDollars((ticketPaidMinor(ticket) / 100).toFixed(2));
     setRefundError(null);
   }
 
@@ -135,7 +132,7 @@ export default function TicketOrdersTab() {
       return;
     }
     const amountMinor = Math.round(parsed * 100);
-    const maxMinor = Math.round(refundTarget.ticket.ticketType.price * 100);
+    const maxMinor = ticketPaidMinor(refundTarget.ticket);
     if (amountMinor > maxMinor) {
       setRefundError(`Amount cannot exceed ticket price (${formatTTD(maxMinor)}).`);
       return;
@@ -254,8 +251,7 @@ export default function TicketOrdersTab() {
                                       {ticket.ticketNumber}
                                     </p>
                                     <p className="font-semibold text-zinc-900">
-                                      {ticket.ticketType.name} ·{" "}
-                                      {formatTTDFromPrice(ticket.ticketType.price)}
+                                      {ticket.ticketType.name} · {formatTTD(ticketPaidMinor(ticket))}
                                     </p>
                                     <p className="text-xs text-zinc-500">
                                       {ticket.holderName} · {ticket.holderEmail}
@@ -307,7 +303,7 @@ export default function TicketOrdersTab() {
             <p className="mt-1 font-mono text-xs text-zinc-500">{refundTarget.ticket.ticketNumber}</p>
             <p className="mt-2 text-sm text-zinc-700">
               {refundTarget.ticket.ticketType.name} — max{" "}
-              {formatTTDFromPrice(refundTarget.ticket.ticketType.price)}
+              {formatTTD(ticketPaidMinor(refundTarget.ticket))}
             </p>
 
             <div
@@ -327,7 +323,7 @@ export default function TicketOrdersTab() {
                 type="number"
                 min={0.01}
                 step={0.01}
-                max={refundTarget.ticket.ticketType.price}
+                max={ticketPaidMinor(refundTarget.ticket) / 100}
                 value={refundAmountDollars}
                 onChange={(e) => setRefundAmountDollars(e.target.value)}
                 className="mt-1 w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#D4450A]/30"

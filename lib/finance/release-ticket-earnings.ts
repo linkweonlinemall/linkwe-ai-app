@@ -4,15 +4,14 @@ import { createNotification } from "@/app/actions/notifications";
 import { getTicketCommissionRate, minorToTtd } from "@/lib/finance/commission";
 import { createTicketOrderEarningsLedger } from "@/lib/finance/release-earnings";
 import { prisma } from "@/lib/prisma";
+import { ticketPaidMinor, type TicketPaidMinorInput } from "@/lib/tickets/ticket-paid-minor";
 
 const ELIGIBLE_TICKET_STATUSES = new Set(["VALID", "USED"]);
 
-function ticketGrossMinor(
-  tickets: { status: string; ticketType: { price: number } }[],
-): number {
+function ticketGrossMinor(tickets: (TicketPaidMinorInput & { status: string })[]): number {
   return tickets
     .filter((t) => ELIGIBLE_TICKET_STATUSES.has(t.status))
-    .reduce((sum, t) => sum + Math.round(t.ticketType.price * 100), 0);
+    .reduce((sum, t) => sum + ticketPaidMinor(t), 0);
 }
 
 export async function releaseTicketOrderEarnings(
@@ -35,6 +34,7 @@ export async function releaseTicketOrderEarnings(
       tickets: {
         select: {
           status: true,
+          pricePaidMinor: true,
           ticketType: { select: { price: true } },
         },
       },

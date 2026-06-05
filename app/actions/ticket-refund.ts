@@ -7,6 +7,7 @@ import { getSession } from "@/lib/auth/session";
 import { calculateTicketEarningsMinor } from "@/lib/finance/commission";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe/stripe";
+import { ticketPaidMinor } from "@/lib/tickets/ticket-paid-minor";
 
 export async function refundTicket(
   ticketId: string,
@@ -25,6 +26,7 @@ export async function refundTicket(
       status: true,
       ticketTypeId: true,
       orderId: true,
+      pricePaidMinor: true,
       ticketType: { select: { price: true } },
       ticketOrder: {
         select: {
@@ -63,7 +65,7 @@ export async function refundTicket(
     return { error: "Free tickets cannot be refunded through Stripe" };
   }
 
-  const ticketPriceMinor = Math.round(ticket.ticketType.price * 100);
+  const ticketPriceMinor = ticketPaidMinor(ticket);
   if (
     !Number.isFinite(amountMinor) ||
     !Number.isInteger(amountMinor) ||

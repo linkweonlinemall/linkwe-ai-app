@@ -123,7 +123,7 @@ export async function createTicketPaymentIntent(
 
   // Build ticket rows — one per purchased ticket
   let globalIdx = 0;
-  const ticketRows = validatedItems.flatMap(({ ticketTypeId, quantity }) =>
+  const ticketRows = validatedItems.flatMap(({ ticketTypeId, quantity, unitMinor }) =>
     Array.from({ length: quantity }, () => {
       globalIdx++;
       return {
@@ -134,6 +134,7 @@ export async function createTicketPaymentIntent(
         userId: session.userId,
         holderName: buyer.fullName ?? buyer.email,
         holderEmail: buyer.email,
+        pricePaidMinor: unitMinor,
       };
     }),
   );

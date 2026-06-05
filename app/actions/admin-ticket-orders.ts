@@ -50,6 +50,7 @@ export async function getAdminTicketOrders(filters?: { search?: string; limit?: 
           holderName: true,
           holderEmail: true,
           status: true,
+          pricePaidMinor: true,
           refundedAt: true,
           refundAmountMinor: true,
           ticketType: { select: { name: true, price: true } },
