@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getSession } from "@/lib/auth/session";
+import { VENDOR_BALANCE_DEBIT_TYPES } from "@/lib/finance/vendor-balance";
 import { prisma } from "@/lib/prisma";
 
 export async function getAdminVendors() {
@@ -177,7 +178,7 @@ export async function approvePayoutRequest(
   const debitEntries = await prisma.vendorLedgerEntry.findMany({
     where: {
       storeId: request.storeId,
-      entryType: { in: ["DEBIT_PLATFORM_FEE", "DEBIT_PAYOUT"] },
+      entryType: { in: [...VENDOR_BALANCE_DEBIT_TYPES] },
     },
     select: { amountMinor: true },
   });

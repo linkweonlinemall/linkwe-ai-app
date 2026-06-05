@@ -4,6 +4,7 @@ import type { AccountType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
+import { isVendorBalanceDebit } from "@/lib/finance/vendor-balance";
 import { prisma } from "@/lib/prisma";
 
 export async function saveVendorBankDetails(formData: FormData): Promise<void> {
@@ -86,7 +87,7 @@ export async function requestPayout(formData: FormData): Promise<{
     .reduce((s, e) => s + e.amountMinor, 0);
 
   const debits = store.ledgerEntries
-    .filter((e) => ["DEBIT_PLATFORM_FEE", "DEBIT_PAYOUT"].includes(e.entryType))
+    .filter((e) => isVendorBalanceDebit(e.entryType))
     .reduce((s, e) => s + e.amountMinor, 0);
 
   const availableBalance = credits - debits;

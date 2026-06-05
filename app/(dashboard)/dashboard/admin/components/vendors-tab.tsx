@@ -12,6 +12,7 @@ import {
   getPayoutHistory,
   rejectPayoutRequest,
 } from "@/app/actions/admin-vendors";
+import { isVendorBalanceDebit } from "@/lib/finance/vendor-balance";
 
 type Vendor = Awaited<ReturnType<typeof getAdminVendors>>[number];
 type PayoutRequest = Awaited<ReturnType<typeof getAdminPayoutRequests>>[number];
@@ -22,7 +23,7 @@ function calcBalance(vendor: Vendor): number {
     .filter((e) => e.entryType === "CREDIT_ORDER_SETTLEMENT")
     .reduce((s, e) => s + e.amountMinor, 0);
   const debits = vendor.ledgerEntries
-    .filter((e) => ["DEBIT_PLATFORM_FEE", "DEBIT_PAYOUT"].includes(e.entryType))
+    .filter((e) => isVendorBalanceDebit(e.entryType))
     .reduce((s, e) => s + e.amountMinor, 0);
   return credits - debits;
 }
@@ -77,7 +78,7 @@ export default function VendorsTab() {
       .filter((e) => e.entryType === "CREDIT_ORDER_SETTLEMENT")
       .reduce((s, e) => s + e.amountMinor, 0);
     const debits = req.store.ledgerEntries
-      .filter((e) => ["DEBIT_PLATFORM_FEE", "DEBIT_PAYOUT"].includes(e.entryType))
+      .filter((e) => isVendorBalanceDebit(e.entryType))
       .reduce((s, e) => s + e.amountMinor, 0);
     return { credits, debits, available: credits - debits };
   }

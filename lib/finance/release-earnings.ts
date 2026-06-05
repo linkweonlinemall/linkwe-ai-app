@@ -7,6 +7,7 @@ import {
   ttdToMinor,
 } from "@/lib/finance/commission";
 import type { CommissionItemType, CommissionPlan } from "@/lib/finance/commission";
+import { isVendorBalanceDebit } from "@/lib/finance/vendor-balance";
 import { prisma } from "@/lib/prisma";
 
 type Tx = Prisma.TransactionClient;
@@ -226,7 +227,7 @@ export async function getVendorAvailableBalanceMinor(storeId: string): Promise<n
     .filter((e) => e.entryType === "CREDIT_ORDER_SETTLEMENT")
     .reduce((s, e) => s + e.amountMinor, 0);
   const debits = entries
-    .filter((e) => ["DEBIT_PLATFORM_FEE", "DEBIT_PAYOUT"].includes(e.entryType))
+    .filter((e) => isVendorBalanceDebit(e.entryType))
     .reduce((s, e) => s + e.amountMinor, 0);
   return credits - debits;
 }

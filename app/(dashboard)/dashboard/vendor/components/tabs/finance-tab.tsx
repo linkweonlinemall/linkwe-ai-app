@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { requestPayout, saveVendorBankDetails } from "@/app/actions/vendor";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
+import { isVendorBalanceDebit } from "@/lib/finance/vendor-balance";
 import { maskBankAccountStars } from "@/lib/format/banking";
 import { formatDate } from "@/lib/format/format-display-date-utc";
 
@@ -140,7 +141,7 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
     .reduce((s, e) => s + e.amountMinor, 0);
 
   const debits = ledgerEntries
-    .filter((e) => ["DEBIT_PLATFORM_FEE", "DEBIT_PAYOUT"].includes(e.entryType))
+    .filter((e) => isVendorBalanceDebit(e.entryType))
     .reduce((s, e) => s + e.amountMinor, 0);
 
   const lastPayoutDate = payoutRequests
@@ -151,7 +152,7 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
   const pendingDebits = ledgerEntries
     .filter(
       (e) =>
-        ["DEBIT_PLATFORM_FEE", "DEBIT_PAYOUT"].includes(e.entryType) &&
+        isVendorBalanceDebit(e.entryType) &&
         (lastPayoutDate === null ||
           new Date(e.createdAt).getTime() > new Date(lastPayoutDate).getTime()),
     )
