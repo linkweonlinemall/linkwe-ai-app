@@ -13,6 +13,13 @@ import { stripe } from "@/lib/stripe/stripe";
 
 export const runtime = "nodejs";
 
+const TICKET_PAYOUT_HOLD_HOURS = 72;
+
+function getTicketPayoutEligibleAt(endDate: Date | null, startDate: Date): Date {
+  const base = endDate ?? startDate;
+  return new Date(base.getTime() + TICKET_PAYOUT_HOLD_HOURS * 60 * 60 * 1000);
+}
+
 // ── Ticket order fulfilment ────────────────────────────────────────────────────
 // Idempotent: updateMany only matches PENDING_PAYMENT; a second Stripe retry
 // gets count=0 and exits immediately without re-incrementing sold counts or
@@ -34,13 +41,20 @@ async function handleTicketOrderPaid(
       reference: true,
       total: true,
       userId: true,
-      event: { select: { title: true } },
+      event: { select: { title: true, startDate: true, endDate: true } },
       user: { select: { email: true, fullName: true } },
       tickets: { select: { ticketTypeId: true } },
     },
   });
 
   if (!order) return;
+
+  await prisma.ticketOrder.update({
+    where: { id: ticketOrderId },
+    data: {
+      payoutEligibleAt: getTicketPayoutEligibleAt(order.event.endDate, order.event.startDate),
+    },
+  });
 
   // Increment quantitySold per ticket type — count from the tickets array
   const countByType = new Map<string, number>();

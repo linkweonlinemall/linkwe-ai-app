@@ -3,6 +3,7 @@ import type { LedgerEntryType, Prisma } from "@prisma/client";
 import {
   calculateEarnings,
   calculateEarningsMinor,
+  calculateTicketEarningsMinor,
   ttdToMinor,
 } from "@/lib/finance/commission";
 import type { CommissionItemType, CommissionPlan } from "@/lib/finance/commission";
@@ -145,6 +146,70 @@ export async function createProductOrderEarningsLedger(
       mainOrderId: input.mainOrderId,
       idempotencyKey: `${input.idempotencyKey}:fee`,
       description: `Platform commission — ${input.description}`,
+      releasedAt: now,
+      createdByUserId: input.markedByUserId,
+    },
+  });
+}
+
+export async function createTicketOrderEarningsLedger(
+  tx: Tx,
+  input: {
+    storeId: string;
+    ticketOrderId: string;
+    grossMinor: number;
+    commissionRate: number;
+    ledgerEntryType: LedgerEntryType;
+    idempotencyKey: string;
+    description: string;
+    markedByUserId?: string;
+  },
+) {
+  const existing = await tx.vendorLedgerEntry.findFirst({
+    where: { idempotencyKey: input.idempotencyKey },
+  });
+  if (existing) return;
+
+  const { grossMinor, commissionMinor, netMinor } = calculateTicketEarningsMinor(
+    input.grossMinor,
+  );
+  const now = new Date();
+  const metadata = {
+    ticketOrderId: input.ticketOrderId,
+    commissionRate: input.commissionRate,
+  };
+
+  await tx.vendorLedgerEntry.create({
+    data: {
+      storeId: input.storeId,
+      currency: "TTD",
+      entryType: "CREDIT_ORDER_SETTLEMENT",
+      ledgerEntryType: input.ledgerEntryType,
+      amountMinor: netMinor,
+      grossMinor,
+      commissionMinor,
+      netMinor,
+      idempotencyKey: input.idempotencyKey,
+      description: input.description,
+      metadata,
+      releasedAt: now,
+      createdByUserId: input.markedByUserId,
+    },
+  });
+
+  await tx.vendorLedgerEntry.create({
+    data: {
+      storeId: input.storeId,
+      currency: "TTD",
+      entryType: "DEBIT_PLATFORM_FEE",
+      ledgerEntryType: "PLATFORM_COMMISSION",
+      amountMinor: commissionMinor,
+      grossMinor,
+      commissionMinor,
+      netMinor,
+      idempotencyKey: `${input.idempotencyKey}:fee`,
+      description: `Platform commission — ${input.description}`,
+      metadata,
       releasedAt: now,
       createdByUserId: input.markedByUserId,
     },

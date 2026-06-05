@@ -1,6 +1,13 @@
 export type CommissionPlan = "STARTER" | "GROWTH" | "PRO";
 export type CommissionItemType = "product" | "service";
 
+/** Flat platform commission on event ticket sales (not plan-tiered). */
+export const TICKET_COMMISSION_RATE = 0.06;
+
+export function getTicketCommissionRate(): number {
+  return TICKET_COMMISSION_RATE;
+}
+
 export function getCommissionRate(
   type: CommissionItemType,
   plan: CommissionPlan,
@@ -44,4 +51,14 @@ export function calculateEarningsMinor(
     commissionMinor: ttdToMinor(commission),
     netMinor: ttdToMinor(net),
   };
+}
+
+export function calculateTicketEarningsMinor(grossMinor: number): {
+  grossMinor: number;
+  commissionMinor: number;
+  netMinor: number;
+} {
+  const commissionMinor = Math.round(grossMinor * TICKET_COMMISSION_RATE);
+  const netMinor = grossMinor - commissionMinor;
+  return { grossMinor, commissionMinor, netMinor };
 }

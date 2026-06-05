@@ -1026,6 +1026,7 @@ enum LedgerEntryType {
   BOOKING_AUTO_COMPLETE
   DEPOSIT_RECEIVED
   ORDER_AUTO_COMPLETE
+  TICKET_SALE
 }
 
 enum VendorSubscriptionPlan {
@@ -1952,6 +1953,8 @@ model TicketOrder {
   subtotal              Int
   total                 Int
   stripePaymentIntentId String?
+  earningsReleased      Boolean           @default(false) @map("earnings_released")
+  payoutEligibleAt      DateTime?         @map("payout_eligible_at")
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
 
@@ -1961,6 +1964,7 @@ model TicketOrder {
 
   @@index([userId])
   @@index([eventId])
+  @@index([payoutEligibleAt, earningsReleased])
   @@map("ticket_orders")
 }
 
