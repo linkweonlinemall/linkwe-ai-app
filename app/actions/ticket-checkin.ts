@@ -49,6 +49,44 @@ export type TicketCheckInLookup =
       };
     };
 
+export type VerifyEventScanCodeResult =
+  | {
+      valid: true;
+      eventTitle: string;
+      eventStartDate: string;
+      venueName?: string;
+    }
+  | { valid: false };
+
+export async function verifyEventScanCode(
+  eventId: string,
+  code: string,
+): Promise<VerifyEventScanCodeResult> {
+  const trimmedId = eventId?.trim();
+  if (!trimmedId) return { valid: false };
+
+  const event = await prisma.event.findUnique({
+    where: { id: trimmedId },
+    select: {
+      scanCode: true,
+      title: true,
+      startDate: true,
+      venueName: true,
+    },
+  });
+
+  if (!event?.scanCode || !eventScanCodesMatch(event.scanCode, code)) {
+    return { valid: false };
+  }
+
+  return {
+    valid: true,
+    eventTitle: event.title,
+    eventStartDate: event.startDate.toISOString(),
+    venueName: event.venueName ?? undefined,
+  };
+}
+
 export type CheckInTicketResult =
   | { ok: true; justCheckedIn: true }
   | {
