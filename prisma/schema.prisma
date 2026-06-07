@@ -1832,6 +1832,7 @@ model Event {
 
   ticketTypes           EventTicketType[]
   tickets               Ticket[]
+  checkIns              TicketCheckIn[]
   promoCodes            EventPromoCode[]
   waitlist              EventWaitlist[]
   ticketOrders          TicketOrder[]
@@ -1910,12 +1911,33 @@ model Ticket {
   ticketType EventTicketType @relation(fields: [ticketTypeId], references: [id])
   user       User            @relation(fields: [userId], references: [id])
   ticketOrder TicketOrder?   @relation(fields: [orderId], references: [id])
+  checkIns   TicketCheckIn[]
 
   @@index([eventId])
   @@index([userId])
   @@index([qrToken])
   @@index([ticketNumber])
   @@map("tickets")
+}
+
+model TicketCheckIn {
+  id        String   @id @default(cuid())
+  ticketId  String
+  eventId   String
+  scannedAt DateTime
+  syncedAt  DateTime @default(now())
+  source    String
+  deviceId  String?
+  outcome   String
+  createdAt DateTime @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id])
+  event  Event  @relation(fields: [eventId], references: [id])
+
+  @@index([ticketId])
+  @@index([eventId])
+  @@index([deviceId])
+  @@map("ticket_check_ins")
 }
 
 model EventPromoCode {
