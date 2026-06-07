@@ -280,10 +280,12 @@ export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
   const wrongEvent =
     lookup?.found === true && lookup.eventId !== eventId;
 
+  const hasScanCodeAuth = Boolean(scanCode?.trim());
+
   const canAdmit =
     lookup?.found === true &&
     !wrongEvent &&
-    lookup.authorized &&
+    (lookup.authorized || hasScanCodeAuth) &&
     lookup.status === "VALID" &&
     !admitted;
 
@@ -337,6 +339,7 @@ export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
           wrongEvent={wrongEvent}
           admitted={admitted}
           canAdmit={canAdmit}
+          hasScanCodeAuth={hasScanCodeAuth}
           isPending={isPending}
           actionError={actionError}
           onAdmit={handleAdmit}
@@ -353,6 +356,7 @@ function ResultCard({
   wrongEvent,
   admitted,
   canAdmit,
+  hasScanCodeAuth,
   isPending,
   actionError,
   onAdmit,
@@ -363,6 +367,7 @@ function ResultCard({
   wrongEvent: boolean;
   admitted: boolean;
   canAdmit: boolean;
+  hasScanCodeAuth: boolean;
   isPending: boolean;
   actionError: string | null;
   onAdmit: (qrToken: string) => void;
@@ -428,7 +433,10 @@ function ResultCard({
           {isPending ? "Checking in…" : "Admit / Mark as used"}
         </button>
       ) : null}
-      {lookup.found && !lookup.authorized && lookup.status === "VALID" ? (
+      {lookup.found &&
+      !lookup.authorized &&
+      !hasScanCodeAuth &&
+      lookup.status === "VALID" ? (
         <p className="rounded-xl bg-zinc-100 px-4 py-3 text-center text-sm text-zinc-600">
           You are not authorized to admit tickets for this event.
         </p>
