@@ -42,6 +42,8 @@ export function CheckInAdmitPanel({ qrToken, expectedEventId }: Props) {
           setError("This ticket was cancelled — do not admit.");
         } else if (result.reason === "refunded") {
           setError("This ticket was refunded — do not admit.");
+        } else if (result.reason === "not_paid") {
+          setError("This ticket's payment is not complete — cannot admit.");
         } else {
           setError("This ticket cannot be checked in.");
         }

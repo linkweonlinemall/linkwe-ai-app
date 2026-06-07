@@ -266,6 +266,8 @@ export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
           setActionError("This ticket was cancelled — do not admit.");
         } else if (result.reason === "refunded") {
           setActionError("This ticket was refunded — do not admit.");
+        } else if (result.reason === "not_paid") {
+          setActionError("This ticket's payment is not complete — cannot admit.");
         } else if (result.reason === "unauthenticated") {
           setActionError("Please sign in again.");
         } else {

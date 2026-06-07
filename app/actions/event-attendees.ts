@@ -81,17 +81,31 @@ async function assertVendorOwnsEvent(eventId: string): Promise<AuthContext | { e
   return { session, storeId: store.id, eventId: event.id };
 }
 
-function countsFromGroupBy(rows: { status: TicketStatus; _count: { _all: number } }[]): EventTicketCounts {
+/** Ticket.orderId → ticketOrder; PAID orders only, excludes REFUNDED/CANCELLED. */
+const PAID_ADMITTABLE_TICKET_WHERE = (eventId: string): Prisma.TicketWhereInput => ({
+  eventId,
+  status: { notIn: ["REFUNDED", "CANCELLED"] },
+  ticketOrder: { status: "PAID" },
+});
+
+function countsFromGroupBy(
+  admittableRows: { status: TicketStatus; _count: { _all: number } }[],
+  terminalRows: { status: TicketStatus; _count: { _all: number } }[],
+): Pick<EventTicketCounts, "valid" | "used" | "cancelled" | "refunded" | "issued" | "checkedIn"> {
   let valid = 0;
   let used = 0;
   let cancelled = 0;
   let refunded = 0;
 
-  for (const row of rows) {
+  for (const row of admittableRows) {
     const n = row._count._all;
     if (row.status === "VALID") valid = n;
     else if (row.status === "USED") used = n;
-    else if (row.status === "CANCELLED") cancelled = n;
+  }
+
+  for (const row of terminalRows) {
+    const n = row._count._all;
+    if (row.status === "CANCELLED") cancelled = n;
     else if (row.status === "REFUNDED") refunded = n;
   }
 
@@ -146,10 +160,18 @@ export async function getEventTicketCounts(
   const auth = await assertVendorOwnsEvent(eventId);
   if ("error" in auth) return auth;
 
-  const [grouped, event, ticketTypes, paidSold] = await Promise.all([
+  const [admittableGrouped, terminalGrouped, event, ticketTypes, paidSold] = await Promise.all([
     prisma.ticket.groupBy({
       by: ["status"],
-      where: { eventId: auth.eventId },
+      where: PAID_ADMITTABLE_TICKET_WHERE(auth.eventId),
+      _count: { _all: true },
+    }),
+    prisma.ticket.groupBy({
+      by: ["status"],
+      where: {
+        eventId: auth.eventId,
+        status: { in: ["CANCELLED", "REFUNDED"] },
+      },
       _count: { _all: true },
     }),
     prisma.event.findUnique({
@@ -169,7 +191,7 @@ export async function getEventTicketCounts(
     getPaidTicketSoldCountsForEvent(auth.eventId),
   ]);
 
-  const checkIn = countsFromGroupBy(grouped);
+  const checkIn = countsFromGroupBy(admittableGrouped, terminalGrouped);
 
   const byType: EventTicketTypeSales[] = ticketTypes.map((t) => {
     const linkweSold = paidSold.byTicketTypeId[t.id] ?? 0;

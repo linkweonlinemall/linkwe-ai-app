@@ -60,6 +60,7 @@ export type CheckInTicketResult =
         | "already_used"
         | "cancelled"
         | "refunded"
+        | "not_paid"
         | "not_valid";
       checkedInAt?: Date | null;
     };
@@ -152,6 +153,7 @@ export async function checkInTicket(
       status: true,
       eventId: true,
       event: { select: { storeId: true } },
+      ticketOrder: { select: { status: true } },
     },
   });
 
@@ -167,6 +169,10 @@ export async function checkInTicket(
 
   if (!ownerAuthorized && !scanAuthorized) {
     return { ok: false, reason: "unauthorized" };
+  }
+
+  if (ticket.ticketOrder?.status !== "PAID") {
+    return { ok: false, reason: "not_paid" };
   }
 
   const checkedInBy = ownerAuthorized
