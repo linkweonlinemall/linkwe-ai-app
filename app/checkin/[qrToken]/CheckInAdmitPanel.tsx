@@ -7,9 +7,11 @@ import { checkInTicket } from "@/app/actions/ticket-checkin";
 
 type Props = {
   qrToken: string;
+  /** Ticket's event — from server lookup; match is trivial but auth still enforced. */
+  expectedEventId: string;
 };
 
-export function CheckInAdmitPanel({ qrToken }: Props) {
+export function CheckInAdmitPanel({ qrToken, expectedEventId }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [justCheckedIn, setJustCheckedIn] = useState(false);
@@ -18,7 +20,7 @@ export function CheckInAdmitPanel({ qrToken }: Props) {
   function handleAdmit() {
     setError(null);
     startTransition(async () => {
-      const result = await checkInTicket(qrToken);
+      const result = await checkInTicket(qrToken, expectedEventId);
       if (result.ok && result.justCheckedIn) {
         setJustCheckedIn(true);
         router.refresh();
@@ -26,7 +28,9 @@ export function CheckInAdmitPanel({ qrToken }: Props) {
       }
 
       if (!result.ok) {
-        if (result.reason === "already_used" && result.checkedInAt) {
+        if (result.reason === "wrong_event") {
+          setError("Wrong event — this ticket is for a different event.");
+        } else if (result.reason === "already_used" && result.checkedInAt) {
           setError(
             `Already checked in at ${formatCheckedInAt(result.checkedInAt)}`,
           );

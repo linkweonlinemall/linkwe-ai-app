@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { TicketStatus } from "@prisma/client";
 
 import { getSession } from "@/lib/auth/session";
+import { eventScanCodesMatch } from "@/lib/tickets/event-scan-code";
 import { prisma } from "@/lib/prisma";
 
 const ticketSelect = {
@@ -55,6 +56,7 @@ export type CheckInTicketResult =
       reason:
         | "unauthenticated"
         | "unauthorized"
+        | "wrong_event"
         | "already_used"
         | "cancelled"
         | "refunded"
@@ -75,6 +77,21 @@ async function isAuthorizedForTicket(
   });
 
   return store?.id === eventStoreId;
+}
+
+async function isScanCodeAuthorized(
+  expectedEventId: string,
+  scanCode: string | undefined,
+): Promise<boolean> {
+  const trimmed = scanCode?.trim();
+  if (!trimmed) return false;
+
+  const event = await prisma.event.findUnique({
+    where: { id: expectedEventId },
+    select: { scanCode: true },
+  });
+
+  return eventScanCodesMatch(event?.scanCode ?? null, trimmed);
 }
 
 function venueLabel(event: { isOnline: boolean; venueName: string | null }): string {
@@ -116,32 +133,52 @@ export async function getTicketForCheckIn(qrToken: string): Promise<TicketCheckI
   };
 }
 
-export async function checkInTicket(qrToken: string): Promise<CheckInTicketResult> {
+export async function checkInTicket(
+  qrToken: string,
+  expectedEventId: string,
+  scanCode?: string,
+): Promise<CheckInTicketResult> {
   const session = await getSession();
-  if (!session) return { ok: false, reason: "unauthenticated" };
 
   const trimmed = qrToken?.trim();
   if (!trimmed) return { ok: false, reason: "not_valid" };
+
+  const trimmedEventId = expectedEventId?.trim();
+  if (!trimmedEventId) return { ok: false, reason: "not_valid" };
 
   const ticket = await prisma.ticket.findUnique({
     where: { qrToken: trimmed },
     select: {
       status: true,
+      eventId: true,
       event: { select: { storeId: true } },
     },
   });
 
   if (!ticket) return { ok: false, reason: "not_valid" };
 
-  const authorized = await isAuthorizedForTicket(session, ticket.event.storeId);
-  if (!authorized) return { ok: false, reason: "unauthorized" };
+  if (ticket.eventId !== trimmedEventId) {
+    return { ok: false, reason: "wrong_event" };
+  }
+
+  const ownerAuthorized =
+    session != null && (await isAuthorizedForTicket(session, ticket.event.storeId));
+  const scanAuthorized = await isScanCodeAuthorized(trimmedEventId, scanCode);
+
+  if (!ownerAuthorized && !scanAuthorized) {
+    return { ok: false, reason: "unauthorized" };
+  }
+
+  const checkedInBy = ownerAuthorized
+    ? session!.userId
+    : `scancode:${trimmedEventId}`;
 
   const result = await prisma.ticket.updateMany({
     where: { qrToken: trimmed, status: "VALID" },
     data: {
       status: "USED",
       checkedInAt: new Date(),
-      checkedInBy: session.userId,
+      checkedInBy,
     },
   });
 

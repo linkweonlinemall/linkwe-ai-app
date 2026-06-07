@@ -119,7 +119,10 @@ export default async function CheckInPage({ params }: Props) {
             </dl>
 
             {lookup.authorized && lookup.status === "VALID" ? (
-              <CheckInAdmitPanel qrToken={lookup.qrToken} />
+              <CheckInAdmitPanel
+                qrToken={lookup.qrToken}
+                expectedEventId={lookup.eventId}
+              />
             ) : null}
 
             {!lookup.authorized ? (

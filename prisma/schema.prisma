@@ -1824,6 +1824,8 @@ model Event {
   lineup                Json?
   refundPolicyType      RefundPolicyType  @default(FULL)
   refundCutoffHours     Int               @default(48)
+  scanCode              String?
+  scanCodeSetAt         DateTime?
 
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt

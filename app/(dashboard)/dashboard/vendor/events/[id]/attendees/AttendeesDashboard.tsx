@@ -177,7 +177,7 @@ export function AttendeesDashboard({
     setCheckInError(null);
     setCheckingInId(ticket.id);
     startTransition(async () => {
-      const result = await checkInTicket(ticket.qrToken);
+      const result = await checkInTicket(ticket.qrToken, eventId);
       setCheckingInId(null);
 
       if (result.ok && result.justCheckedIn) {
@@ -187,7 +187,9 @@ export function AttendeesDashboard({
       }
 
       if (!result.ok) {
-        if (result.reason === "already_used") {
+        if (result.reason === "wrong_event") {
+          setCheckInError("Wrong event — this ticket is for a different event.");
+        } else if (result.reason === "already_used") {
           const at =
             result.checkedInAt != null
               ? formatCheckedInAt(new Date(result.checkedInAt).toISOString())

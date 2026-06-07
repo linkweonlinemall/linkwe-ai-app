@@ -15,6 +15,8 @@ type View = "scanning" | "result" | "camera_unavailable";
 type Props = {
   eventId: string;
   eventTitle: string;
+  /** Door-staff scan code; omitted when vendor is logged in on dashboard. */
+  scanCode?: string;
 };
 
 function parseCheckInToken(decoded: string): string | null {
@@ -90,7 +92,7 @@ async function waitForScannerMount(elementId: string, maxFrames = 8): Promise<bo
   return !!document.getElementById(elementId);
 }
 
-export function CheckInScanner({ eventId, eventTitle }: Props) {
+export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
   const reactId = useId();
   const elementId = `${SCANNER_ELEMENT_ID}-${reactId.replace(/:/g, "")}`;
 
@@ -243,7 +245,7 @@ export function CheckInScanner({ eventId, eventTitle }: Props) {
   function handleAdmit(qrToken: string) {
     setActionError(null);
     startTransition(async () => {
-      const result = await checkInTicket(qrToken);
+      const result = await checkInTicket(qrToken, eventId, scanCode);
       if (result.ok && result.justCheckedIn) {
         setAdmitted(true);
         const refreshed = await getTicketForCheckIn(qrToken);
@@ -252,7 +254,9 @@ export function CheckInScanner({ eventId, eventTitle }: Props) {
       }
 
       if (!result.ok) {
-        if (result.reason === "already_used") {
+        if (result.reason === "wrong_event") {
+          setActionError("Wrong event — this ticket is for a different event.");
+        } else if (result.reason === "already_used") {
           setActionError(`Already checked in at ${formatCheckedInAt(result.checkedInAt)}`);
           const refreshed = await getTicketForCheckIn(qrToken);
           setLookup(refreshed);

@@ -5,6 +5,7 @@ import type { Prisma, TicketStatus } from "@prisma/client";
 
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { getPaidTicketSoldCountsForEvent } from "@/lib/tickets/sold-counts";
 
 const PAGE_SIZE = 25;
 
@@ -145,7 +146,7 @@ export async function getEventTicketCounts(
   const auth = await assertVendorOwnsEvent(eventId);
   if ("error" in auth) return auth;
 
-  const [grouped, event, ticketTypes] = await Promise.all([
+  const [grouped, event, ticketTypes, paidSold] = await Promise.all([
     prisma.ticket.groupBy({
       by: ["status"],
       where: { eventId: auth.eventId },
@@ -161,17 +162,17 @@ export async function getEventTicketCounts(
         id: true,
         name: true,
         quantity: true,
-        quantitySold: true,
         externalSold: true,
       },
       orderBy: { price: "asc" },
     }),
+    getPaidTicketSoldCountsForEvent(auth.eventId),
   ]);
 
   const checkIn = countsFromGroupBy(grouped);
 
   const byType: EventTicketTypeSales[] = ticketTypes.map((t) => {
-    const linkweSold = t.quantitySold;
+    const linkweSold = paidSold.byTicketTypeId[t.id] ?? 0;
     const externalSold = t.externalSold;
     return {
       ticketTypeId: t.id,

@@ -5,6 +5,7 @@ import { formatEventDateLong } from "@/lib/events/format-datetime";
 import { ScanLine, Users } from "lucide-react";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { getPaidTicketSoldCountsForEvent } from "@/lib/tickets/sold-counts";
 import { TicketTypesClient } from "./TicketTypesClient";
 
 type Props = { params: Promise<{ id: string }> };
@@ -50,6 +51,8 @@ export default async function TicketTypesPage({ params }: Props) {
   });
 
   if (!event) redirect("/dashboard/vendor/events");
+
+  const paidSold = await getPaidTicketSoldCountsForEvent(event.id);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
@@ -111,6 +114,7 @@ export default async function TicketTypesPage({ params }: Props) {
         eventStatus={event.status}
         initialTicketTypes={event.ticketTypes.map((tt) => ({
           ...tt,
+          quantitySold: paidSold.byTicketTypeId[tt.id] ?? 0,
           saleStartDate: tt.saleStartDate?.toISOString() ?? null,
           saleEnds: tt.saleEnds?.toISOString() ?? null,
         }))}

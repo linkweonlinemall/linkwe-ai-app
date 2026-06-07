@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import { slotInstantTrinidad } from "@/lib/timezone/trinidad";
 import { prisma } from "@/lib/prisma";
+import { generateEventScanCodeValue } from "@/lib/tickets/event-scan-code";
+import { getPaidTicketSoldCountsForEvents } from "@/lib/tickets/sold-counts";
 import { uploadFile } from "@/lib/uploads/upload";
 
 const EVENTS_PATH = "/dashboard/vendor/events";
@@ -320,7 +322,7 @@ export async function getVendorEventsForCurrentUser() {
 }
 
 export async function getVendorEvents(storeId: string) {
-  return prisma.event.findMany({
+  const events = await prisma.event.findMany({
     where: { storeId },
     orderBy: { startDate: "desc" },
     select: {
@@ -347,6 +349,19 @@ export async function getVendorEvents(storeId: string) {
       },
       _count: { select: { tickets: true } },
     },
+  });
+
+  const soldByEvent = await getPaidTicketSoldCountsForEvents(events.map((e) => e.id));
+
+  return events.map((event) => {
+    const sold = soldByEvent[event.id];
+    return {
+      ...event,
+      ticketTypes: event.ticketTypes.map((tt) => ({
+        ...tt,
+        quantitySold: sold?.byTicketTypeId[tt.id] ?? 0,
+      })),
+    };
   });
 }
 
@@ -487,6 +502,42 @@ export async function deleteTicketType(
   await prisma.eventTicketType.delete({ where: { id: ticketTypeId } });
   revalidatePath(`${EVENTS_PATH}/${ticketType.eventId}/tickets`);
   return { success: true };
+}
+
+// ─── generateEventScanCode ───────────────────────────────────────────────────
+
+export async function generateEventScanCode(
+  eventId: string,
+): Promise<{ ok: boolean; code?: string; reason?: string }> {
+  const session = await getSession();
+  if (!session) return { ok: false, reason: "unauthenticated" };
+
+  const trimmedId = eventId?.trim();
+  if (!trimmedId) return { ok: false, reason: "Event not found" };
+
+  if (session.role === "ADMIN") {
+    const exists = await prisma.event.findUnique({
+      where: { id: trimmedId },
+      select: { id: true },
+    });
+    if (!exists) return { ok: false, reason: "Event not found" };
+  } else {
+    const event = await assertEventOwnership(trimmedId, session.userId);
+    if (!event) return { ok: false, reason: "Unauthorized" };
+  }
+
+  const code = generateEventScanCodeValue();
+
+  await prisma.event.update({
+    where: { id: trimmedId },
+    data: { scanCode: code, scanCodeSetAt: new Date() },
+  });
+
+  revalidatePath(`${EVENTS_PATH}/${trimmedId}/checkin`);
+  revalidatePath(`${EVENTS_PATH}/${trimmedId}/tickets`);
+  revalidatePath(`${EVENTS_PATH}/${trimmedId}/attendees`);
+
+  return { ok: true, code };
 }
 
 // ─── unpublishEvent ───────────────────────────────────────────────────────────

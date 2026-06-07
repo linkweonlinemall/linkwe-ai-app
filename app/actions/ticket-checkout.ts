@@ -2,7 +2,7 @@
 
 import { randomUUID } from "crypto";
 
-import { NotificationType } from "@prisma/client";
+import { NotificationType, Prisma } from "@prisma/client";
 
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -11,11 +11,28 @@ import { BASE_URL } from "@/lib/email/resend";
 import { sendEmail } from "@/lib/email/send";
 import { ticketConfirmationEmail } from "@/lib/email/templates";
 import { createNotification } from "@/app/actions/notifications";
+import {
+  assertAvailableSeatsForCheckout,
+  InsufficientSeatsError,
+} from "@/lib/tickets/sold-counts";
 
 export type CreateTicketPaymentIntentResult =
   | { ok: true; clientSecret: string; ticketOrderId: string; free: false }
   | { ok: true; clientSecret: null; ticketOrderId: string; free: true }
-  | { ok: false; error: string };
+  | { ok: false; error: string; reason?: string; detail?: string };
+
+function insufficientSeatsResult(err: InsufficientSeatsError): CreateTicketPaymentIntentResult {
+  const error =
+    err.available <= 0
+      ? `Sorry, ${err.ticketTypeName} is sold out.`
+      : `Sorry, only ${err.available} ${err.ticketTypeName} left.`;
+  return {
+    ok: false,
+    reason: err.reason,
+    detail: err.detail,
+    error,
+  };
+}
 
 export async function createTicketPaymentIntent(
   eventId: string,
@@ -56,7 +73,7 @@ export async function createTicketPaymentIntent(
   };
   const validatedItems: ValidatedItem[] = [];
 
-  // Validate each ticket type server-side
+  // Validate each ticket type server-side (sale windows, max per order — not quantitySold)
   for (const item of items) {
     const tt = await prisma.eventTicketType.findUnique({
       where: { id: item.ticketTypeId },
@@ -66,7 +83,6 @@ export async function createTicketPaymentIntent(
         name: true,
         price: true,
         quantity: true,
-        quantitySold: true,
         isVisible: true,
         saleStartDate: true,
         saleEnds: true,
@@ -87,16 +103,6 @@ export async function createTicketPaymentIntent(
     if (tt.saleEnds && new Date(tt.saleEnds) < now) {
       return { ok: false, error: `"${tt.name}" ticket sales have ended.` };
     }
-    const remaining = tt.quantity - tt.quantitySold;
-    if (remaining <= 0) {
-      return { ok: false, error: `"${tt.name}" tickets are sold out.` };
-    }
-    if (item.quantity > remaining) {
-      return {
-        ok: false,
-        error: `Only ${remaining} "${tt.name}" ticket${remaining !== 1 ? "s" : ""} remaining.`,
-      };
-    }
     if (item.quantity > tt.maxPerOrder) {
       return {
         ok: false,
@@ -113,6 +119,14 @@ export async function createTicketPaymentIntent(
       quantity: item.quantity,
       unitMinor,
     });
+  }
+
+  // Fast-fail seat check before transaction (re-checked inside tx for race safety)
+  try {
+    await assertAvailableSeatsForCheckout(validatedItems);
+  } catch (e) {
+    if (e instanceof InsufficientSeatsError) return insufficientSeatsResult(e);
+    throw e;
   }
 
   const totalMinor = subtotalMinor; // No shipping for tickets
@@ -141,32 +155,42 @@ export async function createTicketPaymentIntent(
 
   const ticketCount = ticketRows.length;
 
+  const txOptions = {
+    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+  } as const;
+
   // ── FREE TICKET PATH ──────────────────────────────────────────
   if (totalMinor === 0) {
     let order;
     try {
-      order = await prisma.ticketOrder.create({
-        data: {
-          reference,
-          userId: session.userId,
-          eventId,
-          status: "PAID",
-          subtotal: 0,
-          total: 0,
-          tickets: { create: ticketRows },
-        },
-      });
+      order = await prisma.$transaction(async (tx) => {
+        await assertAvailableSeatsForCheckout(validatedItems, tx);
+
+        const created = await tx.ticketOrder.create({
+          data: {
+            reference,
+            userId: session.userId,
+            eventId,
+            status: "PAID",
+            subtotal: 0,
+            total: 0,
+            tickets: { create: ticketRows },
+          },
+        });
+
+        for (const item of validatedItems) {
+          await tx.eventTicketType.update({
+            where: { id: item.ticketTypeId },
+            data: { quantitySold: { increment: item.quantity } },
+          });
+        }
+
+        return created;
+      }, txOptions);
     } catch (e) {
+      if (e instanceof InsufficientSeatsError) return insufficientSeatsResult(e);
       console.error("[ticket-checkout] free order create", e);
       return { ok: false, error: "Could not register tickets. Please try again." };
-    }
-
-    // Increment quantitySold per ticket type
-    for (const item of validatedItems) {
-      await prisma.eventTicketType.update({
-        where: { id: item.ticketTypeId },
-        data: { quantitySold: { increment: item.quantity } },
-      });
     }
 
     // Fire-and-forget: notification
@@ -195,18 +219,23 @@ export async function createTicketPaymentIntent(
   // ── PAID TICKET PATH ─────────────────────────────────────────
   let order;
   try {
-    order = await prisma.ticketOrder.create({
-      data: {
-        reference,
-        userId: session.userId,
-        eventId,
-        status: "PENDING_PAYMENT",
-        subtotal: subtotalMinor,
-        total: totalMinor,
-        tickets: { create: ticketRows },
-      },
-    });
+    order = await prisma.$transaction(async (tx) => {
+      await assertAvailableSeatsForCheckout(validatedItems, tx);
+
+      return tx.ticketOrder.create({
+        data: {
+          reference,
+          userId: session.userId,
+          eventId,
+          status: "PENDING_PAYMENT",
+          subtotal: subtotalMinor,
+          total: totalMinor,
+          tickets: { create: ticketRows },
+        },
+      });
+    }, txOptions);
   } catch (e) {
+    if (e instanceof InsufficientSeatsError) return insufficientSeatsResult(e);
     console.error("[ticket-checkout] paid order create", e);
     return { ok: false, error: "Could not create ticket order. Please try again." };
   }
