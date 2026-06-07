@@ -58,6 +58,61 @@ export type VerifyEventScanCodeResult =
     }
   | { valid: false };
 
+export type EventAllowlistTicket = {
+  qrToken: string;
+  ticketNumber: string;
+  holderName: string;
+  ticketTypeName: string;
+  status: TicketStatus;
+};
+
+export type GetEventAllowlistResult =
+  | { ok: false }
+  | { ok: true; tickets: EventAllowlistTicket[] };
+
+export async function getEventAllowlist(
+  eventId: string,
+  scanCode: string,
+): Promise<GetEventAllowlistResult> {
+  const trimmedId = eventId?.trim();
+  if (!trimmedId) return { ok: false };
+
+  const event = await prisma.event.findUnique({
+    where: { id: trimmedId },
+    select: { scanCode: true },
+  });
+
+  if (!event?.scanCode || !eventScanCodesMatch(event.scanCode, scanCode)) {
+    return { ok: false };
+  }
+
+  const tickets = await prisma.ticket.findMany({
+    where: {
+      eventId: trimmedId,
+      status: { notIn: ["REFUNDED", "CANCELLED"] },
+      ticketOrder: { status: "PAID" },
+    },
+    select: {
+      qrToken: true,
+      ticketNumber: true,
+      holderName: true,
+      status: true,
+      ticketType: { select: { name: true } },
+    },
+  });
+
+  return {
+    ok: true,
+    tickets: tickets.map((t) => ({
+      qrToken: t.qrToken,
+      ticketNumber: t.ticketNumber,
+      holderName: t.holderName,
+      ticketTypeName: t.ticketType.name,
+      status: t.status,
+    })),
+  };
+}
+
 export async function verifyEventScanCode(
   eventId: string,
   code: string,

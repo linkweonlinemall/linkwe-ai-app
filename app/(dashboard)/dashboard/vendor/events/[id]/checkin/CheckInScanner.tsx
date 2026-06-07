@@ -1,12 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState, useTransition } from "react";
+import type { TicketStatus } from "@prisma/client";
 
 import {
   checkInTicket,
   getTicketForCheckIn,
   type TicketCheckInLookup,
 } from "@/app/actions/ticket-checkin";
+import {
+  lookupTicket,
+  markUsedLocally,
+  type AllowlistTicket,
+} from "@/lib/offline-checkin/allowlist";
 
 const SCANNER_ELEMENT_ID = "vendor-checkin-qr-reader";
 
@@ -84,6 +90,37 @@ function isCameraPermissionOrMissingError(err: unknown): boolean {
   return false;
 }
 
+function isOfflineStaffMode(scanCode: string | undefined): boolean {
+  return (
+    typeof navigator !== "undefined" && !navigator.onLine && Boolean(scanCode?.trim())
+  );
+}
+
+function buildOfflineLookup(
+  ticket: AllowlistTicket,
+  eventTitle: string,
+): Extract<TicketCheckInLookup, { found: true }> {
+  const status = (ticket.usedLocally ? "USED" : ticket.status) as TicketStatus;
+
+  return {
+    found: true,
+    authorized: false,
+    id: ticket.qrToken,
+    ticketNumber: ticket.ticketNumber,
+    qrToken: ticket.qrToken,
+    status,
+    checkedInAt: ticket.usedAt ? new Date(ticket.usedAt) : null,
+    holderName: ticket.holderName,
+    ticketTypeName: ticket.ticketTypeName,
+    eventId: ticket.eventId,
+    event: {
+      title: eventTitle,
+      startDate: new Date(),
+      venueLabel: "",
+    },
+  };
+}
+
 async function waitForScannerMount(elementId: string, maxFrames = 8): Promise<boolean> {
   for (let i = 0; i < maxFrames; i++) {
     if (document.getElementById(elementId)) return true;
@@ -101,6 +138,8 @@ export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
   const [lookup, setLookup] = useState<TicketCheckInLookup | null>(null);
   const [foreignQr, setForeignQr] = useState(false);
   const [admitted, setAdmitted] = useState(false);
+  const [offlineAdmitted, setOfflineAdmitted] = useState(false);
+  const [offlineAlreadyUsed, setOfflineAlreadyUsed] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [manualToken, setManualToken] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -137,13 +176,32 @@ export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
 
       setForeignQr(false);
       setAdmitted(false);
+      setOfflineAdmitted(false);
+      setOfflineAlreadyUsed(false);
       setActionError(null);
       setView("result");
+
+      if (isOfflineStaffMode(scanCode)) {
+        const row = await lookupTicket(token);
+        if (!row || row.eventId !== eventId) {
+          setLookup({ found: false });
+          return;
+        }
+
+        if (row.usedLocally) {
+          setOfflineAlreadyUsed(true);
+          setLookup(buildOfflineLookup(row, eventTitle));
+          return;
+        }
+
+        setLookup(buildOfflineLookup(row, eventTitle));
+        return;
+      }
 
       const result = await getTicketForCheckIn(token);
       setLookup(result);
     },
-    [],
+    [eventId, eventTitle, scanCode],
   );
 
   const handleDecodedRef = useRef<(decodedText: string) => void>(() => {});
@@ -228,6 +286,8 @@ export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
     setLookup(null);
     setForeignQr(false);
     setAdmitted(false);
+    setOfflineAdmitted(false);
+    setOfflineAlreadyUsed(false);
     setActionError(null);
     setManualToken("");
     setView("scanning");
@@ -243,6 +303,20 @@ export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
   }
 
   function handleAdmit(qrToken: string) {
+    if (isOfflineStaffMode(scanCode)) {
+      setActionError(null);
+      startTransition(async () => {
+        await markUsedLocally(qrToken);
+        setAdmitted(true);
+        setOfflineAdmitted(true);
+        const refreshed = await lookupTicket(qrToken);
+        if (refreshed) {
+          setLookup(buildOfflineLookup(refreshed, eventTitle));
+        }
+      });
+      return;
+    }
+
     setActionError(null);
     startTransition(async () => {
       const result = await checkInTicket(qrToken, eventId, scanCode);
@@ -338,6 +412,8 @@ export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
           foreignQr={foreignQr}
           wrongEvent={wrongEvent}
           admitted={admitted}
+          offlineAdmitted={offlineAdmitted}
+          offlineAlreadyUsed={offlineAlreadyUsed}
           canAdmit={canAdmit}
           hasScanCodeAuth={hasScanCodeAuth}
           isPending={isPending}
@@ -355,6 +431,8 @@ function ResultCard({
   foreignQr,
   wrongEvent,
   admitted,
+  offlineAdmitted,
+  offlineAlreadyUsed,
   canAdmit,
   hasScanCodeAuth,
   isPending,
@@ -366,6 +444,8 @@ function ResultCard({
   foreignQr: boolean;
   wrongEvent: boolean;
   admitted: boolean;
+  offlineAdmitted: boolean;
+  offlineAlreadyUsed: boolean;
   canAdmit: boolean;
   hasScanCodeAuth: boolean;
   isPending: boolean;
@@ -409,10 +489,32 @@ function ResultCard({
     );
   }
 
+  if (offlineAlreadyUsed && lookup?.found) {
+    return (
+      <div className="space-y-4">
+        <StatusBlock
+          variant="warning"
+          title="⚠️ Already checked in (offline)"
+          subtitle={formatCheckedInAt(lookup.checkedInAt)}
+        />
+        <TicketDetails lookup={lookup} />
+        <ScanNextButton onClick={onScanNext} />
+      </div>
+    );
+  }
+
   if (admitted) {
     return (
       <div className="space-y-4">
-        <StatusBlock variant="success" title="✅ Checked in!" subtitle="Guest admitted successfully." />
+        <StatusBlock
+          variant="success"
+          title={offlineAdmitted ? "✅ Checked in (offline)" : "✅ Checked in!"}
+          subtitle={
+            offlineAdmitted
+              ? "Recorded on this device. Sync when back online."
+              : "Guest admitted successfully."
+          }
+        />
         <TicketDetails lookup={lookup} />
         <ScanNextButton onClick={onScanNext} />
       </div>

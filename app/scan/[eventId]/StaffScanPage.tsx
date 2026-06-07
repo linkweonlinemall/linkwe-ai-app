@@ -4,8 +4,9 @@ import { useParams } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { CheckInScanner } from "@/app/(dashboard)/dashboard/vendor/events/[id]/checkin/CheckInScanner";
-import { verifyEventScanCode } from "@/app/actions/ticket-checkin";
+import { getEventAllowlist, verifyEventScanCode } from "@/app/actions/ticket-checkin";
 import { formatEventDateLong } from "@/lib/events/format-datetime";
+import { saveAllowlist } from "@/lib/offline-checkin/allowlist";
 import { getCachedEvent, saveCachedEvent } from "@/lib/offline-checkin/event-cache";
 import { requestPersistentStorage } from "@/lib/offline-checkin/persist";
 
@@ -60,6 +61,15 @@ export function StaffScanPage() {
           cachedAt: Date.now(),
         });
         void requestPersistentStorage();
+
+        try {
+          const allowlist = await getEventAllowlist(eventId, code);
+          if (allowlist.ok) {
+            await saveAllowlist(eventId, allowlist.tickets);
+          }
+        } catch {
+          // Allowlist download failure must not block the gate.
+        }
         return;
       }
 
