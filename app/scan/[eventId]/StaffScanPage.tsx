@@ -6,6 +6,8 @@ import { useState, useTransition } from "react";
 import { CheckInScanner } from "@/app/(dashboard)/dashboard/vendor/events/[id]/checkin/CheckInScanner";
 import { verifyEventScanCode } from "@/app/actions/ticket-checkin";
 import { formatEventDateLong } from "@/lib/events/format-datetime";
+import { getCachedEvent, saveCachedEvent } from "@/lib/offline-checkin/event-cache";
+import { requestPersistentStorage } from "@/lib/offline-checkin/persist";
 
 type VerifiedEvent = {
   scanCode: string;
@@ -33,18 +35,58 @@ export function StaffScanPage() {
 
     setGateError(null);
     startTransition(async () => {
-      const result = await verifyEventScanCode(eventId, code);
-      if (!result.valid) {
-        setGateError("Invalid scan code");
+      const online = typeof navigator !== "undefined" && navigator.onLine;
+
+      if (online) {
+        const result = await verifyEventScanCode(eventId, code);
+        if (!result.valid) {
+          setGateError("Invalid scan code");
+          return;
+        }
+
+        setVerified({
+          scanCode: code,
+          eventTitle: result.eventTitle,
+          eventStartDate: result.eventStartDate,
+          venueName: result.venueName,
+        });
+
+        void saveCachedEvent({
+          eventId,
+          scanCode: code,
+          eventTitle: result.eventTitle,
+          eventStartDate: result.eventStartDate,
+          venueName: result.venueName,
+          cachedAt: Date.now(),
+        });
+        void requestPersistentStorage();
         return;
       }
 
-      setVerified({
-        scanCode: code,
-        eventTitle: result.eventTitle,
-        eventStartDate: result.eventStartDate,
-        venueName: result.venueName,
-      });
+      try {
+        const cached = await getCachedEvent(eventId);
+        if (!cached) {
+          setGateError(
+            "You need to connect to the internet once to set up this event for offline scanning.",
+          );
+          return;
+        }
+        if (cached.scanCode.trim() !== code) {
+          setGateError("Invalid scan code");
+          return;
+        }
+
+        setVerified({
+          scanCode: cached.scanCode,
+          eventTitle: cached.eventTitle,
+          eventStartDate: cached.eventStartDate,
+          venueName: cached.venueName,
+        });
+      } catch {
+        setGateError(
+          "You need to connect to the internet once to set up this event for offline scanning.",
+        );
+      }
     });
   }
 
