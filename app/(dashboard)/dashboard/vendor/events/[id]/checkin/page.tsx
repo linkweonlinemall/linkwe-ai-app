@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { CheckInScanner } from "./CheckInScanner";
+import { StaffScanCodePanel } from "./StaffScanCodePanel";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,14 @@ export default async function EventCheckInPage({ params }: Props) {
 
   const event = await prisma.event.findFirst({
     where: { id, storeId: store.id },
-    select: { id: true, title: true, startDate: true, venueName: true },
+    select: {
+      id: true,
+      title: true,
+      startDate: true,
+      venueName: true,
+      scanCode: true,
+      scanCodeSetAt: true,
+    },
   });
   if (!event) redirect("/dashboard/vendor/events");
 
@@ -50,7 +58,12 @@ export default async function EventCheckInPage({ params }: Props) {
         View attendees
       </Link>
 
-      <div className="mt-6">
+      <div className="mt-6 space-y-6">
+        <StaffScanCodePanel
+          eventId={event.id}
+          initialScanCode={event.scanCode}
+          initialScanCodeSetAt={event.scanCodeSetAt?.toISOString() ?? null}
+        />
         <CheckInScanner eventId={event.id} eventTitle={event.title} />
       </div>
     </div>
