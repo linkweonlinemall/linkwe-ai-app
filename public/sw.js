@@ -1,4 +1,4 @@
-const CACHE_NAME = "linkwe-v2";
+const CACHE_NAME = "linkwe-v3";
 const OFFLINE_URL = "/offline";
 
 const STATIC_ASSETS = [
@@ -35,6 +35,54 @@ self.addEventListener("activate", (event) => {
 
 // Fetch — network first, fallback to cache, fallback to offline page
 self.addEventListener("fetch", (event) => {
+  const url = new URL(event.request.url);
+
+  // /scan/ staff check-in — network-first, cache successful navigations for offline
+  if (
+    event.request.method === "GET" &&
+    event.request.mode === "navigate" &&
+    url.pathname.startsWith("/scan/")
+  ) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          return caches.match(event.request).then((cachedResponse) => {
+            if (cachedResponse) return cachedResponse;
+            return caches.match(OFFLINE_URL);
+          });
+        })
+    );
+    return;
+  }
+
+  // Immutable build assets — cache-first for offline scan page
+  if (event.request.method === "GET" && url.pathname.startsWith("/_next/static/")) {
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        if (cachedResponse) return cachedResponse;
+        return fetch(event.request).then((response) => {
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
   // Skip non-GET requests and API calls
   if (
     event.request.method !== "GET" ||
