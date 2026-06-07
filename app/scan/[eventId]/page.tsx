@@ -1,19 +1,8 @@
-import type { Metadata } from "next";
+"use client";
 
 import { StaffScanPage } from "./StaffScanPage";
 
-export const dynamic = "force-dynamic";
-
-type Props = { params: Promise<{ eventId: string }> };
-
-export const metadata: Metadata = {
-  title: "Staff check-in",
-  description: "Scan event tickets at the door — no login required.",
-};
-
-export default async function StaffScanRoutePage({ params }: Props) {
-  const { eventId } = await params;
-
+export default function StaffScanRoutePage() {
   return (
     <main className="min-h-screen bg-zinc-50 px-4 py-8 text-[#1C1C1A]">
       <div className="mx-auto w-full max-w-lg">
@@ -25,7 +14,7 @@ export default async function StaffScanRoutePage({ params }: Props) {
           />
         </div>
 
-        <StaffScanPage eventId={eventId} />
+        <StaffScanPage />
       </div>
     </main>
   );

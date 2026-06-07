@@ -1,14 +1,11 @@
 "use client";
 
+import { useParams } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { CheckInScanner } from "@/app/(dashboard)/dashboard/vendor/events/[id]/checkin/CheckInScanner";
 import { verifyEventScanCode } from "@/app/actions/ticket-checkin";
 import { formatEventDateLong } from "@/lib/events/format-datetime";
-
-type Props = {
-  eventId: string;
-};
 
 type VerifiedEvent = {
   scanCode: string;
@@ -17,7 +14,10 @@ type VerifiedEvent = {
   venueName?: string;
 };
 
-export function StaffScanPage({ eventId }: Props) {
+export function StaffScanPage() {
+  const params = useParams();
+  const eventId = typeof params.eventId === "string" ? params.eventId : "";
+
   const [codeInput, setCodeInput] = useState("");
   const [gateError, setGateError] = useState<string | null>(null);
   const [verified, setVerified] = useState<VerifiedEvent | null>(null);
