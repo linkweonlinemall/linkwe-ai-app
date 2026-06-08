@@ -4,10 +4,12 @@ import { formatEventDateLong } from "@/lib/events/format-datetime";
 import { redirect } from "next/navigation";
 
 import { getEventTicketCounts, searchEventTickets } from "@/app/actions/event-attendees";
+import { getEventCheckInReport } from "@/app/actions/ticket-checkin";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
 import { AttendeesDashboard } from "./AttendeesDashboard";
+import { DuplicateScansReport } from "./DuplicateScansReport";
 
 export const dynamic = "force-dynamic";
 
@@ -31,9 +33,10 @@ export default async function EventAttendeesPage({ params }: Props) {
   });
   if (!event) redirect("/dashboard/vendor/events");
 
-  const [countsResult, ticketsResult] = await Promise.all([
+  const [countsResult, ticketsResult, reportResult] = await Promise.all([
     getEventTicketCounts(event.id),
     searchEventTickets(event.id, { q: "", status: "all", page: 1 }),
+    getEventCheckInReport(event.id),
   ]);
 
   if ("error" in countsResult || "error" in ticketsResult) {
@@ -62,6 +65,12 @@ export default async function EventAttendeesPage({ params }: Props) {
           Open scanner
         </Link>
       </div>
+
+      {reportResult.ok ? (
+        <div className="mt-6">
+          <DuplicateScansReport report={reportResult} />
+        </div>
+      ) : null}
 
       <div className="mt-6">
         <AttendeesDashboard

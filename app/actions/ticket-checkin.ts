@@ -355,6 +355,7 @@ export async function checkInTicket(
   const ticket = await prisma.ticket.findUnique({
     where: { qrToken: trimmed },
     select: {
+      id: true,
       status: true,
       eventId: true,
       event: { select: { storeId: true } },
@@ -394,6 +395,21 @@ export async function checkInTicket(
   });
 
   if (result.count === 1) {
+    try {
+      await prisma.ticketCheckIn.create({
+        data: {
+          ticketId: ticket.id,
+          eventId: ticket.eventId,
+          scannedAt: new Date(),
+          source: "ONLINE",
+          deviceId: null,
+          outcome: "ADMITTED",
+        },
+      });
+    } catch (err) {
+      console.error("[checkInTicket] TicketCheckIn audit insert failed:", err);
+    }
+
     revalidatePath(`/checkin/${trimmed}`);
     return { ok: true, justCheckedIn: true };
   }
@@ -418,4 +434,122 @@ export async function checkInTicket(
   }
 
   return { ok: false, reason: "not_valid" };
+}
+
+export type DuplicateCheckInEntry = {
+  ticketNumber: string;
+  holderName: string;
+  duplicateScannedAt: string;
+  duplicateDeviceId: string | null;
+  duplicateSource: string;
+  admittedScannedAt: string | null;
+  admittedDeviceId: string | null;
+};
+
+export type EventCheckInReportResult =
+  | { ok: false }
+  | {
+      ok: true;
+      duplicates: DuplicateCheckInEntry[];
+      summary: {
+        totalOfflineSynced: number;
+        totalDuplicates: number;
+      };
+    };
+
+export async function getEventCheckInReport(
+  eventId: string,
+): Promise<EventCheckInReportResult> {
+  const trimmedId = eventId?.trim();
+  if (!trimmedId) return { ok: false };
+
+  const session = await getSession();
+
+  const event = await prisma.event.findUnique({
+    where: { id: trimmedId },
+    select: { id: true, storeId: true },
+  });
+
+  if (!event) return { ok: false };
+
+  if (!(await isAuthorizedForTicket(session, event.storeId))) {
+    return { ok: false };
+  }
+
+  const [duplicateRows, totalOfflineSynced] = await Promise.all([
+    prisma.ticketCheckIn.findMany({
+      where: { eventId: trimmedId, outcome: "DUPLICATE" },
+      orderBy: { scannedAt: "asc" },
+      select: {
+        scannedAt: true,
+        deviceId: true,
+        source: true,
+        ticketId: true,
+        ticket: {
+          select: {
+            ticketNumber: true,
+            holderName: true,
+          },
+        },
+      },
+    }),
+    prisma.ticketCheckIn.count({
+      where: { eventId: trimmedId, source: "OFFLINE" },
+    }),
+  ]);
+
+  const ticketIds = [...new Set(duplicateRows.map((row) => row.ticketId))];
+
+  const admittedRows =
+    ticketIds.length > 0
+      ? await prisma.ticketCheckIn.findMany({
+          where: {
+            eventId: trimmedId,
+            outcome: "ADMITTED",
+            ticketId: { in: ticketIds },
+          },
+          orderBy: { scannedAt: "asc" },
+          select: {
+            ticketId: true,
+            scannedAt: true,
+            deviceId: true,
+          },
+        })
+      : [];
+
+  const earliestAdmittedByTicket = new Map<
+    string,
+    { scannedAt: Date; deviceId: string | null }
+  >();
+
+  for (const row of admittedRows) {
+    if (!earliestAdmittedByTicket.has(row.ticketId)) {
+      earliestAdmittedByTicket.set(row.ticketId, {
+        scannedAt: row.scannedAt,
+        deviceId: row.deviceId,
+      });
+    }
+  }
+
+  const duplicates: DuplicateCheckInEntry[] = duplicateRows.map((row) => {
+    const admitted = earliestAdmittedByTicket.get(row.ticketId);
+    return {
+      ticketNumber: row.ticket.ticketNumber,
+      holderName: row.ticket.holderName,
+      duplicateScannedAt: row.scannedAt.toISOString(),
+      duplicateDeviceId: row.deviceId,
+      duplicateSource: row.source,
+      admittedScannedAt: admitted?.scannedAt.toISOString() ?? null,
+      admittedDeviceId: admitted?.deviceId ?? null,
+    };
+  });
+
+  return {
+    ok: true,
+    duplicates,
+    summary: {
+      totalOfflineSynced,
+      totalDuplicates: duplicateRows.length,
+    },
+  };
 }
