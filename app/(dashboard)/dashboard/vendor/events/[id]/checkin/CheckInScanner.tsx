@@ -31,6 +31,8 @@ type Props = {
   eventTitle: string;
   /** Door-staff scan code; omitted when vendor is logged in on dashboard. */
   scanCode?: string;
+  /** True while StaffScanPage is downloading the offline allowlist after gate pass. */
+  isDownloadingAllowlist?: boolean;
 };
 
 function parseCheckInToken(decoded: string): string | null {
@@ -137,7 +139,12 @@ async function waitForScannerMount(elementId: string, maxFrames = 8): Promise<bo
   return !!document.getElementById(elementId);
 }
 
-export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
+export function CheckInScanner({
+  eventId,
+  eventTitle,
+  scanCode,
+  isDownloadingAllowlist = false,
+}: Props) {
   const reactId = useId();
   const elementId = `${SCANNER_ELEMENT_ID}-${reactId.replace(/:/g, "")}`;
 
@@ -174,6 +181,7 @@ export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
   const scannerRef = useRef<import("html5-qrcode").Html5Qrcode | null>(null);
   const processingRef = useRef(false);
   const stopScannerRef = useRef<() => Promise<void>>(async () => {});
+  const prevDownloadingAllowlistRef = useRef(isDownloadingAllowlist);
 
   const stopScanner = useCallback(async () => {
     const instance = scannerRef.current;
@@ -236,6 +244,15 @@ export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
     if (!isStaffMode || !offlineAdmitted) return;
     void refreshCounts();
   }, [isStaffMode, offlineAdmitted, refreshCounts]);
+
+  useEffect(() => {
+    if (!isStaffMode) return;
+    const wasDownloading = prevDownloadingAllowlistRef.current;
+    if (wasDownloading && !isDownloadingAllowlist) {
+      void refreshCounts();
+    }
+    prevDownloadingAllowlistRef.current = isDownloadingAllowlist;
+  }, [isDownloadingAllowlist, isStaffMode, refreshCounts]);
 
   const processToken = useCallback(
     async (token: string) => {
@@ -480,7 +497,17 @@ export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
                 />
                 <span className="font-medium">{isOnline ? "Online" : "Offline"}</span>
               </div>
-              <p className="text-zinc-600">{cachedCount} tickets ready offline</p>
+              {isDownloadingAllowlist ? (
+                <p className="flex items-center gap-2 text-zinc-600">
+                  <span
+                    className="h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600"
+                    aria-hidden
+                  />
+                  Downloading tickets…
+                </p>
+              ) : (
+                <p className="text-zinc-600">{cachedCount} tickets ready offline</p>
+              )}
               {pendingCount > 0 ? (
                 <p className="text-zinc-600">{pendingCount} waiting to sync</p>
               ) : null}

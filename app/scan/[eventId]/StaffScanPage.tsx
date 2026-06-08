@@ -24,6 +24,7 @@ export function StaffScanPage() {
   const [codeInput, setCodeInput] = useState("");
   const [gateError, setGateError] = useState<string | null>(null);
   const [verified, setVerified] = useState<VerifiedEvent | null>(null);
+  const [isDownloadingAllowlist, setIsDownloadingAllowlist] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function handleStartScanning(e: React.FormEvent) {
@@ -63,12 +64,15 @@ export function StaffScanPage() {
         void requestPersistentStorage();
 
         try {
+          setIsDownloadingAllowlist(true);
           const allowlist = await getEventAllowlist(eventId, code);
           if (allowlist.ok) {
             await saveAllowlist(eventId, allowlist.tickets);
           }
         } catch {
           // Allowlist download failure must not block the gate.
+        } finally {
+          setIsDownloadingAllowlist(false);
         }
         return;
       }
@@ -121,6 +125,7 @@ export function StaffScanPage() {
           eventId={eventId}
           eventTitle={verified.eventTitle}
           scanCode={verified.scanCode}
+          isDownloadingAllowlist={isDownloadingAllowlist}
         />
       </div>
     );
