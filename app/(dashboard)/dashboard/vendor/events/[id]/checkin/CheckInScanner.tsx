@@ -13,6 +13,9 @@ import {
   markUsedLocally,
   type AllowlistTicket,
 } from "@/lib/offline-checkin/allowlist";
+import { getOrCreateDeviceId } from "@/lib/offline-checkin/device-id";
+import { enqueueScan } from "@/lib/offline-checkin/queue";
+import { syncQueuedScans } from "@/lib/offline-checkin/sync";
 
 const SCANNER_ELEMENT_ID = "vendor-checkin-qr-reader";
 
@@ -168,6 +171,18 @@ export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
 
   stopScannerRef.current = stopScanner;
 
+  useEffect(() => {
+    if (!scanCode?.trim()) return;
+
+    const runSync = () => {
+      void syncQueuedScans(eventId, scanCode).catch(() => {});
+    };
+
+    runSync();
+    window.addEventListener("online", runSync);
+    return () => window.removeEventListener("online", runSync);
+  }, [eventId, scanCode]);
+
   const processToken = useCallback(
     async (token: string) => {
       if (processingRef.current) return;
@@ -306,7 +321,14 @@ export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
     if (isOfflineStaffMode(scanCode)) {
       setActionError(null);
       startTransition(async () => {
+        const scannedAt = Date.now();
         await markUsedLocally(qrToken);
+        await enqueueScan({
+          qrToken,
+          eventId,
+          scannedAt,
+          deviceId: getOrCreateDeviceId(),
+        });
         setAdmitted(true);
         setOfflineAdmitted(true);
         const refreshed = await lookupTicket(qrToken);

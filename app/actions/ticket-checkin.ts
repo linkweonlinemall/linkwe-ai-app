@@ -113,6 +113,118 @@ export async function getEventAllowlist(
   };
 }
 
+export type OfflineCheckInSyncOutcome = "ADMITTED" | "DUPLICATE" | "invalid";
+
+export type SyncOfflineCheckInsResult =
+  | { ok: false }
+  | { ok: true; results: { qrToken: string; outcome: OfflineCheckInSyncOutcome }[] };
+
+export async function syncOfflineCheckIns(
+  eventId: string,
+  scanCode: string,
+  scans: { qrToken: string; scannedAt: number; deviceId: string }[],
+): Promise<SyncOfflineCheckInsResult> {
+  const trimmedId = eventId?.trim();
+  if (!trimmedId) return { ok: false };
+
+  const event = await prisma.event.findUnique({
+    where: { id: trimmedId },
+    select: { scanCode: true },
+  });
+
+  if (!event?.scanCode || !eventScanCodesMatch(event.scanCode, scanCode)) {
+    return { ok: false };
+  }
+
+  const results: { qrToken: string; outcome: OfflineCheckInSyncOutcome }[] = [];
+  const sorted = [...scans].sort((a, b) => a.scannedAt - b.scannedAt);
+
+  for (const scan of sorted) {
+    try {
+      const trimmedToken = scan.qrToken?.trim();
+      if (!trimmedToken) {
+        results.push({ qrToken: scan.qrToken, outcome: "invalid" });
+        continue;
+      }
+
+      const ticket = await prisma.ticket.findUnique({
+        where: { qrToken: trimmedToken },
+        select: {
+          id: true,
+          eventId: true,
+          status: true,
+          checkedInAt: true,
+        },
+      });
+
+      if (!ticket || ticket.eventId !== trimmedId) {
+        results.push({ qrToken: scan.qrToken, outcome: "invalid" });
+        continue;
+      }
+
+      const scannedAtDate = new Date(scan.scannedAt);
+
+      const earlierAdmitted = await prisma.ticketCheckIn.findFirst({
+        where: {
+          ticketId: ticket.id,
+          outcome: "ADMITTED",
+          scannedAt: { lt: scannedAtDate },
+        },
+        select: { id: true },
+      });
+
+      const usedFromEarlierCheckIn =
+        ticket.status === "USED" &&
+        ticket.checkedInAt != null &&
+        ticket.checkedInAt.getTime() < scan.scannedAt;
+
+      let outcome: "ADMITTED" | "DUPLICATE";
+
+      if (earlierAdmitted || usedFromEarlierCheckIn || ticket.status !== "VALID") {
+        outcome = "DUPLICATE";
+      } else {
+        outcome = "ADMITTED";
+      }
+
+      try {
+        await prisma.ticketCheckIn.create({
+          data: {
+            ticketId: ticket.id,
+            eventId: trimmedId,
+            scannedAt: scannedAtDate,
+            source: "OFFLINE",
+            deviceId: scan.deviceId || null,
+            outcome,
+          },
+        });
+      } catch {
+        // Non-blocking per-row audit insert.
+      }
+
+      if (outcome === "ADMITTED") {
+        try {
+          await prisma.ticket.updateMany({
+            where: { id: ticket.id, status: "VALID" },
+            data: {
+              status: "USED",
+              checkedInAt: scannedAtDate,
+              checkedInBy: `scancode:${trimmedId}`,
+            },
+          });
+        } catch {
+          // Non-blocking; audit row still records the admission attempt.
+        }
+      }
+
+      results.push({ qrToken: scan.qrToken, outcome });
+    } catch {
+      results.push({ qrToken: scan.qrToken, outcome: "invalid" });
+    }
+  }
+
+  return { ok: true, results };
+}
+
 export async function verifyEventScanCode(
   eventId: string,
   code: string,
