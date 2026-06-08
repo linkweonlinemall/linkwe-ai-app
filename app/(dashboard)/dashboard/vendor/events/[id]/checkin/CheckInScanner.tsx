@@ -489,7 +489,11 @@ export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
                 <input
                   type="text"
                   value={deviceLabelInput}
-                  onChange={(e) => setDeviceLabelInput(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setDeviceLabelInput(value);
+                    setDeviceLabel(value);
+                  }}
                   onBlur={() => setDeviceLabel(deviceLabelInput)}
                   placeholder="Name this device (e.g. Front Gate)"
                   className="mt-1 min-h-[36px] w-full max-w-xs rounded-lg border border-zinc-200 px-3 text-sm text-[#1C1C1A] placeholder:text-zinc-400 focus:border-[#D4450A] focus:outline-none focus:ring-2 focus:ring-[#D4450A]/20"
