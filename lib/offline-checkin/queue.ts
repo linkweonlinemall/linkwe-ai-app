@@ -34,6 +34,19 @@ export async function getQueuedScans(): Promise<QueuedScan[]> {
   }
 }
 
+export async function countQueuedScans(eventId: string): Promise<number> {
+  if (typeof window === "undefined" || typeof indexedDB === "undefined") {
+    return 0;
+  }
+
+  try {
+    const queued = await getQueuedScans();
+    return queued.filter((scan) => scan.eventId === eventId).length;
+  } catch {
+    return 0;
+  }
+}
+
 export async function deleteQueuedScans(ids: number[]): Promise<void> {
   if (typeof window === "undefined" || typeof indexedDB === "undefined" || ids.length === 0) {
     return;

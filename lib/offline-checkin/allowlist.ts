@@ -37,6 +37,20 @@ export async function saveAllowlist(
   }
 }
 
+export async function countAllowlist(eventId: string): Promise<number> {
+  if (typeof window === "undefined" || typeof indexedDB === "undefined") {
+    return 0;
+  }
+
+  try {
+    const db = await getCheckinDb();
+    const keys = await db.transaction("allowlist").store.index("by_event").getAllKeys(eventId);
+    return keys.length;
+  } catch {
+    return 0;
+  }
+}
+
 export async function lookupTicket(qrToken: string): Promise<AllowlistTicket | null> {
   if (typeof window === "undefined" || typeof indexedDB === "undefined") {
     return null;

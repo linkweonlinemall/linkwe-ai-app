@@ -9,12 +9,13 @@ import {
   type TicketCheckInLookup,
 } from "@/app/actions/ticket-checkin";
 import {
+  countAllowlist,
   lookupTicket,
   markUsedLocally,
   type AllowlistTicket,
 } from "@/lib/offline-checkin/allowlist";
 import { getOrCreateDeviceId } from "@/lib/offline-checkin/device-id";
-import { enqueueScan } from "@/lib/offline-checkin/queue";
+import { countQueuedScans, enqueueScan } from "@/lib/offline-checkin/queue";
 import { syncQueuedScans } from "@/lib/offline-checkin/sync";
 
 const SCANNER_ELEMENT_ID = "vendor-checkin-qr-reader";
@@ -147,6 +148,24 @@ export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
   const [manualToken, setManualToken] = useState("");
   const [isPending, startTransition] = useTransition();
 
+  const isStaffMode = Boolean(scanCode?.trim());
+  const [isOnline, setIsOnline] = useState(
+    () => typeof navigator !== "undefined" && navigator.onLine,
+  );
+  const [cachedCount, setCachedCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const refreshCounts = useCallback(async () => {
+    if (!scanCode?.trim()) return;
+    const [cached, pending] = await Promise.all([
+      countAllowlist(eventId),
+      countQueuedScans(eventId),
+    ]);
+    setCachedCount(cached);
+    setPendingCount(pending);
+  }, [eventId, scanCode]);
+
   const scannerRef = useRef<import("html5-qrcode").Html5Qrcode | null>(null);
   const processingRef = useRef(false);
   const stopScannerRef = useRef<() => Promise<void>>(async () => {});
@@ -182,6 +201,31 @@ export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
     window.addEventListener("online", runSync);
     return () => window.removeEventListener("online", runSync);
   }, [eventId, scanCode]);
+
+  useEffect(() => {
+    if (!isStaffMode) return;
+
+    const handleOnline = () => {
+      setIsOnline(true);
+      void refreshCounts();
+    };
+    const handleOffline = () => setIsOnline(false);
+
+    setIsOnline(navigator.onLine);
+    void refreshCounts();
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [isStaffMode, refreshCounts]);
+
+  useEffect(() => {
+    if (!isStaffMode || !offlineAdmitted) return;
+    void refreshCounts();
+  }, [isStaffMode, offlineAdmitted, refreshCounts]);
 
   const processToken = useCallback(
     async (token: string) => {
@@ -385,8 +429,54 @@ export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
     lookup.status === "VALID" &&
     !admitted;
 
+  function handleManualSync() {
+    if (!scanCode?.trim() || !isOnline || pendingCount === 0 || isSyncing) return;
+
+    setIsSyncing(true);
+    void (async () => {
+      try {
+        await syncQueuedScans(eventId, scanCode);
+        await refreshCounts();
+      } catch {
+        // Manual sync failure leaves queue intact for retry.
+      } finally {
+        setIsSyncing(false);
+      }
+    })();
+  }
+
   return (
     <div className="space-y-6">
+      {isStaffMode ? (
+        <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-[#1C1C1A]">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`h-2 w-2 shrink-0 rounded-full ${isOnline ? "bg-emerald-500" : "bg-zinc-400"}`}
+                  aria-hidden
+                />
+                <span className="font-medium">{isOnline ? "Online" : "Offline"}</span>
+              </div>
+              <p className="text-zinc-600">{cachedCount} tickets ready offline</p>
+              {pendingCount > 0 ? (
+                <p className="text-zinc-600">{pendingCount} waiting to sync</p>
+              ) : null}
+            </div>
+            {isOnline && pendingCount > 0 ? (
+              <button
+                type="button"
+                disabled={isSyncing}
+                onClick={handleManualSync}
+                className="shrink-0 rounded-xl bg-[#D4450A] px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {isSyncing ? "Syncing…" : "Sync now"}
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
       {view === "scanning" ? (
         <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-black">
           <div id={elementId} className="min-h-[280px] w-full" />
