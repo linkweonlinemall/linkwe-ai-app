@@ -253,6 +253,16 @@ export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
           return;
         }
 
+        if (row.status === "CANCELLED" || row.status === "REFUNDED") {
+          setLookup({ found: false });
+          return;
+        }
+
+        if (row.status !== "VALID") {
+          setLookup(buildOfflineLookup(row, eventTitle));
+          return;
+        }
+
         setLookup(buildOfflineLookup(row, eventTitle));
         return;
       }
