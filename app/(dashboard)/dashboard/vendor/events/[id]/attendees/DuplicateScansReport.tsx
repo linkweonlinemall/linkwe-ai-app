@@ -11,9 +11,19 @@ function formatScanTime(iso: string | null): string {
   });
 }
 
-function deviceLabel(deviceId: string | null | undefined): string {
-  if (!deviceId) return "unknown device";
-  return deviceId.length > 6 ? `…${deviceId.slice(-6)}` : deviceId;
+function formatDeviceDisplay(opts: {
+  label: string | null | undefined;
+  deviceId: string | null | undefined;
+  source: string | null | undefined;
+}): string {
+  if (opts.label?.trim()) return opts.label.trim();
+  if (opts.source === "ONLINE") return "Online check-in";
+  if (opts.deviceId) {
+    const short = opts.deviceId.length > 6 ? opts.deviceId.slice(-6) : opts.deviceId;
+    return `device ${short}`;
+  }
+  if (opts.source === "OFFLINE") return "unknown device";
+  return "Online check-in";
 }
 
 type Props = {
@@ -66,14 +76,22 @@ export function DuplicateScansReport({ report }: Props) {
                 <dt className="sr-only">Admitted</dt>
                 <dd>
                   Admitted {formatScanTime(entry.admittedScannedAt)} ·{" "}
-                  {deviceLabel(entry.admittedDeviceId)}
+                  {formatDeviceDisplay({
+                    label: entry.admittedDeviceLabel,
+                    deviceId: entry.admittedDeviceId,
+                    source: entry.admittedSource,
+                  })}
                 </dd>
               </div>
               <div>
                 <dt className="sr-only">Duplicate attempt</dt>
                 <dd>
                   Duplicate attempt {formatScanTime(entry.duplicateScannedAt)} ·{" "}
-                  {deviceLabel(entry.duplicateDeviceId)}
+                  {formatDeviceDisplay({
+                    label: entry.duplicateDeviceLabel,
+                    deviceId: entry.duplicateDeviceId,
+                    source: entry.duplicateSource,
+                  })}
                 </dd>
               </div>
             </dl>

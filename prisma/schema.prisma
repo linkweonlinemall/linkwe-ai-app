@@ -1927,8 +1927,9 @@ model TicketCheckIn {
   scannedAt DateTime
   syncedAt  DateTime @default(now())
   source    String
-  deviceId  String?
-  outcome   String
+  deviceId    String?
+  deviceLabel String?
+  outcome     String
   createdAt DateTime @default(now())
 
   ticket Ticket @relation(fields: [ticketId], references: [id])

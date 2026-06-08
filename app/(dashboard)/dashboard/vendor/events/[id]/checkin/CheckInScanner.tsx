@@ -14,7 +14,11 @@ import {
   markUsedLocally,
   type AllowlistTicket,
 } from "@/lib/offline-checkin/allowlist";
-import { getOrCreateDeviceId } from "@/lib/offline-checkin/device-id";
+import {
+  getDeviceLabel,
+  getOrCreateDeviceId,
+  setDeviceLabel,
+} from "@/lib/offline-checkin/device-id";
 import { countQueuedScans, enqueueScan } from "@/lib/offline-checkin/queue";
 import { syncQueuedScans } from "@/lib/offline-checkin/sync";
 
@@ -155,6 +159,7 @@ export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
   const [cachedCount, setCachedCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [deviceLabelInput, setDeviceLabelInput] = useState("");
 
   const refreshCounts = useCallback(async () => {
     if (!scanCode?.trim()) return;
@@ -201,6 +206,11 @@ export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
     window.addEventListener("online", runSync);
     return () => window.removeEventListener("online", runSync);
   }, [eventId, scanCode]);
+
+  useEffect(() => {
+    if (!isStaffMode) return;
+    setDeviceLabelInput(getDeviceLabel());
+  }, [isStaffMode]);
 
   useEffect(() => {
     if (!isStaffMode) return;
@@ -377,11 +387,13 @@ export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
       startTransition(async () => {
         const scannedAt = Date.now();
         await markUsedLocally(qrToken);
+        const label = getDeviceLabel();
         await enqueueScan({
           qrToken,
           eventId,
           scannedAt,
           deviceId: getOrCreateDeviceId(),
+          deviceLabel: label || undefined,
         });
         setAdmitted(true);
         setOfflineAdmitted(true);
@@ -472,6 +484,17 @@ export function CheckInScanner({ eventId, eventTitle, scanCode }: Props) {
               {pendingCount > 0 ? (
                 <p className="text-zinc-600">{pendingCount} waiting to sync</p>
               ) : null}
+              <label className="mt-2 block">
+                <span className="text-xs font-semibold text-zinc-500">This device</span>
+                <input
+                  type="text"
+                  value={deviceLabelInput}
+                  onChange={(e) => setDeviceLabelInput(e.target.value)}
+                  onBlur={() => setDeviceLabel(deviceLabelInput)}
+                  placeholder="Name this device (e.g. Front Gate)"
+                  className="mt-1 min-h-[36px] w-full max-w-xs rounded-lg border border-zinc-200 px-3 text-sm text-[#1C1C1A] placeholder:text-zinc-400 focus:border-[#D4450A] focus:outline-none focus:ring-2 focus:ring-[#D4450A]/20"
+                />
+              </label>
             </div>
             {isOnline && pendingCount > 0 ? (
               <button

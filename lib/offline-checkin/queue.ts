@@ -6,6 +6,7 @@ export type QueuedScan = {
   eventId: string;
   scannedAt: number;
   deviceId: string;
+  deviceLabel?: string;
 };
 
 export async function enqueueScan(scan: Omit<QueuedScan, "id">): Promise<void> {

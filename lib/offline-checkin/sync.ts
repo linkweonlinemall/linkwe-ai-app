@@ -20,6 +20,7 @@ export async function syncQueuedScans(
         qrToken: scan.qrToken,
         scannedAt: scan.scannedAt,
         deviceId: scan.deviceId,
+        deviceLabel: scan.deviceLabel,
       })),
     );
 

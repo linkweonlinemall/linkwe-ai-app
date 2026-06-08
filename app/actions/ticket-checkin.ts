@@ -122,7 +122,7 @@ export type SyncOfflineCheckInsResult =
 export async function syncOfflineCheckIns(
   eventId: string,
   scanCode: string,
-  scans: { qrToken: string; scannedAt: number; deviceId: string }[],
+  scans: { qrToken: string; scannedAt: number; deviceId: string; deviceLabel?: string }[],
 ): Promise<SyncOfflineCheckInsResult> {
   const trimmedId = eventId?.trim();
   if (!trimmedId) return { ok: false };
@@ -194,6 +194,7 @@ export async function syncOfflineCheckIns(
             scannedAt: scannedAtDate,
             source: "OFFLINE",
             deviceId: scan.deviceId || null,
+            deviceLabel: scan.deviceLabel?.trim() || null,
             outcome,
           },
         });
@@ -441,9 +442,12 @@ export type DuplicateCheckInEntry = {
   holderName: string;
   duplicateScannedAt: string;
   duplicateDeviceId: string | null;
+  duplicateDeviceLabel: string | null;
   duplicateSource: string;
   admittedScannedAt: string | null;
   admittedDeviceId: string | null;
+  admittedDeviceLabel: string | null;
+  admittedSource: string | null;
 };
 
 export type EventCheckInReportResult =
@@ -483,6 +487,7 @@ export async function getEventCheckInReport(
       select: {
         scannedAt: true,
         deviceId: true,
+        deviceLabel: true,
         source: true,
         ticketId: true,
         ticket: {
@@ -513,13 +518,20 @@ export async function getEventCheckInReport(
             ticketId: true,
             scannedAt: true,
             deviceId: true,
+            deviceLabel: true,
+            source: true,
           },
         })
       : [];
 
   const earliestAdmittedByTicket = new Map<
     string,
-    { scannedAt: Date; deviceId: string | null }
+    {
+      scannedAt: Date;
+      deviceId: string | null;
+      deviceLabel: string | null;
+      source: string;
+    }
   >();
 
   for (const row of admittedRows) {
@@ -527,6 +539,8 @@ export async function getEventCheckInReport(
       earliestAdmittedByTicket.set(row.ticketId, {
         scannedAt: row.scannedAt,
         deviceId: row.deviceId,
+        deviceLabel: row.deviceLabel,
+        source: row.source,
       });
     }
   }
@@ -538,9 +552,12 @@ export async function getEventCheckInReport(
       holderName: row.ticket.holderName,
       duplicateScannedAt: row.scannedAt.toISOString(),
       duplicateDeviceId: row.deviceId,
+      duplicateDeviceLabel: row.deviceLabel,
       duplicateSource: row.source,
       admittedScannedAt: admitted?.scannedAt.toISOString() ?? null,
       admittedDeviceId: admitted?.deviceId ?? null,
+      admittedDeviceLabel: admitted?.deviceLabel ?? null,
+      admittedSource: admitted?.source ?? null,
     };
   });
 
