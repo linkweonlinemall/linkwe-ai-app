@@ -5,7 +5,9 @@ import { formatEventDateLong } from "@/lib/events/format-datetime";
 import { ScanLine, Users } from "lucide-react";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { listPromoCodes } from "@/app/actions/promo-codes";
 import { getPaidTicketSoldCountsForEvent } from "@/lib/tickets/sold-counts";
+import { PromoCodesPanel } from "./PromoCodesPanel";
 import { TicketTypesClient } from "./TicketTypesClient";
 
 type Props = { params: Promise<{ id: string }> };
@@ -52,7 +54,12 @@ export default async function TicketTypesPage({ params }: Props) {
 
   if (!event) redirect("/dashboard/vendor/events");
 
-  const paidSold = await getPaidTicketSoldCountsForEvent(event.id);
+  const [paidSold, promoCodesResult] = await Promise.all([
+    getPaidTicketSoldCountsForEvent(event.id),
+    listPromoCodes(event.id),
+  ]);
+
+  const initialPromoCodes = promoCodesResult.ok ? promoCodesResult.codes : [];
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
@@ -109,16 +116,19 @@ export default async function TicketTypesPage({ params }: Props) {
         </div>
       </div>
 
-      <TicketTypesClient
-        eventId={id}
-        eventStatus={event.status}
-        initialTicketTypes={event.ticketTypes.map((tt) => ({
-          ...tt,
-          quantitySold: paidSold.byTicketTypeId[tt.id] ?? 0,
-          saleStartDate: tt.saleStartDate?.toISOString() ?? null,
-          saleEnds: tt.saleEnds?.toISOString() ?? null,
-        }))}
-      />
+      <div className="space-y-6">
+        <PromoCodesPanel eventId={id} initialCodes={initialPromoCodes} />
+        <TicketTypesClient
+          eventId={id}
+          eventStatus={event.status}
+          initialTicketTypes={event.ticketTypes.map((tt) => ({
+            ...tt,
+            quantitySold: paidSold.byTicketTypeId[tt.id] ?? 0,
+            saleStartDate: tt.saleStartDate?.toISOString() ?? null,
+            saleEnds: tt.saleEnds?.toISOString() ?? null,
+          }))}
+        />
+      </div>
     </div>
   );
 }

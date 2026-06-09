@@ -1946,11 +1946,13 @@ model EventPromoCode {
   eventId       String
   code          String
   discountType  String
-  discountValue Float
+  discountValue Int
   maxUses       Int?
   usedCount     Int       @default(0)
   expiresAt     DateTime?
+  active        Boolean   @default(true)
   createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   event Event @relation(fields: [eventId], references: [id])
 
