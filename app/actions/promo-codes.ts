@@ -8,6 +8,61 @@ import { prisma } from "@/lib/prisma";
 
 const EVENTS_PATH = "/dashboard/vendor/events";
 
+const INVALID_PROMO_MESSAGE = "This code isn't valid for this event.";
+
+export type ValidatePromoCodeResult =
+  | { ok: false; reason: string }
+  | { ok: true; code: string; discountType: string; discountValue: number };
+
+type PromoRedeemRow = {
+  active: boolean;
+  expiresAt: Date | null;
+  maxUses: number | null;
+  usedCount: number;
+};
+
+function isPromoCodeRedeemable(row: PromoRedeemRow, now = new Date()): boolean {
+  if (!row.active) return false;
+  if (row.expiresAt != null && row.expiresAt <= now) return false;
+  if (row.maxUses != null && row.usedCount >= row.maxUses) return false;
+  return true;
+}
+
+export async function validatePromoCode(
+  eventId: string,
+  code: string,
+): Promise<ValidatePromoCodeResult> {
+  const trimmedId = eventId?.trim();
+  const normalized = code?.trim().toUpperCase();
+  if (!trimmedId || !normalized) {
+    return { ok: false, reason: INVALID_PROMO_MESSAGE };
+  }
+
+  const row = await prisma.eventPromoCode.findUnique({
+    where: { eventId_code: { eventId: trimmedId, code: normalized } },
+    select: {
+      code: true,
+      discountType: true,
+      discountValue: true,
+      active: true,
+      expiresAt: true,
+      maxUses: true,
+      usedCount: true,
+    },
+  });
+
+  if (!row || !isPromoCodeRedeemable(row)) {
+    return { ok: false, reason: INVALID_PROMO_MESSAGE };
+  }
+
+  return {
+    ok: true,
+    code: row.code,
+    discountType: row.discountType,
+    discountValue: row.discountValue,
+  };
+}
+
 export type PromoCodeRow = {
   id: string;
   code: string;

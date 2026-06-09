@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { createTicketPaymentIntent } from "@/app/actions/ticket-checkout";
+import { validatePromoCode } from "@/app/actions/promo-codes";
 import {
   formatEventDateCard,
   formatEventSaleDate,
@@ -68,6 +69,33 @@ function isLongInclusions(perks: string | null, description: string | null): boo
     text.length > INCLUSIONS_LONG_CHAR_THRESHOLD ||
     inclusionLineCount(perks, description) > INCLUSIONS_LONG_LINE_THRESHOLD
   );
+}
+
+type AppliedPromo = {
+  code: string;
+  discountType: string;
+  discountValue: number;
+};
+
+function computeDisplayDiscountMinor(
+  subtotalMinor: number,
+  discountType: string,
+  discountValue: number,
+): number {
+  if (subtotalMinor <= 0) return 0;
+  const discount =
+    discountType === "PERCENT"
+      ? Math.round((subtotalMinor * discountValue) / 100)
+      : discountValue;
+  return Math.min(Math.max(0, discount), subtotalMinor);
+}
+
+function formatPromoDiscount(promo: AppliedPromo): string {
+  if (promo.discountType === "PERCENT") {
+    return `${promo.discountValue}% off`;
+  }
+  const dollars = promo.discountValue / 100;
+  return `TTD ${dollars.toFixed(2)} off`;
 }
 
 function TicketTypeInclusions({
@@ -243,6 +271,10 @@ export function TicketPurchaseCard({
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [promoInput, setPromoInput] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<AppliedPromo | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoApplying, setPromoApplying] = useState(false);
 
   const visibleTypes = ticketTypes.filter((t) => t.isVisible);
 
@@ -266,6 +298,16 @@ export function TicketPurchaseCard({
     .map((t) => ({ id: t.id, name: t.name, qty: quantities[t.id]!, price: t.price }));
 
   const total = lineItems.reduce((s, l) => s + l.qty * l.price, 0);
+  const subtotalMinor = Math.round(total * 100);
+  const discountMinor = appliedPromo
+    ? computeDisplayDiscountMinor(
+        subtotalMinor,
+        appliedPromo.discountType,
+        appliedPromo.discountValue,
+      )
+    : 0;
+  const finalTotalMinor = subtotalMinor - discountMinor;
+  const finalTotal = finalTotalMinor / 100;
   const totalTickets = Object.values(quantities).reduce((s, v) => s + v, 0);
 
   const totalRemaining = visibleTypes.reduce(
@@ -280,6 +322,37 @@ export function TicketPurchaseCard({
         ? `Partial refund up to ${refundCutoffHours}h before event`
         : "No refunds";
 
+  async function handleApplyPromo() {
+    const code = promoInput.trim();
+    if (!code) return;
+
+    setPromoApplying(true);
+    setPromoError(null);
+
+    const result = await validatePromoCode(eventId, code);
+    setPromoApplying(false);
+
+    if (!result.ok) {
+      setAppliedPromo(null);
+      setPromoError(result.reason);
+      return;
+    }
+
+    setAppliedPromo({
+      code: result.code,
+      discountType: result.discountType,
+      discountValue: result.discountValue,
+    });
+    setPromoInput(result.code);
+    setPromoError(null);
+  }
+
+  function handleRemovePromo() {
+    setAppliedPromo(null);
+    setPromoInput("");
+    setPromoError(null);
+  }
+
   // ── Proceed to payment ───────────────────────────────────────────────────────
   async function handleGetTickets() {
     if (totalTickets === 0) return;
@@ -291,7 +364,11 @@ export function TicketPurchaseCard({
       quantity: l.qty,
     }));
 
-    const result = await createTicketPaymentIntent(eventId, items);
+    const result = await createTicketPaymentIntent(
+      eventId,
+      items,
+      appliedPromo?.code,
+    );
 
     if (!result.ok) {
       setError(result.error);
@@ -345,7 +422,7 @@ export function TicketPurchaseCard({
         <div className="px-6 py-5">
           <Elements stripe={stripePromise} options={{ clientSecret }}>
             <TicketPaymentForm
-              totalTTD={total}
+              totalTTD={finalTotal}
               ticketCount={totalTickets}
               onSuccess={() => setPhase("success")}
               onBack={() => {
@@ -470,6 +547,57 @@ export function TicketPurchaseCard({
           </div>
         )}
 
+        {/* Promo code */}
+        {lineItems.length > 0 ? (
+          <div className="mt-4 rounded-2xl border border-zinc-100 bg-zinc-50/80 p-4">
+            <p className="text-sm font-semibold text-[#1C1C1A]">Have a promo code?</p>
+            {appliedPromo ? (
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm text-zinc-600">
+                  <span className="font-mono font-semibold text-[#D4450A]">{appliedPromo.code}</span>
+                  {" · "}
+                  {formatPromoDiscount(appliedPromo)} applied
+                </p>
+                <button
+                  type="button"
+                  onClick={handleRemovePromo}
+                  className="text-sm font-semibold text-zinc-500 hover:text-[#D4450A]"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <div className="mt-2 flex gap-2">
+                <input
+                  type="text"
+                  value={promoInput}
+                  onChange={(e) => {
+                    setPromoInput(e.target.value.toUpperCase());
+                    setPromoError(null);
+                  }}
+                  placeholder="Enter code"
+                  autoComplete="off"
+                  spellCheck={false}
+                  className="min-h-[44px] flex-1 rounded-xl border border-zinc-200 bg-white px-3 font-mono text-sm uppercase tracking-wider text-[#1C1C1A] placeholder:font-sans placeholder:normal-case placeholder:tracking-normal placeholder:text-zinc-400 focus:border-[#D4450A] focus:outline-none focus:ring-2 focus:ring-[#D4450A]/20"
+                />
+                <button
+                  type="button"
+                  onClick={() => void handleApplyPromo()}
+                  disabled={promoApplying || !promoInput.trim()}
+                  className="shrink-0 rounded-xl border-2 border-[#D4450A] bg-white px-4 py-2 text-sm font-semibold text-[#D4450A] transition-colors hover:bg-[#FEF0EB] disabled:opacity-50"
+                >
+                  {promoApplying ? "Checking…" : "Apply"}
+                </button>
+              </div>
+            )}
+            {promoError ? (
+              <p className="mt-2 text-sm font-medium text-red-600" role="alert">
+                {promoError}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         {/* Order summary */}
         {lineItems.length > 0 && (
           <div className="mt-4 rounded-2xl bg-[#F5F5F5] p-4">
@@ -483,10 +611,18 @@ export function TicketPurchaseCard({
                 </div>
               ))}
             </div>
+            {appliedPromo && discountMinor > 0 ? (
+              <div className="mt-3 flex items-center justify-between border-t border-zinc-200 pt-3 text-sm text-emerald-700">
+                <span>
+                  Promo ({appliedPromo.code}) · {formatPromoDiscount(appliedPromo)}
+                </span>
+                <span>- TTD {(discountMinor / 100).toFixed(2)}</span>
+              </div>
+            ) : null}
             <div className="mt-3 flex items-center justify-between border-t border-zinc-200 pt-3">
               <span className="text-base font-bold text-[#1C1C1A]">Total</span>
               <span className="text-base font-bold text-[#1C1C1A]">
-                {total === 0 ? "Free" : `TTD ${total.toFixed(2)}`}
+                {finalTotal === 0 ? "Free" : `TTD ${finalTotal.toFixed(2)}`}
               </span>
             </div>
           </div>
@@ -507,7 +643,7 @@ export function TicketPurchaseCard({
         >
           {loading
             ? "Preparing payment…"
-            : total === 0 && totalTickets > 0
+            : finalTotal === 0 && totalTickets > 0
               ? "Register free"
               : "Get tickets"}
         </button>

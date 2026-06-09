@@ -21,6 +21,42 @@ export type CreateTicketPaymentIntentResult =
   | { ok: true; clientSecret: null; ticketOrderId: string; free: true }
   | { ok: false; error: string; reason?: string; detail?: string };
 
+type PromoRedeemRow = {
+  active: boolean;
+  expiresAt: Date | null;
+  maxUses: number | null;
+  usedCount: number;
+};
+
+function isPromoCodeRedeemable(row: PromoRedeemRow, now: Date): boolean {
+  if (!row.active) return false;
+  if (row.expiresAt != null && row.expiresAt <= now) return false;
+  if (row.maxUses != null && row.usedCount >= row.maxUses) return false;
+  return true;
+}
+
+function computePromoDiscountMinor(
+  subtotalMinor: number,
+  discountType: string,
+  discountValue: number,
+): number {
+  if (subtotalMinor <= 0) return 0;
+
+  const discount =
+    discountType === "PERCENT"
+      ? Math.round((subtotalMinor * discountValue) / 100)
+      : discountValue;
+
+  return Math.min(Math.max(0, discount), subtotalMinor);
+}
+
+class PromoInvalidError extends Error {
+  constructor() {
+    super("promo_invalid");
+    this.name = "PromoInvalidError";
+  }
+}
+
 function insufficientSeatsResult(err: InsufficientSeatsError): CreateTicketPaymentIntentResult {
   const error =
     err.available <= 0
@@ -34,9 +70,43 @@ function insufficientSeatsResult(err: InsufficientSeatsError): CreateTicketPayme
   };
 }
 
+/** Largest-remainder split so per-ticket pricePaidMinor sums exactly to orderTotalMinor. */
+function distributePricePaidMinor(
+  unitMinors: number[],
+  discountMinor: number,
+): number[] {
+  const subtotalMinor = unitMinors.reduce((sum, unit) => sum + unit, 0);
+  if (unitMinors.length === 0) return [];
+  if (discountMinor <= 0 || subtotalMinor <= 0) {
+    return [...unitMinors];
+  }
+
+  const allocations = unitMinors.map((unitMinor, index) => {
+    const exactShare = (discountMinor * unitMinor) / subtotalMinor;
+    const base = Math.floor(exactShare);
+    return { index, base, remainder: exactShare - base };
+  });
+
+  const pricePaidMinors = unitMinors.map((unitMinor, index) => {
+    const allocation = allocations[index];
+    return unitMinor - allocation.base;
+  });
+
+  let leftover = discountMinor - allocations.reduce((sum, row) => sum + row.base, 0);
+  const byRemainder = [...allocations].sort((a, b) => b.remainder - a.remainder);
+
+  for (let i = 0; leftover > 0 && i < byRemainder.length; i++) {
+    pricePaidMinors[byRemainder[i].index] -= 1;
+    leftover -= 1;
+  }
+
+  return pricePaidMinors.map((value) => Math.max(0, value));
+}
+
 export async function createTicketPaymentIntent(
   eventId: string,
   items: { ticketTypeId: string; quantity: number }[],
+  promoCode?: string,
 ): Promise<CreateTicketPaymentIntentResult> {
   const session = await getSession();
   if (!session) return { ok: false, error: "Please log in to purchase tickets." };
@@ -45,7 +115,6 @@ export async function createTicketPaymentIntent(
   if (!items || items.length === 0) return { ok: false, error: "No tickets selected." };
   if (items.some((i) => i.quantity <= 0)) return { ok: false, error: "Invalid ticket quantity." };
 
-  // Load event
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     select: { id: true, title: true, isPublished: true, status: true },
@@ -55,7 +124,6 @@ export async function createTicketPaymentIntent(
     return { ok: false, error: "This event is not available for ticket purchase." };
   }
 
-  // Load buyer
   const buyer = await prisma.user.findUnique({
     where: { id: session.userId },
     select: { id: true, fullName: true, email: true },
@@ -63,7 +131,6 @@ export async function createTicketPaymentIntent(
   if (!buyer) return { ok: false, error: "User not found." };
 
   const now = new Date();
-  let subtotalMinor = 0;
 
   type ValidatedItem = {
     ticketTypeId: string;
@@ -73,7 +140,6 @@ export async function createTicketPaymentIntent(
   };
   const validatedItems: ValidatedItem[] = [];
 
-  // Validate each ticket type server-side (sale windows, max per order — not quantitySold)
   for (const item of items) {
     const tt = await prisma.eventTicketType.findUnique({
       where: { id: item.ticketTypeId },
@@ -92,7 +158,7 @@ export async function createTicketPaymentIntent(
 
     if (!tt) return { ok: false, error: "Ticket type not found." };
     if (tt.eventId !== eventId) {
-      return { ok: false, error: `Ticket type does not belong to this event.` };
+      return { ok: false, error: "Ticket type does not belong to this event." };
     }
     if (!tt.isVisible) {
       return { ok: false, error: `"${tt.name}" tickets are not available.` };
@@ -110,9 +176,7 @@ export async function createTicketPaymentIntent(
       };
     }
 
-    // Recompute price server-side — never trust client amount
     const unitMinor = Math.round(tt.price * 100);
-    subtotalMinor += unitMinor * item.quantity;
     validatedItems.push({
       ticketTypeId: tt.id,
       ticketTypeName: tt.name,
@@ -121,7 +185,6 @@ export async function createTicketPaymentIntent(
     });
   }
 
-  // Fast-fail seat check before transaction (re-checked inside tx for race safety)
   try {
     await assertAvailableSeatsForCheckout(validatedItems);
   } catch (e) {
@@ -129,71 +192,136 @@ export async function createTicketPaymentIntent(
     throw e;
   }
 
-  const totalMinor = subtotalMinor; // No shipping for tickets
-
-  // Generate a human-readable reference like TKT-0001
   const orderCount = await prisma.ticketOrder.count();
   const reference = `TKT-${String(orderCount + 1).padStart(4, "0")}`;
-
-  // Build ticket rows — one per purchased ticket
-  let globalIdx = 0;
-  const ticketRows = validatedItems.flatMap(({ ticketTypeId, quantity, unitMinor }) =>
-    Array.from({ length: quantity }, () => {
-      globalIdx++;
-      return {
-        ticketNumber: `${reference}-${String(globalIdx).padStart(2, "0")}`,
-        qrToken: randomUUID(),
-        eventId,
-        ticketTypeId,
-        userId: session.userId,
-        holderName: buyer.fullName ?? buyer.email,
-        holderEmail: buyer.email,
-        pricePaidMinor: unitMinor,
-      };
-    }),
-  );
-
-  const ticketCount = ticketRows.length;
+  const normalizedPromoCode = promoCode?.trim().toUpperCase() || null;
 
   const txOptions = {
     isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
   } as const;
 
-  // ── FREE TICKET PATH ──────────────────────────────────────────
-  if (totalMinor === 0) {
-    let order;
-    try {
-      order = await prisma.$transaction(async (tx) => {
-        await assertAvailableSeatsForCheckout(validatedItems, tx);
+  let order;
+  let orderTotalMinor = 0;
+  let subtotalMinor = 0;
+  let ticketCount = 0;
+  let isFree = false;
 
-        const created = await tx.ticketOrder.create({
-          data: {
-            reference,
-            userId: session.userId,
-            eventId,
-            status: "PAID",
-            subtotal: 0,
-            total: 0,
-            tickets: { create: ticketRows },
+  try {
+    const txResult = await prisma.$transaction(async (tx) => {
+      await assertAvailableSeatsForCheckout(validatedItems, tx);
+
+      subtotalMinor = validatedItems.reduce(
+        (sum, item) => sum + item.unitMinor * item.quantity,
+        0,
+      );
+
+      let discountMinor = 0;
+      let promoId: string | null = null;
+
+      if (normalizedPromoCode) {
+        const promo = await tx.eventPromoCode.findUnique({
+          where: { eventId_code: { eventId, code: normalizedPromoCode } },
+          select: {
+            id: true,
+            discountType: true,
+            discountValue: true,
+            active: true,
+            expiresAt: true,
+            maxUses: true,
+            usedCount: true,
           },
         });
 
+        if (!promo || !isPromoCodeRedeemable(promo, now)) {
+          throw new PromoInvalidError();
+        }
+
+        promoId = promo.id;
+        discountMinor = computePromoDiscountMinor(
+          subtotalMinor,
+          promo.discountType,
+          promo.discountValue,
+        );
+      }
+
+      orderTotalMinor = subtotalMinor - discountMinor;
+
+      const unitMinorsFlat = validatedItems.flatMap((item) =>
+        Array.from({ length: item.quantity }, () => item.unitMinor),
+      );
+      const pricePaidMinors = distributePricePaidMinor(unitMinorsFlat, discountMinor);
+
+      let globalIdx = 0;
+      let priceIdx = 0;
+      const ticketRows = validatedItems.flatMap((item) =>
+        Array.from({ length: item.quantity }, () => {
+          globalIdx++;
+          const row = {
+            ticketNumber: `${reference}-${String(globalIdx).padStart(2, "0")}`,
+            qrToken: randomUUID(),
+            eventId,
+            ticketTypeId: item.ticketTypeId,
+            userId: session.userId,
+            holderName: buyer.fullName ?? buyer.email,
+            holderEmail: buyer.email,
+            pricePaidMinor: pricePaidMinors[priceIdx++],
+          };
+          return row;
+        }),
+      );
+
+      const freeOrder = orderTotalMinor === 0;
+
+      const created = await tx.ticketOrder.create({
+        data: {
+          reference,
+          userId: session.userId,
+          eventId,
+          status: freeOrder ? "PAID" : "PENDING_PAYMENT",
+          subtotal: subtotalMinor,
+          total: orderTotalMinor,
+          tickets: { create: ticketRows },
+        },
+      });
+
+      if (freeOrder) {
         for (const item of validatedItems) {
           await tx.eventTicketType.update({
             where: { id: item.ticketTypeId },
             data: { quantitySold: { increment: item.quantity } },
           });
         }
+      }
 
-        return created;
-      }, txOptions);
-    } catch (e) {
-      if (e instanceof InsufficientSeatsError) return insufficientSeatsResult(e);
-      console.error("[ticket-checkout] free order create", e);
-      return { ok: false, error: "Could not register tickets. Please try again." };
+      if (promoId) {
+        await tx.eventPromoCode.update({
+          where: { id: promoId },
+          data: { usedCount: { increment: 1 } },
+        });
+      }
+
+      return {
+        order: created,
+        orderTotalMinor,
+        ticketCount: ticketRows.length,
+        free: freeOrder,
+      };
+    }, txOptions);
+
+    order = txResult.order;
+    orderTotalMinor = txResult.orderTotalMinor;
+    ticketCount = txResult.ticketCount;
+    isFree = txResult.free;
+  } catch (e) {
+    if (e instanceof PromoInvalidError) {
+      return { ok: false, error: "Promo code is no longer valid.", reason: "promo_invalid" };
     }
+    if (e instanceof InsufficientSeatsError) return insufficientSeatsResult(e);
+    console.error("[ticket-checkout] order create", e);
+    return { ok: false, error: "Could not create ticket order. Please try again." };
+  }
 
-    // Fire-and-forget: notification
+  if (isFree) {
     void createNotification({
       userId: session.userId,
       type: NotificationType.TICKET_PURCHASED,
@@ -202,7 +330,6 @@ export async function createTicketPaymentIntent(
       linkUrl: "/my-tickets",
     });
 
-    // Fire-and-forget: email
     const emailData = ticketConfirmationEmail({
       customerName: buyer.fullName ?? buyer.email,
       eventTitle: event.title,
@@ -216,34 +343,10 @@ export async function createTicketPaymentIntent(
     return { ok: true, clientSecret: null, ticketOrderId: order.id, free: true };
   }
 
-  // ── PAID TICKET PATH ─────────────────────────────────────────
-  let order;
-  try {
-    order = await prisma.$transaction(async (tx) => {
-      await assertAvailableSeatsForCheckout(validatedItems, tx);
-
-      return tx.ticketOrder.create({
-        data: {
-          reference,
-          userId: session.userId,
-          eventId,
-          status: "PENDING_PAYMENT",
-          subtotal: subtotalMinor,
-          total: totalMinor,
-          tickets: { create: ticketRows },
-        },
-      });
-    }, txOptions);
-  } catch (e) {
-    if (e instanceof InsufficientSeatsError) return insufficientSeatsResult(e);
-    console.error("[ticket-checkout] paid order create", e);
-    return { ok: false, error: "Could not create ticket order. Please try again." };
-  }
-
   let paymentIntent;
   try {
     paymentIntent = await stripe.paymentIntents.create({
-      amount: totalMinor,
+      amount: orderTotalMinor,
       currency: "ttd",
       metadata: {
         ticketOrderId: order.id,
@@ -253,7 +356,6 @@ export async function createTicketPaymentIntent(
     });
   } catch (e) {
     console.error("[ticket-checkout] stripe", e);
-    // Clean up the orphaned order
     await prisma.ticketOrder.delete({ where: { id: order.id } }).catch(() => {});
     return { ok: false, error: "Payment setup failed. Please try again." };
   }
@@ -264,7 +366,6 @@ export async function createTicketPaymentIntent(
     return { ok: false, error: "Payment setup failed. Please try again." };
   }
 
-  // Persist the PaymentIntent ID so the webhook can use it for deduplication
   await prisma.ticketOrder.update({
     where: { id: order.id },
     data: { stripePaymentIntentId: paymentIntent.id },
