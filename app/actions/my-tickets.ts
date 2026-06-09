@@ -1,9 +1,24 @@
 "use server";
 
+import { randomUUID } from "crypto";
+
 import type { RefundPolicyType, TicketStatus } from "@prisma/client";
+import { revalidatePath } from "next/cache";
 
 import { getSession } from "@/lib/auth/session";
+import { sendEmail } from "@/lib/email/send";
+import { ticketConfirmationEmail } from "@/lib/email/templates";
 import { prisma } from "@/lib/prisma";
+import {
+  generateTicketQRCodeDataURL,
+  getTicketCheckInUrl,
+} from "@/lib/tickets/qr-code";
+
+const HOLDER_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export type TransferTicketResult =
+  | { ok: true; emailNote?: string }
+  | { ok: false; reason?: string };
 
 export type CustomerTicketDetail = {
   id: string;
@@ -164,4 +179,102 @@ export async function getCustomerTicketById(
       store: ticket.event.store,
     },
   };
+}
+
+export async function transferTicket(
+  ticketId: string,
+  newHolderName: string,
+  newHolderEmail: string,
+): Promise<TransferTicketResult> {
+  const session = await getSession();
+  if (!session) return { ok: false };
+
+  const trimmedId = ticketId?.trim();
+  if (!trimmedId) return { ok: false };
+
+  const trimmedName = newHolderName?.trim() ?? "";
+  const trimmedEmail = newHolderEmail?.trim().toLowerCase() ?? "";
+  if (!trimmedName || !HOLDER_EMAIL_RE.test(trimmedEmail)) {
+    return { ok: false, reason: "Enter a valid name and email." };
+  }
+
+  const ticket = await prisma.ticket.findFirst({
+    where: {
+      id: trimmedId,
+      userId: session.userId,
+    },
+    select: {
+      id: true,
+      status: true,
+      ticketNumber: true,
+      pricePaidMinor: true,
+      ticketOrder: {
+        select: { reference: true },
+      },
+      event: {
+        select: { title: true },
+      },
+    },
+  });
+
+  if (!ticket) return { ok: false };
+
+  if (ticket.status !== "VALID") {
+    return {
+      ok: false,
+      reason: "This ticket can't be transferred (already used or no longer valid).",
+    };
+  }
+
+  const newQrToken = randomUUID();
+
+  await prisma.ticket.update({
+    where: { id: ticket.id },
+    data: {
+      holderName: trimmedName,
+      holderEmail: trimmedEmail,
+      qrToken: newQrToken,
+    },
+  });
+
+  let emailNote: string | undefined;
+  try {
+    const checkInUrl = getTicketCheckInUrl(newQrToken);
+    const qrDataUrl = await generateTicketQRCodeDataURL(newQrToken);
+    const { subject, html: baseHtml } = ticketConfirmationEmail({
+      customerName: trimmedName,
+      eventTitle: ticket.event.title,
+      orderRef: ticket.ticketOrder?.reference ?? ticket.ticketNumber,
+      ticketCount: 1,
+      totalTTD: ticket.pricePaidMinor / 100,
+      myTicketsUrl: checkInUrl,
+    });
+
+    const transferIntro = baseHtml.replace(
+      "your ticket purchase was successful.",
+      "a ticket has been transferred to you.",
+    );
+    const qrSection = `<div style="text-align:center;margin:20px 0;"><img src="${qrDataUrl}" alt="Entry QR code" width="200" height="200" style="border-radius:12px;border:1px solid #e4e4e7;" /><p style="margin:12px 0 0;font-size:13px;color:#52525b;">Show this QR code at entry. Ticket #${ticket.ticketNumber}</p></div>`;
+    const btnIndex = transferIntro.lastIndexOf('<a href="');
+    const html =
+      btnIndex === -1
+        ? transferIntro
+        : transferIntro.slice(0, btnIndex) +
+          qrSection +
+          transferIntro.slice(btnIndex).replace("View my tickets", "Open entry QR");
+
+    await sendEmail({
+      to: trimmedEmail,
+      subject: subject.replace("confirmed", "for you"),
+      html,
+    });
+  } catch (err) {
+    console.error("[my-tickets] transfer email failed:", err);
+    emailNote =
+      "Ticket transferred, but we could not send the confirmation email. Share your updated QR from this page.";
+  }
+
+  revalidatePath(`/my-tickets/${trimmedId}`);
+
+  return emailNote ? { ok: true, emailNote } : { ok: true };
 }

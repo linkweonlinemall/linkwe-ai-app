@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { getCustomerTicketById } from "@/app/actions/my-tickets";
+import { TransferTicketPanel } from "@/app/my-tickets/[ticketId]/TransferTicketPanel";
 import PublicNav from "@/components/layout/PublicNav";
 import { getSession } from "@/lib/auth/session";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
@@ -451,6 +452,7 @@ export default async function MyTicketDetailPage({ params }: Props) {
 
         {/* Actions */}
         <div className="mt-6 flex flex-col gap-3">
+          <TransferTicketPanel ticketId={ticket.id} status={ticket.status} />
           <a
             href={`/api/ticket-pdf/${ticket.id}`}
             className="flex min-h-[48px] w-full items-center justify-center rounded-xl bg-[#D4450A] px-6 py-3 text-base font-semibold text-white transition-opacity hover:opacity-90"
