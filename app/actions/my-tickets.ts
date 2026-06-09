@@ -9,10 +9,7 @@ import { getSession } from "@/lib/auth/session";
 import { sendEmail } from "@/lib/email/send";
 import { ticketConfirmationEmail } from "@/lib/email/templates";
 import { prisma } from "@/lib/prisma";
-import {
-  generateTicketQRCodeDataURL,
-  getTicketCheckInUrl,
-} from "@/lib/tickets/qr-code";
+import { getTicketCheckInUrl } from "@/lib/tickets/qr-code";
 
 const HOLDER_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -240,7 +237,6 @@ export async function transferTicket(
   let emailNote: string | undefined;
   try {
     const checkInUrl = getTicketCheckInUrl(newQrToken);
-    const qrDataUrl = await generateTicketQRCodeDataURL(newQrToken);
     const { subject, html: baseHtml } = ticketConfirmationEmail({
       customerName: trimmedName,
       eventTitle: ticket.event.title,
@@ -250,18 +246,12 @@ export async function transferTicket(
       myTicketsUrl: checkInUrl,
     });
 
-    const transferIntro = baseHtml.replace(
-      "your ticket purchase was successful.",
-      "a ticket has been transferred to you.",
-    );
-    const qrSection = `<div style="text-align:center;margin:20px 0;"><img src="${qrDataUrl}" alt="Entry QR code" width="200" height="200" style="border-radius:12px;border:1px solid #e4e4e7;" /><p style="margin:12px 0 0;font-size:13px;color:#52525b;">Show this QR code at entry. Ticket #${ticket.ticketNumber}</p></div>`;
-    const btnIndex = transferIntro.lastIndexOf('<a href="');
-    const html =
-      btnIndex === -1
-        ? transferIntro
-        : transferIntro.slice(0, btnIndex) +
-          qrSection +
-          transferIntro.slice(btnIndex).replace("View my tickets", "Open entry QR");
+    const html = baseHtml
+      .replace(
+        "your ticket purchase was successful.",
+        "a ticket has been transferred to you.",
+      )
+      .replace("View my tickets", "View your ticket");
 
     await sendEmail({
       to: trimmedEmail,
