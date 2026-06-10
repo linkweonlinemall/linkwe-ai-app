@@ -24,6 +24,8 @@ export type CustomerTicketDetail = {
   holderEmail: string;
   status: TicketStatus;
   checkedInAt: Date | null;
+  transferredAt: Date | null;
+  transferredToName: string | null;
   qrToken: string;
   pricePaidMinor: number;
   ticketType: {
@@ -86,6 +88,8 @@ export async function getCustomerTicketById(
       holderEmail: true,
       status: true,
       checkedInAt: true,
+      transferredAt: true,
+      transferredToName: true,
       qrToken: true,
       pricePaidMinor: true,
       ticketType: {
@@ -145,6 +149,8 @@ export async function getCustomerTicketById(
     holderEmail: ticket.holderEmail,
     status: ticket.status,
     checkedInAt: ticket.checkedInAt,
+    transferredAt: ticket.transferredAt,
+    transferredToName: ticket.transferredToName,
     qrToken: ticket.qrToken,
     pricePaidMinor: ticket.pricePaidMinor,
     ticketType: {
@@ -231,6 +237,8 @@ export async function transferTicket(
       holderName: trimmedName,
       holderEmail: trimmedEmail,
       qrToken: newQrToken,
+      transferredAt: new Date(),
+      transferredToName: trimmedName,
     },
   });
 

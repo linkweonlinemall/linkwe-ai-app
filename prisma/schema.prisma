@@ -1896,9 +1896,11 @@ model Ticket {
   holderName      String
   holderEmail     String
   status          TicketStatus @default(VALID)
-  checkedInAt     DateTime?
-  checkedInBy     String?
-  transferredToId String?
+  checkedInAt         DateTime?
+  checkedInBy         String?
+  transferredToId     String?
+  transferredAt       DateTime?
+  transferredToName   String?
   validDays       Json?
   pricePaidMinor    Int          @default(0) @map("price_paid_minor")
   refundedAt      DateTime?    @map("refunded_at")

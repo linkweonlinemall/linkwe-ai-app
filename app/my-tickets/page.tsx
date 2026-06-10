@@ -73,10 +73,12 @@ export default async function MyTicketsPage() {
   const ticketsWithQr = await Promise.all(
     tickets.map(async (ticket) => {
       let qrDataUrl: string | null = null;
-      try {
-        qrDataUrl = await generateTicketQRCodeDataURL(ticket.qrToken);
-      } catch {
-        qrDataUrl = null;
+      if (!ticket.transferredAt) {
+        try {
+          qrDataUrl = await generateTicketQRCodeDataURL(ticket.qrToken);
+        } catch {
+          qrDataUrl = null;
+        }
       }
       return { ...ticket, qrDataUrl };
     }),
@@ -134,6 +136,7 @@ export default async function MyTicketsPage() {
         ) : (
           <div className="flex flex-col gap-4">
             {ticketsWithQr.map((ticket) => {
+              const isTransferred = ticket.transferredAt != null;
               const status =
                 STATUS_STYLES[ticket.status as string] ?? STATUS_STYLES.VALID;
               const accentColor = ticket.ticketType?.color ?? "#D4450A";
@@ -270,15 +273,28 @@ export default async function MyTicketsPage() {
                       </span>
                     </div>
 
-                    <span
-                      className="rounded-full px-2.5 py-1 text-xs font-semibold"
-                      style={{
-                        backgroundColor: status.bg,
-                        color: status.text,
-                      }}
-                    >
-                      {status.label}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {isTransferred ? (
+                        <span
+                          className="rounded-full px-2.5 py-1 text-xs font-semibold"
+                          style={{
+                            backgroundColor: "#FEF0EB",
+                            color: "#D4450A",
+                          }}
+                        >
+                          Transferred
+                        </span>
+                      ) : null}
+                      <span
+                        className="rounded-full px-2.5 py-1 text-xs font-semibold"
+                        style={{
+                          backgroundColor: status.bg,
+                          color: status.text,
+                        }}
+                      >
+                        {status.label}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Step 5b/5c placeholder — QR code + PDF download */}
@@ -289,49 +305,58 @@ export default async function MyTicketsPage() {
                       backgroundColor: "#FAFAFA",
                     }}
                   >
-                    <div className="flex items-center gap-2">
-                      {ticket.qrDataUrl ? (
-                        <img
-                          src={ticket.qrDataUrl}
-                          alt={`Check-in QR for ticket ${ticket.ticketNumber}`}
-                          width={64}
-                          height={64}
-                          className="h-16 w-16 shrink-0 rounded-lg bg-white"
-                        />
-                      ) : (
-                        <>
-                          <div
-                            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg"
-                            style={{ backgroundColor: "#F4F4F5" }}
-                            aria-hidden
-                          >
-                            <svg
-                              width="20"
-                              height="20"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="#A1A1AA"
-                              strokeWidth="1.5"
+                    {isTransferred ? (
+                      <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                        Transferred to{" "}
+                        <span className="font-semibold" style={{ color: "var(--text-primary)" }}>
+                          {ticket.transferredToName}
+                        </span>
+                      </p>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        {ticket.qrDataUrl ? (
+                          <img
+                            src={ticket.qrDataUrl}
+                            alt={`Check-in QR for ticket ${ticket.ticketNumber}`}
+                            width={64}
+                            height={64}
+                            className="h-16 w-16 shrink-0 rounded-lg bg-white"
+                          />
+                        ) : (
+                          <>
+                            <div
+                              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg"
+                              style={{ backgroundColor: "#F4F4F5" }}
                               aria-hidden
                             >
-                              <rect x="3" y="3" width="7" height="7" rx="1" />
-                              <rect x="14" y="3" width="7" height="7" rx="1" />
-                              <rect x="3" y="14" width="7" height="7" rx="1" />
-                              <rect x="5" y="5" width="3" height="3" fill="#A1A1AA" stroke="none" />
-                              <rect x="16" y="5" width="3" height="3" fill="#A1A1AA" stroke="none" />
-                              <rect x="5" y="16" width="3" height="3" fill="#A1A1AA" stroke="none" />
-                              <rect x="14" y="14" width="3" height="3" rx="0.5" />
-                              <rect x="19" y="14" width="2" height="2" rx="0.5" />
-                              <rect x="19" y="18" width="2" height="3" rx="0.5" />
-                              <rect x="14" y="19" width="3" height="2" rx="0.5" />
-                            </svg>
-                          </div>
-                          <span className="text-xs" style={{ color: "var(--text-faint)" }}>
-                            QR unavailable
-                          </span>
-                        </>
-                      )}
-                    </div>
+                              <svg
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="#A1A1AA"
+                                strokeWidth="1.5"
+                                aria-hidden
+                              >
+                                <rect x="3" y="3" width="7" height="7" rx="1" />
+                                <rect x="14" y="3" width="7" height="7" rx="1" />
+                                <rect x="3" y="14" width="7" height="7" rx="1" />
+                                <rect x="5" y="5" width="3" height="3" fill="#A1A1AA" stroke="none" />
+                                <rect x="16" y="5" width="3" height="3" fill="#A1A1AA" stroke="none" />
+                                <rect x="5" y="16" width="3" height="3" fill="#A1A1AA" stroke="none" />
+                                <rect x="14" y="14" width="3" height="3" rx="0.5" />
+                                <rect x="19" y="14" width="2" height="2" rx="0.5" />
+                                <rect x="19" y="18" width="2" height="3" rx="0.5" />
+                                <rect x="14" y="19" width="3" height="2" rx="0.5" />
+                              </svg>
+                            </div>
+                            <span className="text-xs" style={{ color: "var(--text-faint)" }}>
+                              QR unavailable
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    )}
 
                     <span
                       className="rounded-lg px-3 py-1.5 text-xs font-medium"
@@ -340,7 +365,7 @@ export default async function MyTicketsPage() {
                         color: "var(--text-muted)",
                       }}
                     >
-                      View ticket →
+                      {isTransferred ? "View details →" : "View ticket →"}
                     </span>
                   </div>
 
@@ -348,24 +373,26 @@ export default async function MyTicketsPage() {
                     className="flex min-h-[44px] items-center justify-center border-t border-[var(--card-border-subtle)] px-4 py-2 text-sm font-semibold text-[#D4450A]"
                     style={{ backgroundColor: "#FEF0EB" }}
                   >
-                    View full ticket & QR
+                    {isTransferred ? "View transfer details" : "View full ticket & QR"}
                   </div>
                   </Link>
 
-                  <div
-                    className="flex justify-end border-t px-4 py-2 sm:px-5"
-                    style={{ borderColor: "var(--card-border-subtle)" }}
-                  >
-                    <a
-                      href={`/api/ticket-pdf/${ticket.id}`}
-                      className="inline-flex min-h-[44px] items-center rounded-lg px-3 py-2 text-xs font-medium transition-opacity hover:opacity-80"
-                      style={{
-                        color: "var(--text-muted)",
-                      }}
+                  {!isTransferred ? (
+                    <div
+                      className="flex justify-end border-t px-4 py-2 sm:px-5"
+                      style={{ borderColor: "var(--card-border-subtle)" }}
                     >
-                      Download PDF
-                    </a>
-                  </div>
+                      <a
+                        href={`/api/ticket-pdf/${ticket.id}`}
+                        className="inline-flex min-h-[44px] items-center rounded-lg px-3 py-2 text-xs font-medium transition-opacity hover:opacity-80"
+                        style={{
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        Download PDF
+                      </a>
+                    </div>
+                  ) : null}
                 </article>
               );
             })}

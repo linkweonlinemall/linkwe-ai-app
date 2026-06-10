@@ -46,6 +46,10 @@ function formatCheckedInAt(date: Date): string {
   });
 }
 
+function formatTransferredAt(date: Date): string {
+  return formatCheckedInAt(date);
+}
+
 function formatMinor(minor: number): string {
   return `TTD ${(minor / 100).toFixed(2)}`;
 }
@@ -157,11 +161,15 @@ export default async function MyTicketDetailPage({ params }: Props) {
     );
   }
 
+  const isTransferred = ticket.transferredAt != null;
+
   let qrDataUrl: string | null = null;
-  try {
-    qrDataUrl = await generateTicketQRCodeDataURL(ticket.qrToken);
-  } catch {
-    qrDataUrl = null;
+  if (!isTransferred) {
+    try {
+      qrDataUrl = await generateTicketQRCodeDataURL(ticket.qrToken);
+    } catch {
+      qrDataUrl = null;
+    }
   }
 
   const status = statusDisplay(ticket.status, ticket.checkedInAt);
@@ -242,35 +250,52 @@ export default async function MyTicketDetailPage({ params }: Props) {
           </div>
         </div>
 
-        {/* QR + status */}
-        <section className="mt-4 rounded-2xl border border-zinc-200 bg-white p-5 text-center shadow-sm">
-          <span
-            className={`mb-4 inline-flex flex-col items-center rounded-full px-4 py-2 text-sm font-semibold ring-1 ring-inset ${status.className}`}
-          >
-            {status.label}
-            {status.detail ? (
-              <span className="mt-0.5 text-xs font-normal opacity-90">{status.detail}</span>
-            ) : null}
-          </span>
+        {/* QR + status, or transferred-away state */}
+        {isTransferred ? (
+          <section className="mt-4 rounded-2xl border border-zinc-200 bg-white p-6 text-center shadow-sm">
+            <span className="mb-4 inline-flex rounded-full bg-[#FEF0EB] px-4 py-2 text-sm font-semibold text-[#D4450A] ring-1 ring-inset ring-[#D4450A]/20">
+              Transferred
+            </span>
+            <p className="text-base leading-relaxed text-[#1C1C1A]">
+              You transferred this ticket to{" "}
+              <span className="font-semibold">{ticket.transferredToName}</span> on{" "}
+              <span className="font-semibold">
+                {formatTransferredAt(ticket.transferredAt!)}
+              </span>
+              . You no longer have access to it.
+            </p>
+            <p className="mt-3 font-mono text-sm text-zinc-500">#{ticket.ticketNumber}</p>
+          </section>
+        ) : (
+          <section className="mt-4 rounded-2xl border border-zinc-200 bg-white p-5 text-center shadow-sm">
+            <span
+              className={`mb-4 inline-flex flex-col items-center rounded-full px-4 py-2 text-sm font-semibold ring-1 ring-inset ${status.className}`}
+            >
+              {status.label}
+              {status.detail ? (
+                <span className="mt-0.5 text-xs font-normal opacity-90">{status.detail}</span>
+              ) : null}
+            </span>
 
-          {qrDataUrl ? (
-            <div className="mx-auto inline-block rounded-2xl bg-white p-3 shadow-inner ring-1 ring-zinc-100">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={qrDataUrl}
-                alt={`Entry QR for ticket ${ticket.ticketNumber}`}
-                width={240}
-                height={240}
-                className="mx-auto h-[min(72vw,240px)] w-[min(72vw,240px)]"
-              />
-            </div>
-          ) : (
-            <p className="py-8 text-sm text-zinc-500">QR code unavailable — use PDF download below.</p>
-          )}
+            {qrDataUrl ? (
+              <div className="mx-auto inline-block rounded-2xl bg-white p-3 shadow-inner ring-1 ring-zinc-100">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={qrDataUrl}
+                  alt={`Entry QR for ticket ${ticket.ticketNumber}`}
+                  width={240}
+                  height={240}
+                  className="mx-auto h-[min(72vw,240px)] w-[min(72vw,240px)]"
+                />
+              </div>
+            ) : (
+              <p className="py-8 text-sm text-zinc-500">QR code unavailable — use PDF download below.</p>
+            )}
 
-          <p className="mt-4 text-base font-semibold text-[#1C1C1A]">Show this at entry</p>
-          <p className="mt-1 font-mono text-sm font-bold text-[#D4450A]">#{ticket.ticketNumber}</p>
-        </section>
+            <p className="mt-4 text-base font-semibold text-[#1C1C1A]">Show this at entry</p>
+            <p className="mt-1 font-mono text-sm font-bold text-[#D4450A]">#{ticket.ticketNumber}</p>
+          </section>
+        )}
 
         {/* When & where */}
         <div className="mt-4">
@@ -452,13 +477,17 @@ export default async function MyTicketDetailPage({ params }: Props) {
 
         {/* Actions */}
         <div className="mt-6 flex flex-col gap-3">
-          <TransferTicketPanel ticketId={ticket.id} status={ticket.status} />
-          <a
-            href={`/api/ticket-pdf/${ticket.id}`}
-            className="flex min-h-[48px] w-full items-center justify-center rounded-xl bg-[#D4450A] px-6 py-3 text-base font-semibold text-white transition-opacity hover:opacity-90"
-          >
-            Download PDF
-          </a>
+          {!isTransferred ? (
+            <>
+              <TransferTicketPanel ticketId={ticket.id} status={ticket.status} />
+              <a
+                href={`/api/ticket-pdf/${ticket.id}`}
+                className="flex min-h-[48px] w-full items-center justify-center rounded-xl bg-[#D4450A] px-6 py-3 text-base font-semibold text-white transition-opacity hover:opacity-90"
+              >
+                Download PDF
+              </a>
+            </>
+          ) : null}
           <Link
             href={`/events/${ticket.event.slug}`}
             className="flex min-h-[48px] w-full items-center justify-center rounded-xl border-2 border-[#D4450A] bg-white text-base font-semibold text-[#D4450A] transition-colors hover:bg-[#FEF0EB]"
