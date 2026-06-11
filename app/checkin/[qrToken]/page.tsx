@@ -5,6 +5,7 @@ import {
   formatEventDateLong,
   formatEventTime,
 } from "@/lib/events/format-datetime";
+import { generateTicketQRCodeDataURL } from "@/lib/tickets/qr-code";
 import { CheckInAdmitPanel } from "./CheckInAdmitPanel";
 
 export const dynamic = "force-dynamic";
@@ -63,6 +64,15 @@ export default async function CheckInPage({ params }: Props) {
   const { qrToken } = await params;
   const lookup = await getTicketForCheckIn(qrToken);
 
+  let entryQrDataUrl: string | null = null;
+  if (lookup.found && lookup.status === "VALID") {
+    try {
+      entryQrDataUrl = await generateTicketQRCodeDataURL(lookup.qrToken);
+    } catch {
+      entryQrDataUrl = null;
+    }
+  }
+
   return (
     <main className="min-h-screen bg-zinc-50 px-4 py-8 text-[#1C1C1A]">
       <div className="mx-auto max-w-lg">
@@ -84,6 +94,22 @@ export default async function CheckInPage({ params }: Props) {
         ) : (
           <div className="space-y-6 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
             <StatusBanner status={lookup.status} checkedInAt={lookup.checkedInAt} />
+
+            {entryQrDataUrl ? (
+              <div className="text-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={entryQrDataUrl}
+                  width={220}
+                  height={220}
+                  alt="Entry QR code"
+                  className="mx-auto rounded-xl bg-white"
+                />
+                <p className="mt-3 text-sm font-medium text-zinc-600">
+                  Show this QR code at entry.
+                </p>
+              </div>
+            ) : null}
 
             <div className="space-y-1 border-b border-zinc-100 pb-5">
               <h1 className="text-2xl font-bold leading-tight text-[#1C1C1A] sm:text-3xl">
