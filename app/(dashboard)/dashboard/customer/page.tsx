@@ -28,8 +28,10 @@ export default async function CustomerDashboardPage() {
 
   const [
     orders,
+    orderCount,
     cartCount,
     bookings,
+    upcomingBookingsCount,
     wishlistData,
     savedStoresData,
     digitalOrders,
@@ -54,6 +56,7 @@ export default async function CustomerDashboardPage() {
       orderBy: { createdAt: "desc" },
       take: 5,
     }),
+    prisma.mainOrder.count({ where: { buyerId: session.userId } }),
     prisma.productCartItem.count({ where: { userId: session.userId } }),
     prisma.productBooking.findMany({
       where: {
@@ -77,6 +80,13 @@ export default async function CustomerDashboardPage() {
       },
       orderBy: { bookingDate: "asc" },
       take: 3,
+    }),
+    prisma.productBooking.count({
+      where: {
+        customerId: session.userId,
+        bookingDate: { gte: new Date() },
+        status: { in: ["PENDING", "CONFIRMED"] },
+      },
     }),
     prisma.wishlist.findUnique({
       where: { userId: session.userId },
@@ -186,7 +196,7 @@ export default async function CustomerDashboardPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
+    <div className="h-full min-h-0 overflow-y-auto bg-[#F5F5F5] pb-mobile-public lg:pb-0">
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         {/* Header */}
         <div className="mb-8 overflow-hidden rounded-2xl" style={{ background: "linear-gradient(135deg, #1C1C1A 0%, #2A1A0E 100%)" }}>
@@ -205,8 +215,8 @@ export default async function CustomerDashboardPage() {
             {/* Quick stats */}
             <div className="mt-6 flex flex-wrap gap-4">
               {[
-                { value: orders.length, label: "Orders", href: "/orders" },
-                { value: bookings.length, label: "Upcoming bookings", href: "/orders?tab=bookings" },
+                { value: orderCount, label: "Orders", href: "/orders" },
+                { value: upcomingBookingsCount, label: "Upcoming bookings", href: "/orders?tab=bookings" },
                 { value: cartCount, label: "In cart", href: "/cart" },
                 { value: wishlistCount, label: "Wishlisted", href: "/wishlist" },
               ].map((stat) => (
