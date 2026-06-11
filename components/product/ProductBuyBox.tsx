@@ -194,7 +194,7 @@ export default function ProductBuyBox({
       </div>
 
       {mobileStickyBar ? (
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-200 bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)] md:hidden">
+        <div className="fixed bottom-[calc(60px+env(safe-area-inset-bottom,0px))] left-0 right-0 z-50 border-t border-zinc-200 bg-white px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] md:hidden">
           <div className="mx-auto flex w-full items-center gap-4 px-8">
             <p className="shrink-0 text-base font-medium text-[#D4450A]">TTD {price.toFixed(2)}</p>
             <div className="min-w-0 flex-1">
