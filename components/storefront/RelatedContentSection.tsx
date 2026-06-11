@@ -34,26 +34,35 @@ export default function RelatedContentSection({ heading, items }: Props) {
   if (items.length === 0) return null;
 
   return (
-    <section className="mt-10 border-t border-zinc-200 pt-10">
-      <h2 className={`${typography.h4} mb-6 text-zinc-900`}>{heading}</h2>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+    <section
+      id="shop-this-event"
+      className="mt-10 scroll-mt-24 border-t border-zinc-200 pt-10 lg:scroll-mt-10"
+    >
+      <h2 className={`${typography.h4} mb-4 text-zinc-900 sm:mb-6`}>{heading}</h2>
+      <div className="grid auto-rows-fr grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
         {items.map((item) => (
           <Link
             key={item.linkId}
             href={item.href}
             prefetch
-            className={`group overflow-hidden ${radius.card} bg-white ${shadow.card} transition-all hover:shadow-md`}
+            className={`group flex h-full flex-col overflow-hidden ${radius.card} bg-white ${shadow.card} transition-all hover:shadow-md`}
           >
-            <div className="aspect-square overflow-hidden bg-zinc-100">
+            <div className="aspect-square shrink-0 overflow-hidden bg-zinc-100">
               <CardImage image={item.image} name={item.name} />
             </div>
-            <div className="p-3">
-              <p className="truncate text-sm font-semibold text-zinc-900">{item.name}</p>
+            <div className="flex min-h-[4.25rem] flex-1 flex-col p-2.5 sm:min-h-0 sm:p-3">
+              <p className="line-clamp-2 text-[13px] font-semibold leading-snug text-zinc-900 sm:truncate sm:text-sm sm:leading-normal">
+                {item.name}
+              </p>
               {item.price != null ? (
-                <p className={`mt-1 text-sm font-bold ${tw.textScarlet}`}>
+                <p
+                  className={`mt-auto pt-1 text-[13px] font-bold leading-none sm:mt-1 sm:pt-0 sm:text-sm ${tw.textScarlet}`}
+                >
                   TTD {minorToTtd(item.price).toFixed(2)}
                 </p>
-              ) : null}
+              ) : (
+                <span className="mt-auto block min-h-[1.125rem] sm:hidden" aria-hidden />
+              )}
             </div>
           </Link>
         ))}

@@ -269,6 +269,20 @@ export default async function EventDetailPage({ params }: Props) {
         </div>
       )}
 
+      {linkedItems.length > 0 ? (
+        <div
+          className={`mx-auto max-w-5xl px-6 lg:hidden ${quickStripItems.length > 0 ? "pt-3" : "pt-6"}`}
+        >
+          <a
+            href="#shop-this-event"
+            className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl border border-[#D4450A]/25 bg-[#D4450A]/8 px-5 py-3 text-sm font-semibold text-[#D4450A] transition-colors active:bg-[#D4450A]/15"
+          >
+            <span aria-hidden>🛍</span>
+            Shop this event
+          </a>
+        </div>
+      ) : null}
+
       {/* ════════════════════════════════════════════
           TWO-COLUMN CONTENT
       ════════════════════════════════════════════ */}
