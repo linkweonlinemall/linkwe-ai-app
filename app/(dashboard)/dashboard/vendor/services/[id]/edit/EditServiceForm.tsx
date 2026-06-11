@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 
 import { uploadVendorChatImages } from "@/app/actions/ai-vendor-image";
 import { updateService } from "@/app/actions/services";
+import RelatedItemsPanel from "@/components/vendor/RelatedItemsPanel";
 import RichTextEditor from "@/components/ui/RichTextEditor";
+import type { ContentLinkItem } from "@/lib/content-links/types";
 import { SERVICE_CATEGORIES } from "@/lib/categories";
 
 const SERVICE_TYPES = [
@@ -78,7 +80,13 @@ type ServiceData = {
   quotePriceType: string | null;
 };
 
-export default function EditServiceForm({ service }: { service: ServiceData }) {
+export default function EditServiceForm({
+  service,
+  initialRelatedItems = [],
+}: {
+  service: ServiceData;
+  initialRelatedItems?: ContentLinkItem[];
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -895,6 +903,12 @@ export default function EditServiceForm({ service }: { service: ServiceData }) {
           ))}
         </div>
       </div>
+
+      <RelatedItemsPanel
+        fromType="SERVICE"
+        fromId={service.id}
+        initialItems={initialRelatedItems}
+      />
 
       {error ? <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p> : null}
 

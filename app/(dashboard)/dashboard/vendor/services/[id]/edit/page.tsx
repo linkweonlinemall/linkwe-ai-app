@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { getLinkedContent } from "@/app/actions/content-links";
 import EditServiceForm from "./EditServiceForm";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -31,6 +32,10 @@ export default async function EditServicePage({ params }: Props) {
 
   const service = { ...core, ...vendorServiceEditFormDefaults() };
 
+  const { items: initialRelatedItems } = await getLinkedContent("SERVICE", core.id, {
+    includeUnpublished: true,
+  });
+
   return (
     <div className="mx-auto max-w-4xl px-4 pt-6 pb-12">
       <div className="mb-6 flex items-center gap-3">
@@ -41,7 +46,7 @@ export default async function EditServicePage({ params }: Props) {
         <span className="text-sm font-semibold text-zinc-900">Edit service</span>
       </div>
       <h1 className="mb-6 text-2xl font-bold text-zinc-900">Edit Service</h1>
-      <EditServiceForm service={service} />
+      <EditServiceForm service={service} initialRelatedItems={initialRelatedItems} />
     </div>
   );
 }

@@ -7,7 +7,9 @@ import type { ProductFieldErrors } from "@/app/actions/product";
 import { updateProduct } from "@/app/actions/product";
 import { uploadDigitalFile } from "@/app/actions/digital-upload";
 import DraggableImageGrid from "@/components/vendor/draggable-image-grid";
+import RelatedItemsPanel from "@/components/vendor/RelatedItemsPanel";
 import ProductVariantEditor from "@/components/vendor/ProductVariantEditor";
+import type { ContentLinkItem } from "@/lib/content-links/types";
 import { reorderProductImages } from "@/app/actions/ai-vendor-image";
 import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
 import Input from "@/components/ui/Input";
@@ -102,9 +104,14 @@ export type VendorProductInitialVariant = {
 type ProductEditFormProps = {
   product: VendorProductEditPayload;
   variants?: VendorProductInitialVariant[];
+  initialRelatedItems?: ContentLinkItem[];
 };
 
-export function ProductEditForm({ product, variants = [] }: ProductEditFormProps) {
+export function ProductEditForm({
+  product,
+  variants = [],
+  initialRelatedItems = [],
+}: ProductEditFormProps) {
   const [state, formAction, pending] = useActionState(
     async (_prev: unknown, formData: FormData) => updateProduct(_prev, formData),
     null as { ok: false; errors: ProductFieldErrors } | { ok: false; error: string } | null,
@@ -744,6 +751,12 @@ export function ProductEditForm({ product, variants = [] }: ProductEditFormProps
             />
           </div>
         </div>
+
+        <RelatedItemsPanel
+          fromType="PRODUCT"
+          fromId={product.id}
+          initialItems={initialRelatedItems}
+        />
 
         <div className="flex flex-wrap gap-3">
           <button

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getLinkedContent } from "@/app/actions/content-links";
 import { getProductVariants } from "@/app/actions/product-variants";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/prisma";
@@ -72,7 +73,10 @@ export default async function EditVendorProductPage({ params }: Props) {
     redirect("/dashboard/vendor/products");
   }
 
-  const variants = await getProductVariants(row.id);
+  const [variants, { items: initialRelatedItems }] = await Promise.all([
+    getProductVariants(row.id),
+    getLinkedContent("PRODUCT", row.id, { includeUnpublished: true }),
+  ]);
 
   const product: VendorProductEditPayload = {
     id: row.id,
@@ -131,6 +135,7 @@ export default async function EditVendorProductPage({ params }: Props) {
         <div className="mt-8">
           <ProductEditForm
             product={product}
+            initialRelatedItems={initialRelatedItems}
             variants={variants.map((v) => ({
               id: v.id,
               name: v.name,

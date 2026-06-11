@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { getLinkedContent } from "@/app/actions/content-links";
 import { getProductReviews, getUserProductReview } from "@/app/actions/reviews";
+import RelatedContentSection from "@/components/storefront/RelatedContentSection";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
@@ -184,9 +186,10 @@ export default async function ServiceDetailPage({ params }: Props) {
         })
       : null;
 
-  const [reviewData, userReview] = await Promise.all([
+  const [reviewData, userReview, { items: linkedItems }] = await Promise.all([
     getProductReviews(service.id),
     getUserProductReview(service.id),
+    getLinkedContent("SERVICE", service.id),
   ]);
 
   const typeInfo = serviceTypeDisplay(service.serviceType);
@@ -531,6 +534,8 @@ export default async function ServiceDetailPage({ params }: Props) {
                 ) : null}
               </div>
             </div>
+
+            <RelatedContentSection heading="Related items" items={linkedItems} />
 
             <div className="mt-2">
               <div className="mb-4 flex items-center justify-between">

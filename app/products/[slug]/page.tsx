@@ -12,7 +12,9 @@ import PublicNav from "@/components/layout/PublicNav";
 import ExpandableDescription from "@/components/ui/ExpandableDescription";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import type { VariantAttribute } from "@/components/product/VariantSelector";
+import { getLinkedContent } from "@/app/actions/content-links";
 import { getProductReviews, getUserProductReview } from "@/app/actions/reviews";
+import RelatedContentSection from "@/components/storefront/RelatedContentSection";
 import { getWishlistProductIds } from "@/app/actions/wishlist";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { getSession } from "@/lib/auth/session";
@@ -141,9 +143,10 @@ export default async function PublicProductPage({ params }: Props) {
 
   if (!product?.isPublished) notFound();
 
-  const [reviewData, userReview] = await Promise.all([
+  const [reviewData, userReview, { items: linkedItems }] = await Promise.all([
     getProductReviews(product.id),
     getUserProductReview(product.id),
+    getLinkedContent("PRODUCT", product.id),
   ]);
 
   const hasPurchased = session
@@ -485,6 +488,7 @@ export default async function PublicProductPage({ params }: Props) {
             fullWidthLayout
           />
         </section>
+        <RelatedContentSection heading="Related items" items={linkedItems} />
         {moreFromStoreProducts.length > 0 ? (
           <div className="mt-16">
             <div className="mb-6 flex items-center justify-between">
