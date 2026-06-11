@@ -51,6 +51,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Vendors",      href: "/dashboard/admin?tab=vendors",   tab: "vendors",   icon: icon("M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM9 22V12h6v10") },
       { label: "Couriers",     href: "/dashboard/admin?tab=couriers",  tab: "couriers",  icon: icon("M1 3h15v13H1zM16 8h4l3 3v5h-7V8zM5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z") },
       { label: "Verification", href: "/dashboard/admin/verification",  icon: icon("M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z") },
+      { label: "Messages",     href: "/dashboard/admin/messages",      icon: icon("M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z") },
       { label: "Users",        href: "/dashboard/admin/users",         icon: icon("M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z") },
     ],
   },
