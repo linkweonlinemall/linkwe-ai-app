@@ -385,6 +385,8 @@ export default async function EventDetailPage({ params }: Props) {
               </div>
             )}
 
+            <RelatedContentSection heading="Shop this event" items={linkedItems} />
+
             {/* Hosted by card */}
             <div className="rounded-2xl border border-zinc-200 bg-white p-7">
               <p className="mb-4 text-[11px] font-bold uppercase tracking-widest text-zinc-400">
@@ -476,8 +478,6 @@ export default async function EventDetailPage({ params }: Props) {
             )}
           </div>
         </div>
-
-        <RelatedContentSection heading="Shop this event" items={linkedItems} />
       </div>
     </div>
   );
