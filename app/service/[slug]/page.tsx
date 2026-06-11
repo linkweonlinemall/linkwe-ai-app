@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { getCrossStoreFeatureButtonState } from "@/app/actions/cross-store";
 import { getLinkedContent } from "@/app/actions/content-links";
+import RequestFeatureButton from "@/components/cross-store/RequestFeatureButton";
 import { getProductReviews, getUserProductReview } from "@/app/actions/reviews";
 import RelatedContentSection from "@/components/storefront/RelatedContentSection";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
@@ -186,11 +188,13 @@ export default async function ServiceDetailPage({ params }: Props) {
         })
       : null;
 
-  const [reviewData, userReview, { items: linkedItems }] = await Promise.all([
-    getProductReviews(service.id),
-    getUserProductReview(service.id),
-    getLinkedContent("SERVICE", service.id),
-  ]);
+  const [reviewData, userReview, { items: linkedItems }, featureButtonState] =
+    await Promise.all([
+      getProductReviews(service.id),
+      getUserProductReview(service.id),
+      getLinkedContent("SERVICE", service.id),
+      getCrossStoreFeatureButtonState("SERVICE", service.id),
+    ]);
 
   const typeInfo = serviceTypeDisplay(service.serviceType);
   const location = locationDisplay(service.serviceLocation);
@@ -821,6 +825,15 @@ export default async function ServiceDetailPage({ params }: Props) {
               >
                 View all services →
               </Link>
+              <div className="mt-3 flex justify-center">
+                <RequestFeatureButton
+                  itemType="SERVICE"
+                  itemId={service.id}
+                  storeName={service.store.name}
+                  canRequest={featureButtonState.canRequest}
+                  alreadyRequested={featureButtonState.alreadyRequested}
+                />
+              </div>
             </div>
           </div>
         </div>

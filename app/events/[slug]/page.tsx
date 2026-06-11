@@ -17,7 +17,9 @@ import {
   Music,
 } from "lucide-react";
 
+import { getCrossStoreFeatureButtonState } from "@/app/actions/cross-store";
 import { getLinkedContent } from "@/app/actions/content-links";
+import RequestFeatureButton from "@/components/cross-store/RequestFeatureButton";
 import PublicNav from "@/components/layout/PublicNav";
 import RelatedContentSection from "@/components/storefront/RelatedContentSection";
 import { TicketPurchaseCard } from "@/components/events/TicketPurchaseCard";
@@ -137,7 +139,10 @@ export default async function EventDetailPage({ params }: Props) {
       ? (event.lineup as PerformerEntry[])
       : null;
 
-  const { items: linkedItems } = await getLinkedContent("EVENT", event.id);
+  const [{ items: linkedItems }, featureButtonState] = await Promise.all([
+    getLinkedContent("EVENT", event.id),
+    getCrossStoreFeatureButtonState("EVENT", event.id),
+  ]);
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
@@ -434,6 +439,15 @@ export default async function EventDetailPage({ params }: Props) {
                 >
                   Visit store →
                 </Link>
+              </div>
+              <div className="mt-4 border-t border-zinc-100 pt-4">
+                <RequestFeatureButton
+                  itemType="EVENT"
+                  itemId={event.id}
+                  storeName={event.store.name}
+                  canRequest={featureButtonState.canRequest}
+                  alreadyRequested={featureButtonState.alreadyRequested}
+                />
               </div>
             </div>
           </div>

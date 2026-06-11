@@ -12,7 +12,9 @@ import PublicNav from "@/components/layout/PublicNav";
 import ExpandableDescription from "@/components/ui/ExpandableDescription";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import type { VariantAttribute } from "@/components/product/VariantSelector";
+import { getCrossStoreFeatureButtonState } from "@/app/actions/cross-store";
 import { getLinkedContent } from "@/app/actions/content-links";
+import RequestFeatureButton from "@/components/cross-store/RequestFeatureButton";
 import { getProductReviews, getUserProductReview } from "@/app/actions/reviews";
 import RelatedContentSection from "@/components/storefront/RelatedContentSection";
 import { getWishlistProductIds } from "@/app/actions/wishlist";
@@ -143,11 +145,13 @@ export default async function PublicProductPage({ params }: Props) {
 
   if (!product?.isPublished) notFound();
 
-  const [reviewData, userReview, { items: linkedItems }] = await Promise.all([
-    getProductReviews(product.id),
-    getUserProductReview(product.id),
-    getLinkedContent("PRODUCT", product.id),
-  ]);
+  const [reviewData, userReview, { items: linkedItems }, featureButtonState] =
+    await Promise.all([
+      getProductReviews(product.id),
+      getUserProductReview(product.id),
+      getLinkedContent("PRODUCT", product.id),
+      getCrossStoreFeatureButtonState("PRODUCT", product.id),
+    ]);
 
   const hasPurchased = session
     ? !!(await prisma.orderItem.findFirst({
@@ -302,12 +306,21 @@ export default async function PublicProductPage({ params }: Props) {
               {product.name}
             </h1>
 
-            <p className={`${typography.bodySmall} text-zinc-600`}>
-              by{" "}
-              <Link href={`/store/${store.slug}`} className={`font-semibold ${tw.textScarlet} hover:underline`}>
-                {store.name}
-              </Link>
-            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <p className={`${typography.bodySmall} text-zinc-600`}>
+                by{" "}
+                <Link href={`/store/${store.slug}`} className={`font-semibold ${tw.textScarlet} hover:underline`}>
+                  {store.name}
+                </Link>
+              </p>
+              <RequestFeatureButton
+                itemType="PRODUCT"
+                itemId={product.id}
+                storeName={store.name}
+                canRequest={featureButtonState.canRequest}
+                alreadyRequested={featureButtonState.alreadyRequested}
+              />
+            </div>
 
             {product.shortDescription ? (
               <p

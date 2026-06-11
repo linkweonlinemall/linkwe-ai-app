@@ -11,12 +11,18 @@ import {
   resolveContentRows,
   type ResolvedRow,
 } from "@/lib/content-links/resolve-content";
+import type { ContentLinkType } from "@/lib/content-links/types";
 import type {
   CrossStoreOutgoingRow,
   CrossStoreRequestRow,
   CrossStoreResolvedItem,
   PartnerContentItem,
 } from "@/lib/cross-store/types";
+
+export type CrossStoreFeatureButtonState = {
+  canRequest: boolean;
+  alreadyRequested: boolean;
+};
 import { prisma } from "@/lib/prisma";
 
 const PARTNERS_URL = "/dashboard/vendor/partners";
@@ -105,6 +111,57 @@ async function notifySafely(input: Parameters<typeof createNotification>[0]) {
   } catch {
     // Non-blocking
   }
+}
+
+export async function getCrossStoreFeatureButtonState(
+  itemType: string,
+  itemId: string,
+): Promise<CrossStoreFeatureButtonState> {
+  const hidden: CrossStoreFeatureButtonState = {
+    canRequest: false,
+    alreadyRequested: false,
+  };
+
+  if (!isContentLinkType(itemType)) return hidden;
+
+  const trimmedId = itemId?.trim();
+  if (!trimmedId) return hidden;
+
+  const session = await getSession();
+  if (!session) return hidden;
+
+  const callerStore = await prisma.store.findUnique({
+    where: { ownerId: session.userId },
+    select: { id: true },
+  });
+  if (!callerStore) return hidden;
+
+  const resolved = await resolveContentRows(
+    itemType as ContentLinkType,
+    [trimmedId],
+    { publicOnly: true },
+  );
+  const item = resolved.get(trimmedId);
+  if (!item) return hidden;
+
+  if (item.storeId === callerStore.id) return hidden;
+
+  const existing = await prisma.storeContentRelationship.findUnique({
+    where: {
+      requestingStoreId_targetStoreId_contentType_contentId: {
+        requestingStoreId: callerStore.id,
+        targetStoreId: item.storeId,
+        contentType: itemType,
+        contentId: trimmedId,
+      },
+    },
+    select: { status: true },
+  });
+
+  const alreadyRequested =
+    existing?.status === "PENDING" || existing?.status === "APPROVED";
+
+  return { canRequest: true, alreadyRequested };
 }
 
 export async function requestCrossStoreFeature(
