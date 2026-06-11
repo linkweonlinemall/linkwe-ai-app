@@ -12,6 +12,8 @@ import {
 import RichTextEditor from "@/components/ui/RichTextEditor";
 import { TT_REGIONS } from "@/lib/regions/tt-regions";
 import LineupEditor, { type Performer } from "@/components/events/LineupEditor";
+import RelatedItemsPanel from "@/components/vendor/RelatedItemsPanel";
+import type { ContentLinkItem } from "@/lib/content-links/types";
 import { TRINIDAD_TIMEZONE, ymdInTrinidad } from "@/lib/timezone/trinidad";
 
 export const EVENT_CATEGORIES: { group: string; options: { value: string; label: string }[] }[] = [
@@ -195,7 +197,13 @@ export type EventFormData = {
   lineup: Performer[] | null;
 };
 
-export function EditEventForm({ event }: { event: EventFormData }) {
+export function EditEventForm({
+  event,
+  initialRelatedItems = [],
+}: {
+  event: EventFormData;
+  initialRelatedItems?: ContentLinkItem[];
+}) {
   const params = useParams<{ id: string }>();
   const eventId = params.id;
   const router = useRouter();
@@ -465,6 +473,12 @@ export function EditEventForm({ event }: { event: EventFormData }) {
 
       {/* ── Section 1b: Entertainment & Lineup ── */}
       <LineupEditor value={lineup} onChange={setLineup} />
+
+      <RelatedItemsPanel
+        fromType="EVENT"
+        fromId={event.id}
+        initialItems={initialRelatedItems}
+      />
 
       {/* ── Section 2: Location ── */}
       <div className="rounded-2xl border border-zinc-200 bg-white p-5">

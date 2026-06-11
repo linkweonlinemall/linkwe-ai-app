@@ -193,6 +193,7 @@ model Store {
   onDemandRequests OnDemandRequest[]
   storeReviews     Review[]   @relation("StoreReviews")
   conversations    Conversation[]
+  contentLinks     ContentLink[]
 
   @@index([slug])
   @@map("stores")
@@ -2233,6 +2234,22 @@ model StoreContentRelationship {
   @@index([requestingStoreId])
   @@index([targetStoreId])
   @@index([status])
+}
+
+model ContentLink {
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  fromType  String
+  fromId    String
+  toType    String
+  toId      String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@unique([fromType, fromId, toType, toId])
+  @@index([fromType, fromId])
+  @@index([storeId])
 }
 
 model VendorChat {

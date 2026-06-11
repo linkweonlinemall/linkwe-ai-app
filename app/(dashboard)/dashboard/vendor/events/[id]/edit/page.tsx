@@ -1,3 +1,4 @@
+import { getLinkedContent } from "@/app/actions/content-links"
 import { getSession } from "@/lib/auth/session"
 import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
@@ -56,8 +57,13 @@ export default async function EditEventPage({
 
   if (!event) redirect("/dashboard/vendor/events")
 
+  const { items: initialRelatedItems } = await getLinkedContent("EVENT", event.id, {
+    includeUnpublished: true,
+  })
+
   return (
     <EditEventForm
+      initialRelatedItems={initialRelatedItems}
       event={{
         ...event,
         startDate: event.startDate.toISOString(),
