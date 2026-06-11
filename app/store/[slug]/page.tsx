@@ -11,6 +11,7 @@ import PublicNav from "@/components/layout/PublicNav";
 import StorefrontTabs from "@/components/storefront/StorefrontTabs";
 import StorePageHero from "@/components/storefront/StorePageHero";
 import StoreStatsBar from "@/components/storefront/StoreStatsBar";
+import { getApprovedPartnerContent } from "@/app/actions/cross-store";
 import { getSavedStoreIds } from "@/app/actions/wishlist";
 import { getStoreReviewsNew, getUserStoreReview } from "@/app/actions/reviews";
 import { tw } from "@/lib/design-system";
@@ -104,9 +105,10 @@ export default async function PublicStorePage({ params }: Props) {
   const savedStoreIds = await getSavedStoreIds();
   const isSaved = savedStoreIds.includes(store.id);
 
-  const [reviewData, userReview] = await Promise.all([
+  const [reviewData, userReview, { items: partnerItems }] = await Promise.all([
     getStoreReviewsNew(store.id),
     getUserStoreReview(store.id),
+    getApprovedPartnerContent(store.id),
   ]);
 
   const socialLinks = Object.fromEntries(
@@ -252,6 +254,7 @@ export default async function PublicStorePage({ params }: Props) {
           followerCount={store._count.savedBy}
           products={products}
           services={services}
+          partnerItems={partnerItems}
           relatedStores={relatedStores}
           openingHours={openingHours}
           socialLinks={socialLinks}

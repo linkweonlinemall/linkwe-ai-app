@@ -35,6 +35,9 @@ import {
   type WeekSchedule,
 } from "@/lib/store/opening-hours-utils";
 
+import type { PartnerContentItem } from "@/lib/cross-store/types";
+
+import RelatedContentCards from "./RelatedContentCards";
 import StoreCompactCartButton from "./StoreCompactCartButton";
 import StoreFollowCard from "./StoreFollowCard";
 import type { StorefrontTabsStore } from "./StorefrontTabs";
@@ -70,6 +73,7 @@ type Props = {
   slug: string;
   products: ProductPreview[];
   services: ServicePreview[];
+  partnerItems?: PartnerContentItem[];
   openingHours: WeekSchedule | null;
   socialLinks: Record<string, string>;
   initialFollowing: boolean;
@@ -285,6 +289,7 @@ export default function StoreAboutTab({
   slug,
   products,
   services,
+  partnerItems = [],
   openingHours,
   socialLinks,
   initialFollowing,
@@ -465,6 +470,28 @@ export default function StoreAboutTab({
               </>
             )}
           </div>
+
+          {partnerItems.length > 0 ? (
+            <div className="mb-3.5 overflow-hidden rounded-xl border border-[0.5px] border-[var(--color-border-tertiary)] bg-white p-4">
+              <div className="mb-4">
+                <h2 className="text-[13px] font-semibold text-[var(--text-primary)]">
+                  From partner stores
+                </h2>
+                <p className="mt-1 text-[11px] leading-relaxed text-[var(--text-muted)]">
+                  Items this store recommends from other vendors
+                </p>
+              </div>
+              <RelatedContentCards
+                items={partnerItems.map((item) => ({
+                  id: item.id,
+                  name: item.name,
+                  image: item.image,
+                  price: item.price,
+                  href: item.href,
+                }))}
+              />
+            </div>
+          ) : null}
 
           {/* About */}
           <div className="rounded-xl border border-[0.5px] border-[var(--color-border-tertiary)] bg-white p-4">

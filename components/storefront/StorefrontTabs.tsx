@@ -14,6 +14,7 @@ import StoreServiceFiltersPanel from "@/components/storefront/StoreServiceFilter
 import StoreWriteReviewSection from "@/components/storefront/StoreWriteReviewSection";
 import ReviewsList from "@/components/ui/ReviewsList";
 import { StorefrontMapAndProducts, type StorefrontProductRow } from "@/components/storefront/StorefrontMapAndProducts";
+import type { PartnerContentItem } from "@/lib/cross-store/types";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 
 const PLACEHOLDER_COLORS = ["#E8820C", "#1A7FB5", "#D4450A", "#15803D", "#7C3AED"] as const;
@@ -256,6 +257,7 @@ type Props = {
   followerCount: number;
   products: StoreTabProduct[];
   services?: StoreTabServiceRow[];
+  partnerItems?: PartnerContentItem[];
   relatedStores?: RelatedStore[];
   openingHours: WeekSchedule | null;
   socialLinks: Record<string, string>;
@@ -282,6 +284,7 @@ export default function StorefrontTabs({
   followerCount,
   products,
   services,
+  partnerItems = [],
   relatedStores,
   openingHours,
   socialLinks,
@@ -439,6 +442,7 @@ export default function StorefrontTabs({
               slug={store.slug}
               products={products}
               services={services ?? []}
+              partnerItems={partnerItems}
               openingHours={openingHours}
               socialLinks={socialLinks}
               initialFollowing={initialSaved}
