@@ -58,7 +58,10 @@ export default function MessageNavBadge({
     >
       <IconMessage className={iconClassName} stroke={1.75} aria-hidden />
       {mounted && count > 0 ? (
-        <span className="absolute -right-1 top-[-3px] flex h-[14px] min-w-[14px] items-center justify-center rounded-full bg-[#D4450A] px-0.5 text-[8px] font-black text-white">
+        <span
+          className="pointer-events-none absolute -right-1 top-[-3px] flex h-[14px] min-w-[14px] items-center justify-center rounded-full bg-[#D4450A] px-0.5 text-[8px] font-black leading-none text-white"
+          aria-hidden
+        >
           {count > 9 ? "9+" : count}
         </span>
       ) : null}

@@ -27,6 +27,23 @@ type Props = {
   shellClassName?: string;
 };
 
+const CARD_BORDER = "border-[0.5px] border-[rgba(28,28,26,0.12)]";
+
+function isNearBottom(el: HTMLElement, threshold = 80): boolean {
+  return el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
+}
+
+function messagesEqual(a: ThreadMessage[], b: ThreadMessage[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every(
+    (msg, i) =>
+      msg.id === b[i]?.id &&
+      msg.content === b[i]?.content &&
+      msg.senderId === b[i]?.senderId &&
+      msg.senderRole === b[i]?.senderRole,
+  );
+}
+
 export function MessageThread({
   conversationId,
   headerTitle,
@@ -34,30 +51,38 @@ export function MessageThread({
   currentUserId,
   initialMessages,
   emptyHint = "Say hello — your message will go directly to the store.",
-  shellClassName = "min-h-[calc(100dvh-4rem)] flex-col bg-[#F5F5F5] pb-mobile-public lg:min-h-screen lg:pb-0",
+  shellClassName = "min-h-[calc(100dvh-4rem)] flex-col bg-[#F7F5F5] pb-mobile-public lg:min-h-screen lg:pb-0",
 }: Props) {
   const router = useRouter();
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState(initialMessages);
   const [isPending, startTransition] = useTransition();
-  const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const didInitialScroll = useRef(false);
+  const scrollAfterSend = useRef(false);
+
+  function scrollListToBottom(behavior: ScrollBehavior = "auto") {
+    const el = listRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+  }
 
   useEffect(() => {
     setMessages(initialMessages);
-  }, [initialMessages]);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "auto" });
-  }, [initialMessages]);
-
-  useEffect(() => {
-    const listEl = listRef.current;
-
-    function isNearBottom(el: HTMLElement, threshold = 80): boolean {
-      return el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+    if (!didInitialScroll.current) {
+      didInitialScroll.current = true;
+      requestAnimationFrame(() => scrollListToBottom("auto"));
+      return;
     }
 
+    if (scrollAfterSend.current) {
+      scrollAfterSend.current = false;
+      requestAnimationFrame(() => scrollListToBottom("auto"));
+    }
+  }, [initialMessages]);
+
+  useEffect(() => {
     async function pollMessages() {
       const result = await getConversationMessages(conversationId);
       if (!result.ok) return;
@@ -70,14 +95,17 @@ export function MessageThread({
         timeLabel: formatMessageTimestamp(msg.createdAt),
       }));
 
+      const listEl = listRef.current;
       const stickToBottom = listEl ? isNearBottom(listEl) : true;
-      setMessages(nextMessages);
 
-      if (stickToBottom) {
-        requestAnimationFrame(() => {
-          bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-        });
-      }
+      setMessages((prev) => {
+        if (messagesEqual(prev, nextMessages)) return prev;
+        return nextMessages;
+      });
+
+      if (!stickToBottom) return;
+
+      requestAnimationFrame(() => scrollListToBottom("smooth"));
     }
 
     const id = window.setInterval(() => void pollMessages(), 5_000);
@@ -96,41 +124,47 @@ export function MessageThread({
         return;
       }
       setDraft("");
+      scrollAfterSend.current = true;
       router.refresh();
     });
   }
 
   return (
     <div className={`flex ${shellClassName}`}>
-      <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-zinc-200 bg-white px-4 py-3 shadow-sm">
+      <header
+        className={`sticky top-0 z-10 flex items-center gap-2 border-b border-[rgba(28,28,26,0.08)] bg-white px-3 py-2.5 sm:px-4 sm:py-3`}
+      >
         <Link
           href={backHref}
-          className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-zinc-600 hover:bg-zinc-100"
+          className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-[10px] text-[#7c7b77] transition-colors hover:bg-[#F7F5F2] hover:text-[#1C1C1A]"
           aria-label="Back to messages"
         >
           <IconArrowLeft className="size-5" stroke={1.75} aria-hidden />
         </Link>
-        <h1 className="truncate text-base font-semibold text-[#1C1C1A]">{headerTitle}</h1>
+        <h1 className="truncate text-[15px] font-medium text-[#1C1C1A]">{headerTitle}</h1>
       </header>
 
       <div
         ref={listRef}
-        className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-3 overflow-y-auto px-4 py-4"
+        className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-2 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4"
       >
         {messages.length === 0 ? (
-          <p className="py-8 text-center text-sm text-zinc-500">{emptyHint}</p>
+          <p className="py-10 text-center text-[13px] text-[#7c7b77]">{emptyHint}</p>
         ) : (
           messages.map((msg) => {
             if (msg.senderRole === "ADMIN") {
               return (
-                <div key={msg.id} className="flex flex-col items-center gap-1 px-2">
-                  <span className="text-[10px] font-semibold uppercase tracking-wide text-[#D4450A]">
+                <div key={msg.id} className="flex flex-col items-center gap-0.5 px-2 py-0.5">
+                  <span className="text-[9px] font-semibold uppercase tracking-wider text-[#D4450A]/80">
                     LinkWe Support
                   </span>
-                  <div className="max-w-[90%] rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-center text-sm text-amber-950">
+                  <div
+                    className={`max-w-[75%] rounded-[12px] bg-[#FFFBEB] px-4 py-2 text-center text-[13px] leading-snug text-[#1C1C1A] ${CARD_BORDER}`}
+                    style={{ borderColor: "rgba(212,69,10,0.15)" }}
+                  >
                     {msg.content}
                   </div>
-                  <span className="text-[10px] text-zinc-400">{msg.timeLabel}</span>
+                  <span className="text-[10px] text-[#7c7b77]">{msg.timeLabel}</span>
                 </div>
               );
             }
@@ -140,36 +174,35 @@ export function MessageThread({
             return (
               <div
                 key={msg.id}
-                className={`flex flex-col gap-1 ${isMine ? "items-end" : "items-start"}`}
+                className={`flex flex-col gap-0.5 py-0.5 ${isMine ? "items-end" : "items-start"}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                  className={`max-w-[75%] rounded-2xl px-4 py-2 text-[13px] leading-snug ${
                     isMine
-                      ? "rounded-br-md bg-[#D4450A] text-white"
-                      : "rounded-bl-md bg-white text-[#1C1C1A] ring-1 ring-zinc-200"
+                      ? "rounded-br-sm bg-[#D4450A] text-white"
+                      : `rounded-bl-sm bg-[#f5f5f5] text-[#1C1C1A] ${CARD_BORDER}`
                   }`}
                 >
                   {msg.content}
                 </div>
-                <span className="px-1 text-[10px] text-zinc-400">{msg.timeLabel}</span>
+                <span className="px-1 text-[10px] text-[#7c7b77]">{msg.timeLabel}</span>
               </div>
             );
           })
         )}
-        <div ref={bottomRef} aria-hidden />
       </div>
 
       <form
         onSubmit={handleSend}
-        className="sticky bottom-0 border-t border-zinc-200 bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+        className={`sticky bottom-0 border-t border-[rgba(28,28,26,0.08)] bg-white px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-3`}
       >
-        <div className="mx-auto flex max-w-lg gap-2">
+        <div className="mx-auto flex max-w-lg items-end gap-2">
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            rows={2}
+            rows={1}
             placeholder="Write a message…"
-            className="min-h-[44px] flex-1 resize-none rounded-xl border border-zinc-200 px-3 py-2.5 text-sm text-[#1C1C1A] outline-none ring-[#D4450A] focus:border-[#D4450A] focus:ring-2"
+            className={`min-h-[40px] max-h-28 flex-1 resize-none rounded-[10px] bg-white px-3 py-2 text-[13px] text-[#1C1C1A] outline-none focus:border-[#D4450A] focus:ring-1 focus:ring-[#D4450A]/30 ${CARD_BORDER}`}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -180,7 +213,7 @@ export function MessageThread({
           <button
             type="submit"
             disabled={!draft.trim() || isPending}
-            className="flex min-h-[44px] shrink-0 items-center justify-center rounded-xl bg-[#D4450A] px-5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="flex h-[40px] shrink-0 items-center justify-center rounded-[10px] bg-[#D4450A] px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 disabled:bg-[#e8e8e6] disabled:text-[#7c7b77]"
           >
             {isPending ? "…" : "Send"}
           </button>
