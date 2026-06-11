@@ -11,6 +11,7 @@ import {
   IconExternalLink,
   IconLayoutDashboard,
   IconLayoutList,
+  IconLink,
   IconMessageCircle,
   IconPackage,
   IconSettings,
@@ -96,6 +97,7 @@ export default function VendorDashboardSidebar({
   const STORE: NavLeaf[] = [
     { href: "/dashboard/vendor?tab=store", label: "Store", Icon: IconBuildingStore },
     { href: "/dashboard/vendor?tab=listings", label: "Listings", Icon: IconLayoutList },
+    { href: "/dashboard/vendor/partners", label: "Partners", Icon: IconLink },
     { href: "/dashboard/vendor/staff", label: "Availability", Icon: IconUsers },
   ];
 
