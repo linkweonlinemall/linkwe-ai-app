@@ -229,6 +229,7 @@ export default async function PublicStorePage({ params }: Props) {
           }}
           initials={initials}
           canEditStore={canEditStore}
+          isLoggedIn={session != null}
           initialFollowing={isSaved}
           averageRating={averageRating}
           reviewCount={reviewCount}

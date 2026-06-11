@@ -21,6 +21,7 @@ type Props = {
   };
   initials: string;
   canEditStore: boolean;
+  isLoggedIn: boolean;
   initialFollowing: boolean;
   averageRating: number;
   reviewCount: number;
@@ -30,6 +31,7 @@ export default function StorePageHero({
   store,
   initials,
   canEditStore,
+  isLoggedIn,
   initialFollowing,
   averageRating,
   reviewCount,
@@ -123,8 +125,10 @@ export default function StorePageHero({
 
           <StoreHeroActions
             storeId={store.id}
+            storeSlug={store.slug}
             storeName={store.name}
             canEditStore={canEditStore}
+            isLoggedIn={isLoggedIn}
             initialFollowing={initialFollowing}
           />
         </div>

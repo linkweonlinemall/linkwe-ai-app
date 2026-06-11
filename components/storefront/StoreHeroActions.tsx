@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import {
   IconEdit,
   IconMessage,
@@ -10,7 +10,9 @@ import {
   IconUserPlus,
 } from "@tabler/icons-react";
 
+import { getOrCreateConversation } from "@/app/actions/messages";
 import { toggleFollowStore } from "@/app/actions/store";
+import { toastFormError } from "@/lib/feedback/toasts";
 
 const SCARLET = "#D4450A";
 
@@ -24,23 +26,29 @@ const glassStyle = {
 
 type Props = {
   storeId: string;
+  storeSlug: string;
   storeName: string;
   canEditStore: boolean;
+  isLoggedIn: boolean;
   initialFollowing: boolean;
 };
 
 export default function StoreHeroActions({
   storeId,
+  storeSlug,
   storeName,
   canEditStore,
+  isLoggedIn,
   initialFollowing,
 }: Props) {
   const router = useRouter();
   const [following, setFollowing] = useState(initialFollowing);
   const [followBusy, setFollowBusy] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [messagePending, startMessageTransition] = useTransition();
 
   const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+  const loginHref = `/login?callbackUrl=${encodeURIComponent(`/store/${storeSlug}`)}`;
 
   useEffect(() => {
     if (!showShare) return;
@@ -57,13 +65,30 @@ export default function StoreHeroActions({
     if ("error" in result) {
       setFollowing(prev);
       if (result.error.includes("Sign in")) {
-        router.push("/login");
+        router.push(loginHref);
       }
     } else {
       setFollowing(result.following);
     }
     setFollowBusy(false);
-  }, [following, router, storeId]);
+  }, [following, loginHref, router, storeId]);
+
+  function handleMessageClick() {
+    if (!isLoggedIn) return;
+    if (canEditStore) {
+      toastFormError("This is your store.");
+      return;
+    }
+
+    startMessageTransition(async () => {
+      const result = await getOrCreateConversation(storeId);
+      if (!result.ok) {
+        toastFormError(result.error);
+        return;
+      }
+      router.push(`/messages/${result.conversationId}`);
+    });
+  }
 
   return (
     <div className="flex w-full shrink-0 flex-row items-center gap-2 md:w-auto md:flex-wrap md:justify-end md:pb-0.5">
@@ -134,15 +159,31 @@ export default function StoreHeroActions({
         ) : null}
       </div>
 
-      <button
-        type="button"
-        className={`${glassBtn} shrink-0`}
-        style={glassStyle}
-        aria-label="Message store"
-        title="Message store"
-      >
-        <IconMessage className="size-4" stroke={1.75} aria-hidden />
-      </button>
+      {!canEditStore ? (
+        isLoggedIn ? (
+          <button
+            type="button"
+            disabled={messagePending}
+            className={`${glassBtn} shrink-0`}
+            style={glassStyle}
+            aria-label="Message store"
+            title="Message store"
+            onClick={handleMessageClick}
+          >
+            <IconMessage className="size-4" stroke={1.75} aria-hidden />
+          </button>
+        ) : (
+          <Link
+            href={loginHref}
+            className={`${glassBtn} shrink-0`}
+            style={glassStyle}
+            aria-label="Message store"
+            title="Message store"
+          >
+            <IconMessage className="size-4" stroke={1.75} aria-hidden />
+          </Link>
+        )
+      ) : null}
     </div>
   );
 }

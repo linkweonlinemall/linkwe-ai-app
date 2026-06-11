@@ -62,6 +62,8 @@ model User {
   tickets               Ticket[]
   eventTicketCartItems  EventTicketCartItem[]
   ticketOrders          TicketOrder[]
+  conversationsAsCustomer Conversation[] @relation("CustomerConversations")
+  sentMessages            Message[]        @relation("SentMessages")
 
   @@index([email])
   @@index([createdAt])
@@ -190,6 +192,7 @@ model Store {
   savedBy          SavedStore[]
   onDemandRequests OnDemandRequest[]
   storeReviews     Review[]   @relation("StoreReviews")
+  conversations    Conversation[]
 
   @@index([slug])
   @@map("stores")
@@ -2254,6 +2257,40 @@ model VendorChatMessage {
   createdAt DateTime   @default(now())
 
   @@index([chatId])
+}
+
+model Conversation {
+  id              String    @id @default(cuid())
+  customerId      String
+  customer        User      @relation("CustomerConversations", fields: [customerId], references: [id], onDelete: Cascade)
+  storeId         String
+  store           Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  lastMessageAt   DateTime  @default(now())
+  lastMessageText String?
+  customerUnread  Int       @default(0)
+  storeUnread     Int       @default(0)
+  messages        Message[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([customerId, storeId])
+  @@index([customerId])
+  @@index([storeId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  senderRole     String
+  content        String       @db.Text
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+  @@index([conversationId, createdAt])
 }
 
 model StaffMember {
