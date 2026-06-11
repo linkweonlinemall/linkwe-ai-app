@@ -900,6 +900,7 @@ enum NotificationType {
   PAYOUT_PROCESSED
   GENERAL
   TICKET_PURCHASED
+  MESSAGE_RECEIVED
 }
 
 enum UserRole {

@@ -1,5 +1,8 @@
 "use server";
 
+import { NotificationType } from "@prisma/client";
+
+import { createNotification } from "@/app/actions/notifications";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
@@ -148,7 +151,8 @@ export async function sendMessage(
     select: {
       id: true,
       customerId: true,
-      store: { select: { id: true, ownerId: true } },
+      customer: { select: { fullName: true } },
+      store: { select: { id: true, ownerId: true, name: true } },
     },
   });
   if (!conversation) return { ok: false, error: "Conversation not found." };
@@ -193,6 +197,48 @@ export async function sendMessage(
   } catch (err) {
     console.error("[messages] sendMessage", err);
     return { ok: false, error: "Could not send message." };
+  }
+
+  try {
+    const customerName = conversation.customer.fullName?.trim() || "A customer";
+    const storeName = conversation.store.name?.trim() || "A store";
+    const vendorLink = `/dashboard/vendor/messages/${conversation.id}`;
+    const customerLink = `/messages/${conversation.id}`;
+
+    if (senderRole === "CUSTOMER") {
+      await createNotification({
+        userId: conversation.store.ownerId,
+        type: NotificationType.MESSAGE_RECEIVED,
+        title: "New message",
+        body: `${customerName} sent you a message`,
+        linkUrl: vendorLink,
+      });
+    } else if (senderRole === "VENDOR") {
+      await createNotification({
+        userId: conversation.customerId,
+        type: NotificationType.MESSAGE_RECEIVED,
+        title: "New message",
+        body: `${storeName} replied to your message`,
+        linkUrl: customerLink,
+      });
+    } else {
+      await createNotification({
+        userId: conversation.customerId,
+        type: NotificationType.MESSAGE_RECEIVED,
+        title: "New message",
+        body: "LinkWe Support sent you a message",
+        linkUrl: customerLink,
+      });
+      await createNotification({
+        userId: conversation.store.ownerId,
+        type: NotificationType.MESSAGE_RECEIVED,
+        title: "New message",
+        body: "LinkWe Support sent you a message",
+        linkUrl: vendorLink,
+      });
+    }
+  } catch {
+    // Notification failures must not break message send
   }
 
   return { ok: true };
@@ -382,7 +428,11 @@ export async function adminSendMessage(
 
   const conversation = await prisma.conversation.findUnique({
     where: { id: trimmedId },
-    select: { id: true },
+    select: {
+      id: true,
+      customerId: true,
+      store: { select: { ownerId: true } },
+    },
   });
   if (!conversation) return { ok: false, error: "Conversation not found." };
 
@@ -412,6 +462,27 @@ export async function adminSendMessage(
   } catch (err) {
     console.error("[messages] adminSendMessage", err);
     return { ok: false, error: "Could not send message." };
+  }
+
+  try {
+    const vendorLink = `/dashboard/vendor/messages/${conversation.id}`;
+    const customerLink = `/messages/${conversation.id}`;
+    await createNotification({
+      userId: conversation.customerId,
+      type: NotificationType.MESSAGE_RECEIVED,
+      title: "New message",
+      body: "LinkWe Support sent you a message",
+      linkUrl: customerLink,
+    });
+    await createNotification({
+      userId: conversation.store.ownerId,
+      type: NotificationType.MESSAGE_RECEIVED,
+      title: "New message",
+      body: "LinkWe Support sent you a message",
+      linkUrl: vendorLink,
+    });
+  } catch {
+    // Notification failures must not break message send
   }
 
   return { ok: true };

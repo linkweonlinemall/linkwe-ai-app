@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { IconHome } from "@tabler/icons-react";
 
+import MessageNavBadge from "@/components/messages/MessageNavBadge";
 import NotificationBell from "@/components/ui/NotificationBell";
 
 function formatVendorDate(now: Date) {
@@ -56,6 +57,12 @@ export default function VendorDashboardTopbar({ firstName, unreadCount }: Vendor
         >
           <IconHome className="size-[18px]" stroke={1.75} aria-hidden />
         </Link>
+        <MessageNavBadge
+          href="/dashboard/vendor/messages"
+          enabled
+          className="relative flex size-8 items-center justify-center rounded-lg border border-[rgba(28,28,26,0.12)] text-[#7c7b77] transition-colors hover:bg-[#F7F5F2] hover:text-[#D4450A]"
+          iconClassName="size-[18px] shrink-0"
+        />
         <div className="flex size-8 items-center justify-center rounded-lg border border-[rgba(28,28,26,0.12)]">
           <NotificationBell compactToolbar initialUnreadCount={unreadCount} variant="light" />
         </div>

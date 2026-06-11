@@ -26,6 +26,7 @@ import {
 
 import { logoutAction } from "@/app/(auth)/auth-actions";
 import NavSearchInput, { MobileSearchOverlay } from "@/components/layout/NavSearchInput";
+import MessageNavBadge from "@/components/messages/MessageNavBadge";
 import NotificationBell from "@/components/ui/NotificationBell";
 import { toastPWAInstalled } from "@/components/ui/pwa-installed-toast";
 import { usePWAInstall } from "@/lib/hooks/use-pwa-install";
@@ -112,6 +113,9 @@ export default function PublicNav({
   const currentPathEncoded = encodeURIComponent(pathname?.trim() ? pathname : "/");
   const loginHref = `/login?callbackUrl=${currentPathEncoded}`;
   const dashTarget = dashboardHref ?? user?.href ?? "/dashboard";
+  const messagesHref = dashTarget.includes("/dashboard/vendor")
+    ? "/dashboard/vendor/messages"
+    : "/messages";
 
   useEffect(() => {
     setMounted(true);
@@ -371,6 +375,12 @@ export default function PublicNav({
               </button>
               {user ? (
                 <>
+                  <MessageNavBadge
+                    href={messagesHref}
+                    enabled
+                    className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-white/[0.1] text-white"
+                    iconClassName="size-[20px] shrink-0"
+                  />
                   <button
                     type="button"
                     onClick={toggleDrawerCart}
@@ -476,6 +486,7 @@ export default function PublicNav({
           <div className="flex shrink-0 items-center gap-2">
             {user ? (
               <>
+                <MessageNavBadge href={messagesHref} enabled />
                 <div className="flex h-9 w-9 items-center justify-center rounded-[10px] border-[0.5px] border-white/[0.12] bg-white/[0.08] text-white [&_button]:rounded-[10px] [&_button]:bg-transparent [&_button]:border-0 [&_button]:shadow-none [&_button]:hover:bg-transparent">
                   <NotificationBell initialUnreadCount={unreadCount} variant="dark" compactToolbar />
                 </div>

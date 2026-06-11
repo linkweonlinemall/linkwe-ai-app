@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { IconArrowLeft } from "@tabler/icons-react";
 
-import { sendMessage } from "@/app/actions/messages";
+import { getConversationMessages, sendMessage } from "@/app/actions/messages";
 import { toastFormError } from "@/lib/feedback/toasts";
+import { formatMessageTimestamp } from "@/lib/messages/format-time";
 
 export type ThreadMessage = {
   id: string;
@@ -37,13 +38,51 @@ export function MessageThread({
 }: Props) {
   const router = useRouter();
   const [draft, setDraft] = useState("");
+  const [messages, setMessages] = useState(initialMessages);
   const [isPending, startTransition] = useTransition();
   const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    setMessages(initialMessages);
+  }, [initialMessages]);
+
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "auto" });
   }, [initialMessages]);
+
+  useEffect(() => {
+    const listEl = listRef.current;
+
+    function isNearBottom(el: HTMLElement, threshold = 80): boolean {
+      return el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+    }
+
+    async function pollMessages() {
+      const result = await getConversationMessages(conversationId);
+      if (!result.ok) return;
+
+      const nextMessages: ThreadMessage[] = result.messages.map((msg) => ({
+        id: msg.id,
+        senderId: msg.senderId,
+        senderRole: msg.senderRole,
+        content: msg.content,
+        timeLabel: formatMessageTimestamp(msg.createdAt),
+      }));
+
+      const stickToBottom = listEl ? isNearBottom(listEl) : true;
+      setMessages(nextMessages);
+
+      if (stickToBottom) {
+        requestAnimationFrame(() => {
+          bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+        });
+      }
+    }
+
+    const id = window.setInterval(() => void pollMessages(), 5_000);
+    return () => window.clearInterval(id);
+  }, [conversationId]);
 
   function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -78,10 +117,10 @@ export function MessageThread({
         ref={listRef}
         className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-3 overflow-y-auto px-4 py-4"
       >
-        {initialMessages.length === 0 ? (
+        {messages.length === 0 ? (
           <p className="py-8 text-center text-sm text-zinc-500">{emptyHint}</p>
         ) : (
-          initialMessages.map((msg) => {
+          messages.map((msg) => {
             if (msg.senderRole === "ADMIN") {
               return (
                 <div key={msg.id} className="flex flex-col items-center gap-1 px-2">
