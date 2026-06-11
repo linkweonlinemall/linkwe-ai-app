@@ -17,7 +17,9 @@ import {
   Music,
 } from "lucide-react";
 
+import { getLinkedContent } from "@/app/actions/content-links";
 import PublicNav from "@/components/layout/PublicNav";
+import RelatedContentSection from "@/components/storefront/RelatedContentSection";
 import { TicketPurchaseCard } from "@/components/events/TicketPurchaseCard";
 import { EventShareButton } from "@/components/events/EventShareButton";
 import { categoryLabel } from "@/components/events/EventCard";
@@ -135,6 +137,7 @@ export default async function EventDetailPage({ params }: Props) {
       ? (event.lineup as PerformerEntry[])
       : null;
 
+  const { items: linkedItems } = await getLinkedContent("EVENT", event.id);
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
@@ -473,6 +476,8 @@ export default async function EventDetailPage({ params }: Props) {
             )}
           </div>
         </div>
+
+        <RelatedContentSection heading="Shop this event" items={linkedItems} />
       </div>
     </div>
   );
