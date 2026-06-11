@@ -18,16 +18,22 @@ export type ThreadMessage = {
 
 type Props = {
   conversationId: string;
-  storeName: string;
+  headerTitle: string;
+  backHref?: string;
   currentUserId: string;
   initialMessages: ThreadMessage[];
+  emptyHint?: string;
+  shellClassName?: string;
 };
 
 export function MessageThread({
   conversationId,
-  storeName,
+  headerTitle,
+  backHref = "/messages",
   currentUserId,
   initialMessages,
+  emptyHint = "Say hello — your message will go directly to the store.",
+  shellClassName = "min-h-[calc(100dvh-4rem)] flex-col bg-[#F5F5F5] pb-mobile-public lg:min-h-screen lg:pb-0",
 }: Props) {
   const router = useRouter();
   const [draft, setDraft] = useState("");
@@ -56,16 +62,16 @@ export function MessageThread({
   }
 
   return (
-    <div className="flex min-h-[calc(100dvh-4rem)] flex-col bg-[#F5F5F5] pb-mobile-public lg:min-h-screen lg:pb-0">
+    <div className={`flex ${shellClassName}`}>
       <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-zinc-200 bg-white px-4 py-3 shadow-sm">
         <Link
-          href="/messages"
+          href={backHref}
           className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-zinc-600 hover:bg-zinc-100"
           aria-label="Back to messages"
         >
           <IconArrowLeft className="size-5" stroke={1.75} aria-hidden />
         </Link>
-        <h1 className="truncate text-base font-semibold text-[#1C1C1A]">{storeName}</h1>
+        <h1 className="truncate text-base font-semibold text-[#1C1C1A]">{headerTitle}</h1>
       </header>
 
       <div
@@ -73,9 +79,7 @@ export function MessageThread({
         className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-3 overflow-y-auto px-4 py-4"
       >
         {initialMessages.length === 0 ? (
-          <p className="py-8 text-center text-sm text-zinc-500">
-            Say hello — your message will go directly to the store.
-          </p>
+          <p className="py-8 text-center text-sm text-zinc-500">{emptyHint}</p>
         ) : (
           initialMessages.map((msg) => {
             if (msg.senderRole === "ADMIN") {
