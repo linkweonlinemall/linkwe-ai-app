@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import {
+  Bell,
   Bookmark,
   Bot,
   Calendar,
@@ -9,15 +10,27 @@ import {
   ConciergeBell,
   Hand,
   Heart,
+  MessageCircle,
   Package,
   Settings,
   ShoppingBag,
   Ticket,
 } from "lucide-react";
 
+import { getMyConversations, getUnreadCount as getMessageUnreadCount } from "@/app/actions/messages";
+import {
+  getNotifications,
+  getUnreadCount as getNotificationUnreadCount,
+} from "@/app/actions/notifications";
+import { getUpcomingTicketsPreview } from "@/app/actions/tickets";
 import { assertDashboardRole } from "@/lib/auth/assert-role";
 import { getSession } from "@/lib/auth/session";
+import {
+  formatEventDateShort,
+  formatEventTime,
+} from "@/lib/events/format-datetime";
 import { icn } from "@/lib/iconography";
+import { formatConversationListTime } from "@/lib/messages/format-time";
 import { prisma } from "@/lib/prisma";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 
@@ -36,6 +49,11 @@ export default async function CustomerDashboardPage() {
     savedStoresData,
     digitalOrders,
     savedStoresTotal,
+    conversationsResult,
+    messageUnreadResult,
+    upcomingTicketEvents,
+    notificationsList,
+    notificationUnreadCount,
   ] = await Promise.all([
     prisma.mainOrder.findMany({
       where: { buyerId: session.userId },
@@ -157,10 +175,23 @@ export default async function CustomerDashboardPage() {
       take: 3,
     }),
     prisma.savedStore.count({ where: { userId: session.userId } }),
+    getMyConversations(),
+    getMessageUnreadCount(),
+    getUpcomingTicketsPreview(session.userId, 3),
+    getNotifications(),
+    getNotificationUnreadCount(),
   ]);
 
   const wishlistCount = wishlistData?._count.items ?? 0;
   const savedStoresCount = savedStoresTotal;
+
+  const messageUnreadCount =
+    messageUnreadResult && "count" in messageUnreadResult ? messageUnreadResult.count : 0;
+  const messageConversations =
+    conversationsResult.ok && conversationsResult.side === "customer"
+      ? conversationsResult.conversations.slice(0, 3)
+      : [];
+  const notificationPreview = notificationsList.slice(0, 4);
 
   function formatTime(t: string): string {
     const [h, m] = t.split(":").map(Number);
@@ -219,6 +250,7 @@ export default async function CustomerDashboardPage() {
                 { value: upcomingBookingsCount, label: "Upcoming bookings", href: "/orders?tab=bookings" },
                 { value: cartCount, label: "In cart", href: "/cart" },
                 { value: wishlistCount, label: "Wishlisted", href: "/wishlist" },
+                { value: messageUnreadCount, label: "Unread messages", href: "/messages" },
               ].map((stat) => (
                 <Link
                   key={stat.label}
@@ -248,6 +280,142 @@ export default async function CustomerDashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Messages */}
+          <div className="rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
+            <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
+              <h2 className="font-bold text-zinc-900">
+                Messages
+                {messageUnreadCount > 0 ? (
+                  <span className="ml-2 rounded-full bg-[#D4450A] px-2 py-0.5 text-[10px] font-bold text-white">
+                    {messageUnreadCount}
+                  </span>
+                ) : null}
+              </h2>
+              <Link href="/messages" className="text-xs font-semibold text-[#D4450A] hover:underline">
+                View all →
+              </Link>
+            </div>
+            {messageConversations.length === 0 ? (
+              <div className="flex flex-col items-center py-12 text-center">
+                <MessageCircle className={`${icn.empty} mb-3`} aria-hidden strokeWidth={1.25} />
+                <p className="text-sm text-zinc-500">No messages yet.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-zinc-50">
+                {messageConversations.map((conversation) => (
+                  <Link
+                    key={conversation.id}
+                    href={`/messages/${conversation.id}`}
+                    className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-zinc-50"
+                  >
+                    <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-zinc-100">
+                      {conversation.storeLogoUrl ? (
+                        <img
+                          src={conversation.storeLogoUrl}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-sm font-bold text-[#D4450A]">
+                          {conversation.storeName.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-zinc-900">
+                        {conversation.storeName}
+                      </p>
+                      <p className="truncate text-xs text-zinc-500">
+                        {conversation.lastMessageText?.trim() || "No messages yet"}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <p className="text-[10px] text-zinc-400">
+                        {formatConversationListTime(conversation.lastMessageAt)}
+                      </p>
+                      {conversation.unread > 0 ? (
+                        <span
+                          className="h-2 w-2 rounded-full bg-[#D4450A]"
+                          aria-label={`${conversation.unread} unread`}
+                        />
+                      ) : null}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Notifications */}
+          <div className="rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
+            <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
+              <h2 className="font-bold text-zinc-900">
+                Notifications
+                {notificationUnreadCount > 0 ? (
+                  <span className="ml-2 rounded-full bg-[#D4450A] px-2 py-0.5 text-[10px] font-bold text-white">
+                    {notificationUnreadCount}
+                  </span>
+                ) : null}
+              </h2>
+              {notificationsList.length > 0 ? (
+                <span className="text-xs font-semibold text-zinc-400">
+                  {notificationsList.length} total
+                </span>
+              ) : null}
+            </div>
+            {notificationPreview.length === 0 ? (
+              <div className="flex flex-col items-center py-12 text-center">
+                <Bell className={`${icn.empty} mb-3`} aria-hidden strokeWidth={1.25} />
+                <p className="text-sm text-zinc-500">You&apos;re all caught up.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-zinc-50">
+                {notificationPreview.map((notification) => {
+                  const row = (
+                    <>
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className={`truncate text-sm ${
+                            !notification.isRead ? "font-semibold text-zinc-900" : "font-medium text-zinc-700"
+                          }`}
+                        >
+                          {notification.title}
+                        </p>
+                        <p className="mt-0.5 text-[10px] text-zinc-400">
+                          {formatConversationListTime(notification.createdAt)}
+                        </p>
+                      </div>
+                      {!notification.isRead ? (
+                        <span
+                          className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#D4450A]"
+                          aria-hidden
+                        />
+                      ) : null}
+                    </>
+                  );
+
+                  if (notification.linkUrl) {
+                    return (
+                      <Link
+                        key={notification.id}
+                        href={notification.linkUrl}
+                        className="flex items-start gap-3 px-5 py-3.5 transition-colors hover:bg-zinc-50"
+                      >
+                        {row}
+                      </Link>
+                    );
+                  }
+
+                  return (
+                    <div key={notification.id} className="flex items-start gap-3 px-5 py-3.5">
+                      {row}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           {/* Recent orders */}
           <div className="rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
             <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
@@ -355,6 +523,50 @@ export default async function CustomerDashboardPage() {
                       </span>
                     </div>
                   </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* My tickets */}
+          <div className="rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
+            <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
+              <h2 className="font-bold text-zinc-900">My tickets</h2>
+              <Link href="/my-tickets" className="text-xs font-semibold text-[#D4450A] hover:underline">
+                View all →
+              </Link>
+            </div>
+            {upcomingTicketEvents.length === 0 ? (
+              <div className="flex flex-col items-center py-12 text-center">
+                <Ticket className={`${icn.empty} mb-3`} aria-hidden strokeWidth={1.25} />
+                <p className="text-sm text-zinc-500">No upcoming events.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-zinc-50">
+                {upcomingTicketEvents.map((eventPreview) => (
+                  <Link
+                    key={eventPreview.eventId}
+                    href="/my-tickets"
+                    className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-zinc-50"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FEF0EB]">
+                      <Ticket className={`${icn.ui} text-[#D4450A]`} aria-hidden strokeWidth={2} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-zinc-900">
+                        {eventPreview.eventTitle}
+                      </p>
+                      <p className="text-xs text-zinc-400">
+                        {formatEventDateShort(eventPreview.eventStartDate)} ·{" "}
+                        {formatEventTime(eventPreview.eventStartDate)}
+                      </p>
+                    </div>
+                    {eventPreview.ticketCount > 1 ? (
+                      <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-bold text-zinc-600">
+                        {eventPreview.ticketCount} tickets
+                      </span>
+                    ) : null}
+                  </Link>
                 ))}
               </div>
             )}
