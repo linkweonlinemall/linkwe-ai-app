@@ -164,6 +164,7 @@ model Store {
   address          String?
   socialLinks      Json?       @map("social_links")
   staffMode        StaffMode   @default(SOLO)
+  shippingMode     StoreShippingMode @default(LINKWE) @map("shipping_mode")
   /// Vendor subscription tier — drives platform commission rates.
   subscriptionPlan VendorSubscriptionPlan @default(STARTER) @map("subscription_plan")
   isAvailableNow   Boolean     @default(false)
@@ -194,9 +195,25 @@ model Store {
   storeReviews     Review[]   @relation("StoreReviews")
   conversations    Conversation[]
   contentLinks     ContentLink[]
+  shippingRates    VendorShippingRate[]
 
   @@index([slug])
   @@map("stores")
+}
+
+model VendorShippingRate {
+  id        String   @id @default(cuid())
+  storeId   String   @map("store_id")
+  zone      String
+  rateMinor Int      @map("rate_minor")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, zone])
+  @@index([storeId])
+  @@map("vendor_shipping_rates")
 }
 
 model StoreImage {
@@ -922,6 +939,11 @@ enum StoreStatus {
   DRAFT             @map("draft")
   PENDING_APPROVAL  @map("pending_approval")
   ACTIVE            @map("active")
+}
+
+enum StoreShippingMode {
+  SELF
+  LINKWE
 }
 
 /// Top-level marketplace category (what the listing represents)
