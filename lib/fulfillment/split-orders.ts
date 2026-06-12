@@ -1,6 +1,11 @@
 import type { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { loadStoreShippingConfigs } from "@/lib/shipping/load-store-shipping-configs";
+import {
+  computePerStoreShipping,
+  type PerStoreShippingRow,
+} from "@/lib/shipping/per-store-shipping";
 
 async function generateSplitOrderRef(
   tx: Prisma.TransactionClient,
@@ -96,16 +101,43 @@ async function resolveListingIdForOrderItem(
   }
 }
 
+function reconcileSplitShippingMinor(
+  perStore: PerStoreShippingRow[],
+  orderShippingMinor: number,
+): Map<string, number> {
+  const amounts = new Map<string, number>();
+  for (const row of perStore) {
+    amounts.set(row.storeId, row.deliversToZone ? row.shippingMinor : 0);
+  }
+
+  if (amounts.size === 0) return amounts;
+
+  const sum = [...amounts.values()].reduce((acc, n) => acc + n, 0);
+  const diff = orderShippingMinor - sum;
+  if (diff !== 0) {
+    const firstStoreId = perStore[0]!.storeId;
+    amounts.set(firstStoreId, (amounts.get(firstStoreId) ?? 0) + diff);
+  }
+
+  return amounts;
+}
+
 export async function createSplitOrdersFromMainOrder(mainOrderId: string): Promise<void> {
   const mainOrder = await prisma.mainOrder.findUnique({
     where: { id: mainOrderId },
-    include: {
+    select: {
+      status: true,
+      shippingMinor: true,
+      shippingZone: true,
+      region: true,
       items: {
         include: {
+          store: { select: { name: true } },
           product: {
             select: {
               id: true,
               storeId: true,
+              isDigital: true,
               price: true,
               weight: true,
               weightUnit: true,
@@ -129,6 +161,49 @@ export async function createSplitOrdersFromMainOrder(mainOrderId: string): Promi
       itemsByStore.set(storeId, []);
     }
     itemsByStore.get(storeId)!.push(item);
+  }
+
+  const storeIds = [...itemsByStore.keys()];
+  let shippingMinorByStore = new Map<string, number>();
+
+  if (mainOrder.shippingMinor === 0) {
+    for (const storeId of storeIds) {
+      shippingMinorByStore.set(storeId, 0);
+    }
+  } else {
+    const configs = await loadStoreShippingConfigs(storeIds);
+    const configByStoreId = new Map(configs.map((c) => [c.storeId, c]));
+
+    const shippingResult = computePerStoreShipping({
+      zone: mainOrder.shippingZone,
+      region: mainOrder.region,
+      stores: storeIds.map((storeId) => {
+        const storeItems = itemsByStore.get(storeId) ?? [];
+        const config = configByStoreId.get(storeId);
+        const storeName = config?.storeName ?? storeItems[0]?.store.name ?? "Store";
+        const totalWeightLbs = storeItems.reduce((sum, item) => {
+          if (item.product?.isDigital) return sum;
+          return sum + item.weightLbs * item.quantity;
+        }, 0);
+        const allItemsDigitalOrPickup = storeItems.every(
+          (item) => item.product?.isDigital === true,
+        );
+
+        return {
+          storeId,
+          storeName,
+          shippingMode: config?.shippingMode ?? "LINKWE",
+          selfRates: config?.selfRates ?? [],
+          totalWeightLbs,
+          allItemsDigitalOrPickup,
+        };
+      }),
+    });
+
+    shippingMinorByStore = reconcileSplitShippingMinor(
+      shippingResult.perStore,
+      mainOrder.shippingMinor,
+    );
   }
 
   await prisma.$transaction(async (tx) => {
@@ -172,6 +247,7 @@ export async function createSplitOrdersFromMainOrder(mainOrderId: string): Promi
           status: "AWAITING_VENDOR_ACTION",
           subtotalMinor,
           vendorNetMinor: subtotalMinor,
+          shippingMinor: shippingMinorByStore.get(storeId) ?? 0,
           currency: "TTD",
           pickupRegion: store?.region ?? null,
           pickupAddress: store?.address ?? null,

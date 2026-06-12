@@ -634,6 +634,7 @@ model SplitOrder {
   status                   SplitOrderStatus     @default(AWAITING_VENDOR_ACTION)
   subtotalMinor            Int                  @map("subtotal_minor")
   vendorNetMinor           Int                  @map("vendor_net_minor")
+  shippingMinor            Int                  @default(0) @map("shipping_minor")
   currency                 String               @db.Char(3)
   vendorInboundMethod      VendorInboundMethod? @map("vendor_inbound_method")
   vendorActionAt           DateTime?            @map("vendor_action_at")
