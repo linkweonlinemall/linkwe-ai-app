@@ -7,6 +7,7 @@ import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import {
   getProgressStep,
+  getSplitOrderStatusLabel,
   getStatusInfo,
   ORDER_PROGRESS_STEPS,
 } from "@/lib/orders/order-status";
@@ -48,33 +49,6 @@ function formatOrderDate(d: Date): string {
     month: "long",
     year: "numeric",
   });
-}
-
-function getSplitOrderStatusLabel(status: string): { label: string; className: string } {
-  switch (status) {
-    case "AWAITING_VENDOR_ACTION":
-      return { label: "Action Required", className: "bg-red-50 text-red-700 border border-red-200" };
-    case "VENDOR_PREPARING":
-      return { label: "Preparing", className: "bg-amber-50 text-amber-700 border border-amber-200" };
-    case "AWAITING_COURIER_PICKUP":
-      return { label: "Awaiting Courier", className: "bg-blue-50 text-blue-700 border border-blue-200" };
-    case "COURIER_ASSIGNED":
-      return { label: "Courier Assigned", className: "bg-blue-50 text-blue-700 border border-blue-200" };
-    case "COURIER_PICKED_UP":
-      return { label: "En Route To Warehouse", className: "bg-blue-50 text-blue-700 border border-blue-200" };
-    case "VENDOR_DROPPED_OFF":
-      return { label: "Dropped Off", className: "bg-blue-50 text-blue-700 border border-blue-200" };
-    case "AT_WAREHOUSE":
-      return { label: "At Warehouse", className: "bg-emerald-50 text-emerald-700 border border-emerald-200" };
-    case "BUNDLED_FOR_DISPATCH":
-      return { label: "Ready to Ship", className: "bg-emerald-50 text-emerald-700 border border-emerald-200" };
-    case "DISPATCHED":
-      return { label: "Out for Delivery", className: "bg-emerald-50 text-emerald-700 border border-emerald-200" };
-    case "DELIVERED":
-      return { label: "Delivered", className: "bg-emerald-50 text-emerald-700 border border-emerald-200" };
-    default:
-      return { label: status, className: "bg-zinc-100 text-zinc-600 border border-zinc-200" };
-  }
 }
 
 function forceDownloadUrl(url: string, filename?: string): string {
@@ -138,9 +112,8 @@ export default async function OrderDetailPage({ params }: Props) {
           id: true,
           status: true,
           subtotalMinor: true,
-          vendorInboundMethod: true,
           store: {
-            select: { name: true, slug: true },
+            select: { name: true, slug: true, shippingMode: true },
           },
           items: {
             select: {
@@ -427,14 +400,9 @@ export default async function OrderDetailPage({ params }: Props) {
                 <polyline points="9 22 9 12 15 12 15 22" />
               </svg>
               <p className="text-xs text-zinc-600">
-                This order contains items from{" "}
-                <span className="font-semibold">{order.splitOrders.length} vendors</span> —{" "}
-                {
-                  order.splitOrders.filter((s) =>
-                    ["AT_WAREHOUSE", "BUNDLED_FOR_DISPATCH", "DISPATCHED", "DELIVERED"].includes(s.status),
-                  ).length
-                }{" "}
-                of {order.splitOrders.length} at warehouse
+                This order has items from{" "}
+                <span className="font-semibold">{order.splitOrders.length} stores</span>. Each store
+                ships its items separately.
               </p>
             </div>
           ) : null}
@@ -543,11 +511,9 @@ export default async function OrderDetailPage({ params }: Props) {
 
                         <div className="flex items-center justify-between border-t border-zinc-100 bg-zinc-50 px-4 py-2.5">
                           <p className="text-xs text-zinc-500">
-                            {splitOrder.vendorInboundMethod === "VENDOR_DROPOFF"
-                              ? "Vendor dropping off at warehouse"
-                              : splitOrder.vendorInboundMethod === "PICKUP_REQUESTED"
-                                ? "Courier pickup requested"
-                                : "Fulfillment method not yet chosen"}
+                            {splitOrder.store.shippingMode === "SELF"
+                              ? `Delivered by ${splitOrder.store.name}`
+                              : "LinkWe delivery"}
                           </p>
                           <p className="text-xs font-semibold text-zinc-900">
                             TTD {(splitOrder.subtotalMinor / 100).toFixed(2)}
