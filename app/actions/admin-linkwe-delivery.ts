@@ -1,0 +1,88 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+
+import { getSession } from "@/lib/auth/session";
+import { recalculateMainOrderStatus } from "@/lib/fulfillment/order-status";
+import { prisma } from "@/lib/prisma";
+
+const STATUS_SORT_ORDER: Record<string, number> = {
+  READY_FOR_LINKWE: 0,
+  OUT_FOR_DELIVERY: 1,
+};
+
+export async function getLinkWeDeliveryQueue() {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") redirect("/");
+
+  const rows = await prisma.splitOrder.findMany({
+    where: {
+      status: { in: ["READY_FOR_LINKWE", "OUT_FOR_DELIVERY"] },
+    },
+    select: {
+      id: true,
+      referenceNumber: true,
+      status: true,
+      subtotalMinor: true,
+      shippingMinor: true,
+      createdAt: true,
+      vendorActionAt: true,
+      store: { select: { name: true } },
+      items: {
+        select: {
+          titleSnapshot: true,
+          quantity: true,
+          unitPriceMinor: true,
+        },
+      },
+      mainOrder: {
+        select: {
+          referenceNumber: true,
+          region: true,
+          buyer: { select: { fullName: true, email: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  return rows.sort((a, b) => {
+    const statusDiff =
+      (STATUS_SORT_ORDER[a.status] ?? 99) - (STATUS_SORT_ORDER[b.status] ?? 99);
+    if (statusDiff !== 0) return statusDiff;
+    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+  });
+}
+
+export async function markOutForLinkWeDelivery(
+  splitOrderId: string,
+): Promise<{ ok: true } | { error: string }> {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") redirect("/");
+
+  const id = splitOrderId.trim();
+  if (!id) return { error: "Order is required" };
+
+  const splitOrder = await prisma.splitOrder.findUnique({
+    where: { id },
+    select: { id: true, mainOrderId: true, status: true },
+  });
+
+  if (!splitOrder) return { error: "Order not found" };
+  if (splitOrder.status === "OUT_FOR_DELIVERY") return { ok: true };
+  if (splitOrder.status !== "READY_FOR_LINKWE") {
+    return { error: "Order is not ready for LinkWe delivery" };
+  }
+
+  await prisma.splitOrder.update({
+    where: { id },
+    data: { status: "OUT_FOR_DELIVERY" },
+  });
+
+  await recalculateMainOrderStatus(splitOrder.mainOrderId);
+  revalidatePath("/dashboard/admin");
+  revalidatePath(`/orders/${splitOrder.mainOrderId}`, "page");
+
+  return { ok: true };
+}

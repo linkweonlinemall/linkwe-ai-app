@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 
+import LinkWeDeliveryTab from "./linkwe-delivery-tab";
 import OverviewTab from "./overview-tab";
 import OrdersTab from "./orders-tab";
 import CouriersTab from "./couriers-tab";
@@ -17,6 +18,7 @@ import TicketOrdersTab from "./ticket-orders-tab";
 const TAB_IDS = [
   "overview",
   "orders",
+  "linkwe-delivery",
   "tickets",
   "warehouse",
   "bays",
@@ -166,6 +168,7 @@ export default function AdminDashboard({ adminName: _adminName }: Props) {
     <div className="p-6" style={{ backgroundColor: "var(--surface)" }}>
         {activeTab === "overview" && <OverviewTab />}
         {activeTab === "orders" && <OrdersTab />}
+        {activeTab === "linkwe-delivery" && <LinkWeDeliveryTab />}
         {activeTab === "tickets" && <TicketOrdersTab />}
         {activeTab === "warehouse" && <WarehouseTab />}
         {activeTab === "bays" && <BayMapTab />}
@@ -176,6 +179,7 @@ export default function AdminDashboard({ adminName: _adminName }: Props) {
         {activeTab === "settings" && <SettingsTab />}
         {activeTab !== "overview" &&
           activeTab !== "orders" &&
+          activeTab !== "linkwe-delivery" &&
           activeTab !== "tickets" &&
           activeTab !== "warehouse" &&
           activeTab !== "bays" &&
