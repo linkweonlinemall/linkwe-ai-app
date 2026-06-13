@@ -2,13 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 
-import type { CheckoutPricingLine } from "@/lib/checkout/pricing";
-import { getCartSubtotal } from "@/lib/checkout/pricing";
+import {
+  computeCartShipping,
+  computeCartShippingFromItems,
+  formatCoverageBlockError,
+  loadCheckoutCart,
+  type CheckoutShippingBreakdown,
+} from "@/lib/checkout/compute-cart-shipping";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { getShippingZone } from "@/lib/shipping/trinidad-zoning";
-import { loadStoreShippingConfigs } from "@/lib/shipping/load-store-shipping-configs";
-import { computePerStoreShipping } from "@/lib/shipping/per-store-shipping";
 import { createSplitOrdersFromMainOrder } from "@/lib/fulfillment/split-orders";
 import { stripe } from "@/lib/stripe/stripe";
 import { sendEmail } from "@/lib/email/send";
@@ -31,18 +33,27 @@ export type CreatePaymentIntentResult =
   | { ok: true; clientSecret: string; orderId: string }
   | { ok: false; error: string };
 
-function itemWeightLbs(weight: number | null, weightUnit: string | null): number {
-  if (!weight) return 0.5;
-  return weightUnit === "KG" ? weight * 2.20462 : weight;
-}
+export type CheckoutShippingBreakdownResult =
+  | ({ ok: true } & CheckoutShippingBreakdown)
+  | { ok: false; error?: string };
 
-function formatCoverageBlockError(
-  blockedStores: Array<{ storeId: string; storeName: string }>,
-): string {
-  const lines = blockedStores.map(
-    (s) => `\`${s.storeName}\` doesn't deliver to your area.`,
-  );
-  return `${lines.join(" ")} Remove their items or choose a different delivery address.`;
+export async function getCheckoutShippingBreakdown(
+  deliveryRegion: string,
+  useDelivery: boolean,
+): Promise<CheckoutShippingBreakdownResult> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "not_logged_in" };
+
+  const result = await computeCartShipping(session.userId, deliveryRegion, useDelivery);
+  if (!result.ok) return { ok: false, error: result.error };
+
+  return {
+    ok: true,
+    perStore: result.perStore,
+    totalShippingMinor: result.totalShippingMinor,
+    hasCoverageFailure: result.hasCoverageFailure,
+    blockedStores: result.blockedStores,
+  };
 }
 
 export async function createPaymentIntent(
@@ -54,29 +65,7 @@ export async function createPaymentIntent(
   const session = await getSession();
   if (!session) return { ok: false, error: "not_logged_in" };
 
-  const cartItems = await prisma.productCartItem.findMany({
-    where: { userId: session.userId },
-    include: {
-      product: {
-        select: {
-          id: true,
-          name: true,
-          price: true,
-          stock: true,
-          isPublished: true,
-          deliveryFee: true,
-          allowDelivery: true,
-          allowPickup: true,
-          storeId: true,
-          weight: true,
-          weightUnit: true,
-          isDigital: true,
-          store: { select: { id: true, name: true } },
-        },
-      },
-    },
-  });
-
+  const cartItems = await loadCheckoutCart(session.userId);
   if (cartItems.length === 0) return { ok: false, error: "cart_empty" };
 
   for (const item of cartItems) {
@@ -88,58 +77,18 @@ export async function createPaymentIntent(
     }
   }
 
-  const pricingLines: CheckoutPricingLine[] = cartItems.map((item) => ({
-    priceMinor: Math.round(item.product.price * 100),
-    quantity: item.quantity,
-    weightLbs: itemWeightLbs(item.product.weight, item.product.weightUnit),
-  }));
+  const shipping = await computeCartShippingFromItems(
+    cartItems,
+    deliveryRegion,
+    useDelivery,
+  );
 
-  const subtotalMinor = getCartSubtotal(pricingLines);
-
-  const storeIds = [...new Set(cartItems.map((i) => i.product.storeId))];
-  const configs = await loadStoreShippingConfigs(storeIds);
-  const configByStoreId = new Map(configs.map((c) => [c.storeId, c]));
-
-  const itemsByStore = new Map<string, typeof cartItems>();
-  for (const item of cartItems) {
-    const sid = item.product.storeId;
-    if (!itemsByStore.has(sid)) itemsByStore.set(sid, []);
-    itemsByStore.get(sid)!.push(item);
+  if (shipping.hasCoverageFailure) {
+    return { ok: false, error: formatCoverageBlockError(shipping.blockedStores) };
   }
 
-  const zone = getShippingZone(deliveryRegion);
-  const shippingResult = computePerStoreShipping({
-    zone,
-    region: deliveryRegion,
-    stores: storeIds.map((storeId) => {
-      const storeItems = itemsByStore.get(storeId) ?? [];
-      const config = configByStoreId.get(storeId);
-      const storeName =
-        config?.storeName ?? storeItems[0]?.product.store.name ?? "Store";
-      const totalWeightLbs = storeItems.reduce((sum, item) => {
-        if (item.product.isDigital) return sum;
-        const w = itemWeightLbs(item.product.weight, item.product.weightUnit);
-        return sum + w * item.quantity;
-      }, 0);
-      const allItemsDigitalOrPickup =
-        !useDelivery || storeItems.every((item) => item.product.isDigital);
-
-      return {
-        storeId,
-        storeName,
-        shippingMode: config?.shippingMode ?? "LINKWE",
-        selfRates: config?.selfRates ?? [],
-        totalWeightLbs,
-        allItemsDigitalOrPickup,
-      };
-    }),
-  });
-
-  if (shippingResult.hasCoverageFailure) {
-    return { ok: false, error: formatCoverageBlockError(shippingResult.blockedStores) };
-  }
-
-  const shippingMinor = shippingResult.totalShippingMinor;
+  const { subtotalMinor, totalShippingMinor: shippingMinor, zone, pricingLines, storeIds } =
+    shipping;
   const totalMinor = subtotalMinor + shippingMinor;
   const primaryStoreId = storeIds[0];
 

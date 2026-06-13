@@ -4,9 +4,14 @@ import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-
 import { loadStripe } from "@stripe/stripe-js";
 import { Check, ChevronUp } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { confirmOrderPaid, createPaymentIntent } from "@/app/actions/checkout";
+import {
+  confirmOrderPaid,
+  createPaymentIntent,
+  getCheckoutShippingBreakdown,
+  type CheckoutShippingBreakdownResult,
+} from "@/app/actions/checkout";
 import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
 import Button from "@/components/ui/Button";
 import InlineSpinner from "@/components/ui/InlineSpinner";
@@ -14,7 +19,6 @@ import Select from "@/components/ui/Select";
 import { TRINIDAD_ONBOARDING_REGION_OPTIONS } from "@/lib/onboarding/tt-region-options";
 import { useCartStore } from "@/lib/cart/cart-store";
 import { radius, spacing, tw } from "@/lib/design-system";
-import { getFinalShippingRateForRegion } from "@/lib/shipping/tt-markup";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -129,25 +133,50 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [regionDetectionFailed, setRegionDetectionFailed] = useState(false);
+  const [shippingBreakdown, setShippingBreakdown] =
+    useState<CheckoutShippingBreakdownResult | null>(null);
+  const [shippingLoading, setShippingLoading] = useState(false);
 
-  const shippingEstimate = useMemo(() => {
-    if (allDigital) return 0;
-    if (!(useDelivery && deliveryRegion)) return 0;
-    return getFinalShippingRateForRegion(
-      deliveryRegion,
-      items.reduce((sum, item) => {
-        const weightLbs =
-          item.product.weight != null
-            ? item.product.weightUnit === "KG"
-              ? item.product.weight * 2.20462
-              : item.product.weight
-            : 0.5;
-        return sum + weightLbs * item.quantity;
-      }, 0),
-    );
-  }, [allDigital, useDelivery, deliveryRegion, items]);
+  const regionLabel = deliveryRegion.replace(/_/g, " ");
 
-  const displayTotal = subtotal + shippingEstimate;
+  const needsShippingQuote = !allDigital && useDelivery && Boolean(deliveryRegion);
+
+  useEffect(() => {
+    if (!needsShippingQuote) {
+      setShippingBreakdown(null);
+      setShippingLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setShippingLoading(true);
+
+    void getCheckoutShippingBreakdown(deliveryRegion, useDelivery).then((result) => {
+      if (cancelled) return;
+      setShippingBreakdown(result);
+      setShippingLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [needsShippingQuote, deliveryRegion, useDelivery]);
+
+  const totalShippingMinor = needsShippingQuote && shippingBreakdown?.ok
+    ? shippingBreakdown.totalShippingMinor
+    : 0;
+
+  const hasCoverageFailure = Boolean(
+    needsShippingQuote && shippingBreakdown?.ok && shippingBreakdown.hasCoverageFailure,
+  );
+
+  const displayTotal = subtotal + totalShippingMinor / 100;
+
+  const payBlocked =
+    loading ||
+    (!allDigital && !anyDelivery && !anyPickup) ||
+    hasCoverageFailure ||
+    (needsShippingQuote && shippingLoading);
 
   async function proceedToPayment() {
     const addressInput = document.querySelector('input[name="locationAddress"]') as HTMLInputElement | null;
@@ -176,6 +205,96 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
     setLoading(false);
   }
 
+  function renderShippingLines() {
+    if (allDigital) {
+      return (
+        <div className="flex justify-between py-2 text-sm">
+          <span>Delivery</span>
+          <span className="font-semibold text-emerald-600">Free — instant download</span>
+        </div>
+      );
+    }
+
+    if (!useDelivery) {
+      return (
+        <div className="flex justify-between py-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+          <span>Pickup</span>
+          <span>Free</span>
+        </div>
+      );
+    }
+
+    if (!deliveryRegion) {
+      return (
+        <div className="flex justify-between py-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+          <span>Delivery</span>
+          <span>Enter address to calculate</span>
+        </div>
+      );
+    }
+
+    if (shippingLoading) {
+      return (
+        <div className="flex justify-between py-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+          <span>Delivery</span>
+          <span className="inline-flex items-center gap-2">
+            <InlineSpinner className="size-4" />
+            Calculating…
+          </span>
+        </div>
+      );
+    }
+
+    if (!shippingBreakdown?.ok) {
+      return (
+        <div className="flex justify-between py-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+          <span>Delivery</span>
+          <span>—</span>
+        </div>
+      );
+    }
+
+    const { perStore } = shippingBreakdown;
+    const deliveringStores = perStore.filter((row) => row.deliversToZone);
+
+    if (deliveringStores.length <= 1) {
+      const amountMinor = deliveringStores[0]?.shippingMinor ?? 0;
+      return (
+        <div className="flex justify-between py-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+          <span>Delivery</span>
+          <span>TTD {(amountMinor / 100).toFixed(2)}</span>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        {deliveringStores.map((row) => (
+          <div
+            key={row.storeId}
+            className="flex justify-between py-1.5 text-sm"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            <span className="min-w-0 pr-2">{row.storeName} delivery</span>
+            <span className="shrink-0">TTD {(row.shippingMinor / 100).toFixed(2)}</span>
+          </div>
+        ))}
+      </>
+    );
+  }
+
+  const coverageWarning =
+    hasCoverageFailure && shippingBreakdown?.ok ? (
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        {shippingBreakdown.blockedStores.map((store) => (
+          <p key={store.storeId}>
+            {store.storeName} doesn&apos;t deliver to {regionLabel}. Remove their items or choose a
+            different delivery address.
+          </p>
+        ))}
+      </div>
+    ) : null;
+
   const summaryBody = (
     <>
       <ul className="max-lg:text-sm lg:text-[length:inherit]">
@@ -196,23 +315,7 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
         <span>Subtotal</span>
         <span>TTD {subtotal.toFixed(2)}</span>
       </div>
-      {allDigital ? (
-        <div className="flex justify-between py-2 text-sm">
-          <span>Delivery</span>
-          <span className="font-semibold text-emerald-600">Free — instant download</span>
-        </div>
-      ) : (
-        <div className="flex justify-between py-2 text-sm" style={{ color: "var(--text-secondary)" }}>
-          <span>{useDelivery ? "Delivery" : "Pickup"}</span>
-          <span>
-            {useDelivery
-              ? deliveryRegion
-                ? `TTD ${shippingEstimate.toFixed(2)}`
-                : "Enter address to calculate"
-              : "Free"}
-          </span>
-        </div>
-      )}
+      {renderShippingLines()}
       <div className="my-3 border-t" style={{ borderColor: "var(--card-border-subtle)" }} />
       <div className="flex justify-between">
         <span className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
@@ -361,10 +464,12 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
               )}
             </div>
 
+            {coverageWarning ? <div className="mt-4">{coverageWarning}</div> : null}
+
             <button
               type="button"
               onClick={() => void proceedToPayment()}
-              disabled={loading || (!allDigital && !anyDelivery && !anyPickup)}
+              disabled={payBlocked}
               className={`${mobilePrimaryBtn} mt-4 hidden gap-2 lg:flex`}
             >
               {loading ? (
@@ -433,7 +538,7 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
               <button
                 type="button"
                 onClick={() => void proceedToPayment()}
-                disabled={loading || (!allDigital && !anyDelivery && !anyPickup)}
+                disabled={payBlocked}
                 className={`${mobilePrimaryBtn} gap-2`}
               >
                 {loading ? (
