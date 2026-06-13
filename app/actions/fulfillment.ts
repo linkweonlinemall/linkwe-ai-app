@@ -41,6 +41,99 @@ export async function chooseVendorDropoff(formData: FormData): Promise<void> {
   redirect(`/dashboard/vendor/orders/${splitOrderId}`);
 }
 
+export async function startPreparing(formData: FormData): Promise<void> {
+  const session = await getSession();
+  if (!session || session.role !== "VENDOR") redirect("/");
+
+  const splitOrderId = String(formData.get("splitOrderId") ?? "").trim();
+  if (!splitOrderId) redirect("/dashboard/vendor");
+
+  const splitOrder = await prisma.splitOrder.findFirst({
+    where: {
+      id: splitOrderId,
+      store: { ownerId: session.userId },
+      status: "AWAITING_VENDOR_ACTION",
+    },
+    select: { id: true, mainOrderId: true },
+  });
+
+  if (!splitOrder) redirect("/dashboard/vendor");
+
+  await prisma.splitOrder.update({
+    where: { id: splitOrderId },
+    data: {
+      status: "PREPARING",
+      vendorActionAt: new Date(),
+    },
+  });
+
+  await recalculateMainOrderStatus(splitOrder.mainOrderId);
+  revalidatePath(`/orders/${splitOrder.mainOrderId}`, "page");
+  revalidatePath("/dashboard/vendor");
+  revalidatePath(`/dashboard/vendor/orders/${splitOrderId}`, "page");
+  redirect(`/dashboard/vendor/orders/${splitOrderId}`);
+}
+
+export async function markShipped(formData: FormData): Promise<void> {
+  const session = await getSession();
+  if (!session || session.role !== "VENDOR") redirect("/");
+
+  const splitOrderId = String(formData.get("splitOrderId") ?? "").trim();
+  if (!splitOrderId) redirect("/dashboard/vendor");
+
+  const splitOrder = await prisma.splitOrder.findFirst({
+    where: {
+      id: splitOrderId,
+      store: { ownerId: session.userId, shippingMode: "SELF" },
+      status: "PREPARING",
+    },
+    select: { id: true, mainOrderId: true },
+  });
+
+  if (!splitOrder) redirect("/dashboard/vendor");
+
+  await prisma.splitOrder.update({
+    where: { id: splitOrderId },
+    data: { status: "SHIPPED" },
+  });
+
+  await recalculateMainOrderStatus(splitOrder.mainOrderId);
+  revalidatePath(`/orders/${splitOrder.mainOrderId}`, "page");
+  revalidatePath("/dashboard/vendor");
+  revalidatePath(`/dashboard/vendor/orders/${splitOrderId}`, "page");
+  redirect(`/dashboard/vendor/orders/${splitOrderId}`);
+}
+
+export async function markReadyForLinkWe(formData: FormData): Promise<void> {
+  const session = await getSession();
+  if (!session || session.role !== "VENDOR") redirect("/");
+
+  const splitOrderId = String(formData.get("splitOrderId") ?? "").trim();
+  if (!splitOrderId) redirect("/dashboard/vendor");
+
+  const splitOrder = await prisma.splitOrder.findFirst({
+    where: {
+      id: splitOrderId,
+      store: { ownerId: session.userId, shippingMode: "LINKWE" },
+      status: "PREPARING",
+    },
+    select: { id: true, mainOrderId: true },
+  });
+
+  if (!splitOrder) redirect("/dashboard/vendor");
+
+  await prisma.splitOrder.update({
+    where: { id: splitOrderId },
+    data: { status: "READY_FOR_LINKWE" },
+  });
+
+  await recalculateMainOrderStatus(splitOrder.mainOrderId);
+  revalidatePath(`/orders/${splitOrder.mainOrderId}`, "page");
+  revalidatePath("/dashboard/vendor");
+  revalidatePath(`/dashboard/vendor/orders/${splitOrderId}`, "page");
+  redirect(`/dashboard/vendor/orders/${splitOrderId}`);
+}
+
 export async function chooseCourierPickup(formData: FormData): Promise<void> {
   const session = await getSession();
   if (!session || session.role !== "VENDOR") redirect("/");

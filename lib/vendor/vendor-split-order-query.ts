@@ -67,6 +67,7 @@ export const vendorSplitOrderDetailSelect = {
       region: true,
       address: true,
       logoUrl: true,
+      shippingMode: true,
     },
   },
   items: {

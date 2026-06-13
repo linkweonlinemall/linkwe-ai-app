@@ -54,10 +54,22 @@ function getStatusBadge(status: string): { label: string; className: string } {
         label: "Action Required",
         className: "bg-[#D4450A] text-white",
       };
+    case "PREPARING":
     case "VENDOR_PREPARING":
       return {
         label: "Preparing",
         className: "bg-[#FAEEDA] text-[#854F0B]",
+      };
+    case "SHIPPED":
+    case "OUT_FOR_DELIVERY":
+      return {
+        label: "Out for delivery",
+        className: "bg-[#E6F1FB] text-[#185FA5]",
+      };
+    case "READY_FOR_LINKWE":
+      return {
+        label: "Ready for LinkWe",
+        className: "bg-[#E6F1FB] text-[#185FA5]",
       };
     case "AWAITING_COURIER_PICKUP":
     case "COURIER_ASSIGNED":
@@ -82,9 +94,18 @@ function getStatusBadge(status: string): { label: string; className: string } {
         className: "bg-[#EAF3DE] text-[#3B6D11]",
       };
     case "DISPATCHED":
+      return {
+        label: "Dispatched",
+        className: "bg-[#EAF3DE] text-[#3B6D11]",
+      };
     case "DELIVERED":
       return {
-        label: status === "DELIVERED" ? "Delivered" : "Dispatched",
+        label: "Delivered",
+        className: "bg-[#EAF3DE] text-[#3B6D11]",
+      };
+    case "COMPLETED":
+      return {
+        label: "Completed",
         className: "bg-[#EAF3DE] text-[#3B6D11]",
       };
     default:
@@ -120,13 +141,23 @@ export default function OrdersTab({ splitOrders }: Props) {
 
   const actionRequired = splitOrders.filter((o) => o.status === "AWAITING_VENDOR_ACTION");
   const inProgress = splitOrders.filter((o) =>
-    ["VENDOR_PREPARING", "AWAITING_COURIER_PICKUP", "COURIER_ASSIGNED", "COURIER_PICKED_UP", "VENDOR_DROPPED_OFF"].includes(
-      o.status,
-    ),
+    [
+      "PREPARING",
+      "READY_FOR_LINKWE",
+      "SHIPPED",
+      "OUT_FOR_DELIVERY",
+      "VENDOR_PREPARING",
+      "AWAITING_COURIER_PICKUP",
+      "COURIER_ASSIGNED",
+      "COURIER_PICKED_UP",
+      "VENDOR_DROPPED_OFF",
+      "AT_WAREHOUSE",
+      "PACKAGED",
+      "BUNDLED_FOR_DISPATCH",
+      "DISPATCHED",
+    ].includes(o.status),
   );
-  const completed = splitOrders.filter((o) =>
-    ["AT_WAREHOUSE", "PACKAGED", "BUNDLED_FOR_DISPATCH", "DISPATCHED", "DELIVERED"].includes(o.status),
-  );
+  const completed = splitOrders.filter((o) => ["DELIVERED", "COMPLETED"].includes(o.status));
 
   function renderOrderCard(order: VendorSplitOrder) {
     const badge = getStatusBadge(order.status);
@@ -183,7 +214,7 @@ export default function OrdersTab({ splitOrders }: Props) {
 
         {needsAction ? (
           <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-[#FFF8F0] px-4 py-2">
-            <p className="min-w-0 text-sm text-[var(--text-muted)]">Action required — choose fulfilment</p>
+            <p className="min-w-0 text-sm text-[var(--text-muted)]">Action required — start preparing this order</p>
             <div className="flex shrink-0 items-center gap-3">
               <Link
                 href={orderHref}

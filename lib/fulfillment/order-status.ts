@@ -18,7 +18,13 @@ const AT_WAREHOUSE_OR_BEYOND: string[] = [
   "DELIVERED",
 ];
 
-const DISPATCHED_OR_BEYOND: string[] = ["DISPATCHED", "DELIVERED", "COMPLETED"];
+const DISPATCHED_OR_BEYOND: string[] = [
+  "SHIPPED",
+  "OUT_FOR_DELIVERY",
+  "DISPATCHED",
+  "DELIVERED",
+  "COMPLETED",
+];
 
 const PACKAGED_OR_BEYOND: string[] = [
   "PACKAGED",

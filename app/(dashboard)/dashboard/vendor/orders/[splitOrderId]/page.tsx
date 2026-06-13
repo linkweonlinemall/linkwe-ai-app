@@ -1,13 +1,14 @@
 import type { CSSProperties } from "react";
+import type { StoreShippingMode } from "@prisma/client";
 import { redirect } from "next/navigation";
 
-import { chooseCourierPickup, chooseVendorDropoff } from "@/app/actions/fulfillment";
-import { getSession } from "@/lib/auth/session";
 import {
-  calculateBatchWeightLbs,
-  getCourierPickupFee,
-  getCourierPickupFeeMinor,
-} from "@/lib/fulfillment/courier-pickup-rates";
+  markReadyForLinkWe,
+  markShipped,
+  startPreparing,
+} from "@/app/actions/fulfillment";
+import { getSession } from "@/lib/auth/session";
+import { getCourierPickupFeeMinor } from "@/lib/fulfillment/courier-pickup-rates";
 import { calculateCommissionMinor, calculateVendorNetMinor } from "@/lib/platform/commission";
 import { prisma } from "@/lib/prisma";
 import { vendorSplitOrderDetailSelect } from "@/lib/vendor/vendor-split-order-query";
@@ -17,34 +18,66 @@ type Props = { params: Promise<{ splitOrderId: string }> };
 const SCARLET = "#D4450A";
 const EMERALD = "#059669";
 
-const VENDOR_FLOW_STEPS = [
+const SELF_FLOW_STEPS = ["Action", "Preparing", "Shipped", "Delivered"] as const;
+const LINKWE_FLOW_STEPS = [
   "Action",
   "Preparing",
-  "At warehouse",
-  "Packaged",
-  "Dispatched",
+  "Ready for LinkWe",
+  "Out for delivery",
   "Delivered",
 ] as const;
 
-function getVendorStepIndex(status: string): number {
+function getFlowSteps(shippingMode: StoreShippingMode): readonly string[] {
+  return shippingMode === "SELF" ? SELF_FLOW_STEPS : LINKWE_FLOW_STEPS;
+}
+
+function getVendorStepIndex(status: string, shippingMode: StoreShippingMode): number {
+  if (shippingMode === "SELF") {
+    switch (status) {
+      case "AWAITING_VENDOR_ACTION":
+        return 0;
+      case "PREPARING":
+      case "VENDOR_PREPARING":
+      case "AWAITING_COURIER_PICKUP":
+      case "COURIER_ASSIGNED":
+      case "COURIER_PICKED_UP":
+      case "VENDOR_DROPPED_OFF":
+        return 1;
+      case "SHIPPED":
+      case "AT_WAREHOUSE":
+      case "PACKAGED":
+      case "BUNDLED_FOR_DISPATCH":
+      case "DISPATCHED":
+        return 2;
+      case "DELIVERED":
+      case "COMPLETED":
+        return 3;
+      default:
+        return 0;
+    }
+  }
+
   switch (status) {
     case "AWAITING_VENDOR_ACTION":
       return 0;
+    case "PREPARING":
     case "VENDOR_PREPARING":
     case "AWAITING_COURIER_PICKUP":
     case "COURIER_ASSIGNED":
     case "COURIER_PICKED_UP":
     case "VENDOR_DROPPED_OFF":
       return 1;
+    case "READY_FOR_LINKWE":
     case "AT_WAREHOUSE":
-      return 2;
     case "PACKAGED":
-      return 3;
     case "BUNDLED_FOR_DISPATCH":
+      return 2;
+    case "OUT_FOR_DELIVERY":
     case "DISPATCHED":
-      return 4;
+      return 3;
     case "DELIVERED":
-      return 5;
+    case "COMPLETED":
+      return 4;
     default:
       return 0;
   }
@@ -67,10 +100,22 @@ function getStatusBadge(status: string): { label: string; style: CSSProperties }
         label: "Action Required",
         style: { ...pill, backgroundColor: "#FEF2F2", color: "#B91C1C", borderColor: "#FECACA" },
       };
+    case "PREPARING":
     case "VENDOR_PREPARING":
       return {
         label: "Preparing",
         style: { ...pill, backgroundColor: "#FFFBEB", color: "#B45309", borderColor: "#FDE68A" },
+      };
+    case "SHIPPED":
+    case "OUT_FOR_DELIVERY":
+      return {
+        label: "Out for delivery",
+        style: { ...pill, backgroundColor: "#EFF6FF", color: "#1D4ED8", borderColor: "#BFDBFE" },
+      };
+    case "READY_FOR_LINKWE":
+      return {
+        label: "Ready for LinkWe",
+        style: { ...pill, backgroundColor: "#EFF6FF", color: "#1D4ED8", borderColor: "#BFDBFE" },
       };
     case "AWAITING_COURIER_PICKUP":
     case "COURIER_ASSIGNED":
@@ -91,7 +136,6 @@ function getStatusBadge(status: string): { label: string; style: CSSProperties }
     case "PACKAGED":
     case "BUNDLED_FOR_DISPATCH":
     case "DISPATCHED":
-    case "DELIVERED":
       return {
         label:
           status === "AT_WAREHOUSE"
@@ -100,9 +144,13 @@ function getStatusBadge(status: string): { label: string; style: CSSProperties }
               ? "Packaged"
               : status === "BUNDLED_FOR_DISPATCH"
                 ? "Bundled"
-                : status === "DISPATCHED"
-                  ? "Dispatched"
-                  : "Delivered",
+                : "Dispatched",
+        style: { ...pill, backgroundColor: "#ECFDF5", color: "#047857", borderColor: "#A7F3D0" },
+      };
+    case "DELIVERED":
+    case "COMPLETED":
+      return {
+        label: status === "COMPLETED" ? "Completed" : "Delivered",
         style: { ...pill, backgroundColor: "#ECFDF5", color: "#047857", borderColor: "#A7F3D0" },
       };
     default:
@@ -146,65 +194,27 @@ export default async function VendorOrderDetailPage({ params }: Props) {
 
   if (!splitOrder) redirect("/dashboard/vendor");
 
-  let batchWeightLbsForDisplay = 1;
-  if (splitOrder.status === "AWAITING_VENDOR_ACTION") {
-    const batchSplits = await prisma.splitOrder.findMany({
-      where: {
-        storeId: splitOrder.storeId,
-        status: "AWAITING_VENDOR_ACTION",
-      },
-      select: {
-        mainOrderId: true,
-        items: { select: { quantity: true, listingId: true } },
-      },
-    });
-    const mainOrderIds = [...new Set(batchSplits.map((s) => s.mainOrderId))];
-    const listingIds = [...new Set(batchSplits.flatMap((s) => s.items.map((i) => i.listingId)))];
-    if (mainOrderIds.length > 0 && listingIds.length > 0) {
-      const orderItems = await prisma.orderItem.findMany({
-        where: {
-          mainOrderId: { in: mainOrderIds },
-          listingId: { in: listingIds },
-        },
-        select: { mainOrderId: true, listingId: true, weightLbs: true },
-      });
-      const weightInputs = batchSplits.flatMap((so) =>
-        so.items.map((it) => {
-          const oi = orderItems.find(
-            (o) => o.mainOrderId === so.mainOrderId && o.listingId === it.listingId,
-          );
-          const unitLbs = oi && oi.weightLbs > 0 ? oi.weightLbs : 1;
-          return {
-            quantity: it.quantity,
-            product: { weight: unitLbs, weightUnit: "LB" as const },
-          };
-        }),
-      );
-      const raw = calculateBatchWeightLbs(weightInputs);
-      batchWeightLbsForDisplay = raw > 0 ? raw : 1;
-    }
-  }
-
+  const shippingMode = splitOrder.store.shippingMode;
   const badge = getStatusBadge(splitOrder.status);
   const splitRef = `SP-${splitOrder.id.slice(-8).toUpperCase()}`;
   const mainRef = `LW-${splitOrder.mainOrderId.slice(-8).toUpperCase()}`;
-  const stepIndex = getVendorStepIndex(splitOrder.status);
+  const flowSteps = getFlowSteps(shippingMode);
+  const stepIndex = getVendorStepIndex(splitOrder.status, shippingMode);
   const commissionMinor = calculateCommissionMinor(splitOrder.subtotalMinor);
   const netAfterCommission = calculateVendorNetMinor(splitOrder.subtotalMinor);
-  const courierLeg = splitOrder.legacyInboundShipment;
-  const regionForPickup = splitOrder.store.region ?? "";
-  const weightForPickupFee =
-    splitOrder.status === "AWAITING_VENDOR_ACTION" ? batchWeightLbsForDisplay : 1;
   const pickupFeeMinor =
     splitOrder.vendorInboundMethod === "PICKUP_REQUESTED"
-      ? getCourierPickupFeeMinor(regionForPickup, weightForPickupFee)
+      ? getCourierPickupFeeMinor(splitOrder.store.region ?? "", 1)
       : 0;
   const netEarningsMinor = netAfterCommission - pickupFeeMinor;
 
-  const showFulfillmentChoice = splitOrder.status === "AWAITING_VENDOR_ACTION";
-  const showCourierAssigned = Boolean(courierLeg?.courierId && courierLeg.courier);
-  const showCourierWaiting =
-    splitOrder.status === "AWAITING_COURIER_PICKUP" && !courierLeg?.courierId;
+  const showStartPreparing = splitOrder.status === "AWAITING_VENDOR_ACTION";
+  const showMarkShipped = splitOrder.status === "PREPARING" && shippingMode === "SELF";
+  const showMarkReadyForLinkWe = splitOrder.status === "PREPARING" && shippingMode === "LINKWE";
+  const showShippedPanel = splitOrder.status === "SHIPPED";
+  const showReadyForLinkWePanel = splitOrder.status === "READY_FOR_LINKWE";
+  const showOutForDeliveryPanel = splitOrder.status === "OUT_FOR_DELIVERY";
+  const showDeliveredPanel = splitOrder.status === "DELIVERED" || splitOrder.status === "COMPLETED";
 
   return (
     <div className="bg-[#f5f5f5] pb-24 sm:pb-0">
@@ -224,8 +234,18 @@ export default async function VendorOrderDetailPage({ params }: Props) {
             </h1>
             <p className="mt-1 text-sm text-zinc-400">Main order: {mainRef}</p>
             <p className="mt-1 text-sm text-zinc-600">Placed {formatDate(splitOrder.mainOrder.createdAt)}</p>
-            <div className="mt-3">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
               <span style={badge.style}>{badge.label}</span>
+              <span
+                className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
+                style={{
+                  backgroundColor: shippingMode === "SELF" ? "#FFF7ED" : "#EFF6FF",
+                  color: shippingMode === "SELF" ? "#C2410C" : "#1D4ED8",
+                  borderColor: shippingMode === "SELF" ? "#FED7AA" : "#BFDBFE",
+                }}
+              >
+                {shippingMode === "SELF" ? "You deliver this order" : "LinkWe delivers this order"}
+              </span>
             </div>
           </div>
           <div className="flex shrink-0 flex-col gap-2 sm:items-end">
@@ -248,7 +268,7 @@ export default async function VendorOrderDetailPage({ params }: Props) {
             Your progress
           </h2>
           <div className="flex flex-wrap items-start justify-between gap-2">
-            {VENDOR_FLOW_STEPS.map((label, i) => {
+            {flowSteps.map((label, i) => {
               const isPast = i < stepIndex;
               const isCurrent = i === stepIndex;
               return (
@@ -310,95 +330,129 @@ export default async function VendorOrderDetailPage({ params }: Props) {
               </div>
             </div>
 
-            {showFulfillmentChoice ? (
+            {showStartPreparing ? (
               <div
                 className="rounded-xl bg-white p-5 sm:p-6"
                 style={{ border: "1px solid var(--card-border)" }}
               >
-                <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                <h2 className="mb-2 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
                   Fulfillment
                 </h2>
-                <p className="mb-4 text-sm text-zinc-600">Choose how you will get items to the LinkWe warehouse.</p>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <form action={chooseVendorDropoff}>
-                    <input type="hidden" name="splitOrderId" value={splitOrder.id} />
-                    <button
-                      type="submit"
-                      className="w-full rounded-xl border-2 border-zinc-200 bg-white p-4 text-left transition-colors hover:border-[#D4450A]"
-                    >
-                      <p className="text-sm font-semibold text-zinc-900">Drop off at warehouse</p>
-                      <p className="mt-1 text-xs text-zinc-500">Bring your items to the LinkWe warehouse yourself.</p>
-                      <p className="mt-2 text-xs font-semibold text-emerald-600">Free — no fee</p>
-                    </button>
-                  </form>
-
-                  <form action={chooseCourierPickup}>
-                    <input type="hidden" name="splitOrderId" value={splitOrder.id} />
-                    <button
-                      type="submit"
-                      className="w-full rounded-xl border-2 border-zinc-200 bg-white p-4 text-left transition-colors hover:border-[#D4450A]"
-                    >
-                      <p className="text-sm font-semibold text-zinc-900">Request courier pickup</p>
-                      <p className="mt-1 text-xs text-zinc-500">A LinkWe courier will collect your items.</p>
-                      <p className="mt-2 text-xs font-semibold text-amber-600">
-                        TTD{" "}
-                        {getCourierPickupFee(splitOrder.store.region ?? "", batchWeightLbsForDisplay).toFixed(2)}{" "}
-                        pickup fee (batched weight) — deducted from
-                        earnings
-                      </p>
-                    </button>
-                  </form>
-                </div>
+                <p className="mb-4 text-sm text-zinc-600">
+                  Confirm you&apos;ve received this order and are packing it.
+                </p>
+                <form action={startPreparing}>
+                  <input type="hidden" name="splitOrderId" value={splitOrder.id} />
+                  <button
+                    type="submit"
+                    className="inline-flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 sm:w-auto"
+                    style={{ backgroundColor: SCARLET }}
+                  >
+                    Start preparing
+                  </button>
+                </form>
               </div>
             ) : null}
 
-            {showCourierWaiting ? (
+            {showMarkShipped ? (
               <div
                 className="rounded-xl bg-white p-5 sm:p-6"
                 style={{ border: "1px solid var(--card-border)" }}
               >
-                <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                  Courier pickup
+                <h2 className="mb-2 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                  Fulfillment
                 </h2>
-                <p className="text-sm text-zinc-600">Waiting for a courier to accept this pickup.</p>
+                <p className="mb-4 text-sm text-zinc-600">
+                  Mark when the order is out for delivery to the customer.
+                </p>
+                <form action={markShipped}>
+                  <input type="hidden" name="splitOrderId" value={splitOrder.id} />
+                  <button
+                    type="submit"
+                    className="inline-flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 sm:w-auto"
+                    style={{ backgroundColor: SCARLET }}
+                  >
+                    Mark as shipped
+                  </button>
+                </form>
               </div>
             ) : null}
 
-            {showCourierAssigned && courierLeg?.courier ? (
+            {showMarkReadyForLinkWe ? (
               <div
                 className="rounded-xl bg-white p-5 sm:p-6"
                 style={{ border: "1px solid var(--card-border)" }}
               >
-                <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                  Courier
+                <h2 className="mb-2 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                  Fulfillment
                 </h2>
-                <div className="flex items-start gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-sm font-bold text-zinc-700">
-                    {courierLeg.courier.fullName.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-semibold text-zinc-900">{courierLeg.courier.fullName}</p>
-                    <p className="text-sm capitalize text-zinc-500">
-                      {courierLeg.courier.region?.replace(/_/g, " ") ?? "—"}
-                    </p>
-                    {courierLeg.courier.phone ? (
-                      <p className="mt-1 text-sm text-zinc-600">{courierLeg.courier.phone}</p>
-                    ) : null}
-                    <p className="mt-2 text-xs text-zinc-500">
-                      Status: {courierLeg.status.replace(/_/g, " ")}
-                    </p>
-                    {courierLeg.claimedAt ? (
-                      <p className="text-xs text-zinc-500">
-                        Claimed: {formatDate(courierLeg.claimedAt)}
-                      </p>
-                    ) : null}
-                    {courierLeg.pickedUpAt ? (
-                      <p className="text-xs text-zinc-500">
-                        Picked up: {formatDate(courierLeg.pickedUpAt)}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
+                <p className="mb-4 text-sm text-zinc-600">
+                  LinkWe will collect this order and handle delivery.
+                </p>
+                <form action={markReadyForLinkWe}>
+                  <input type="hidden" name="splitOrderId" value={splitOrder.id} />
+                  <button
+                    type="submit"
+                    className="inline-flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 sm:w-auto"
+                    style={{ backgroundColor: SCARLET }}
+                  >
+                    Mark ready for LinkWe pickup
+                  </button>
+                </form>
+              </div>
+            ) : null}
+
+            {showShippedPanel ? (
+              <div
+                className="rounded-xl bg-white p-5 sm:p-6"
+                style={{ border: "1px solid var(--card-border)" }}
+              >
+                <h2 className="mb-2 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                  Fulfillment
+                </h2>
+                <p className="text-sm text-zinc-600">
+                  Out for delivery — waiting for the customer to confirm receipt.
+                </p>
+              </div>
+            ) : null}
+
+            {showReadyForLinkWePanel ? (
+              <div
+                className="rounded-xl bg-white p-5 sm:p-6"
+                style={{ border: "1px solid var(--card-border)" }}
+              >
+                <h2 className="mb-2 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                  Fulfillment
+                </h2>
+                <p className="text-sm text-zinc-600">
+                  Ready for LinkWe. We&apos;ll collect and deliver it.
+                </p>
+              </div>
+            ) : null}
+
+            {showOutForDeliveryPanel ? (
+              <div
+                className="rounded-xl bg-white p-5 sm:p-6"
+                style={{ border: "1px solid var(--card-border)" }}
+              >
+                <h2 className="mb-2 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                  Fulfillment
+                </h2>
+                <p className="text-sm text-zinc-600">LinkWe is delivering this order.</p>
+              </div>
+            ) : null}
+
+            {showDeliveredPanel ? (
+              <div
+                className="rounded-xl bg-white p-5 sm:p-6"
+                style={{ border: "1px solid var(--card-border)" }}
+              >
+                <h2 className="mb-2 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                  Fulfillment
+                </h2>
+                <p className="text-sm text-zinc-600">
+                  {splitOrder.status === "COMPLETED" ? "Order completed." : "Delivered to the customer."}
+                </p>
               </div>
             ) : null}
           </div>
