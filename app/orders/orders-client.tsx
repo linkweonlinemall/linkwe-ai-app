@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import MarkReceivedButton from "@/app/orders/components/mark-received-button";
 import Button from "@/components/ui/Button";
 import type { MainOrderStatus } from "@prisma/client";
 
@@ -255,9 +254,6 @@ export default function OrdersClient({ orders }: Props) {
                     TTD {(order.totalMinor / 100).toFixed(2)}
                   </p>
                   <div className="flex min-w-0 flex-wrap items-center gap-2 sm:ml-auto sm:shrink-0">
-                    {order.status === "SHIPPED" || order.status === "DELIVERED" ? (
-                      <MarkReceivedButton orderId={order.id} />
-                    ) : null}
                     {order.status === "CUSTOMER_RECEIVED" ? (
                       <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
                         ✓ Received

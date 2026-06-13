@@ -2,22 +2,23 @@
 
 import { useState } from "react";
 
-import { markOrderReceived } from "@/app/actions/order-received";
+import { markSplitReceived } from "@/app/actions/order-received";
 
-type Props = { orderId: string };
+type Props = { splitOrderId: string; storeName?: string };
 
-export default function MarkReceivedButton({ orderId }: Props) {
+export default function MarkReceivedButton({ splitOrderId, storeName }: Props) {
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const storeLabel = storeName ?? "this store";
 
   if (confirming) {
     return (
       <div className="flex flex-col gap-3 rounded-xl border-2 border-emerald-300 bg-emerald-50 p-4">
-        <p className="text-sm font-semibold text-emerald-900">Confirm you have received all items in this order?</p>
-        <p className="text-xs text-emerald-700">
-          This will notify the vendors and release their payments. Only confirm if you have physically received
-          everything.
+        <p className="text-sm font-semibold text-emerald-900">
+          Confirm you&apos;ve received your items from {storeLabel}?
         </p>
+        <p className="text-xs text-emerald-700">This releases their payment.</p>
         <div className="flex gap-2">
           <button
             type="button"
@@ -31,9 +32,7 @@ export default function MarkReceivedButton({ orderId }: Props) {
             type="button"
             onClick={async () => {
               setSubmitting(true);
-              const fd = new FormData();
-              fd.append("orderId", orderId);
-              const result = await markOrderReceived(fd);
+              const result = await markSplitReceived(splitOrderId);
               setSubmitting(false);
               if (result && "error" in result) {
                 alert(result.error);
@@ -56,7 +55,7 @@ export default function MarkReceivedButton({ orderId }: Props) {
     <button
       type="button"
       onClick={() => setConfirming(true)}
-      className="whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:opacity-90"
+      className="whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold text-white transition-colors hover:opacity-90"
       style={{ backgroundColor: "#059669" }}
     >
       ✓ Mark as Received

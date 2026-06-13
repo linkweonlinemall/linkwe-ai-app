@@ -112,6 +112,8 @@ export default async function OrderDetailPage({ params }: Props) {
           id: true,
           status: true,
           subtotalMinor: true,
+          deliveredAt: true,
+          earningsReleased: true,
           store: {
             select: { name: true, slug: true, shippingMode: true },
           },
@@ -154,6 +156,12 @@ export default async function OrderDetailPage({ params }: Props) {
 
   const currentStep = getProgressStep(order.status);
   const statusInfo = getStatusInfo(order.status);
+
+  const splitTotal = order.splitOrders.length;
+  const deliveredCount = order.splitOrders.filter((s) =>
+    ["DELIVERED", "COMPLETED"].includes(s.status),
+  ).length;
+  const isMultiStore = splitTotal > 1;
 
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
@@ -407,35 +415,16 @@ export default async function OrderDetailPage({ params }: Props) {
             </div>
           ) : null}
 
+          {isMultiStore && !allDigital ? (
+            <p className="mt-3 text-xs text-zinc-600">
+              <span className="font-semibold">
+                {deliveredCount} of {splitTotal} stores received
+              </span>
+            </p>
+          ) : null}
+
           <p className="mt-4 text-sm text-zinc-500">{statusInfo.description}</p>
         </section>
-
-        {order.status === "SHIPPED" && isBuyer ? (
-          <div className="mb-5 rounded-xl border-2 border-emerald-200 bg-emerald-50 p-5 sm:p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-bold text-emerald-900">Has your order arrived?</p>
-                <p className="mt-1 text-xs text-emerald-700">
-                  If you have received all your items, please confirm below.
-                </p>
-              </div>
-              <MarkReceivedButton orderId={order.id} />
-            </div>
-          </div>
-        ) : null}
-
-        {order.status === "CUSTOMER_RECEIVED" && isBuyer ? (
-          <div className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
-            <div className="flex items-center gap-2">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-              <p className="text-sm font-medium text-emerald-800">
-                You confirmed receipt of this order. Thank you for shopping with LinkWe.
-              </p>
-            </div>
-          </div>
-        ) : null}
 
         <div className="grid gap-5 lg:grid-cols-3">
           {/* Items */}
@@ -452,6 +441,11 @@ export default async function OrderDetailPage({ params }: Props) {
                 <div className="flex flex-col gap-6">
                   {order.splitOrders.map((splitOrder) => {
                     const badge = getSplitOrderStatusLabel(splitOrder.status as string);
+                    const isReceivable =
+                      isBuyer &&
+                      (splitOrder.status === "SHIPPED" || splitOrder.status === "OUT_FOR_DELIVERY");
+                    const isReceived =
+                      splitOrder.status === "DELIVERED" || splitOrder.status === "COMPLETED";
                     return (
                       <div key={splitOrder.id} className="overflow-hidden rounded-xl border border-zinc-100">
                         <div className="flex items-center justify-between border-b border-zinc-100 bg-zinc-50 px-4 py-3">
@@ -519,6 +513,29 @@ export default async function OrderDetailPage({ params }: Props) {
                             TTD {(splitOrder.subtotalMinor / 100).toFixed(2)}
                           </p>
                         </div>
+
+                        {isReceivable ? (
+                          <div className="border-t border-zinc-100 bg-emerald-50/50 px-4 py-3">
+                            <MarkReceivedButton
+                              splitOrderId={splitOrder.id}
+                              storeName={splitOrder.store.name}
+                            />
+                          </div>
+                        ) : isReceived ? (
+                          <div className="flex items-center gap-2 border-t border-emerald-100 bg-emerald-50 px-4 py-3">
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="#059669"
+                              strokeWidth="2.5"
+                            >
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                            <p className="text-xs font-semibold text-emerald-800">Received ✓</p>
+                          </div>
+                        ) : null}
                       </div>
                     );
                   })}
