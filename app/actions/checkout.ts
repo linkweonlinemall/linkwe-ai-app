@@ -57,9 +57,11 @@ export async function getCheckoutShippingBreakdown(
 }
 
 export async function createPaymentIntent(
-  _deliveryAddress: string,
+  deliveryAddress: string,
   deliveryRegion: string,
   useDelivery: boolean,
+  deliveryLat?: number | null,
+  deliveryLng?: number | null,
 ): Promise<CreatePaymentIntentResult> {
 
   const session = await getSession();
@@ -110,6 +112,23 @@ export async function createPaymentIntent(
     });
   }
 
+  let shippingAddressId: string | undefined;
+  const trimmedAddress = deliveryAddress.trim();
+  if (useDelivery && trimmedAddress) {
+    const savedAddress = await prisma.address.create({
+      data: {
+        userId: session.userId,
+        line1: trimmedAddress,
+        city: deliveryRegion || "unknown",
+        region: deliveryRegion || null,
+        country: "TT",
+        latitude: deliveryLat ?? null,
+        longitude: deliveryLng ?? null,
+      },
+    });
+    shippingAddressId = savedAddress.id;
+  }
+
   let order;
   try {
     order = await prisma.mainOrder.create({
@@ -121,6 +140,7 @@ export async function createPaymentIntent(
         subtotalMinor,
         shippingMinor,
         totalMinor,
+        shippingAddressId,
         items: {
           create: cartItems.map((item, index) => ({
             listingId: null,

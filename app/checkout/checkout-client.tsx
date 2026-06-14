@@ -180,7 +180,13 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
 
   async function proceedToPayment() {
     const addressInput = document.querySelector('input[name="locationAddress"]') as HTMLInputElement | null;
+    const latInput = document.querySelector('input[name="locationLat"]') as HTMLInputElement | null;
+    const lngInput = document.querySelector('input[name="locationLng"]') as HTMLInputElement | null;
     const address = addressInput?.value ?? "";
+    const latRaw = latInput?.value?.trim() ?? "";
+    const lngRaw = lngInput?.value?.trim() ?? "";
+    const deliveryLat = latRaw ? Number(latRaw) : null;
+    const deliveryLng = lngRaw ? Number(lngRaw) : null;
 
     if (!allDigital && useDelivery && !deliveryRegion) {
       setError("Please select your delivery region.");
@@ -193,6 +199,8 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
       address,
       allDigital ? "" : deliveryRegion,
       allDigital ? false : useDelivery,
+      Number.isFinite(deliveryLat) ? deliveryLat : null,
+      Number.isFinite(deliveryLng) ? deliveryLng : null,
     );
     if (result.ok) {
       setClientSecret(result.clientSecret);
