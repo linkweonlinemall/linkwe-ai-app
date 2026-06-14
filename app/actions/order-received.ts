@@ -4,10 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getSession } from "@/lib/auth/session";
-import {
-  getOrderAutoCompleteAt,
-  releaseSplitOrderEarnings,
-} from "@/lib/finance/complete-order";
+import { getOrderAutoCompleteAt } from "@/lib/finance/complete-order";
 import { recalculateMainOrderStatus } from "@/lib/fulfillment/order-status";
 import { prisma } from "@/lib/prisma";
 
@@ -75,8 +72,6 @@ export async function markOrderReceived(
           : getOrderAutoCompleteAt(deliveredAt),
       },
     });
-
-    await releaseSplitOrderEarnings(split.id, session.userId, "ORDER_REVENUE");
   }
 
   revalidatePath(`/orders/${orderId}`);
@@ -120,20 +115,16 @@ export async function markSplitReceived(
     return { error: "This item can't be confirmed received yet" };
   }
 
-  if (!split.earningsReleased) {
-    const now = new Date();
+  const now = new Date();
 
-    await prisma.splitOrder.update({
-      where: { id },
-      data: {
-        status: "DELIVERED",
-        deliveredAt: now,
-        autoCompleteAt: getOrderAutoCompleteAt(now),
-      },
-    });
-
-    await releaseSplitOrderEarnings(split.id, session.userId, "ORDER_REVENUE");
-  }
+  await prisma.splitOrder.update({
+    where: { id },
+    data: {
+      status: "DELIVERED",
+      deliveredAt: now,
+      autoCompleteAt: getOrderAutoCompleteAt(now),
+    },
+  });
 
   await recalculateMainOrderStatus(split.mainOrderId);
   revalidatePath(`/orders/${split.mainOrderId}`);

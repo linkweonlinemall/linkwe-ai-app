@@ -9,9 +9,11 @@ import {
   getCourierPickupFeeMinor,
 } from "@/lib/fulfillment/courier-pickup-rates";
 import { getSession } from "@/lib/auth/session";
-import { prisma } from "@/lib/prisma";
+import { releaseSplitOrderEarnings } from "@/lib/finance/complete-order";
 import { createProductOrderEarningsLedger } from "@/lib/finance/release-earnings";
 import { resolveVendorPlan } from "@/lib/finance/vendor-plan";
+import { recalculateMainOrderStatus } from "@/lib/fulfillment/order-status";
+import { prisma } from "@/lib/prisma";
 
 export async function completeOrders(orderIds: string[]): Promise<void> {
   const session = await getSession();
@@ -115,6 +117,78 @@ export async function completeOrders(orderIds: string[]): Promise<void> {
 
   revalidatePath("/dashboard/admin");
   revalidatePath("/orders");
+}
+
+export async function completeSplitOrder(
+  splitOrderId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") redirect("/");
+
+  const id = splitOrderId.trim();
+  if (!id) return { ok: false, error: "Split order is required" };
+
+  const split = await prisma.splitOrder.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      status: true,
+      earningsReleased: true,
+      mainOrderId: true,
+    },
+  });
+
+  if (!split) return { ok: false, error: "Split order not found" };
+
+  if (split.earningsReleased || split.status === "COMPLETED") {
+    return { ok: true };
+  }
+
+  if (split.status !== "DELIVERED") {
+    return { ok: false, error: "Split must be delivered before payout release" };
+  }
+
+  const result = await releaseSplitOrderEarnings(split.id, session.userId, "ORDER_REVENUE");
+  if (!result.ok) {
+    return { ok: false, error: result.error };
+  }
+
+  await recalculateMainOrderStatus(split.mainOrderId);
+
+  revalidatePath("/dashboard/admin");
+  revalidatePath(`/orders/${split.mainOrderId}`);
+  revalidatePath("/orders");
+  revalidatePath("/dashboard/vendor/finance");
+
+  return { ok: true };
+}
+
+export async function completeAllDeliveredSplits(
+  mainOrderId: string,
+): Promise<{ ok: true; completed: number } | { ok: false; error: string }> {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") redirect("/");
+
+  const orderId = mainOrderId.trim();
+  if (!orderId) return { ok: false, error: "Order is required" };
+
+  const splits = await prisma.splitOrder.findMany({
+    where: {
+      mainOrderId: orderId,
+      status: "DELIVERED",
+      earningsReleased: false,
+    },
+    select: { id: true },
+  });
+
+  for (const split of splits) {
+    const result = await completeSplitOrder(split.id);
+    if (!result.ok) {
+      return result;
+    }
+  }
+
+  return { ok: true, completed: splits.length };
 }
 
 export async function updateOrderStatus(orderIds: string[], status: string): Promise<void> {
@@ -226,6 +300,7 @@ export async function getAdminOrders(filters?: {
           id: true,
           referenceNumber: true,
           status: true,
+          earningsReleased: true,
           bayNumber: true,
           subtotalMinor: true,
           packagedAt: true,

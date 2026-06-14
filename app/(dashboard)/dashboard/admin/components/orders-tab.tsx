@@ -6,7 +6,8 @@ import { bundleAndDispatch, markPackaged } from "@/app/actions/assembly";
 import { cleanupAbandonedOrders, deleteAllOrders } from "@/app/actions/admin-delete";
 import UndoDeleteToast from "./undo-delete-toast";
 import {
-  completeOrders,
+  completeAllDeliveredSplits,
+  completeSplitOrder,
   exportOrdersCSV,
   getAdminOrders,
   getAdminOrderStats,
@@ -358,9 +359,19 @@ export default function OrdersTab() {
   const someSelected =
     visibleIds.some((id) => selectedRows.has(id)) && !allSelected;
 
-  const hasCustomerReceived = filtered
+  const hasDeliveredSplitsToComplete = filtered
     .filter((o) => selectedRows.has(o.id))
-    .some((o) => o.status === "CUSTOMER_RECEIVED");
+    .some((o) =>
+      o.splitOrders.some((s) => s.status === "DELIVERED" && !s.earningsReleased),
+    );
+
+  const deliveredSplitCount = filtered
+    .filter((o) => selectedRows.has(o.id))
+    .reduce(
+      (n, o) =>
+        n + o.splitOrders.filter((s) => s.status === "DELIVERED" && !s.earningsReleased).length,
+      0,
+    );
 
   const hasPackingComplete = filtered
     .filter((o) => selectedRows.has(o.id))
@@ -575,7 +586,6 @@ export default function OrdersTab() {
             <option value="READY_TO_SHIP">Ready to Ship</option>
             <option value="SHIPPED">Shipped</option>
             <option value="DELIVERED">Delivered</option>
-            <option value="COMPLETED">Complete orders</option>
             <option value="CANCELLED">Cancel orders</option>
           </select>
 
@@ -590,18 +600,25 @@ export default function OrdersTab() {
             </button>
           ) : null}
 
-          {hasCustomerReceived ? (
+          {hasDeliveredSplitsToComplete ? (
             <button
               type="button"
-              onClick={() => {
-                setBulkAction("COMPLETED");
-                setShowBulkConfirm(true);
+              disabled={bulkProcessing}
+              onClick={async () => {
+                setBulkProcessing(true);
+                try {
+                  for (const order of filtered.filter((o) => selectedRows.has(o.id))) {
+                    await completeAllDeliveredSplits(order.id);
+                  }
+                  setRefreshKey((k) => k + 1);
+                } finally {
+                  setBulkProcessing(false);
+                }
               }}
-              className="rounded-lg px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:opacity-90"
+              className="rounded-lg px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
               style={{ backgroundColor: "#059669" }}
             >
-              Complete & Release Earnings (
-              {filtered.filter((o) => selectedRows.has(o.id) && o.status === "CUSTOMER_RECEIVED").length})
+              Complete all delivered ({deliveredSplitCount})
             </button>
           ) : null}
 
@@ -930,6 +947,22 @@ export default function OrdersTab() {
                                     </span>
                                   </div>
                                 </div>
+                                {so.status === "DELIVERED" && !so.earningsReleased ? (
+                                  <button
+                                    type="button"
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      await completeSplitOrder(so.id);
+                                      setRefreshKey((k) => k + 1);
+                                    }}
+                                    className="mt-2 w-full rounded-lg px-3 py-1.5 text-[10px] font-semibold text-white transition-colors hover:opacity-90"
+                                    style={{ backgroundColor: "#059669" }}
+                                  >
+                                    Complete & release payout
+                                  </button>
+                                ) : so.status === "COMPLETED" || so.earningsReleased ? (
+                                  <p className="mt-2 text-[10px] font-semibold text-emerald-700">Paid out ✓</p>
+                                ) : null}
                               </li>
                             );
                           })}
@@ -957,38 +990,23 @@ export default function OrdersTab() {
                       <p className="mb-4 text-sm text-zinc-500">{row.buyer.email}</p>
 
                       {/* Action row */}
-                      {hasAnyPackageable || row.status === "CUSTOMER_RECEIVED" ? (
+                      {hasAnyPackageable ? (
                         <div className="flex flex-col gap-2 border-t border-zinc-100 pt-3">
-                          {row.status === "CUSTOMER_RECEIVED" ? (
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                await completeOrders([row.id]);
-                                setRefreshKey((k) => k + 1);
-                                setExpandedRow(null);
-                              }}
-                              className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
-                            >
-                              Mark complete
-                            </button>
-                          ) : null}
-                          {hasAnyPackageable ? (
-                            <button
-                              type="button"
-                              disabled={!allSplitOrdersPackaged}
-                              onClick={async () => {
-                                const fd = new FormData();
-                                fd.append("mainOrderId", row.id);
-                                await bundleAndDispatch(fd);
-                                setRefreshKey((k) => k + 1);
-                                setExpandedRow(null);
-                              }}
-                              className="w-full rounded-lg px-3 py-2 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
-                              style={{ backgroundColor: "#D4450A" }}
-                            >
-                              Bundle & Dispatch →
-                            </button>
-                          ) : null}
+                          <button
+                            type="button"
+                            disabled={!allSplitOrdersPackaged}
+                            onClick={async () => {
+                              const fd = new FormData();
+                              fd.append("mainOrderId", row.id);
+                              await bundleAndDispatch(fd);
+                              setRefreshKey((k) => k + 1);
+                              setExpandedRow(null);
+                            }}
+                            className="w-full rounded-lg px-3 py-2 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
+                            style={{ backgroundColor: "#D4450A" }}
+                          >
+                            Bundle & Dispatch →
+                          </button>
                         </div>
                       ) : null}
 
@@ -1252,12 +1270,13 @@ export default function OrdersTab() {
                                       <th className="py-1.5 text-center text-zinc-400">Bay</th>
                                       <th className="py-1.5 text-center text-zinc-400">Pack</th>
                                       <th className="py-1.5 text-right text-zinc-400">Subtotal</th>
+                                      <th className="py-1.5 text-right text-zinc-400">Payout</th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {row.splitOrders.length === 0 ? (
                                       <tr>
-                                        <td colSpan={5} className="py-3 text-zinc-400">
+                                        <td colSpan={6} className="py-3 text-zinc-400">
                                           No split orders
                                         </td>
                                       </tr>
@@ -1335,6 +1354,27 @@ export default function OrdersTab() {
                                             <td className="py-2 text-right font-mono text-zinc-900">
                                               {formatTTD(so.subtotalMinor)}
                                             </td>
+                                            <td className="py-2 text-right">
+                                              {so.status === "DELIVERED" && !so.earningsReleased ? (
+                                                <button
+                                                  type="button"
+                                                  onClick={async () => {
+                                                    await completeSplitOrder(so.id);
+                                                    setRefreshKey((k) => k + 1);
+                                                  }}
+                                                  className="rounded-lg px-2 py-1 text-[10px] font-semibold text-white transition-colors hover:opacity-90"
+                                                  style={{ backgroundColor: "#059669" }}
+                                                >
+                                                  Complete & release
+                                                </button>
+                                              ) : so.status === "COMPLETED" || so.earningsReleased ? (
+                                                <span className="text-[10px] font-semibold text-emerald-700">
+                                                  Paid out ✓
+                                                </span>
+                                              ) : (
+                                                <span className="text-xs text-zinc-300">—</span>
+                                              )}
+                                            </td>
                                           </tr>
                                         );
                                       })
@@ -1373,58 +1413,41 @@ export default function OrdersTab() {
                             </div>
 
                             {/* ── Action row ──────────────────────────────────── */}
-                            {hasAnyPackageable || row.status === "CUSTOMER_RECEIVED" ? (
+                            {hasAnyPackageable ? (
                               <div className="mt-4 flex items-center justify-between border-t border-zinc-100 pt-3">
                                 <p className="text-xs text-zinc-500">
                                   {allSplitOrdersPackaged
                                     ? "All vendor packages packed — ready to dispatch."
-                                    : hasAnyPackageable
-                                      ? `${
-                                          row.splitOrders.filter(
-                                            (so) =>
-                                              !["PACKAGED", "BUNDLED_FOR_DISPATCH", "DISPATCHED"].includes(so.status),
-                                          ).length
-                                        } vendor package${
-                                          row.splitOrders.filter(
-                                            (so) =>
-                                              !["PACKAGED", "BUNDLED_FOR_DISPATCH", "DISPATCHED"].includes(so.status),
-                                          ).length !== 1
-                                            ? "s"
-                                            : ""
-                                        } still need packing.`
-                                      : null}
+                                    : `${
+                                        row.splitOrders.filter(
+                                          (so) =>
+                                            !["PACKAGED", "BUNDLED_FOR_DISPATCH", "DISPATCHED"].includes(so.status),
+                                        ).length
+                                      } vendor package${
+                                        row.splitOrders.filter(
+                                          (so) =>
+                                            !["PACKAGED", "BUNDLED_FOR_DISPATCH", "DISPATCHED"].includes(so.status),
+                                        ).length !== 1
+                                          ? "s"
+                                          : ""
+                                      } still need packing.`}
                                 </p>
                                 <div className="flex items-center gap-2">
-                                  {row.status === "CUSTOMER_RECEIVED" ? (
-                                    <button
-                                      type="button"
-                                      onClick={async () => {
-                                        await completeOrders([row.id]);
-                                        setRefreshKey((k) => k + 1);
-                                        setExpandedRow(null);
-                                      }}
-                                      className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
-                                    >
-                                      Mark complete
-                                    </button>
-                                  ) : null}
-                                  {hasAnyPackageable ? (
-                                    <button
-                                      type="button"
-                                      disabled={!allSplitOrdersPackaged}
-                                      onClick={async () => {
-                                        const fd = new FormData();
-                                        fd.append("mainOrderId", row.id);
-                                        await bundleAndDispatch(fd);
-                                        setRefreshKey((k) => k + 1);
-                                        setExpandedRow(null);
-                                      }}
-                                      className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
-                                      style={{ backgroundColor: "#D4450A" }}
-                                    >
-                                      Bundle & Dispatch →
-                                    </button>
-                                  ) : null}
+                                  <button
+                                    type="button"
+                                    disabled={!allSplitOrdersPackaged}
+                                    onClick={async () => {
+                                      const fd = new FormData();
+                                      fd.append("mainOrderId", row.id);
+                                      await bundleAndDispatch(fd);
+                                      setRefreshKey((k) => k + 1);
+                                      setExpandedRow(null);
+                                    }}
+                                    className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
+                                    style={{ backgroundColor: "#D4450A" }}
+                                  >
+                                    Bundle & Dispatch →
+                                  </button>
                                 </div>
                               </div>
                             ) : null}
@@ -1488,11 +1511,7 @@ export default function OrdersTab() {
                 onClick={async () => {
                   setBulkProcessing(true);
                   try {
-                    if (bulkAction === "COMPLETED") {
-                      await completeOrders(Array.from(selectedRows));
-                    } else {
-                      await updateOrderStatus(Array.from(selectedRows), bulkAction);
-                    }
+                    await updateOrderStatus(Array.from(selectedRows), bulkAction);
                     setSelectedRows(new Set());
                     setBulkAction("");
                     setShowBulkConfirm(false);
@@ -1504,12 +1523,7 @@ export default function OrdersTab() {
                 disabled={bulkProcessing}
                 className="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
                 style={{
-                  backgroundColor:
-                    bulkAction === "CANCELLED"
-                      ? "#DC2626"
-                      : bulkAction === "COMPLETED"
-                        ? "#059669"
-                        : "#D4450A",
+                  backgroundColor: bulkAction === "CANCELLED" ? "#DC2626" : "#D4450A",
                 }}
               >
                 {bulkProcessing ? "Updating..." : `Confirm`}
