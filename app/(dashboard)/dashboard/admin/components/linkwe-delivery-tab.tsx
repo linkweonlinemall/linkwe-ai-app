@@ -76,6 +76,13 @@ function DeliveryCard({
   }
 
   const weight = computeSplitWeightLbs(row.items, row.mainOrder.items);
+  const addr = row.mainOrder.shippingAddress;
+  const directionsUrl =
+    addr?.latitude != null && addr?.longitude != null
+      ? `https://www.google.com/maps/search/?api=1&query=${String(addr.latitude)},${String(addr.longitude)}`
+      : addr?.line1
+        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr.line1)}`
+        : null;
 
   return (
     <div
@@ -119,11 +126,27 @@ function DeliveryCard({
             </p>
           ) : null}
           {row.mainOrder.shippingAddress?.phone ? (
-            <p className="text-xs text-zinc-500">Tel: {row.mainOrder.shippingAddress.phone}</p>
+            <a
+              href={`tel:${row.mainOrder.shippingAddress.phone.replace(/\s+/g, "")}`}
+              className="text-xs text-zinc-500 underline-offset-2 hover:underline"
+            >
+              Tel: {row.mainOrder.shippingAddress.phone}
+            </a>
           ) : null}
           <p className="mt-1 text-xs capitalize text-zinc-500">
             {formatRegion(row.mainOrder.region)}
           </p>
+          {directionsUrl ? (
+            <a
+              href={directionsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 inline-flex items-center gap-1 text-xs font-medium"
+              style={{ color: SCARLET }}
+            >
+              Get directions →
+            </a>
+          ) : null}
           <p className="mt-2 text-xs font-medium" style={{ color: SCARLET }}>
             LinkWe fee: {formatTTD(row.shippingMinor)}
           </p>
