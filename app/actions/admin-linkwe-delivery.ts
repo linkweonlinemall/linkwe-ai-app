@@ -137,8 +137,20 @@ export async function exportLinkWeManifestCSV(splitIds: string[]): Promise<strin
   const comment =
     "# LinkWe delivery manifest — Deliver to the street address below (phone for contact, map coords for exact location). Region is a fallback when no address was captured.";
 
-  const header =
-    "Split Ref,Main Ref,Store (pickup from),Customer (deliver to),Email,Phone,Address,Map (lat,lng),Region,Items,Total Weight (lbs),LinkWe Fee";
+  const header = [
+    "Split Ref",
+    "Main Ref",
+    "Store (pickup from)",
+    "Customer (deliver to)",
+    "Email",
+    "Phone",
+    "Address",
+    "Map (lat,lng)",
+    "Region",
+    "Items",
+    "Total Weight (lbs)",
+    "LinkWe Fee",
+  ].map(escapeCsvCell).join(",");
 
   if (ids.length === 0) {
     return `${comment}\n${header}`;
