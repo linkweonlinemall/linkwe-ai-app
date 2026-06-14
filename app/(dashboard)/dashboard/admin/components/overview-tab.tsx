@@ -117,7 +117,7 @@ export default function OverviewTab() {
       count: metrics.alerts.vendorDelays,
       label: "Vendors unresponsive 24h+",
       action: "View orders",
-      tab: "warehouse",
+      tab: "orders",
       color: "#E8820C", bg: "#FFF7ED", iconBg: "#FEE0B9",
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -146,15 +146,11 @@ export default function OverviewTab() {
   const allClear = attentionCards.length === 0;
 
   // ── Band 2: pipeline stages — same data as before ──
-  const pipelineTotal =
-    metrics.pipeline.awaitingVendor + metrics.pipeline.inTransit +
-    metrics.pipeline.atWarehouse + metrics.pipeline.readyToShip;
+  const pipelineTotal = metrics.pipeline.awaitingVendor + metrics.pipeline.inTransit;
 
   const pipelineStages = [
-    { label: "Awaiting Vendor", count: metrics.pipeline.awaitingVendor, color: "#E8820C", tab: "warehouse" },
-    { label: "In Transit",      count: metrics.pipeline.inTransit,      color: "#1A7FB5", tab: "couriers" },
-    { label: "At Warehouse",    count: metrics.pipeline.atWarehouse,    color: "#7F77DD", tab: "warehouse" },
-    { label: "Ready to Ship",   count: metrics.pipeline.readyToShip,    color: "#1B8C5A", tab: "warehouse" },
+    { label: "Awaiting Vendor", count: metrics.pipeline.awaitingVendor, color: "#E8820C", tab: "orders" },
+    { label: "In Transit", count: metrics.pipeline.inTransit, color: "#1A7FB5", tab: "linkwe-delivery" },
   ];
 
   return (
@@ -293,7 +289,7 @@ export default function OverviewTab() {
             <h3 className="text-sm font-semibold text-zinc-900">Operational Pipeline</h3>
             <span className="text-xs text-zinc-400">{pipelineTotal} active orders</span>
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3">
             {pipelineStages.map((stage) => (
               <button
                 key={stage.label}
@@ -397,9 +393,9 @@ export default function OverviewTab() {
         {/* Quick actions row */}
         <div className="flex flex-wrap items-center gap-3">
           {[
-            { label: "Process Warehouse", tab: "warehouse" },
-            { label: "View Couriers",     tab: "couriers"  },
-            { label: "Operations Map",    tab: "map"       },
+            { label: "View Orders", tab: "orders" },
+            { label: "LinkWe Delivery", tab: "linkwe-delivery" },
+            { label: "Operations Map", tab: "map" },
           ].map((action) => (
             <button
               key={action.tab}

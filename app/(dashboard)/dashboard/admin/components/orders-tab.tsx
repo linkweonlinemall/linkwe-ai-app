@@ -2,7 +2,6 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 
-import { bundleAndDispatch, markPackaged } from "@/app/actions/assembly";
 import { cleanupAbandonedOrders, deleteAllOrders } from "@/app/actions/admin-delete";
 import UndoDeleteToast from "./undo-delete-toast";
 import {
@@ -106,13 +105,15 @@ function getRowBgColor(status: string): string {
 // Part 3 token pill colors for split-order statuses in the expand panel.
 function splitStatusPill(status: string): { color: string; bg: string } {
   if (status === "AWAITING_VENDOR_ACTION") return { color: "#1A7FB5", bg: "#EFF8FF" };
-  if (["VENDOR_PREPARING", "AWAITING_COURIER_PICKUP"].includes(status))
+  if (["PREPARING", "VENDOR_PREPARING", "AWAITING_COURIER_PICKUP"].includes(status))
     return { color: "#E8820C", bg: "#FFF7ED" };
   if (["COURIER_ASSIGNED", "COURIER_PICKED_UP", "VENDOR_DROPPED_OFF"].includes(status))
     return { color: "#E8820C", bg: "#FFF7ED" };
-  if (["AT_WAREHOUSE", "PACKAGED", "BUNDLED_FOR_DISPATCH"].includes(status))
+  if (["READY_FOR_LINKWE", "AT_WAREHOUSE", "PACKAGED", "BUNDLED_FOR_DISPATCH"].includes(status))
     return { color: "#1B8C5A", bg: "#F0FDF4" };
-  if (["DISPATCHED", "DELIVERED", "COMPLETED"].includes(status))
+  if (["SHIPPED", "OUT_FOR_DELIVERY", "DISPATCHED"].includes(status))
+    return { color: "#1D4ED8", bg: "#EFF6FF" };
+  if (["DELIVERED", "COMPLETED"].includes(status))
     return { color: "#1B8C5A", bg: "#F0FDF4" };
   if (status === "CANCELLED") return { color: "#D4450A", bg: "#FEF0EC" };
   return { color: "#71717a", bg: "#f4f4f5" };
@@ -120,8 +121,14 @@ function splitStatusPill(status: string): { color: string; bg: string } {
 
 function splitStatusLabel(status: string): string {
   const map: Record<string, string> = {
-    AWAITING_VENDOR_ACTION: "Awaiting vendor",
+    AWAITING_VENDOR_ACTION: "Order placed",
+    PREPARING: "Preparing",
     VENDOR_PREPARING: "Preparing",
+    SHIPPED: "Out for delivery",
+    OUT_FOR_DELIVERY: "Out for delivery",
+    READY_FOR_LINKWE: "Ready for LinkWe",
+    DELIVERED: "Delivered",
+    COMPLETED: "Completed",
     AWAITING_COURIER_PICKUP: "Awaiting courier",
     COURIER_ASSIGNED: "Courier assigned",
     COURIER_PICKED_UP: "Picked up",
@@ -130,10 +137,93 @@ function splitStatusLabel(status: string): string {
     PACKAGED: "Packaged",
     BUNDLED_FOR_DISPATCH: "Bundled",
     DISPATCHED: "Dispatched",
-    DELIVERED: "Delivered",
     CANCELLED: "Cancelled",
   };
   return map[status] ?? status.replace(/_/g, " ");
+}
+
+const SCARLET = "#D4450A";
+
+type SplitOrderRow = Order["splitOrders"][number];
+
+function SplitStoreFulfillmentCard({
+  split,
+  onComplete,
+}: {
+  split: SplitOrderRow;
+  onComplete: () => void | Promise<void>;
+}) {
+  const pill = splitStatusPill(split.status);
+  const splitRef = split.referenceNumber ?? split.id.slice(-8).toUpperCase();
+  const showPayoutButton = split.status === "DELIVERED" && !split.earningsReleased;
+  const showPaidOut = split.status === "COMPLETED" || split.earningsReleased;
+
+  return (
+    <div
+      className="rounded-xl bg-white p-4 sm:p-5"
+      style={{ border: "1px solid var(--card-border)" }}
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-semibold text-zinc-900">{split.store.name}</p>
+            <span
+              className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold"
+              style={{ color: pill.color, backgroundColor: pill.bg }}
+            >
+              {splitStatusLabel(split.status)}
+            </span>
+          </div>
+          <p className="mt-1 font-mono text-xs text-zinc-500">{splitRef}</p>
+          <p className="mt-2 text-xs font-medium text-zinc-700">
+            Subtotal {formatTTD(split.subtotalMinor)}
+          </p>
+        </div>
+        {showPayoutButton ? (
+          <button
+            type="button"
+            onClick={async (e) => {
+              e.stopPropagation();
+              await onComplete();
+            }}
+            className="shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ backgroundColor: SCARLET }}
+          >
+            Complete & release payout
+          </button>
+        ) : showPaidOut ? (
+          <p className="shrink-0 text-sm font-semibold text-emerald-700">Paid out ✓</p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function VendorFulfillmentCards({
+  splits,
+  onRefresh,
+}: {
+  splits: SplitOrderRow[];
+  onRefresh: () => void;
+}) {
+  if (splits.length === 0) {
+    return <p className="text-xs text-zinc-400">No split orders</p>;
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {splits.map((split) => (
+        <SplitStoreFulfillmentCard
+          key={split.id}
+          split={split}
+          onComplete={async () => {
+            await completeSplitOrder(split.id);
+            onRefresh();
+          }}
+        />
+      ))}
+    </div>
+  );
 }
 
 // ─── Fulfillment derived data ─────────────────────────────────────────────────
@@ -221,8 +311,6 @@ type RowMeta = {
   pillBg: string;
   itemsLabel: string;
   panelReadiness: { text: string; color: string };
-  allSplitOrdersPackaged: boolean;
-  hasAnyPackageable: boolean;
 };
 
 function makeRowItem(order: Order, isDone: boolean): RowMeta {
@@ -277,15 +365,6 @@ function makeRowItem(order: Order, isDone: boolean): RowMeta {
                     color: "#71717a",
                   };
 
-  const allSplitOrdersPackaged =
-    order.splitOrders.length > 0 &&
-    order.splitOrders.every((so) =>
-      ["PACKAGED", "BUNDLED_FOR_DISPATCH", "DISPATCHED"].includes(so.status),
-    );
-  const hasAnyPackageable = order.splitOrders.some((so) =>
-    ["AT_WAREHOUSE", "PACKAGED"].includes(so.status),
-  );
-
   return {
     kind: "row",
     order,
@@ -300,8 +379,6 @@ function makeRowItem(order: Order, isDone: boolean): RowMeta {
     pillBg,
     itemsLabel,
     panelReadiness,
-    allSplitOrdersPackaged,
-    hasAnyPackageable,
   };
 }
 
@@ -372,10 +449,6 @@ export default function OrdersTab() {
         n + o.splitOrders.filter((s) => s.status === "DELIVERED" && !s.earningsReleased).length,
       0,
     );
-
-  const hasPackingComplete = filtered
-    .filter((o) => selectedRows.has(o.id))
-    .some((o) => o.status === "PACKING_COMPLETE");
 
   // ── Four fulfillment groups ──────────────────────────────────────────────────
   // Helper: sort oldest-first; within waiting group, stale orders float to top.
@@ -622,35 +695,6 @@ export default function OrdersTab() {
             </button>
           ) : null}
 
-          {hasPackingComplete ? (
-            <button
-              type="button"
-              onClick={async () => {
-                setBulkProcessing(true);
-                try {
-                  const packingCompleteOrders = filtered.filter(
-                    (o) => selectedRows.has(o.id) && o.status === "PACKING_COMPLETE",
-                  );
-                  for (const order of packingCompleteOrders) {
-                    const fd = new FormData();
-                    fd.append("mainOrderId", order.id);
-                    await bundleAndDispatch(fd);
-                  }
-                  setSelectedRows(new Set());
-                  setRefreshKey((k) => k + 1);
-                } finally {
-                  setBulkProcessing(false);
-                }
-              }}
-              disabled={bulkProcessing}
-              className="rounded-lg px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
-              style={{ backgroundColor: "#1B8C5A" }}
-            >
-              Bundle & Dispatch (
-              {filtered.filter((o) => selectedRows.has(o.id) && o.status === "PACKING_COMPLETE").length})
-            </button>
-          ) : null}
-
           <div className="h-4 w-px bg-zinc-200" />
 
           <button
@@ -776,7 +820,6 @@ export default function OrdersTab() {
               const {
                 order: row, isDone, recvd, total, ready, stale,
                 edgeColor, pillColor, pillBg, itemsLabel, panelReadiness,
-                allSplitOrdersPackaged, hasAnyPackageable,
               } = item;
               const sCfg = STATUS_CONFIG[row.status];
 
@@ -886,88 +929,12 @@ export default function OrdersTab() {
 
                       {/* Vendor fulfillment */}
                       <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Vendor fulfillment</p>
-                      {row.splitOrders.length === 0 ? (
-                        <p className="mb-4 text-xs text-zinc-400">No split orders</p>
-                      ) : (
-                        <ul className="mb-4 flex flex-col gap-2">
-                          {row.splitOrders.map((so) => {
-                            const pill = splitStatusPill(so.status);
-                            return (
-                              <li key={so.id} className="rounded-lg border border-zinc-100 bg-white px-3 py-2.5">
-                                <div className="flex items-start justify-between gap-2">
-                                  <div>
-                                    <p className="text-xs font-semibold text-zinc-800">{so.store.name}</p>
-                                    <p className="font-mono text-[10px] text-zinc-400">
-                                      {so.referenceNumber ?? so.id.slice(-8)}
-                                    </p>
-                                  </div>
-                                  {so.bayNumber != null ? (
-                                    <span
-                                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-bold text-white"
-                                      style={{ backgroundColor: "var(--scarlet)" }}
-                                    >
-                                      {so.bayNumber}
-                                    </span>
-                                  ) : null}
-                                </div>
-                                <div className="mt-2 flex items-center justify-between">
-                                  <span
-                                    className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
-                                    style={{ color: pill.color, backgroundColor: pill.bg }}
-                                  >
-                                    {splitStatusLabel(so.status)}
-                                  </span>
-                                  <div className="flex items-center gap-2">
-                                    {["AT_WAREHOUSE", "PACKAGED"].includes(so.status) ? (
-                                      <button
-                                        type="button"
-                                        onClick={async (e) => {
-                                          e.stopPropagation();
-                                          const fd = new FormData();
-                                          fd.append("splitOrderId", so.id);
-                                          await markPackaged(fd);
-                                          setRefreshKey((k) => k + 1);
-                                        }}
-                                        className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
-                                          so.status === "PACKAGED"
-                                            ? "border-emerald-500 bg-emerald-500 hover:bg-emerald-600"
-                                            : "border-zinc-300 bg-white hover:border-[#D4450A]"
-                                        }`}
-                                        title={so.status === "PACKAGED" ? "Click to unpack" : "Click to mark as packed"}
-                                      >
-                                        {so.status === "PACKAGED" ? (
-                                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
-                                            <polyline points="20 6 9 17 4 12" />
-                                          </svg>
-                                        ) : null}
-                                      </button>
-                                    ) : null}
-                                    <span className="font-mono text-xs text-zinc-900">
-                                      {formatTTD(so.subtotalMinor)}
-                                    </span>
-                                  </div>
-                                </div>
-                                {so.status === "DELIVERED" && !so.earningsReleased ? (
-                                  <button
-                                    type="button"
-                                    onClick={async (e) => {
-                                      e.stopPropagation();
-                                      await completeSplitOrder(so.id);
-                                      setRefreshKey((k) => k + 1);
-                                    }}
-                                    className="mt-2 w-full rounded-lg px-3 py-1.5 text-[10px] font-semibold text-white transition-colors hover:opacity-90"
-                                    style={{ backgroundColor: "#059669" }}
-                                  >
-                                    Complete & release payout
-                                  </button>
-                                ) : so.status === "COMPLETED" || so.earningsReleased ? (
-                                  <p className="mt-2 text-[10px] font-semibold text-emerald-700">Paid out ✓</p>
-                                ) : null}
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      )}
+                      <div className="mb-4">
+                        <VendorFulfillmentCards
+                          splits={row.splitOrders}
+                          onRefresh={() => setRefreshKey((k) => k + 1)}
+                        />
+                      </div>
 
                       {/* Order financials */}
                       <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Order financials</p>
@@ -988,27 +955,6 @@ export default function OrdersTab() {
                       <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Customer</p>
                       <p className="text-sm font-medium text-zinc-900">{row.buyer.fullName}</p>
                       <p className="mb-4 text-sm text-zinc-500">{row.buyer.email}</p>
-
-                      {/* Action row */}
-                      {hasAnyPackageable ? (
-                        <div className="flex flex-col gap-2 border-t border-zinc-100 pt-3">
-                          <button
-                            type="button"
-                            disabled={!allSplitOrdersPackaged}
-                            onClick={async () => {
-                              const fd = new FormData();
-                              fd.append("mainOrderId", row.id);
-                              await bundleAndDispatch(fd);
-                              setRefreshKey((k) => k + 1);
-                              setExpandedRow(null);
-                            }}
-                            className="w-full rounded-lg px-3 py-2 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
-                            style={{ backgroundColor: "#D4450A" }}
-                          >
-                            Bundle & Dispatch →
-                          </button>
-                        </div>
-                      ) : null}
 
                     </div>
                   ) : null}
@@ -1089,7 +1035,6 @@ export default function OrdersTab() {
                   const {
                     order: row, isDone, recvd, total, ready, stale,
                     edgeColor, pillColor, pillBg, itemsLabel, panelReadiness,
-                    allSplitOrdersPackaged, hasAnyPackageable,
                   } = item;
 
                   return (
@@ -1257,130 +1202,15 @@ export default function OrdersTab() {
                                 </table>
                               </div>
 
-                              {/* Vendor fulfillment — Vendor → Status → Bay → Pack → Subtotal */}
+                              {/* Vendor fulfillment */}
                               <div>
                                 <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
                                   Vendor fulfillment
                                 </p>
-                                <table className="w-full text-xs">
-                                  <thead>
-                                    <tr className="border-b border-zinc-200">
-                                      <th className="py-1.5 text-left text-zinc-400">Vendor</th>
-                                      <th className="py-1.5 text-left text-zinc-400">Status</th>
-                                      <th className="py-1.5 text-center text-zinc-400">Bay</th>
-                                      <th className="py-1.5 text-center text-zinc-400">Pack</th>
-                                      <th className="py-1.5 text-right text-zinc-400">Subtotal</th>
-                                      <th className="py-1.5 text-right text-zinc-400">Payout</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {row.splitOrders.length === 0 ? (
-                                      <tr>
-                                        <td colSpan={6} className="py-3 text-zinc-400">
-                                          No split orders
-                                        </td>
-                                      </tr>
-                                    ) : (
-                                      row.splitOrders.map((so) => {
-                                        const pill = splitStatusPill(so.status);
-                                        return (
-                                          <tr key={so.id} className="border-b border-zinc-100">
-                                            <td className="py-2">
-                                              <p className="font-medium text-zinc-800">{so.store.name}</p>
-                                              <p className="font-mono text-[10px] text-zinc-400">
-                                                {so.referenceNumber ?? so.id.slice(-8)}
-                                              </p>
-                                            </td>
-                                            <td className="py-2">
-                                              <span
-                                                className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
-                                                style={{ color: pill.color, backgroundColor: pill.bg }}
-                                              >
-                                                {splitStatusLabel(so.status)}
-                                              </span>
-                                            </td>
-                                            <td className="py-2 text-center">
-                                              {so.bayNumber != null ? (
-                                                <span
-                                                  className="inline-flex h-6 w-6 items-center justify-center rounded-md text-xs font-bold text-white"
-                                                  style={{ backgroundColor: "var(--scarlet)" }}
-                                                >
-                                                  {so.bayNumber}
-                                                </span>
-                                              ) : (
-                                                <span className="text-xs" style={{ color: "var(--text-faint)" }}>
-                                                  —
-                                                </span>
-                                              )}
-                                            </td>
-                                            <td className="py-2 text-center">
-                                              {["AT_WAREHOUSE", "PACKAGED"].includes(so.status) ? (
-                                                <button
-                                                  type="button"
-                                                  onClick={async () => {
-                                                    const fd = new FormData();
-                                                    fd.append("splitOrderId", so.id);
-                                                    await markPackaged(fd);
-                                                    setRefreshKey((k) => k + 1);
-                                                  }}
-                                                  className={`mx-auto flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
-                                                    so.status === "PACKAGED"
-                                                      ? "border-emerald-500 bg-emerald-500 hover:bg-emerald-600"
-                                                      : "border-zinc-300 bg-white hover:border-[#D4450A]"
-                                                  }`}
-                                                  title={
-                                                    so.status === "PACKAGED"
-                                                      ? "Click to unpack"
-                                                      : "Click to mark as packed"
-                                                  }
-                                                >
-                                                  {so.status === "PACKAGED" ? (
-                                                    <svg
-                                                      width="10"
-                                                      height="10"
-                                                      viewBox="0 0 24 24"
-                                                      fill="none"
-                                                      stroke="white"
-                                                      strokeWidth="3"
-                                                    >
-                                                      <polyline points="20 6 9 17 4 12" />
-                                                    </svg>
-                                                  ) : null}
-                                                </button>
-                                              ) : (
-                                                <span className="text-xs text-zinc-300">—</span>
-                                              )}
-                                            </td>
-                                            <td className="py-2 text-right font-mono text-zinc-900">
-                                              {formatTTD(so.subtotalMinor)}
-                                            </td>
-                                            <td className="py-2 text-right">
-                                              {so.status === "DELIVERED" && !so.earningsReleased ? (
-                                                <button
-                                                  type="button"
-                                                  onClick={async () => {
-                                                    await completeSplitOrder(so.id);
-                                                    setRefreshKey((k) => k + 1);
-                                                  }}
-                                                  className="rounded-lg px-2 py-1 text-[10px] font-semibold text-white transition-colors hover:opacity-90"
-                                                  style={{ backgroundColor: "#059669" }}
-                                                >
-                                                  Complete & release
-                                                </button>
-                                              ) : so.status === "COMPLETED" || so.earningsReleased ? (
-                                                <span className="text-[10px] font-semibold text-emerald-700">
-                                                  Paid out ✓
-                                                </span>
-                                              ) : (
-                                                <span className="text-xs text-zinc-300">—</span>
-                                              )}
-                                            </td>
-                                          </tr>
-                                        );
-                                      })
-                                    )}
-                                  </tbody>
-                                </table>
+                                <VendorFulfillmentCards
+                                  splits={row.splitOrders}
+                                  onRefresh={() => setRefreshKey((k) => k + 1)}
+                                />
                               </div>
 
                               {/* Order financials + customer */}
@@ -1411,46 +1241,6 @@ export default function OrdersTab() {
                                 <p className="text-sm text-zinc-500">{row.buyer.email}</p>
                               </div>
                             </div>
-
-                            {/* ── Action row ──────────────────────────────────── */}
-                            {hasAnyPackageable ? (
-                              <div className="mt-4 flex items-center justify-between border-t border-zinc-100 pt-3">
-                                <p className="text-xs text-zinc-500">
-                                  {allSplitOrdersPackaged
-                                    ? "All vendor packages packed — ready to dispatch."
-                                    : `${
-                                        row.splitOrders.filter(
-                                          (so) =>
-                                            !["PACKAGED", "BUNDLED_FOR_DISPATCH", "DISPATCHED"].includes(so.status),
-                                        ).length
-                                      } vendor package${
-                                        row.splitOrders.filter(
-                                          (so) =>
-                                            !["PACKAGED", "BUNDLED_FOR_DISPATCH", "DISPATCHED"].includes(so.status),
-                                        ).length !== 1
-                                          ? "s"
-                                          : ""
-                                      } still need packing.`}
-                                </p>
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    type="button"
-                                    disabled={!allSplitOrdersPackaged}
-                                    onClick={async () => {
-                                      const fd = new FormData();
-                                      fd.append("mainOrderId", row.id);
-                                      await bundleAndDispatch(fd);
-                                      setRefreshKey((k) => k + 1);
-                                      setExpandedRow(null);
-                                    }}
-                                    className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
-                                    style={{ backgroundColor: "#D4450A" }}
-                                  >
-                                    Bundle & Dispatch →
-                                  </button>
-                                </div>
-                              </div>
-                            ) : null}
 
                           </td>
                         </tr>

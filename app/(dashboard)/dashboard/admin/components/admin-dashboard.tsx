@@ -6,10 +6,7 @@ import { useSearchParams } from "next/navigation";
 import LinkWeDeliveryTab from "./linkwe-delivery-tab";
 import OverviewTab from "./overview-tab";
 import OrdersTab from "./orders-tab";
-import CouriersTab from "./couriers-tab";
 import VendorsTab from "./vendors-tab";
-import WarehouseTab from "./warehouse-tab";
-import BayMapTab from "./bay-map-tab";
 import MapTab from "./map-tab";
 import CustomersTab from "./customers-tab";
 import SettingsTab from "./settings-tab";
@@ -20,9 +17,6 @@ const TAB_IDS = [
   "orders",
   "linkwe-delivery",
   "tickets",
-  "warehouse",
-  "bays",
-  "couriers",
   "vendors",
   "map",
   "customers",
@@ -69,39 +63,6 @@ const TAB_CONFIG: { id: TabId; label: string; icon: ReactNode }[] = [
         <path d="M2 9a3 3 0 0 1 3-3h14a3 3 0 0 1 3 3v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V9z" />
         <path d="M6 12h.01M10 12h.01" />
         <path d="M2 14v3a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-3" />
-      </svg>
-    ),
-  },
-  {
-    id: "warehouse",
-    label: "Warehouse",
-    icon: (
-      <svg className="h-4 w-4 shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-      </svg>
-    ),
-  },
-  {
-    id: "bays",
-    label: "Bay Map",
-    icon: (
-      <svg className="h-4 w-4 shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" />
-      </svg>
-    ),
-  },
-  {
-    id: "couriers",
-    label: "Couriers",
-    icon: (
-      <svg className="h-4 w-4 shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <rect x="1" y="3" width="15" height="13" />
-        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-        <circle cx="5.5" cy="18.5" r="2.5" />
-        <circle cx="18.5" cy="18.5" r="2.5" />
       </svg>
     ),
   },
@@ -170,9 +131,6 @@ export default function AdminDashboard({ adminName: _adminName }: Props) {
         {activeTab === "orders" && <OrdersTab />}
         {activeTab === "linkwe-delivery" && <LinkWeDeliveryTab />}
         {activeTab === "tickets" && <TicketOrdersTab />}
-        {activeTab === "warehouse" && <WarehouseTab />}
-        {activeTab === "bays" && <BayMapTab />}
-        {activeTab === "couriers" && <CouriersTab />}
         {activeTab === "vendors" && <VendorsTab />}
         {activeTab === "map" && <MapTab />}
         {activeTab === "customers" && <CustomersTab />}
@@ -181,9 +139,6 @@ export default function AdminDashboard({ adminName: _adminName }: Props) {
           activeTab !== "orders" &&
           activeTab !== "linkwe-delivery" &&
           activeTab !== "tickets" &&
-          activeTab !== "warehouse" &&
-          activeTab !== "bays" &&
-          activeTab !== "couriers" &&
           activeTab !== "vendors" &&
           activeTab !== "map" &&
           activeTab !== "customers" &&
