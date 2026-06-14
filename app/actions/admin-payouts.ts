@@ -4,6 +4,11 @@ import { redirect } from "next/navigation";
 
 import { getSession } from "@/lib/auth/session";
 import { escapeCsvCell } from "@/lib/csv/escape-cell";
+import {
+  computeSplitWeightLbs,
+  formatItemsWithWeight,
+  formatWeightLbs,
+} from "@/lib/orders/split-weight";
 import { prisma } from "@/lib/prisma";
 
 function formatTtdMinor(minor: number): string {
@@ -14,11 +19,11 @@ function splitRefLabel(referenceNumber: string | null, id: string): string {
   return referenceNumber ?? `SP-${id.slice(-8).toUpperCase()}`;
 }
 
-function formatItems(
-  items: { titleSnapshot: string; quantity: number }[],
-): string {
-  return items.map((i) => `${i.quantity}x ${i.titleSnapshot}`).join(" | ");
-}
+const MAIN_ORDER_ITEMS_WEIGHT_SELECT = {
+  titleSnapshot: true,
+  weightLbs: true,
+  quantity: true,
+} as const;
 
 export async function getPendingPayoutSplits() {
   const session = await getSession();
@@ -50,6 +55,7 @@ export async function getPendingPayoutSplits() {
           referenceNumber: true,
           region: true,
           buyer: { select: { fullName: true, email: true } },
+          items: { select: MAIN_ORDER_ITEMS_WEIGHT_SELECT },
         },
       },
     },
@@ -64,7 +70,9 @@ export async function exportPayoutsCSV(splitIds: string[]): Promise<string> {
   if (!session || session.role !== "ADMIN") redirect("/");
 
   const ids = splitIds.map((id) => id.trim()).filter(Boolean);
-  if (ids.length === 0) return "Split Ref,Main Ref,Store,Shipping Mode,Customer,Email,Region,Subtotal,Shipping,Delivered Date,Items";
+  if (ids.length === 0) {
+    return "Split Ref,Main Ref,Store,Shipping Mode,Customer,Email,Region,Subtotal,Shipping,Delivered Date,Total Weight (lbs),Items";
+  }
 
   const splits = await prisma.splitOrder.findMany({
     where: { id: { in: ids } },
@@ -87,6 +95,7 @@ export async function exportPayoutsCSV(splitIds: string[]): Promise<string> {
           referenceNumber: true,
           region: true,
           buyer: { select: { fullName: true, email: true } },
+          items: { select: MAIN_ORDER_ITEMS_WEIGHT_SELECT },
         },
       },
     },
@@ -94,11 +103,12 @@ export async function exportPayoutsCSV(splitIds: string[]): Promise<string> {
   });
 
   const header =
-    "Split Ref,Main Ref,Store,Shipping Mode,Customer,Email,Region,Subtotal,Shipping,Delivered Date,Items";
+    "Split Ref,Main Ref,Store,Shipping Mode,Customer,Email,Region,Subtotal,Shipping,Delivered Date,Total Weight (lbs),Items";
 
   const rows = splits
     .map((s) => {
       const delivered = s.deliveredAt ?? s.createdAt;
+      const weight = computeSplitWeightLbs(s.items, s.mainOrder.items);
       return [
         escapeCsvCell(splitRefLabel(s.referenceNumber, s.id)),
         escapeCsvCell(s.mainOrder.referenceNumber ?? ""),
@@ -110,7 +120,8 @@ export async function exportPayoutsCSV(splitIds: string[]): Promise<string> {
         escapeCsvCell(formatTtdMinor(s.subtotalMinor)),
         escapeCsvCell(formatTtdMinor(s.shippingMinor)),
         escapeCsvCell(new Date(delivered).toLocaleDateString("en-TT")),
-        escapeCsvCell(formatItems(s.items)),
+        escapeCsvCell(formatWeightLbs(weight.totalLbs)),
+        escapeCsvCell(formatItemsWithWeight(weight.lines)),
       ].join(",");
     })
     .join("\n");

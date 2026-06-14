@@ -7,6 +7,11 @@ import {
   getLinkWeDeliveryQueue,
   markOutForLinkWeDelivery,
 } from "@/app/actions/admin-linkwe-delivery";
+import {
+  computeSplitWeightLbs,
+  formatWeightLbs,
+  resolveUnitWeightLbs,
+} from "@/lib/orders/split-weight";
 
 type QueueRow = Awaited<ReturnType<typeof getLinkWeDeliveryQueue>>[number];
 
@@ -70,6 +75,8 @@ function DeliveryCard({
     }
   }
 
+  const weight = computeSplitWeightLbs(row.items, row.mainOrder.items);
+
   return (
     <div
       className="rounded-xl bg-white p-4 sm:p-5"
@@ -112,6 +119,9 @@ function DeliveryCard({
           <p className="mt-2 text-xs font-medium" style={{ color: SCARLET }}>
             LinkWe fee: {formatTTD(row.shippingMinor)}
           </p>
+          <p className="mt-0.5 text-xs text-zinc-500">
+            Total weight: {formatWeightLbs(weight.totalLbs)} lb
+          </p>
         </div>
         {!readOnly ? (
           <button
@@ -131,19 +141,25 @@ function DeliveryCard({
           Items
         </p>
         <ul className="flex flex-col gap-1.5">
-          {row.items.map((item, idx) => (
+          {row.items.map((item, idx) => {
+            const unitLbs = resolveUnitWeightLbs(item.titleSnapshot, row.mainOrder.items);
+            return (
             <li
               key={`${row.id}-${idx}`}
               className="flex items-center justify-between gap-3 text-xs text-zinc-700"
             >
               <span className="min-w-0 truncate">
                 {item.quantity}× {item.titleSnapshot}
+                {unitLbs > 0 ? (
+                  <span className="text-zinc-400"> · {formatWeightLbs(unitLbs)} lb each</span>
+                ) : null}
               </span>
               <span className="shrink-0 font-mono text-zinc-500">
                 {formatTTD(item.unitPriceMinor * item.quantity)}
               </span>
             </li>
-          ))}
+            );
+          })}
         </ul>
         <p className="mt-2 text-right text-xs font-semibold text-zinc-800">
           Subtotal {formatTTD(row.subtotalMinor)}

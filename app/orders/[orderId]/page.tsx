@@ -8,6 +8,11 @@ import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { getSplitOrderStatusLabel, getStatusInfo } from "@/lib/orders/order-status";
 import { getSplitProgressSteps, getSplitStepIndex } from "@/lib/orders/split-progress";
+import {
+  computeSplitWeightLbs,
+  formatWeightLbs,
+  resolveUnitWeightLbs,
+} from "@/lib/orders/split-weight";
 import { generateOrderQRCodeDataURL, getOrderUrl } from "@/lib/orders/qr-code";
 import { prisma } from "@/lib/prisma";
 
@@ -91,7 +96,12 @@ export default async function OrderDetailPage({ params }: Props) {
       totalMinor: true,
       buyer: { select: { fullName: true, email: true } },
       items: {
-        include: {
+        select: {
+          id: true,
+          titleSnapshot: true,
+          quantity: true,
+          priceMinor: true,
+          weightLbs: true,
           product: {
             select: {
               name: true,
@@ -392,6 +402,17 @@ export default async function OrderDetailPage({ params }: Props) {
                       (splitOrder.status === "SHIPPED" || splitOrder.status === "OUT_FOR_DELIVERY");
                     const isReceived =
                       splitOrder.status === "DELIVERED" || splitOrder.status === "COMPLETED";
+                    const splitWeight = computeSplitWeightLbs(
+                      splitOrder.items,
+                      order.items.map((oi) => ({
+                        titleSnapshot: oi.titleSnapshot,
+                        weightLbs: oi.weightLbs,
+                        quantity: oi.quantity,
+                      })),
+                    );
+                    const weightByTitle = new Map(
+                      splitWeight.lines.map((line) => [line.titleSnapshot, line]),
+                    );
                     return (
                       <div key={splitOrder.id} className="overflow-hidden rounded-xl border border-zinc-100">
                         <div className="flex items-center justify-between border-b border-zinc-100 bg-zinc-50 px-4 py-3">
@@ -434,6 +455,7 @@ export default async function OrderDetailPage({ params }: Props) {
                           {splitOrder.items.map((item) => {
                             const orderItem = order.items.find((oi) => oi.titleSnapshot === item.titleSnapshot);
                             const img = orderItem?.product?.images?.[0];
+                            const weightLine = weightByTitle.get(item.titleSnapshot);
                             return (
                               <li key={item.id} className="flex gap-4 py-4">
                                 <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-zinc-100">
@@ -452,6 +474,11 @@ export default async function OrderDetailPage({ params }: Props) {
                                   <p className="mt-1 text-xs text-zinc-600">
                                     {item.quantity} × TTD {(item.unitPriceMinor / 100).toFixed(2)}
                                   </p>
+                                  {weightLine && weightLine.unitWeightLbs > 0 ? (
+                                    <p className="mt-0.5 text-xs text-zinc-400">
+                                      {formatWeightLbs(weightLine.unitWeightLbs)} lb each
+                                    </p>
+                                  ) : null}
                                 </div>
                                 <p className="shrink-0 text-sm font-semibold text-zinc-900">
                                   TTD {(item.lineTotalMinor / 100).toFixed(2)}
@@ -462,11 +489,18 @@ export default async function OrderDetailPage({ params }: Props) {
                         </ul>
 
                         <div className="flex items-center justify-between border-t border-zinc-100 bg-zinc-50 px-4 py-2.5">
-                          <p className="text-xs text-zinc-500">
-                            {splitOrder.store.shippingMode === "SELF"
-                              ? `Delivered by ${splitOrder.store.name}`
-                              : "LinkWe delivery"}
-                          </p>
+                          <div>
+                            <p className="text-xs text-zinc-500">
+                              {splitOrder.store.shippingMode === "SELF"
+                                ? `Delivered by ${splitOrder.store.name}`
+                                : "LinkWe delivery"}
+                            </p>
+                            {splitWeight.totalLbs > 0 ? (
+                              <p className="mt-0.5 text-xs text-zinc-400">
+                                Total weight: {formatWeightLbs(splitWeight.totalLbs)} lb
+                              </p>
+                            ) : null}
+                          </div>
                           <p className="text-xs font-semibold text-zinc-900">
                             TTD {(splitOrder.subtotalMinor / 100).toFixed(2)}
                           </p>

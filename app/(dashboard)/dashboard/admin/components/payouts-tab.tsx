@@ -4,6 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 
 import { completeSplitOrder } from "@/app/actions/admin-orders";
 import { exportPayoutsCSV, getPendingPayoutSplits } from "@/app/actions/admin-payouts";
+import {
+  computeSplitWeightLbs,
+  formatWeightLbs,
+  resolveUnitWeightLbs,
+} from "@/lib/orders/split-weight";
 
 type PayoutRow = Awaited<ReturnType<typeof getPendingPayoutSplits>>[number];
 
@@ -76,6 +81,8 @@ function PayoutCard({
     }
   }
 
+  const weight = computeSplitWeightLbs(row.items, row.mainOrder.items);
+
   return (
     <div
       className="rounded-xl bg-white p-4 sm:p-5"
@@ -125,6 +132,9 @@ function PayoutCard({
           <p className="mt-0.5 text-xs text-zinc-500">
             Shipping {formatTTD(row.shippingMinor)}
           </p>
+          <p className="mt-0.5 text-xs text-zinc-500">
+            Total weight: {formatWeightLbs(weight.totalLbs)} lb
+          </p>
         </div>
         <button
           type="button"
@@ -148,19 +158,25 @@ function PayoutCard({
           Items
         </p>
         <ul className="flex flex-col gap-1.5">
-          {row.items.map((item, idx) => (
+          {row.items.map((item, idx) => {
+            const unitLbs = resolveUnitWeightLbs(item.titleSnapshot, row.mainOrder.items);
+            return (
             <li
               key={`${row.id}-${idx}`}
               className="flex items-center justify-between gap-3 text-xs text-zinc-700"
             >
               <span className="min-w-0 truncate">
                 {item.quantity}× {item.titleSnapshot}
+                {unitLbs > 0 ? (
+                  <span className="text-zinc-400"> · {formatWeightLbs(unitLbs)} lb each</span>
+                ) : null}
               </span>
               <span className="shrink-0 font-mono text-zinc-500">
                 {formatTTD(item.unitPriceMinor * item.quantity)}
               </span>
             </li>
-          ))}
+            );
+          })}
         </ul>
         <p className="mt-0.5 text-right text-[10px] text-zinc-400">Main order {mainRef(row)}</p>
       </div>

@@ -6,6 +6,11 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { escapeCsvCell } from "@/lib/csv/escape-cell";
 import { recalculateMainOrderStatus } from "@/lib/fulfillment/order-status";
+import {
+  computeSplitWeightLbs,
+  formatItemsWithWeight,
+  formatWeightLbs,
+} from "@/lib/orders/split-weight";
 import { prisma } from "@/lib/prisma";
 
 function formatTtdMinor(minor: number): string {
@@ -16,11 +21,11 @@ function splitRefLabel(referenceNumber: string | null, id: string): string {
   return referenceNumber ?? `SP-${id.slice(-8).toUpperCase()}`;
 }
 
-function formatItems(
-  items: { titleSnapshot: string; quantity: number }[],
-): string {
-  return items.map((i) => `${i.quantity}x ${i.titleSnapshot}`).join(" | ");
-}
+const MAIN_ORDER_ITEMS_WEIGHT_SELECT = {
+  titleSnapshot: true,
+  weightLbs: true,
+  quantity: true,
+} as const;
 
 const STATUS_SORT_ORDER: Record<string, number> = {
   READY_FOR_LINKWE: 0,
@@ -56,6 +61,7 @@ export async function getLinkWeDeliveryQueue() {
           referenceNumber: true,
           region: true,
           buyer: { select: { fullName: true, email: true } },
+          items: { select: MAIN_ORDER_ITEMS_WEIGHT_SELECT },
         },
       },
     },
@@ -112,7 +118,7 @@ export async function exportLinkWeManifestCSV(splitIds: string[]): Promise<strin
     "# LinkWe delivery manifest — Region only. Street address is not yet captured at checkout; deliver-to location is the customer region below.";
 
   const header =
-    "Split Ref,Main Ref,Store (pickup from),Customer (deliver to),Email,Region,Items,LinkWe Fee";
+    "Split Ref,Main Ref,Store (pickup from),Customer (deliver to),Email,Region,Items,Total Weight (lbs),LinkWe Fee";
 
   if (ids.length === 0) {
     return `${comment}\n${header}`;
@@ -137,6 +143,7 @@ export async function exportLinkWeManifestCSV(splitIds: string[]): Promise<strin
           referenceNumber: true,
           region: true,
           buyer: { select: { fullName: true, email: true } },
+          items: { select: MAIN_ORDER_ITEMS_WEIGHT_SELECT },
         },
       },
     },
@@ -144,18 +151,20 @@ export async function exportLinkWeManifestCSV(splitIds: string[]): Promise<strin
   });
 
   const rows = splits
-    .map((s) =>
-      [
+    .map((s) => {
+      const weight = computeSplitWeightLbs(s.items, s.mainOrder.items);
+      return [
         escapeCsvCell(splitRefLabel(s.referenceNumber, s.id)),
         escapeCsvCell(s.mainOrder.referenceNumber ?? ""),
         escapeCsvCell(s.store.name),
         escapeCsvCell(s.mainOrder.buyer.fullName),
         escapeCsvCell(s.mainOrder.buyer.email),
         escapeCsvCell(s.mainOrder.region),
-        escapeCsvCell(formatItems(s.items)),
+        escapeCsvCell(formatItemsWithWeight(weight.lines)),
+        escapeCsvCell(formatWeightLbs(weight.totalLbs)),
         escapeCsvCell(formatTtdMinor(s.shippingMinor)),
-      ].join(","),
-    )
+      ].join(",");
+    })
     .join("\n");
 
   return `${comment}\n${header}\n${rows}`;
