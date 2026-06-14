@@ -62,6 +62,7 @@ export async function createPaymentIntent(
   useDelivery: boolean,
   deliveryLat?: number | null,
   deliveryLng?: number | null,
+  deliveryPhone?: string | null,
 ): Promise<CreatePaymentIntentResult> {
 
   const session = await getSession();
@@ -124,6 +125,7 @@ export async function createPaymentIntent(
         country: "TT",
         latitude: deliveryLat ?? null,
         longitude: deliveryLng ?? null,
+        phone: deliveryPhone?.trim() || null,
       },
     });
     shippingAddressId = savedAddress.id;

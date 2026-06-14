@@ -119,6 +119,7 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
 
   const [step, setStep] = useState<"details" | "payment">("details");
   const [deliveryRegion, setDeliveryRegion] = useState("");
+  const [deliveryPhone, setDeliveryPhone] = useState("");
   const [fulfillmentChoice, setFulfillmentChoice] = useState<"delivery" | "pickup" | null>(() => null);
   const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
 
@@ -201,6 +202,7 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
       allDigital ? false : useDelivery,
       Number.isFinite(deliveryLat) ? deliveryLat : null,
       Number.isFinite(deliveryLng) ? deliveryLng : null,
+      deliveryPhone.trim() || null,
     );
     if (result.ok) {
       setClientSecret(result.clientSecret);
@@ -462,6 +464,17 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
                           />
                         </>
                       ) : null}
+
+                      <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800">
+                        Contact phone (for delivery)
+                        <input
+                          type="tel"
+                          value={deliveryPhone}
+                          onChange={(e) => setDeliveryPhone(e.target.value)}
+                          placeholder="868 123 4567"
+                          className={`${radius.card} min-h-[44px] border border-zinc-200 bg-white px-4 py-3 text-base outline-none ring-zinc-300 focus:ring-2`}
+                        />
+                      </label>
                     </div>
                   ) : null}
                 </>

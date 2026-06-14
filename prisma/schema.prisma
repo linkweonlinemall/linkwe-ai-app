@@ -287,6 +287,7 @@ model Address {
   region     String?
   postalCode String?     @map("postal_code")
   country    String      @db.Char(2)
+  phone      String?     @map("phone")
   latitude   Decimal?    @db.Decimal(10, 7)
   longitude  Decimal?    @db.Decimal(10, 7)
   createdAt  DateTime    @default(now()) @map("created_at")
