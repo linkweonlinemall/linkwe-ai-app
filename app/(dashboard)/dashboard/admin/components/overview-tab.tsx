@@ -125,19 +125,6 @@ export default function OverviewTab() {
         </svg>
       ),
     },
-    metrics.alerts.courierStale > 0 && {
-      key: "couriers",
-      count: metrics.alerts.courierStale,
-      label: "Courier locations stale",
-      action: "Open map",
-      tab: "map",
-      color: "#1A7FB5", bg: "#EFF8FF", iconBg: "#BFE0F7",
-      icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
-        </svg>
-      ),
-    },
   ].filter(Boolean) as {
     key: string; count: number; label: string; action: string; tab: string;
     color: string; bg: string; iconBg: string; icon: React.ReactNode;
@@ -395,7 +382,7 @@ export default function OverviewTab() {
           {[
             { label: "View Orders", tab: "orders" },
             { label: "LinkWe Delivery", tab: "linkwe-delivery" },
-            { label: "Operations Map", tab: "map" },
+            { label: "Payouts", tab: "payouts" },
           ].map((action) => (
             <button
               key={action.tab}

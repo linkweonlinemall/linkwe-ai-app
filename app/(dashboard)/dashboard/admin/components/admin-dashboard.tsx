@@ -6,8 +6,8 @@ import { useSearchParams } from "next/navigation";
 import LinkWeDeliveryTab from "./linkwe-delivery-tab";
 import OverviewTab from "./overview-tab";
 import OrdersTab from "./orders-tab";
+import PayoutsTab from "./payouts-tab";
 import VendorsTab from "./vendors-tab";
-import MapTab from "./map-tab";
 import CustomersTab from "./customers-tab";
 import SettingsTab from "./settings-tab";
 import TicketOrdersTab from "./ticket-orders-tab";
@@ -16,9 +16,9 @@ const TAB_IDS = [
   "overview",
   "orders",
   "linkwe-delivery",
+  "payouts",
   "tickets",
   "vendors",
-  "map",
   "customers",
   "settings",
 ] as const;
@@ -56,6 +56,28 @@ const TAB_CONFIG: { id: TabId; label: string; icon: ReactNode }[] = [
     ),
   },
   {
+    id: "linkwe-delivery",
+    label: "LinkWe Delivery",
+    icon: (
+      <svg className="h-4 w-4 shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="1" y="3" width="15" height="13" />
+        <path d="M16 8h4l3 3v5h-7V8z" />
+        <circle cx="5.5" cy="18.5" r="2.5" />
+        <circle cx="18.5" cy="18.5" r="2.5" />
+      </svg>
+    ),
+  },
+  {
+    id: "payouts",
+    label: "Payouts",
+    icon: (
+      <svg className="h-4 w-4 shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <line x1="12" y1="1" x2="12" y2="23" />
+        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+      </svg>
+    ),
+  },
+  {
     id: "tickets",
     label: "Tickets",
     icon: (
@@ -73,17 +95,6 @@ const TAB_CONFIG: { id: TabId; label: string; icon: ReactNode }[] = [
       <svg className="h-4 w-4 shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
         <polyline points="9 22 9 12 15 12 15 22" />
-      </svg>
-    ),
-  },
-  {
-    id: "map",
-    label: "Map",
-    icon: (
-      <svg className="h-4 w-4 shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
-        <line x1="9" y1="3" x2="9" y2="18" />
-        <line x1="15" y1="6" x2="15" y2="21" />
       </svg>
     ),
   },
@@ -130,17 +141,17 @@ export default function AdminDashboard({ adminName: _adminName }: Props) {
         {activeTab === "overview" && <OverviewTab />}
         {activeTab === "orders" && <OrdersTab />}
         {activeTab === "linkwe-delivery" && <LinkWeDeliveryTab />}
+        {activeTab === "payouts" && <PayoutsTab />}
         {activeTab === "tickets" && <TicketOrdersTab />}
         {activeTab === "vendors" && <VendorsTab />}
-        {activeTab === "map" && <MapTab />}
         {activeTab === "customers" && <CustomersTab />}
         {activeTab === "settings" && <SettingsTab />}
         {activeTab !== "overview" &&
           activeTab !== "orders" &&
           activeTab !== "linkwe-delivery" &&
+          activeTab !== "payouts" &&
           activeTab !== "tickets" &&
           activeTab !== "vendors" &&
-          activeTab !== "map" &&
           activeTab !== "customers" &&
           activeTab !== "settings" && (
           <div className="rounded-2xl border border-zinc-200 bg-white p-16 text-center shadow-sm">
