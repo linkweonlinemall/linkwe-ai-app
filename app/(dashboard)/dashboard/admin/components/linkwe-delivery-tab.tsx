@@ -247,6 +247,8 @@ export default function LinkWeDeliveryTab() {
   const outRows = rows.filter((r) => r.status === "OUT_FOR_DELIVERY");
 
   const readyIds = readyRows.map((r) => r.id);
+  const exportIds = selectedIds.size > 0 ? Array.from(selectedIds) : readyIds;
+  const exportPdfHref = `/api/linkwe-manifest?ids=${exportIds.join(",")}`;
   const allReadySelected =
     readyIds.length > 0 && readyIds.every((id) => selectedIds.has(id));
 
@@ -374,13 +376,23 @@ export default function LinkWeDeliveryTab() {
                   Select all ready ({readyRows.length})
                 </label>
                 {selectedIds.size === 0 ? (
-                  <button
-                    type="button"
-                    onClick={handleExport}
-                    className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
-                  >
-                    Export all ready ({readyRows.length})
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleExport}
+                      className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                    >
+                      Export all ready ({readyRows.length})
+                    </button>
+                    <a
+                      href={exportPdfHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                    >
+                      Export PDF
+                    </a>
+                  </>
                 ) : null}
               </div>
 
@@ -409,6 +421,14 @@ export default function LinkWeDeliveryTab() {
                   >
                     Export manifest CSV
                   </button>
+                  <a
+                    href={exportPdfHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                  >
+                    Export PDF
+                  </a>
                   <button
                     type="button"
                     onClick={() => {

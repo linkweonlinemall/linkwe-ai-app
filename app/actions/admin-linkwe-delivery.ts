@@ -9,25 +9,16 @@ import { getSession } from "@/lib/auth/session";
 import { escapeCsvCell } from "@/lib/csv/escape-cell";
 import { recalculateMainOrderStatus } from "@/lib/fulfillment/order-status";
 import {
+  formatTtdMinor,
+  MAIN_ORDER_ITEMS_WEIGHT_SELECT,
+  splitRefLabel,
+} from "@/lib/orders/manifest-shared";
+import {
   computeSplitWeightLbs,
   formatItemsWithWeight,
   formatWeightLbs,
 } from "@/lib/orders/split-weight";
 import { prisma } from "@/lib/prisma";
-
-function formatTtdMinor(minor: number): string {
-  return `TTD ${(minor / 100).toFixed(2)}`;
-}
-
-function splitRefLabel(referenceNumber: string | null, id: string): string {
-  return referenceNumber ?? `SP-${id.slice(-8).toUpperCase()}`;
-}
-
-const MAIN_ORDER_ITEMS_WEIGHT_SELECT = {
-  titleSnapshot: true,
-  weightLbs: true,
-  quantity: true,
-} as const;
 
 const STATUS_SORT_ORDER: Record<string, number> = {
   READY_FOR_LINKWE: 0,
