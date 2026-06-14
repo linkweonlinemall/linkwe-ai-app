@@ -47,6 +47,8 @@ function ledgerTypeLabel(ledgerEntryType: string | null): string {
       return "Order auto";
     case "ORDER_REVENUE":
       return "Order";
+    case "SHIPPING":
+      return "Delivery fee";
     case "PLATFORM_COMMISSION":
       return "Commission";
     default:
@@ -328,7 +330,7 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
           {ledgerEntries.length === 0 ? (
             <div className={`${CARD} p-6 text-center shadow-none`}>
               <p className="text-sm text-zinc-500">
-                No earnings yet. Earnings appear here when customers confirm receipt of their orders.
+                No earnings yet. Earnings appear here once your delivered orders are completed.
               </p>
             </div>
           ) : (
@@ -338,6 +340,7 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
                 const gross = entry.grossMinor ?? entry.amountMinor;
                 const commission = entry.commissionMinor ?? 0;
                 const net = entry.netMinor ?? entry.amountMinor;
+                const isShipping = entry.ledgerEntryType === "SHIPPING";
                 return (
                   <div key={entry.id} className={`px-4 py-3 ${CARD} shadow-none`}>
                     <div className="flex flex-wrap items-center gap-2">
@@ -352,20 +355,27 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
                       ) : null}
                     </div>
                     <p className="mt-1 truncate text-[11px] text-zinc-600">{entry.description ?? "—"}</p>
-                    <div className="mt-2 grid grid-cols-3 gap-2 text-[10px]">
-                      <div>
-                        <p className="text-zinc-400">Gross</p>
-                        <p className="font-semibold tabular-nums text-zinc-800">{formatTTD(gross)}</p>
-                      </div>
-                      <div>
-                        <p className="text-zinc-400">Commission</p>
-                        <p className="font-semibold tabular-nums text-red-500">-{formatTTD(commission)}</p>
-                      </div>
-                      <div>
-                        <p className="text-zinc-400">Net</p>
+                    {isShipping ? (
+                      <div className="mt-2">
                         <p className="font-semibold tabular-nums text-emerald-600">+{formatTTD(net)}</p>
+                        <p className="mt-0.5 text-[10px] text-zinc-400">Your delivery fee · no commission</p>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="mt-2 grid grid-cols-3 gap-2 text-[10px]">
+                        <div>
+                          <p className="text-zinc-400">Gross</p>
+                          <p className="font-semibold tabular-nums text-zinc-800">{formatTTD(gross)}</p>
+                        </div>
+                        <div>
+                          <p className="text-zinc-400">Commission</p>
+                          <p className="font-semibold tabular-nums text-red-500">-{formatTTD(commission)}</p>
+                        </div>
+                        <div>
+                          <p className="text-zinc-400">Net</p>
+                          <p className="font-semibold tabular-nums text-emerald-600">+{formatTTD(net)}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}

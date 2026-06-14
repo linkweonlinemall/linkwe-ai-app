@@ -79,7 +79,7 @@ export async function releaseSplitOrderEarnings(
       description:
         ledgerType === "ORDER_AUTO_COMPLETE"
           ? "Order auto-completed after delivery window"
-          : "Customer confirmed receipt",
+          : "Order completed",
       markedByUserId: markedCompleteBy === "SYSTEM" ? undefined : markedCompleteBy,
     });
 
@@ -119,7 +119,7 @@ export async function releaseSplitOrderEarnings(
       title:
         ledgerType === "ORDER_AUTO_COMPLETE"
           ? "Order auto-completed"
-          : "Customer marked order received",
+          : "Order completed — earnings released",
       body: "Earnings added to your balance",
       linkUrl: "/dashboard/vendor/finance",
     });
