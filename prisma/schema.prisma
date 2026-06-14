@@ -1059,6 +1059,7 @@ enum LedgerEntryType {
   DEPOSIT_RECEIVED
   ORDER_AUTO_COMPLETE
   TICKET_SALE
+  SHIPPING
 }
 
 enum VendorSubscriptionPlan {

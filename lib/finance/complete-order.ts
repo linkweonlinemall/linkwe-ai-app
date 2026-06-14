@@ -37,9 +37,12 @@ export async function releaseSplitOrderEarnings(
       mainOrderId: true,
       storeId: true,
       subtotalMinor: true,
+      shippingMinor: true,
       earningsReleased: true,
       status: true,
-      store: { select: { ownerId: true, subscriptionPlan: true } },
+      store: {
+        select: { ownerId: true, subscriptionPlan: true, shippingMode: true },
+      },
     },
   });
 
@@ -79,6 +82,34 @@ export async function releaseSplitOrderEarnings(
           : "Customer confirmed receipt",
       markedByUserId: markedCompleteBy === "SYSTEM" ? undefined : markedCompleteBy,
     });
+
+    if (split.store.shippingMode === "SELF" && split.shippingMinor > 0) {
+      const shippingIdempotencyKey = `split:${split.id}:${ledgerType}:shipping`;
+      const existingShipping = await tx.vendorLedgerEntry.findFirst({
+        where: { idempotencyKey: shippingIdempotencyKey },
+      });
+      if (!existingShipping) {
+        await tx.vendorLedgerEntry.create({
+          data: {
+            storeId: split.storeId,
+            currency: "TTD",
+            entryType: "CREDIT_ORDER_SETTLEMENT",
+            ledgerEntryType: "SHIPPING",
+            amountMinor: split.shippingMinor,
+            grossMinor: split.shippingMinor,
+            commissionMinor: 0,
+            netMinor: split.shippingMinor,
+            splitOrderId: split.id,
+            splitOrderRef: split.id,
+            mainOrderId: split.mainOrderId,
+            idempotencyKey: shippingIdempotencyKey,
+            description: "Delivery fee — self-delivered",
+            releasedAt: now,
+            createdByUserId: markedCompleteBy === "SYSTEM" ? undefined : markedCompleteBy,
+          },
+        });
+      }
+    }
   });
 
   if (split.store.ownerId) {
