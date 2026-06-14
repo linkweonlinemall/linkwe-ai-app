@@ -2,15 +2,12 @@ import { Fragment } from "react";
 import { notFound, redirect } from "next/navigation";
 
 import MarkReceivedButton from "@/app/orders/components/mark-received-button";
+import SplitProgressMini from "@/components/orders/split-progress-mini";
 import PublicNav from "@/components/layout/PublicNav";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
-import {
-  getProgressStep,
-  getSplitOrderStatusLabel,
-  getStatusInfo,
-  ORDER_PROGRESS_STEPS,
-} from "@/lib/orders/order-status";
+import { getSplitOrderStatusLabel, getStatusInfo } from "@/lib/orders/order-status";
+import { getSplitProgressSteps, getSplitStepIndex } from "@/lib/orders/split-progress";
 import { generateOrderQRCodeDataURL, getOrderUrl } from "@/lib/orders/qr-code";
 import { prisma } from "@/lib/prisma";
 
@@ -154,7 +151,6 @@ export default async function OrderDetailPage({ params }: Props) {
   const qrCodeDataUrl = await generateOrderQRCodeDataURL(order.id);
   const orderUrl = getOrderUrl(order.id);
 
-  const currentStep = getProgressStep(order.status);
   const statusInfo = getStatusInfo(order.status);
 
   const splitTotal = order.splitOrders.length;
@@ -331,62 +327,18 @@ export default async function OrderDetailPage({ params }: Props) {
               )}
             </div>
           ) : (
-            <div className="mt-6">
-              <div className="flex items-center overflow-x-auto pb-2">
-                {ORDER_PROGRESS_STEPS.map((label, idx) => {
-                  const lastIdx = ORDER_PROGRESS_STEPS.length - 1;
-                  const delivered =
-                    order.status === "COMPLETED" ||
-                    order.status === "DELIVERED" ||
-                    order.status === "CUSTOMER_RECEIVED";
-                  const completed = idx < currentStep || (delivered && idx === lastIdx);
-                  const current = !completed && idx === currentStep;
-                  return (
-                    <Fragment key={label}>
-                      <div className="flex min-w-[4.5rem] flex-col items-center">
-                        <div
-                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                            completed
-                              ? "bg-[#D4450A] text-white"
-                              : current
-                                ? "border-2 border-[#D4450A] bg-white text-[#D4450A]"
-                                : "border border-zinc-200 bg-zinc-100 text-zinc-400"
-                          }`}
-                        >
-                          {completed ? (
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="3"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                          ) : (
-                            idx + 1
-                          )}
-                        </div>
-                        <span className="mt-2 hidden max-w-[5.5rem] text-center text-[10px] leading-tight text-zinc-500 sm:block">
-                          {label}
-                        </span>
-                      </div>
-                      {idx < lastIdx ? (
-                        <div
-                          className={`mx-1 h-0.5 min-w-[12px] flex-1 ${
-                            idx < currentStep ? "bg-[#D4450A]" : "bg-zinc-200"
-                          }`}
-                          aria-hidden
-                        />
-                      ) : null}
-                    </Fragment>
-                  );
-                })}
-              </div>
+            <div className="mt-2">
+              {isMultiStore ? (
+                <p className="text-sm text-zinc-600">
+                  <span className="font-semibold">
+                    {deliveredCount} of {splitTotal} stores received
+                  </span>
+                </p>
+              ) : order.splitOrders.length === 1 ? (
+                <p className="text-sm text-zinc-600">
+                  {getSplitOrderStatusLabel(order.splitOrders[0].status).label}
+                </p>
+              ) : null}
             </div>
           )}
 
@@ -415,15 +367,9 @@ export default async function OrderDetailPage({ params }: Props) {
             </div>
           ) : null}
 
-          {isMultiStore && !allDigital ? (
-            <p className="mt-3 text-xs text-zinc-600">
-              <span className="font-semibold">
-                {deliveredCount} of {splitTotal} stores received
-              </span>
-            </p>
+          {!allDigital && order.status !== "CANCELLED" && order.status !== "REFUNDED" ? (
+            <p className="mt-4 text-sm text-zinc-500">{statusInfo.description}</p>
           ) : null}
-
-          <p className="mt-4 text-sm text-zinc-500">{statusInfo.description}</p>
         </section>
 
         <div className="grid gap-5 lg:grid-cols-3">
@@ -471,6 +417,18 @@ export default async function OrderDetailPage({ params }: Props) {
                             {badge.label}
                           </span>
                         </div>
+
+                        {!allDigital ? (
+                          <div className="border-b border-zinc-100 bg-white">
+                            <SplitProgressMini
+                              steps={getSplitProgressSteps(splitOrder.store.shippingMode)}
+                              stepIndex={getSplitStepIndex(
+                                splitOrder.status,
+                                splitOrder.store.shippingMode,
+                              )}
+                            />
+                          </div>
+                        ) : null}
 
                         <ul className="divide-y divide-zinc-100 px-4">
                           {splitOrder.items.map((item) => {

@@ -11,77 +11,13 @@ import { getSession } from "@/lib/auth/session";
 import { getCourierPickupFeeMinor } from "@/lib/fulfillment/courier-pickup-rates";
 import { calculateCommissionMinor, calculateVendorNetMinor } from "@/lib/platform/commission";
 import { prisma } from "@/lib/prisma";
+import { getSplitProgressSteps, getSplitStepIndex } from "@/lib/orders/split-progress";
 import { vendorSplitOrderDetailSelect } from "@/lib/vendor/vendor-split-order-query";
 
 type Props = { params: Promise<{ splitOrderId: string }> };
 
 const SCARLET = "#D4450A";
 const EMERALD = "#059669";
-
-const SELF_FLOW_STEPS = ["Action", "Preparing", "Shipped", "Delivered"] as const;
-const LINKWE_FLOW_STEPS = [
-  "Action",
-  "Preparing",
-  "Ready for LinkWe",
-  "Out for delivery",
-  "Delivered",
-] as const;
-
-function getFlowSteps(shippingMode: StoreShippingMode): readonly string[] {
-  return shippingMode === "SELF" ? SELF_FLOW_STEPS : LINKWE_FLOW_STEPS;
-}
-
-function getVendorStepIndex(status: string, shippingMode: StoreShippingMode): number {
-  if (shippingMode === "SELF") {
-    switch (status) {
-      case "AWAITING_VENDOR_ACTION":
-        return 0;
-      case "PREPARING":
-      case "VENDOR_PREPARING":
-      case "AWAITING_COURIER_PICKUP":
-      case "COURIER_ASSIGNED":
-      case "COURIER_PICKED_UP":
-      case "VENDOR_DROPPED_OFF":
-        return 1;
-      case "SHIPPED":
-      case "AT_WAREHOUSE":
-      case "PACKAGED":
-      case "BUNDLED_FOR_DISPATCH":
-      case "DISPATCHED":
-        return 2;
-      case "DELIVERED":
-      case "COMPLETED":
-        return 3;
-      default:
-        return 0;
-    }
-  }
-
-  switch (status) {
-    case "AWAITING_VENDOR_ACTION":
-      return 0;
-    case "PREPARING":
-    case "VENDOR_PREPARING":
-    case "AWAITING_COURIER_PICKUP":
-    case "COURIER_ASSIGNED":
-    case "COURIER_PICKED_UP":
-    case "VENDOR_DROPPED_OFF":
-      return 1;
-    case "READY_FOR_LINKWE":
-    case "AT_WAREHOUSE":
-    case "PACKAGED":
-    case "BUNDLED_FOR_DISPATCH":
-      return 2;
-    case "OUT_FOR_DELIVERY":
-    case "DISPATCHED":
-      return 3;
-    case "DELIVERED":
-    case "COMPLETED":
-      return 4;
-    default:
-      return 0;
-  }
-}
 
 function getStatusBadge(status: string): { label: string; style: CSSProperties } {
   const pill = {
@@ -198,8 +134,8 @@ export default async function VendorOrderDetailPage({ params }: Props) {
   const badge = getStatusBadge(splitOrder.status);
   const splitRef = `SP-${splitOrder.id.slice(-8).toUpperCase()}`;
   const mainRef = `LW-${splitOrder.mainOrderId.slice(-8).toUpperCase()}`;
-  const flowSteps = getFlowSteps(shippingMode);
-  const stepIndex = getVendorStepIndex(splitOrder.status, shippingMode);
+  const flowSteps = getSplitProgressSteps(shippingMode, "vendor");
+  const stepIndex = getSplitStepIndex(splitOrder.status, shippingMode);
   const commissionMinor = calculateCommissionMinor(splitOrder.subtotalMinor);
   const netAfterCommission = calculateVendorNetMinor(splitOrder.subtotalMinor);
   const pickupFeeMinor =
