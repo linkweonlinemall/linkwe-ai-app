@@ -191,6 +191,74 @@ export async function completeAllDeliveredSplits(
   return { ok: true, completed: splits.length };
 }
 
+const CANCELLABLE_MAIN_STATUSES: MainOrderStatus[] = ["PAID", "PROCESSING"];
+
+const TERMINAL_SPLIT_STATUSES = ["DELIVERED", "COMPLETED", "CANCELLED"] as const;
+
+export async function cancelOrders(
+  orderIds: string[],
+): Promise<{ cancelled: number; skipped: number }> {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") redirect("/");
+
+  const ids = orderIds.map((id) => id.trim()).filter(Boolean);
+  let cancelled = 0;
+  let skipped = 0;
+
+  for (const id of ids) {
+    const order = await prisma.mainOrder.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        status: true,
+        splitOrders: {
+          select: { id: true, status: true, earningsReleased: true },
+        },
+      },
+    });
+
+    if (!order) {
+      skipped += 1;
+      continue;
+    }
+
+    const isCancellable = CANCELLABLE_MAIN_STATUSES.includes(order.status);
+    const hasReleasedEarnings = order.splitOrders.some((s) => s.earningsReleased);
+
+    if (!isCancellable || hasReleasedEarnings) {
+      skipped += 1;
+      continue;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.mainOrder.update({
+        where: { id: order.id },
+        data: { status: "CANCELLED" },
+      });
+
+      for (const split of order.splitOrders) {
+        if (
+          !TERMINAL_SPLIT_STATUSES.includes(
+            split.status as (typeof TERMINAL_SPLIT_STATUSES)[number],
+          )
+        ) {
+          await tx.splitOrder.update({
+            where: { id: split.id },
+            data: { status: "CANCELLED" },
+          });
+        }
+      }
+    });
+
+    cancelled += 1;
+  }
+
+  revalidatePath("/dashboard/admin");
+  revalidatePath("/orders");
+
+  return { cancelled, skipped };
+}
+
 export async function updateOrderStatus(orderIds: string[], status: string): Promise<void> {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/");

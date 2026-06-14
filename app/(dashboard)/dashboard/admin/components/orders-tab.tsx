@@ -5,12 +5,12 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { cleanupAbandonedOrders, deleteAllOrders } from "@/app/actions/admin-delete";
 import UndoDeleteToast from "./undo-delete-toast";
 import {
+  cancelOrders,
   completeAllDeliveredSplits,
   completeSplitOrder,
   exportOrdersCSV,
   getAdminOrders,
   getAdminOrderStats,
-  updateOrderStatus,
 } from "@/app/actions/admin-orders";
 import type { MainOrderStatus } from "@prisma/client";
 
@@ -18,18 +18,28 @@ type Order = Awaited<ReturnType<typeof getAdminOrders>>[number];
 type Stats = Awaited<ReturnType<typeof getAdminOrderStats>>;
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  PAID: { label: "Order Placed", color: "#1A7FB5", bg: "#EFF8FF" },
+  PAID: { label: "Order placed", color: "#1A7FB5", bg: "#EFF8FF" },
   PROCESSING: { label: "Processing", color: "#E8820C", bg: "#FFF7ED" },
-  PARTIALLY_IN_HOUSE: { label: "Partial Warehouse", color: "#7F77DD", bg: "#F5F3FF" },
-  READY_TO_SHIP: { label: "Ready to Package", color: "#1B8C5A", bg: "#F0FDF4" },
-  PACKING_COMPLETE: { label: "Packing Complete", color: "#7F77DD", bg: "#F5F3FF" },
   SHIPPED: { label: "Shipped", color: "#1A7FB5", bg: "#EFF8FF" },
-  CUSTOMER_RECEIVED: { label: "Customer Received", color: "#059669", bg: "#F0FDF4" },
   DELIVERED: { label: "Delivered", color: "#1B8C5A", bg: "#F0FDF4" },
+  CUSTOMER_RECEIVED: { label: "Customer Received", color: "#059669", bg: "#F0FDF4" },
   COMPLETED: { label: "Completed", color: "#1B8C5A", bg: "#F0FDF4" },
   CANCELLED: { label: "Cancelled", color: "#DC2626", bg: "#FEF2F2" },
   REFUNDED: { label: "Refunded", color: "#DC2626", bg: "#FEF2F2" },
 };
+
+/** Legacy warehouse-era main statuses — folded into Awaiting vendors for grouping/display. */
+const LEGACY_AWAITING_VENDOR_STATUSES: Set<string> = new Set([
+  "PARTIALLY_IN_HOUSE",
+  "READY_TO_SHIP",
+  "PACKING_COMPLETE",
+]);
+
+function statusDisplayLabel(status: string): string {
+  if (STATUS_CONFIG[status]?.label) return STATUS_CONFIG[status].label;
+  if (LEGACY_AWAITING_VENDOR_STATUSES.has(status)) return "Processing";
+  return status.replace(/_/g, " ");
+}
 
 function formatTTD(minor: number): string {
   return (minor / 100).toLocaleString("en-TT", {
@@ -228,48 +238,27 @@ function VendorFulfillmentCards({
 
 // ─── Fulfillment derived data ─────────────────────────────────────────────────
 
-// Statuses that mean an item has left the vendor and is in transit to or at the warehouse.
-// Starts at COURIER_ASSIGNED (courier confirmed, bay may be pre-assigned) — everything from
-// that point on counts as received for "X of N received" purposes. CANCELLED is excluded.
-const RECEIVED_STATUSES: Set<string> = new Set([
-  "COURIER_ASSIGNED",
-  "COURIER_PICKED_UP",
-  "VENDOR_DROPPED_OFF",
-  "AT_WAREHOUSE",
-  "PACKAGED",
-  "BUNDLED_FOR_DISPATCH",
-  "DISPATCHED",
-  "DELIVERED",
-  "COMPLETED",
+const RECEIVED_STATUSES: Set<string> = new Set(["DELIVERED", "COMPLETED"]);
+
+const AWAITING_VENDOR_STATUSES: Set<string> = new Set([
+  "PAID",
+  "PROCESSING",
+  ...LEGACY_AWAITING_VENDOR_STATUSES,
 ]);
 
-// Group 1 — warehouse action needed right now.
-const ACTION_STATUSES: Set<string> = new Set(["READY_TO_SHIP", "PACKING_COMPLETE"]);
+const IN_TRANSIT_STATUSES: Set<string> = new Set(["SHIPPED"]);
 
-// Group 2 — pieces still incoming from vendors.
-const WAITING_STATUSES: Set<string> = new Set(["PAID", "PROCESSING", "PARTIALLY_IN_HOUSE"]);
+const DELIVERED_GROUP_STATUSES: Set<string> = new Set(["DELIVERED"]);
 
-// Group 3 — past warehouse action, monitoring only (NOT dimmed).
-const MOTION_STATUSES: Set<string> = new Set(["SHIPPED", "CUSTOMER_RECEIVED"]);
-
-// Group 4 — truly terminal; dimmed.
-const DONE_STATUSES: Set<string> = new Set(["DELIVERED", "COMPLETED", "CANCELLED", "REFUNDED"]);
-
-/** Orders open longer than this without full warehouse receipt are flagged stale. */
-const STALE_THRESHOLD_MS = 48 * 60 * 60 * 1000; // 48 hours
-
-/**
- * Main-order statuses that are only reachable AFTER every split order has been
- * dispatched from the warehouse. If a split order's raw enum status disagrees
- * with one of these, the order-level status is authoritative — we display N of N
- * and treat the split mismatch as a data inconsistency (order manually advanced).
- */
-const POST_DISPATCH_STATUSES: Set<string> = new Set([
-  "SHIPPED",
+const CLOSED_STATUSES: Set<string> = new Set([
+  "CANCELLED",
+  "REFUNDED",
+  "COMPLETED",
   "CUSTOMER_RECEIVED",
-  "DELIVERED",
-  "COMPLETED",
 ]);
+
+/** Orders open longer than this without all splits delivered are flagged stale. */
+const STALE_THRESHOLD_MS = 48 * 60 * 60 * 1000; // 48 hours
 
 function receivedCount(order: Order): number {
   return order.splitOrders.filter((s) => RECEIVED_STATUSES.has(s.status)).length;
@@ -280,8 +269,9 @@ function fullyReceived(order: Order): boolean {
 }
 
 function orderIsStale(order: Order): boolean {
-  if (DONE_STATUSES.has(order.status)) return false;
-  if (POST_DISPATCH_STATUSES.has(order.status)) return false; // in motion — never stale
+  if (CLOSED_STATUSES.has(order.status)) return false;
+  if (DELIVERED_GROUP_STATUSES.has(order.status)) return false;
+  if (IN_TRANSIT_STATUSES.has(order.status)) return false;
   if (fullyReceived(order)) return false;
   return Date.now() - new Date(order.createdAt).getTime() > STALE_THRESHOLD_MS;
 }
@@ -315,11 +305,9 @@ type RowMeta = {
 
 function makeRowItem(order: Order, isDone: boolean): RowMeta {
   const total = order.splitOrders.length;
-  const rawRecvd = order.splitOrders.filter((s) => RECEIVED_STATUSES.has(s.status)).length;
-  const recvd = POST_DISPATCH_STATUSES.has(order.status) ? total : rawRecvd;
-  const ready = total > 0 && recvd === total;
+  const recvd = receivedCount(order);
   const stale = !isDone && orderIsStale(order);
-  const isMotion = MOTION_STATUSES.has(order.status);
+  const isMotion = IN_TRANSIT_STATUSES.has(order.status);
 
   const edgeColor = stale
     ? "#D4450A"
@@ -327,43 +315,37 @@ function makeRowItem(order: Order, isDone: boolean): RowMeta {
       ? "#D4D4D8"
       : isMotion
         ? "#1A7FB5"
-        : ready
+        : DELIVERED_GROUP_STATUSES.has(order.status)
           ? "#1B8C5A"
           : "#E8820C";
 
-  const pillColor = ready ? "#1B8C5A" : recvd > 0 ? "#E8820C" : "#1A7FB5";
-  const pillBg    = ready ? "#F0FDF4" : recvd > 0 ? "#FFF7ED" : "#EFF8FF";
+  const pillColor = recvd === total && total > 0 ? "#1B8C5A" : recvd > 0 ? "#E8820C" : "#1A7FB5";
+  const pillBg = recvd === total && total > 0 ? "#F0FDF4" : recvd > 0 ? "#FFF7ED" : "#EFF8FF";
 
-  const firstItem  = order.items[0];
+  const firstItem = order.items[0];
   const itemsLabel =
     order.items.length === 0
       ? "0 items"
       : `${order.items.length} item${order.items.length !== 1 ? "s" : ""} · ${firstItem.titleSnapshot}`;
 
+  const pending = total - recvd;
+
   const panelReadiness: { text: string; color: string } = isDone
-    ? { text: STATUS_CONFIG[order.status]?.label ?? order.status, color: "#A1A1AA" }
+    ? { text: statusDisplayLabel(order.status), color: "#A1A1AA" }
     : order.status === "SHIPPED"
-      ? { text: "Dispatched", color: "#1A7FB5" }
-      : order.status === "CUSTOMER_RECEIVED"
-        ? { text: "With customer", color: "#1A7FB5" }
+      ? { text: "In transit", color: "#1A7FB5" }
+      : order.status === "DELIVERED"
+        ? { text: "Delivered", color: "#1B8C5A" }
         : stale
           ? { text: `Waiting ${staleAge(order)}`, color: "#D4450A" }
-          : ready && ACTION_STATUSES.has(order.status)
-            ? { text: "Ready to bundle", color: "#1B8C5A" }
-            : ready &&
-                order.splitOrders.some((s) =>
-                  ["COURIER_ASSIGNED", "COURIER_PICKED_UP"].includes(s.status),
-                )
-              ? { text: "In transit to warehouse", color: "#E8820C" }
-              : ready
-                ? { text: "Awaiting check-in", color: "#E8820C" }
-                : {
-                    text:
-                      total - recvd === 1
-                        ? "Awaiting vendor"
-                        : `Waiting on ${total - recvd} vendors`,
-                    color: "#71717a",
-                  };
+          : pending === total
+            ? {
+                text: total === 1 ? "Awaiting vendor" : `Waiting on ${total} vendors`,
+                color: "#71717a",
+              }
+            : pending === 1
+              ? { text: "Awaiting vendor", color: "#71717a" }
+              : { text: `Waiting on ${pending} vendors`, color: "#71717a" };
 
   return {
     kind: "row",
@@ -371,7 +353,7 @@ function makeRowItem(order: Order, isDone: boolean): RowMeta {
     isDone,
     recvd,
     total,
-    ready,
+    ready: fullyReceived(order),
     stale,
     isMotion,
     edgeColor,
@@ -393,9 +375,9 @@ export default function OrdersTab() {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
-  const [bulkAction, setBulkAction] = useState<string>("");
-  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [cancelSummary, setCancelSummary] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState(false);
   const [cleaning, setCleaning] = useState(false);
   const [cleanedCount, setCleanedCount] = useState<number | null>(null);
@@ -450,34 +432,30 @@ export default function OrdersTab() {
       0,
     );
 
-  // ── Four fulfillment groups ──────────────────────────────────────────────────
-  // Helper: sort oldest-first; within waiting group, stale orders float to top.
+  // ── Per-split fulfillment groups ─────────────────────────────────────────────
   function sortOldest(a: Order, b: Order, stalePriority = false): number {
     if (stalePriority) {
-      const aS = orderIsStale(a), bS = orderIsStale(b);
+      const aS = orderIsStale(a);
+      const bS = orderIsStale(b);
       if (aS !== bS) return aS ? -1 : 1;
     }
     return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
   }
 
-  // Group 1 — Needs action (ready to bundle now).
-  const actionGroup = filtered
-    .filter((o) => ACTION_STATUSES.has(o.status))
-    .sort((a, b) => sortOldest(a, b));
-
-  // Group 2 — Waiting on vendors (pieces still incoming).
-  const waitingGroup = filtered
-    .filter((o) => WAITING_STATUSES.has(o.status))
+  const awaitingGroup = filtered
+    .filter((o) => AWAITING_VENDOR_STATUSES.has(o.status))
     .sort((a, b) => sortOldest(a, b, true));
 
-  // Group 3 — In motion (dispatched / with customer — active but not actionable by warehouse).
-  const motionGroup = filtered
-    .filter((o) => MOTION_STATUSES.has(o.status))
+  const transitGroup = filtered
+    .filter((o) => IN_TRANSIT_STATUSES.has(o.status))
     .sort((a, b) => sortOldest(a, b));
 
-  // Group 4 — Completed (terminal; dimmed).
-  const doneGroup = filtered
-    .filter((o) => DONE_STATUSES.has(o.status))
+  const deliveredGroup = filtered
+    .filter((o) => DELIVERED_GROUP_STATUSES.has(o.status))
+    .sort((a, b) => sortOldest(a, b));
+
+  const closedGroup = filtered
+    .filter((o) => CLOSED_STATUSES.has(o.status))
     .sort((a, b) => sortOldest(a, b));
 
   type TableItem =
@@ -485,47 +463,45 @@ export default function OrdersTab() {
     | RowMeta;
 
   const tableItems: TableItem[] = [];
-  if (actionGroup.length > 0) {
+  if (awaitingGroup.length > 0) {
     tableItems.push({
       kind: "header",
-      label: "Needs action",
-      sublabel: "ready to bundle",
-      color: "#1B8C5A",
-      bg: "#F0FDF4",
-      count: actionGroup.length,
-    });
-    actionGroup.forEach((o) => tableItems.push(makeRowItem(o, false)));
-  }
-  if (waitingGroup.length > 0) {
-    tableItems.push({
-      kind: "header",
-      label: "Waiting on vendors",
+      label: "Awaiting vendors",
       color: "#E8820C",
       bg: "#FFF7ED",
-      count: waitingGroup.length,
+      count: awaitingGroup.length,
     });
-    waitingGroup.forEach((o) => tableItems.push(makeRowItem(o, false)));
+    awaitingGroup.forEach((o) => tableItems.push(makeRowItem(o, false)));
   }
-  if (motionGroup.length > 0) {
+  if (transitGroup.length > 0) {
     tableItems.push({
       kind: "header",
-      label: "In motion",
-      sublabel: "dispatched · with customer",
+      label: "In transit",
       color: "#1A7FB5",
       bg: "#EFF8FF",
-      count: motionGroup.length,
+      count: transitGroup.length,
     });
-    motionGroup.forEach((o) => tableItems.push(makeRowItem(o, false)));
+    transitGroup.forEach((o) => tableItems.push(makeRowItem(o, false)));
   }
-  if (doneGroup.length > 0) {
+  if (deliveredGroup.length > 0) {
     tableItems.push({
       kind: "header",
-      label: "Completed",
+      label: "Delivered",
+      color: "#1B8C5A",
+      bg: "#F0FDF4",
+      count: deliveredGroup.length,
+    });
+    deliveredGroup.forEach((o) => tableItems.push(makeRowItem(o, false)));
+  }
+  if (closedGroup.length > 0) {
+    tableItems.push({
+      kind: "header",
+      label: "Completed / closed",
       color: "#A1A1AA",
       bg: "#F9FAFB",
-      count: doneGroup.length,
+      count: closedGroup.length,
     });
-    doneGroup.forEach((o) => tableItems.push(makeRowItem(o, true)));
+    closedGroup.forEach((o) => tableItems.push(makeRowItem(o, true)));
   }
 
   function toggleAll() {
@@ -649,29 +625,14 @@ export default function OrdersTab() {
           </span>
           <div className="h-4 w-px bg-zinc-200" />
 
-          <select
-            value={bulkAction}
-            onChange={(e) => setBulkAction(e.target.value)}
-            className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-700 outline-none focus:ring-2 ring-zinc-300"
+          <button
+            type="button"
+            onClick={() => setShowCancelConfirm(true)}
+            className="rounded-lg px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:opacity-90"
+            style={{ backgroundColor: "#DC2626" }}
           >
-            <option value="">Change status to...</option>
-            <option value="PROCESSING">Processing</option>
-            <option value="READY_TO_SHIP">Ready to Ship</option>
-            <option value="SHIPPED">Shipped</option>
-            <option value="DELIVERED">Delivered</option>
-            <option value="CANCELLED">Cancel orders</option>
-          </select>
-
-          {bulkAction ? (
-            <button
-              type="button"
-              onClick={() => setShowBulkConfirm(true)}
-              className="rounded-lg px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:opacity-90"
-              style={{ backgroundColor: bulkAction === "CANCELLED" ? "#DC2626" : "#D4450A" }}
-            >
-              Apply to {selectedRows.size}
-            </button>
-          ) : null}
+            Cancel selected ({selectedRows.size})
+          </button>
 
           {hasDeliveredSplitsToComplete ? (
             <button
@@ -718,13 +679,19 @@ export default function OrdersTab() {
             type="button"
             onClick={() => {
               setSelectedRows(new Set());
-              setBulkAction("");
+              setCancelSummary(null);
             }}
             className="ml-auto text-xs text-zinc-400 transition-colors hover:text-zinc-700"
           >
             Clear selection
           </button>
         </div>
+      ) : null}
+
+      {cancelSummary ? (
+        <p className="mb-4 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+          {cancelSummary}
+        </p>
       ) : null}
 
       {loading ? (
@@ -1101,48 +1068,12 @@ export default function OrdersTab() {
                           )}
                         </td>
                         <td className="px-3 py-3">
-                          {isDone ? (
-                            <span className="text-xs text-zinc-400">
-                              {STATUS_CONFIG[row.status]?.label ?? row.status}
-                            </span>
-                          ) : row.status === "SHIPPED" ? (
-                            <span className="text-xs font-medium" style={{ color: "#1A7FB5" }}>
-                              Dispatched
-                            </span>
-                          ) : row.status === "CUSTOMER_RECEIVED" ? (
-                            <span className="text-xs font-medium" style={{ color: "#1A7FB5" }}>
-                              With customer
-                            </span>
-                          ) : stale ? (
-                            <span className="text-xs font-semibold" style={{ color: "#D4450A" }}>
-                              Waiting {staleAge(row)}
-                            </span>
-                          ) : ready && ACTION_STATUSES.has(row.status) ? (
-                            // ACTION group only (READY_TO_SHIP / PACKING_COMPLETE)
-                            <span className="text-xs font-medium" style={{ color: "#1B8C5A" }}>
-                              Ready to bundle
-                            </span>
-                          ) : ready &&
-                            row.splitOrders.some((s) =>
-                              ["COURIER_ASSIGNED", "COURIER_PICKED_UP"].includes(s.status),
-                            ) ? (
-                            // All splits left the vendor, but at least one is still in transit
-                            <span className="text-xs font-medium" style={{ color: "#E8820C" }}>
-                              In transit to warehouse
-                            </span>
-                          ) : ready ? (
-                            // All splits are VENDOR_DROPPED_OFF or AT_WAREHOUSE+ but
-                            // admin hasn't formally checked them in yet (markItemsReceivedAtWarehouse)
-                            <span className="text-xs font-medium" style={{ color: "#E8820C" }}>
-                              Awaiting check-in
-                            </span>
-                          ) : (
-                            <span className="text-xs text-zinc-500">
-                              {total - recvd === 1
-                                ? "Awaiting vendor"
-                                : `Waiting on ${total - recvd} vendors`}
-                            </span>
-                          )}
+                          <span
+                            className="text-xs font-medium"
+                            style={{ color: panelReadiness.color }}
+                          >
+                            {panelReadiness.text}
+                          </span>
                         </td>
                         <td className="px-3 py-3 text-right text-xs text-zinc-500">
                           {relativeTime(row.createdAt)}
@@ -1256,19 +1187,18 @@ export default function OrdersTab() {
         </>
       )}
 
-      {showBulkConfirm ? (
+      {showCancelConfirm ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-            <h3 className="mb-2 text-lg font-bold text-zinc-900">Confirm Bulk Update</h3>
+            <h3 className="mb-2 text-lg font-bold text-zinc-900">Cancel selected orders</h3>
             <p className="mb-4 text-sm text-zinc-600">
-              You are about to change {selectedRows.size} order{selectedRows.size !== 1 ? "s" : ""} to{" "}
-              <span className="font-semibold">
-                {STATUS_CONFIG[bulkAction]?.label ?? bulkAction}
+              Cancel {selectedRows.size} order{selectedRows.size !== 1 ? "s" : ""}? Only orders
+              still at <span className="font-semibold">Order placed</span> or{" "}
+              <span className="font-semibold">Processing</span> (not yet shipped, no payouts
+              released) will be cancelled. Others are skipped.
+              <span className="mt-2 block font-medium text-red-600">
+                This cannot be undone. Refunds, if any, are handled separately.
               </span>
-              .
-              {bulkAction === "CANCELLED" ? (
-                <span className="font-medium text-red-600"> This action cannot be undone.</span>
-              ) : null}
             </p>
 
             <div className="mb-4 max-h-40 overflow-y-auto rounded-xl border border-zinc-100">
@@ -1290,21 +1220,25 @@ export default function OrdersTab() {
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => setShowBulkConfirm(false)}
+                onClick={() => setShowCancelConfirm(false)}
                 disabled={bulkProcessing}
                 className="flex-1 rounded-xl border border-zinc-200 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50 disabled:opacity-50"
               >
-                Cancel
+                Keep orders
               </button>
               <button
                 type="button"
                 onClick={async () => {
                   setBulkProcessing(true);
                   try {
-                    await updateOrderStatus(Array.from(selectedRows), bulkAction);
+                    const result = await cancelOrders(Array.from(selectedRows));
+                    setCancelSummary(
+                      result.skipped > 0
+                        ? `Cancelled ${result.cancelled}, skipped ${result.skipped} (already shipped, paid out, or ineligible)`
+                        : `Cancelled ${result.cancelled}`,
+                    );
                     setSelectedRows(new Set());
-                    setBulkAction("");
-                    setShowBulkConfirm(false);
+                    setShowCancelConfirm(false);
                     setRefreshKey((k) => k + 1);
                   } finally {
                     setBulkProcessing(false);
@@ -1312,11 +1246,9 @@ export default function OrdersTab() {
                 }}
                 disabled={bulkProcessing}
                 className="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
-                style={{
-                  backgroundColor: bulkAction === "CANCELLED" ? "#DC2626" : "#D4450A",
-                }}
+                style={{ backgroundColor: "#DC2626" }}
               >
-                {bulkProcessing ? "Updating..." : `Confirm`}
+                {bulkProcessing ? "Cancelling…" : "Confirm cancel"}
               </button>
             </div>
           </div>
