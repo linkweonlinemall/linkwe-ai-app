@@ -3,11 +3,21 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { completeSplitOrder } from "@/app/actions/admin-orders";
-import { getPendingPayoutSplits } from "@/app/actions/admin-payouts";
+import { exportPayoutsCSV, getPendingPayoutSplits } from "@/app/actions/admin-payouts";
 
 type PayoutRow = Awaited<ReturnType<typeof getPendingPayoutSplits>>[number];
 
 const SCARLET = "#D4450A";
+
+function downloadCsv(csv: string, filename: string) {
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 function formatTTD(minor: number): string {
   return `TTD ${(minor / 100).toLocaleString("en-TT", {
@@ -39,9 +49,13 @@ function formatDeliveredAt(row: PayoutRow): string {
 
 function PayoutCard({
   row,
+  selected,
+  onToggleSelect,
   onCompleted,
 }: {
   row: PayoutRow;
+  selected: boolean;
+  onToggleSelect: () => void;
   onCompleted: () => void;
 }) {
   const [submitting, setSubmitting] = useState(false);
@@ -65,11 +79,23 @@ function PayoutCard({
   return (
     <div
       className="rounded-xl bg-white p-4 sm:p-5"
-      style={{ border: "1px solid var(--card-border)" }}
+      style={{
+        border: "1px solid var(--card-border)",
+        backgroundColor: selected ? "#EFF6FF" : "#FFFFFF",
+      }}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
+            <div onClick={(e) => e.stopPropagation()}>
+              <input
+                type="checkbox"
+                checked={selected}
+                onChange={onToggleSelect}
+                className="rounded"
+                aria-label={`Select ${splitRef(row)}`}
+              />
+            </div>
             <p className="text-sm font-semibold text-zinc-900">{row.store.name}</p>
             <span
               className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold"
@@ -146,6 +172,9 @@ export default function PayoutsTab() {
   const [rows, setRows] = useState<PayoutRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [bulkSummary, setBulkSummary] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -163,6 +192,58 @@ export default function PayoutsTab() {
       storeCount: storeIds.size,
     };
   }, [rows]);
+
+  const allIds = rows.map((r) => r.id);
+  const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
+
+  function toggleAll() {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(allIds));
+    }
+  }
+
+  function toggleRow(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleExport() {
+    const ids = selectedIds.size > 0 ? Array.from(selectedIds) : allIds;
+    const csv = await exportPayoutsCSV(ids);
+    downloadCsv(csv, `linkwe-payouts-${new Date().toISOString().slice(0, 10)}.csv`);
+  }
+
+  async function handleBulkComplete() {
+    setBulkProcessing(true);
+    setBulkSummary(null);
+    let released = 0;
+    let failed = 0;
+    try {
+      for (const id of selectedIds) {
+        const result = await completeSplitOrder(id);
+        if (!result.ok) {
+          failed += 1;
+        } else {
+          released += 1;
+        }
+      }
+      setBulkSummary(
+        failed > 0
+          ? `Released ${released}, ${failed} failed`
+          : `Released ${released}`,
+      );
+      setSelectedIds(new Set());
+      setRefreshKey((k) => k + 1);
+    } finally {
+      setBulkProcessing(false);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -215,10 +296,77 @@ export default function PayoutsTab() {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-600">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={toggleAll}
+                className="rounded"
+              />
+              Select all ({rows.length})
+            </label>
+            {selectedIds.size === 0 ? (
+              <button
+                type="button"
+                onClick={handleExport}
+                className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+              >
+                Export all ({rows.length})
+              </button>
+            ) : null}
+          </div>
+
+          {selectedIds.size > 0 ? (
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 shadow-sm">
+              <span className="text-sm font-medium text-zinc-700">
+                {selectedIds.size} selected
+              </span>
+              <div className="h-4 w-px bg-zinc-200" />
+              <button
+                type="button"
+                onClick={handleBulkComplete}
+                disabled={bulkProcessing}
+                className="rounded-lg px-3 py-1.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                style={{ backgroundColor: SCARLET }}
+              >
+                {bulkProcessing
+                  ? "Releasing…"
+                  : `Complete & release selected (${selectedIds.size})`}
+              </button>
+              <button
+                type="button"
+                onClick={handleExport}
+                disabled={bulkProcessing}
+                className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50 disabled:opacity-50"
+              >
+                Export CSV
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedIds(new Set());
+                  setBulkSummary(null);
+                }}
+                className="ml-auto text-xs text-zinc-400 transition-colors hover:text-zinc-700"
+              >
+                Clear selection
+              </button>
+            </div>
+          ) : null}
+
+          {bulkSummary ? (
+            <p className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+              {bulkSummary}
+            </p>
+          ) : null}
+
           {rows.map((row) => (
             <PayoutCard
               key={row.id}
               row={row}
+              selected={selectedIds.has(row.id)}
+              onToggleSelect={() => toggleRow(row.id)}
               onCompleted={() => setRefreshKey((k) => k + 1)}
             />
           ))}

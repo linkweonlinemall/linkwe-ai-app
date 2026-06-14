@@ -4,8 +4,23 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getSession } from "@/lib/auth/session";
+import { escapeCsvCell } from "@/lib/csv/escape-cell";
 import { recalculateMainOrderStatus } from "@/lib/fulfillment/order-status";
 import { prisma } from "@/lib/prisma";
+
+function formatTtdMinor(minor: number): string {
+  return `TTD ${(minor / 100).toFixed(2)}`;
+}
+
+function splitRefLabel(referenceNumber: string | null, id: string): string {
+  return referenceNumber ?? `SP-${id.slice(-8).toUpperCase()}`;
+}
+
+function formatItems(
+  items: { titleSnapshot: string; quantity: number }[],
+): string {
+  return items.map((i) => `${i.quantity}x ${i.titleSnapshot}`).join(" | ");
+}
 
 const STATUS_SORT_ORDER: Record<string, number> = {
   READY_FOR_LINKWE: 0,
@@ -85,4 +100,63 @@ export async function markOutForLinkWeDelivery(
   revalidatePath(`/orders/${splitOrder.mainOrderId}`, "page");
 
   return { ok: true };
+}
+
+export async function exportLinkWeManifestCSV(splitIds: string[]): Promise<string> {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") redirect("/");
+
+  const ids = splitIds.map((id) => id.trim()).filter(Boolean);
+
+  const comment =
+    "# LinkWe delivery manifest — Region only. Street address is not yet captured at checkout; deliver-to location is the customer region below.";
+
+  const header =
+    "Split Ref,Main Ref,Store (pickup from),Customer (deliver to),Email,Region,Items,LinkWe Fee";
+
+  if (ids.length === 0) {
+    return `${comment}\n${header}`;
+  }
+
+  const splits = await prisma.splitOrder.findMany({
+    where: { id: { in: ids } },
+    select: {
+      id: true,
+      referenceNumber: true,
+      shippingMinor: true,
+      createdAt: true,
+      store: { select: { name: true } },
+      items: {
+        select: {
+          titleSnapshot: true,
+          quantity: true,
+        },
+      },
+      mainOrder: {
+        select: {
+          referenceNumber: true,
+          region: true,
+          buyer: { select: { fullName: true, email: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const rows = splits
+    .map((s) =>
+      [
+        escapeCsvCell(splitRefLabel(s.referenceNumber, s.id)),
+        escapeCsvCell(s.mainOrder.referenceNumber ?? ""),
+        escapeCsvCell(s.store.name),
+        escapeCsvCell(s.mainOrder.buyer.fullName),
+        escapeCsvCell(s.mainOrder.buyer.email),
+        escapeCsvCell(s.mainOrder.region),
+        escapeCsvCell(formatItems(s.items)),
+        escapeCsvCell(formatTtdMinor(s.shippingMinor)),
+      ].join(","),
+    )
+    .join("\n");
+
+  return `${comment}\n${header}\n${rows}`;
 }
