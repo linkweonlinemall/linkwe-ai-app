@@ -1,8 +1,10 @@
 "use server";
 
+import { NotificationType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { createNotification } from "@/app/actions/notifications";
 import { getSession } from "@/lib/auth/session";
 import { escapeCsvCell } from "@/lib/csv/escape-cell";
 import { recalculateMainOrderStatus } from "@/lib/fulfillment/order-status";
@@ -87,7 +89,13 @@ export async function markOutForLinkWeDelivery(
 
   const splitOrder = await prisma.splitOrder.findUnique({
     where: { id },
-    select: { id: true, mainOrderId: true, status: true },
+    select: {
+      id: true,
+      mainOrderId: true,
+      status: true,
+      store: { select: { name: true } },
+      mainOrder: { select: { buyerId: true, referenceNumber: true } },
+    },
   });
 
   if (!splitOrder) return { error: "Order not found" };
@@ -102,6 +110,15 @@ export async function markOutForLinkWeDelivery(
   });
 
   await recalculateMainOrderStatus(splitOrder.mainOrderId);
+
+  await createNotification({
+    userId: splitOrder.mainOrder.buyerId,
+    type: NotificationType.ORDER_STATUS_UPDATED,
+    title: "Your order is out for delivery",
+    body: `Your items from ${splitOrder.store.name} are on the way with LinkWe delivery.`,
+    linkUrl: `/orders/${splitOrder.mainOrderId}`,
+  });
+
   revalidatePath("/dashboard/admin");
   revalidatePath(`/orders/${splitOrder.mainOrderId}`, "page");
 

@@ -1,8 +1,10 @@
 "use server";
 
+import { NotificationType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { createNotification } from "@/app/actions/notifications";
 import { calculateBatchWeightLbs, getCourierPickupFeeMinor } from "@/lib/fulfillment/courier-pickup-rates";
 import { getSession } from "@/lib/auth/session";
 import { recalculateMainOrderStatus } from "@/lib/fulfillment/order-status";
@@ -87,7 +89,12 @@ export async function markShipped(formData: FormData): Promise<void> {
       store: { ownerId: session.userId, shippingMode: "SELF" },
       status: "PREPARING",
     },
-    select: { id: true, mainOrderId: true },
+    select: {
+      id: true,
+      mainOrderId: true,
+      store: { select: { name: true } },
+      mainOrder: { select: { buyerId: true, referenceNumber: true } },
+    },
   });
 
   if (!splitOrder) redirect("/dashboard/vendor");
@@ -98,6 +105,15 @@ export async function markShipped(formData: FormData): Promise<void> {
   });
 
   await recalculateMainOrderStatus(splitOrder.mainOrderId);
+
+  await createNotification({
+    userId: splitOrder.mainOrder.buyerId,
+    type: NotificationType.ORDER_STATUS_UPDATED,
+    title: "Your order is on its way",
+    body: `Your items from ${splitOrder.store.name} are out for delivery.`,
+    linkUrl: `/orders/${splitOrder.mainOrderId}`,
+  });
+
   revalidatePath(`/orders/${splitOrder.mainOrderId}`, "page");
   revalidatePath("/dashboard/vendor");
   revalidatePath(`/dashboard/vendor/orders/${splitOrderId}`, "page");
