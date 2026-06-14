@@ -63,6 +63,9 @@ export async function getLinkWeDeliveryQueue() {
           referenceNumber: true,
           region: true,
           buyer: { select: { fullName: true, email: true } },
+          shippingAddress: {
+            select: { line1: true, phone: true, latitude: true, longitude: true },
+          },
           items: { select: MAIN_ORDER_ITEMS_WEIGHT_SELECT },
         },
       },
@@ -132,10 +135,10 @@ export async function exportLinkWeManifestCSV(splitIds: string[]): Promise<strin
   const ids = splitIds.map((id) => id.trim()).filter(Boolean);
 
   const comment =
-    "# LinkWe delivery manifest — Region only. Street address is not yet captured at checkout; deliver-to location is the customer region below.";
+    "# LinkWe delivery manifest — Deliver to the street address below (phone for contact, map coords for exact location). Region is a fallback when no address was captured.";
 
   const header =
-    "Split Ref,Main Ref,Store (pickup from),Customer (deliver to),Email,Region,Items,Total Weight (lbs),LinkWe Fee";
+    "Split Ref,Main Ref,Store (pickup from),Customer (deliver to),Email,Phone,Address,Map (lat,lng),Region,Items,Total Weight (lbs),LinkWe Fee";
 
   if (ids.length === 0) {
     return `${comment}\n${header}`;
@@ -160,6 +163,9 @@ export async function exportLinkWeManifestCSV(splitIds: string[]): Promise<strin
           referenceNumber: true,
           region: true,
           buyer: { select: { fullName: true, email: true } },
+          shippingAddress: {
+            select: { line1: true, phone: true, latitude: true, longitude: true },
+          },
           items: { select: MAIN_ORDER_ITEMS_WEIGHT_SELECT },
         },
       },
@@ -170,12 +176,20 @@ export async function exportLinkWeManifestCSV(splitIds: string[]): Promise<strin
   const rows = splits
     .map((s) => {
       const weight = computeSplitWeightLbs(s.items, s.mainOrder.items);
+      const addr = s.mainOrder.shippingAddress;
+      const mapCoords =
+        addr?.latitude != null && addr?.longitude != null
+          ? `${String(addr.latitude)},${String(addr.longitude)}`
+          : "";
       return [
         escapeCsvCell(splitRefLabel(s.referenceNumber, s.id)),
         escapeCsvCell(s.mainOrder.referenceNumber ?? ""),
         escapeCsvCell(s.store.name),
         escapeCsvCell(s.mainOrder.buyer.fullName),
         escapeCsvCell(s.mainOrder.buyer.email),
+        escapeCsvCell(addr?.phone ?? ""),
+        escapeCsvCell(addr?.line1 ?? ""),
+        escapeCsvCell(mapCoords),
         escapeCsvCell(s.mainOrder.region),
         escapeCsvCell(formatItemsWithWeight(weight.lines)),
         escapeCsvCell(formatWeightLbs(weight.totalLbs)),

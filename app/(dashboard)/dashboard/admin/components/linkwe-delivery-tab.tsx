@@ -113,6 +113,14 @@ function DeliveryCard({
           <p className="mt-1 font-mono text-xs text-zinc-500">{splitRef(row)}</p>
           <p className="mt-2 text-sm text-zinc-800">{row.mainOrder.buyer.fullName}</p>
           <p className="text-xs text-zinc-500">{row.mainOrder.buyer.email}</p>
+          {row.mainOrder.shippingAddress?.line1 ? (
+            <p className="mt-1 text-xs font-medium text-zinc-700">
+              {row.mainOrder.shippingAddress.line1}
+            </p>
+          ) : null}
+          {row.mainOrder.shippingAddress?.phone ? (
+            <p className="text-xs text-zinc-500">Tel: {row.mainOrder.shippingAddress.phone}</p>
+          ) : null}
           <p className="mt-1 text-xs capitalize text-zinc-500">
             {formatRegion(row.mainOrder.region)}
           </p>
