@@ -320,7 +320,7 @@ export function ProductEditForm({
             <Input
               required
               error={fieldError("slug")}
-              helperText={`linkwe.com/products/${slug || "your-slug"}`}
+              helperText={`linkweonlinemall.com/products/${slug || "your-slug"}`}
               label="Slug"
               name="slug"
               value={slug}

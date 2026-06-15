@@ -1,3 +1,5 @@
+import { BASE_URL } from "./resend";
+
 // Shared email HTML wrapper
 function wrap(content: string, preheader = ""): string {
   return `<!DOCTYPE html>
@@ -32,8 +34,8 @@ function wrap(content: string, preheader = ""): string {
             <td style="background:#f4f4f5;border-radius:0 0 16px 16px;border:1px solid #e4e4e7;border-top:none;padding:20px 32px;text-align:center;">
               <p style="margin:0;font-size:11px;color:#a1a1aa;">
                 LinkWe Online Directory · Trinidad & Tobago<br/>
-                <a href="https://linkwemall.com/privacy" style="color:#a1a1aa;">Privacy Policy</a> ·
-                <a href="https://linkwemall.com/terms" style="color:#a1a1aa;">Terms of Service</a>
+                <a href="${BASE_URL}/privacy" style="color:#a1a1aa;">Privacy Policy</a> ·
+                <a href="${BASE_URL}/terms" style="color:#a1a1aa;">Terms of Service</a>
               </p>
             </td>
           </tr>
