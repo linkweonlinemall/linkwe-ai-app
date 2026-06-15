@@ -67,7 +67,7 @@ export default function SiteFooter() {
               <li><Link href="/register?role=vendor" className={linkClass}>Become a vendor</Link></li>
               <li><Link href="/dashboard/vendor" className={linkClass}>Vendor dashboard</Link></li>
               <li><Link href="/dashboard/vendor/services/new" className={linkClass}>List a service</Link></li>
-              <li><Link href="/contact" className={linkClass}>Pricing</Link></li>
+              <li><Link href="/pricing" className={linkClass}>Pricing</Link></li>
             </ul>
           </div>
           <div>
