@@ -9,22 +9,22 @@ const ROLE_CARDS: { role: UserRole; title: string; body: string }[] = [
   {
     role: "CUSTOMER",
     title: "Customer",
-    body: "Orders, wishlists, and AI shopping assistance will live here.",
+    body: "View your orders, bookings, wishlist, and saved stores.",
   },
   {
     role: "VENDOR",
     title: "Vendor",
-    body: "Store settings, catalog tools, and payouts will live here.",
+    body: "Manage your store, products, orders, and earnings.",
   },
   {
     role: "COURIER",
     title: "Courier",
-    body: "Assignments, routes, and proof-of-delivery will live here.",
+    body: "Courier workspace for delivery assignments and settings.",
   },
   {
     role: "ADMIN",
     title: "Admin",
-    body: "Internal controls and moderation will live here.",
+    body: "Oversee orders, payouts, deliveries, and platform operations.",
   },
 ];
 

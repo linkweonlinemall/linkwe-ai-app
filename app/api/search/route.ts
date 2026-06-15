@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { prisma } from "@/lib/prisma";
 import { runUniversalSearch } from "@/lib/search/run-search";
 import {
   emptyUniversalSearchResponse,
@@ -8,53 +7,6 @@ import {
 } from "@/lib/search/types";
 
 export const runtime = "nodejs";
-
-/** Unfiltered DB smoke test — use ?debug=smoke (no query required). */
-async function runSearchSmokeTest() {
-  try {
-    const [products, stores, productTotal, storeTotal] = await Promise.all([
-      prisma.product.findMany({
-        take: 5,
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          isPublished: true,
-          isArchived: true,
-          isService: true,
-        },
-      }),
-      prisma.store.findMany({
-        take: 5,
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          status: true,
-          region: true,
-        },
-      }),
-      prisma.product.count(),
-      prisma.store.count(),
-    ]);
-
-    return NextResponse.json({
-      debug: true,
-      mode: "smoke",
-      dbTotals: { products: productTotal, stores: storeTotal },
-      sampleProducts: products,
-      sampleStores: stores,
-    });
-  } catch (err) {
-    console.error("[api/search] smoke test failed:", err);
-    return NextResponse.json(
-      { debug: true, mode: "smoke", error: "Smoke test failed" },
-      { status: 500 },
-    );
-  }
-}
 
 function parseNumber(v: string | null): number | undefined {
   if (!v) return undefined;
@@ -64,10 +16,6 @@ function parseNumber(v: string | null): number | undefined {
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-
-  if (searchParams.get("debug") === "smoke") {
-    return runSearchSmokeTest();
-  }
 
   const q = searchParams.get("q")?.trim() ?? "";
 
