@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   IconBrandFacebook,
   IconBrandInstagram,
-  IconBrandX,
   IconDownload,
 } from "@tabler/icons-react";
 
@@ -109,15 +108,6 @@ export default function SiteFooter() {
               aria-label="Facebook"
             >
               <IconBrandFacebook className="size-4" stroke={1.75} aria-hidden />
-            </a>
-            <a
-              href="https://x.com/linkwe_tt"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex h-[28px] w-[28px] items-center justify-center rounded-[7px] bg-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.7)] transition-colors hover:bg-[#D4450A] hover:text-white"
-              aria-label="X"
-            >
-              <IconBrandX className="size-4" stroke={1.75} aria-hidden />
             </a>
           </div>
         </div>
