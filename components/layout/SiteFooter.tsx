@@ -57,6 +57,8 @@ export default function SiteFooter() {
               <li><Link href="/services" className={linkClass}>All services</Link></li>
               <li><Link href="/stores" className={linkClass}>Browse stores</Link></li>
               <li><Link href="/events" className={linkClass}>Events</Link></li>
+              <li><Link href="/shipping-info" className={linkClass}>Shipping</Link></li>
+              <li><Link href="/returns" className={linkClass}>Returns</Link></li>
             </ul>
           </div>
           <div>
@@ -71,9 +73,9 @@ export default function SiteFooter() {
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wide text-white">Company</p>
             <ul className="mt-3 flex flex-col gap-1">
-              <li><Link href="/contact" className={linkClass}>About LinkWe</Link></li>
+              <li><Link href="/about" className={linkClass}>About LinkWe</Link></li>
+              <li><Link href="/faq" className={linkClass}>FAQ</Link></li>
               <li><Link href="/contact" className={linkClass}>Contact us</Link></li>
-              <li><Link href="/contact" className={linkClass}>Careers</Link></li>
             </ul>
           </div>
           <div>
