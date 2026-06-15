@@ -167,6 +167,10 @@ model Store {
   shippingMode     StoreShippingMode @default(LINKWE) @map("shipping_mode")
   /// Vendor subscription tier — drives platform commission rates.
   subscriptionPlan VendorSubscriptionPlan @default(STARTER) @map("subscription_plan")
+  subscriptionStatus   StoreSubscriptionStatus @default(NONE) @map("subscription_status")
+  planRenewsAt         DateTime?               @map("plan_renews_at")
+  stripeCustomerId     String?                 @map("stripe_customer_id")
+  stripeSubscriptionId String?                 @map("stripe_subscription_id")
   isAvailableNow   Boolean     @default(false)
   staffMembers     StaffMember[]
   createdAt        DateTime    @default(now()) @map("created_at")
@@ -1067,6 +1071,13 @@ enum VendorSubscriptionPlan {
   STARTER
   GROWTH
   PRO
+}
+
+enum StoreSubscriptionStatus {
+  NONE
+  ACTIVE
+  PAST_DUE
+  CANCELED
 }
 
 /// How vendor gets goods into the warehouse for this split
