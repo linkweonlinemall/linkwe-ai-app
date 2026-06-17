@@ -6,6 +6,9 @@ import { useSearchParams } from "next/navigation";
 import { requestPayout, saveVendorBankDetails } from "@/app/actions/vendor";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
+import { getCommissionRate } from "@/lib/finance/commission";
+import { PLAN_PRICE_MINOR } from "@/lib/finance/plan-limits";
+import { getStorePlan } from "@/lib/finance/store-plan";
 import { isVendorBalanceDebit } from "@/lib/finance/vendor-balance";
 import { maskBankAccountStars } from "@/lib/format/banking";
 import { formatDate } from "@/lib/format/format-display-date-utc";
@@ -74,6 +77,8 @@ type Props = {
   bankDetails: BankDetails;
   ledgerEntries: LedgerEntry[];
   payoutRequests: PayoutRequest[];
+  subscriptionPlan: string;
+  subscriptionStatus: string;
 };
 
 function formatTTD(minor: number): string {
@@ -90,8 +95,26 @@ function sectionFromTabParam(tab: string | null): FinanceSection | null {
   return null;
 }
 
-export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests }: Props) {
+export default function FinanceTab({
+  bankDetails,
+  ledgerEntries,
+  payoutRequests,
+  subscriptionPlan,
+  subscriptionStatus,
+}: Props) {
   const searchParams = useSearchParams();
+  const { plan, limits } = getStorePlan({ subscriptionPlan, subscriptionStatus });
+  const planLabel = `${plan.charAt(0)}${plan.slice(1).toLowerCase()} plan`;
+  const productCommissionPct = Math.round(getCommissionRate("product", plan) * 100);
+  const priceMinor = PLAN_PRICE_MINOR[plan];
+  const pricePill =
+    plan === "STARTER"
+      ? "Free"
+      : `TTD ${(priceMinor / 100).toLocaleString("en-TT", { maximumFractionDigits: 0 })}/mo`;
+  const aiLine =
+    limits.aiMonthlyAllowance === 0
+      ? "No AI assistant"
+      : `${limits.aiMonthlyAllowance} AI uses/month`;
   const [requestAmount, setRequestAmount] = useState("");
   const [requestError, setRequestError] = useState<string | null>(null);
   const [requestSuccess, setRequestSuccess] = useState(false);
@@ -275,38 +298,49 @@ export default function FinanceTab({ bankDetails, ledgerEntries, payoutRequests 
         </div>
       ) : null}
 
-      {availableBalance > 0 ? (
-        <div className={`${CARD} p-4 shadow-none`}>
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                Subscription
-              </h2>
-              <p className="mt-0.5 text-[11px] text-zinc-500">Starter plan — Free tier</p>
-            </div>
-            <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-[10px] font-medium text-zinc-600">Free</span>
+      <div className={`${CARD} p-4 shadow-none`}>
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+              Subscription
+            </h2>
+            <p className="mt-0.5 text-[11px] text-zinc-500">{planLabel}</p>
           </div>
-          <div className="mt-3 rounded-lg border border-zinc-100 bg-zinc-50 p-2.5">
-            <p className="text-[11px] text-zinc-500">
-              Upgrade to Growth plan for TTD 200/month to reduce your commission from 15% to 12% and unlock 500 AI
-              prompts per month.
-            </p>
-            <div className="mt-2 flex gap-2">
-              <button
-                type="button"
-                className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:opacity-90"
-                style={{ backgroundColor: "#D4450A" }}
-                onClick={() => {
-                  window.location.href =
-                    "mailto:admin@linkwemall.com?subject=Subscription Upgrade Enquiry";
-                }}
-              >
-                Upgrade Plan
-              </button>
-            </div>
-          </div>
+          <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-[10px] font-medium text-zinc-600">
+            {pricePill}
+          </span>
         </div>
-      ) : null}
+        <div className="mt-3 rounded-lg border border-zinc-100 bg-zinc-50 p-2.5">
+          <p className="text-[11px] text-zinc-500">
+            Product commission: {productCommissionPct}% · {aiLine}
+          </p>
+          {plan === "STARTER" ? (
+            <>
+              <p className="mt-2 text-[11px] text-zinc-500">
+                Upgrade to Growth plan for TTD 200/month to reduce your commission from 15% to 12% and
+                unlock 300 AI uses per month.
+              </p>
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:opacity-90"
+                  style={{ backgroundColor: "#D4450A" }}
+                  onClick={() => {
+                    window.location.href =
+                      "mailto:admin@linkwemall.com?subject=Subscription Upgrade Enquiry";
+                  }}
+                >
+                  Upgrade Plan
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="mt-2 text-[11px] font-medium text-zinc-600">
+              You&apos;re on the {planLabel}.
+            </p>
+          )}
+        </div>
+      </div>
 
       {/* Section tabs */}
       <div className={`flex overflow-hidden ${CARD} shadow-none`}>

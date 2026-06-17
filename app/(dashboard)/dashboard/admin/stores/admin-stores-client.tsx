@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import type { IdVerificationStatus, StoreStatus } from "@prisma/client";
 import { useState } from "react";
 
-import { adminDeleteStore, updateStoreStatus } from "@/app/actions/admin-stores";
+import { adminDeleteStore, setVendorPlan, updateStoreStatus } from "@/app/actions/admin-stores";
 
 type StoreRow = {
   id: string;
   name: string;
   slug: string;
   status: StoreStatus;
+  subscriptionPlan: "STARTER" | "GROWTH" | "PRO";
   region: string;
   logoUrl: string | null;
   createdAt: Date;
@@ -103,6 +104,14 @@ export default function AdminStoresClient({
     if (loading === "bulk") return;
     setLoading(id);
     await updateStoreStatus(id, status);
+    setLoading(null);
+    router.refresh();
+  }
+
+  async function handlePlanChange(id: string, plan: string) {
+    if (loading === "bulk") return;
+    setLoading(id);
+    await setVendorPlan(id, plan);
     setLoading(null);
     router.refresh();
   }
@@ -346,6 +355,18 @@ export default function AdminStoresClient({
                     View store
                   </Link>
                   <select
+                    title="Plan"
+                    aria-label="Plan"
+                    value={store.subscriptionPlan}
+                    disabled={loading === store.id || loading === "bulk"}
+                    className="rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs focus:outline-none"
+                    onChange={(e) => handlePlanChange(store.id, e.target.value)}
+                  >
+                    <option value="STARTER">Starter</option>
+                    <option value="GROWTH">Growth</option>
+                    <option value="PRO">Pro</option>
+                  </select>
+                  <select
                     value={store.status}
                     disabled={loading === store.id || loading === "bulk"}
                     className="rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs focus:outline-none"
@@ -417,6 +438,18 @@ export default function AdminStoresClient({
                   >
                     View store
                   </Link>
+                  <select
+                    title="Plan"
+                    aria-label="Plan"
+                    value={store.subscriptionPlan}
+                    disabled={loading === store.id || loading === "bulk"}
+                    className="flex-1 rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs focus:outline-none"
+                    onChange={(e) => handlePlanChange(store.id, e.target.value)}
+                  >
+                    <option value="STARTER">Starter</option>
+                    <option value="GROWTH">Growth</option>
+                    <option value="PRO">Pro</option>
+                  </select>
                   <select
                     value={store.status}
                     disabled={loading === store.id || loading === "bulk"}

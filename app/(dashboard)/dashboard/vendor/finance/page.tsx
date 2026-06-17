@@ -29,6 +29,8 @@ export default async function VendorFinancePage() {
   const store = await prisma.store.findFirst({
     where: { ownerId: session.userId },
     select: {
+      subscriptionPlan: true,
+      subscriptionStatus: true,
       ledgerEntries: {
         select: {
           id: true,
@@ -80,6 +82,8 @@ export default async function VendorFinancePage() {
         bankDetails={user.bankDetails}
         ledgerEntries={store.ledgerEntries}
         payoutRequests={store.payoutRequests}
+        subscriptionPlan={store.subscriptionPlan}
+        subscriptionStatus={store.subscriptionStatus}
       />
     </div>
   );

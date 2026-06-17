@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import type { Prisma, StoreStatus } from "@prisma/client";
+import type { Prisma, StoreStatus, StoreSubscriptionStatus, VendorSubscriptionPlan } from "@prisma/client";
 
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -51,6 +51,7 @@ export async function getAdminStores(filters: {
         name: true,
         slug: true,
         status: true,
+        subscriptionPlan: true,
         region: true,
         logoUrl: true,
         createdAt: true,
@@ -75,6 +76,26 @@ export async function updateStoreStatus(storeId: string, status: string) {
   await prisma.store.update({
     where: { id: storeId },
     data: { status: status as StoreStatus },
+  });
+  revalidatePath("/dashboard/admin/stores");
+  return { ok: true };
+}
+
+export async function setVendorPlan(storeId: string, plan: string) {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") redirect("/login");
+
+  const normalizedPlan: VendorSubscriptionPlan =
+    plan === "GROWTH" || plan === "PRO" ? plan : "STARTER";
+  const status: StoreSubscriptionStatus =
+    normalizedPlan === "STARTER" ? "NONE" : "ACTIVE";
+
+  await prisma.store.update({
+    where: { id: storeId },
+    data: {
+      subscriptionPlan: normalizedPlan,
+      subscriptionStatus: status,
+    },
   });
   revalidatePath("/dashboard/admin/stores");
   return { ok: true };
