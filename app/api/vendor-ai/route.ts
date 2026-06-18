@@ -16,7 +16,7 @@ import {
 import { isTrustedHostedImageUrl } from "@/lib/images/trusted-host"
 import { createProductFromAIRaw } from "@/app/actions/ai-vendor"
 import { checkProductCap } from "@/lib/finance/product-cap"
-import { consumeAIUse } from "@/lib/finance/ai-usage"
+import { consumeAIUse, recordAITokens } from "@/lib/finance/ai-usage"
 import { getStorePlan } from "@/lib/finance/store-plan"
 import {
   getVendorInventoryAlerts,
@@ -1677,6 +1677,8 @@ If SYSTEM notes further down report an issue with attaching to a product gallery
 
         let currentMessages: Anthropic.MessageParam[] = cleanMessages
         let toolRound = 0
+        let promptTokensTotal = 0
+        let completionTokensTotal = 0
 
         for (;;) {
           if (toolRound++ >= MAX_TOOL_ROUNDS) {
@@ -1696,6 +1698,11 @@ If SYSTEM notes further down report an issue with attaching to a product gallery
           messageStream.on("text", (delta) => send(JSON.stringify({ text: delta })))
 
           const final = await messageStream.finalMessage()
+
+          if (final.usage) {
+            promptTokensTotal += final.usage.input_tokens ?? 0
+            completionTokensTotal += final.usage.output_tokens ?? 0
+          }
 
           if (final.stop_reason !== "tool_use") {
             break
@@ -1747,6 +1754,16 @@ If SYSTEM notes further down report an issue with attaching to a product gallery
             },
           ]
         }
+
+        console.log(
+          `[ai-tokens] route=rex store=${store.id} model=claude-sonnet-4-5 prompt=${promptTokensTotal} completion=${completionTokensTotal}`,
+        )
+        await recordAITokens(
+          store.id,
+          store.planRenewsAt,
+          promptTokensTotal,
+          completionTokensTotal,
+        ).catch(() => {})
 
         send("[DONE]")
         controller.close()

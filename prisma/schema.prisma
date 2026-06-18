@@ -881,13 +881,15 @@ model RateLimit {
 }
 
 model AIUsage {
-  id        String   @id @default(cuid())
-  storeId   String   @map("store_id")
-  periodKey String   @map("period_key")
-  count     Int      @default(0)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  id                   String   @id @default(cuid())
+  storeId              String   @map("store_id")
+  periodKey            String   @map("period_key")
+  count                Int      @default(0)
+  tokenPromptTotal     Int      @default(0) @map("token_prompt_total")
+  tokenCompletionTotal Int      @default(0) @map("token_completion_total")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  store                Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@unique([storeId, periodKey])
   @@index([storeId])

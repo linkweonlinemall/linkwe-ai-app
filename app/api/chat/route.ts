@@ -351,6 +351,8 @@ Start your response with one short sentence, then paste the code block above exa
 
         let currentMessages: Anthropic.MessageParam[] = [...cleanMessages]
         let continueLoop = true
+        let promptTokensTotal = 0
+        let completionTokensTotal = 0
 
         while (continueLoop) {
           const messageStream = client.messages.stream({
@@ -366,6 +368,11 @@ Start your response with one short sentence, then paste the code block above exa
           messageStream.on("text", (delta) => send(JSON.stringify({ text: delta })))
 
           const response = await messageStream.finalMessage()
+
+          if (response.usage) {
+            promptTokensTotal += response.usage.input_tokens ?? 0
+            completionTokensTotal += response.usage.output_tokens ?? 0
+          }
 
           if (response.stop_reason === "tool_use") {
             const toolBlocks = response.content.filter(
@@ -702,6 +709,10 @@ Start your response with one short sentence, then paste the code block above exa
             // Text already sent via delta events — do not re-send
           }
         }
+
+        console.log(
+          `[ai-tokens] route=zara model=claude-sonnet-4-5 prompt=${promptTokensTotal} completion=${completionTokensTotal}`,
+        )
 
         send("[DONE]")
         controller.close()

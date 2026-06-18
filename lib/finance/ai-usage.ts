@@ -93,3 +93,27 @@ export async function consumeAIUse(
 
   return { ok: true, remaining: allowance - updated.count };
 }
+
+export async function recordAITokens(
+  storeId: string,
+  planRenewsAt: Date | null,
+  promptTokens: number,
+  completionTokens: number,
+): Promise<void> {
+  if (promptTokens <= 0 && completionTokens <= 0) return;
+  const periodKey = getCurrentPeriodKey(planRenewsAt);
+  await prisma.aIUsage.upsert({
+    where: { storeId_periodKey: { storeId, periodKey } },
+    create: {
+      storeId,
+      periodKey,
+      count: 0,
+      tokenPromptTotal: promptTokens,
+      tokenCompletionTotal: completionTokens,
+    },
+    update: {
+      tokenPromptTotal: { increment: promptTokens },
+      tokenCompletionTotal: { increment: completionTokens },
+    },
+  });
+}
