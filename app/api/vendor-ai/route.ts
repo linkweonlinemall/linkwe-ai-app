@@ -16,6 +16,7 @@ import {
 import { isTrustedHostedImageUrl } from "@/lib/images/trusted-host"
 import { createProductFromAIRaw } from "@/app/actions/ai-vendor"
 import { checkProductCap } from "@/lib/finance/product-cap"
+import { getStorePlan } from "@/lib/finance/store-plan"
 import {
   getVendorInventoryAlerts,
   getVendorRecentOrders,
@@ -611,6 +612,21 @@ export async function POST(req: NextRequest) {
   })
   if (!store) {
     return new Response("No store found", { status: 400 })
+  }
+
+  const aiEnabled =
+    getStorePlan({
+      subscriptionPlan: store.subscriptionPlan,
+      subscriptionStatus: store.subscriptionStatus,
+    }).limits.aiMonthlyAllowance > 0
+  if (!aiEnabled) {
+    return new Response(
+      JSON.stringify({
+        error:
+          "AI assistant is not included on your current plan. Upgrade to Growth or Pro to use Rex.",
+      }),
+      { status: 403, headers: { "Content-Type": "application/json" } },
+    )
   }
 
   const body = (await req.json()) as {

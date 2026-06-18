@@ -7,6 +7,7 @@ import { getNextBusinessOnboardingStep } from "@/lib/onboarding/business-progres
 import { getStoreByOwnerId } from "@/lib/store/get-vendor-store";
 import { getVendorNavCounts } from "@/lib/vendor/get-vendor-nav-counts";
 import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
+import { getStorePlan } from "@/lib/finance/store-plan";
 import { prisma } from "@/lib/prisma";
 
 export default async function VendorDashboardLayout({
@@ -24,9 +25,22 @@ export default async function VendorDashboardLayout({
 
   const fullStore = await prisma.store.findFirst({
     where: { ownerId: user.id },
-    select: { id: true, name: true, slug: true, logoUrl: true },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      logoUrl: true,
+      subscriptionPlan: true,
+      subscriptionStatus: true,
+    },
   });
   if (!fullStore) redirect("/onboarding/business/step-3");
+
+  const aiEnabled =
+    getStorePlan({
+      subscriptionPlan: fullStore.subscriptionPlan,
+      subscriptionStatus: fullStore.subscriptionStatus,
+    }).limits.aiMonthlyAllowance > 0;
 
   const [counts, unreadCount] = await Promise.all([
     getVendorNavCounts(fullStore.id),
@@ -44,6 +58,7 @@ export default async function VendorDashboardLayout({
       unreadCount={unreadCount}
       pendingRequestsCount={counts.pendingRequestsCount}
       activeOrdersCount={counts.activeOrdersCount}
+      aiEnabled={aiEnabled}
     >
       {children}
     </VendorDashboardShell>

@@ -17,6 +17,7 @@ export type VendorDashboardShellProps = {
   unreadCount: number;
   pendingRequestsCount: number;
   activeOrdersCount: number;
+  aiEnabled: boolean;
 };
 
 export default function VendorDashboardShell({
@@ -28,6 +29,7 @@ export default function VendorDashboardShell({
   unreadCount,
   pendingRequestsCount,
   activeOrdersCount,
+  aiEnabled,
 }: VendorDashboardShellProps) {
   const pathname = usePathname() ?? "";
   const isAIAssistant = pathname.includes("/ai-assistant");
@@ -36,7 +38,7 @@ export default function VendorDashboardShell({
     return (
       <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#F7F5F2]">
         <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
-        <FloatingAIChat />
+        <FloatingAIChat aiEnabled={aiEnabled} />
       </div>
     );
   }
@@ -54,7 +56,11 @@ export default function VendorDashboardShell({
       </Suspense>
 
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col md:ml-[60px] lg:ml-[220px]">
-        <VendorDashboardTopbar firstName={userFirstName} unreadCount={unreadCount} />
+        <VendorDashboardTopbar
+          firstName={userFirstName}
+          unreadCount={unreadCount}
+          aiEnabled={aiEnabled}
+        />
 
         <div className="vendor-main-scroll min-h-0 flex-1 overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0 bg-[#F7F5F2]">
           {children}
@@ -63,7 +69,7 @@ export default function VendorDashboardShell({
         <Suspense fallback={null}>
           <VendorMobileBottomNav />
         </Suspense>
-        <FloatingAIChat />
+        <FloatingAIChat aiEnabled={aiEnabled} />
       </div>
     </div>
   );

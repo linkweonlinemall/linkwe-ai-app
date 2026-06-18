@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useState, useEffect, useRef, useCallback } from "react"
 import ReactMarkdown from "react-markdown"
 import {
@@ -101,7 +102,7 @@ const LISTING_TYPE_OPTIONS = [
   },
 ]
 
-export default function FloatingAIChat() {
+export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<ChatMsg[]>([])
   const [input, setInput] = useState("")
@@ -375,6 +376,32 @@ export default function FloatingAIChat() {
     },
     [input, loading, messages, chatId, attachedPreviews, focusedProductId]
   )
+
+  if (!aiEnabled) {
+    return (
+      <Link
+        href="/dashboard/vendor/finance"
+        className="fixed right-4 bottom-[80px] z-50 inline-flex items-center gap-1.5 rounded-full border border-zinc-300/80 bg-zinc-100 px-3 py-2 text-xs font-medium text-zinc-600 shadow-sm transition-colors hover:bg-zinc-200/90 lg:right-6 lg:bottom-6"
+        title="Upgrade to unlock AI"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+        >
+          <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
+          <path d="M19 13l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z" />
+        </svg>
+        Unlock AI
+      </Link>
+    )
+  }
 
   return (
     <>
