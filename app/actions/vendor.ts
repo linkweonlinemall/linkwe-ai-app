@@ -4,6 +4,7 @@ import type { AccountType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
+import { chargeSubscriptionFromBalance } from "@/lib/finance/subscription-billing";
 import { isVendorBalanceDebit } from "@/lib/finance/vendor-balance";
 import { prisma } from "@/lib/prisma";
 
@@ -112,4 +113,32 @@ export async function requestPayout(formData: FormData): Promise<{
 
   revalidatePath("/dashboard/vendor");
   return { ok: true };
+}
+
+export async function payMySubscriptionFromBalance(): Promise<
+  | { ok: true; charged: boolean; reason?: string }
+  | { ok: false; error: string }
+> {
+  const session = await getSession();
+  if (!session || session.role !== "VENDOR") return { ok: false, error: "Not authorized" };
+
+  const store = await prisma.store.findFirst({
+    where: { ownerId: session.userId },
+    select: { id: true, subscriptionPlan: true, planRenewsAt: true },
+  });
+  if (!store) return { ok: false, error: "No store found" };
+
+  const result = await chargeSubscriptionFromBalance(
+    store.id,
+    store.subscriptionPlan,
+    store.planRenewsAt,
+  );
+
+  revalidatePath("/dashboard/vendor/finance");
+
+  if (result.ok) {
+    return { ok: true, charged: result.charged, reason: result.reason };
+  }
+
+  return { ok: false, error: result.reason };
 }

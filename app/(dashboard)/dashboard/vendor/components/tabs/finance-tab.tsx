@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
-import { requestPayout, saveVendorBankDetails } from "@/app/actions/vendor";
+import { payMySubscriptionFromBalance, requestPayout, saveVendorBankDetails } from "@/app/actions/vendor";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import { getCommissionRate } from "@/lib/finance/commission";
@@ -82,6 +82,7 @@ type Props = {
   aiUsed: number;
   aiAllowance: number;
   aiRemaining: number;
+  subPaidThisPeriod: boolean;
 };
 
 function formatTTD(minor: number): string {
@@ -107,7 +108,9 @@ export default function FinanceTab({
   aiUsed,
   aiAllowance,
   aiRemaining,
+  subPaidThisPeriod,
 }: Props) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { plan, limits } = getStorePlan({ subscriptionPlan, subscriptionStatus });
   const planLabel = `${plan.charAt(0)}${plan.slice(1).toLowerCase()} plan`;
@@ -125,6 +128,9 @@ export default function FinanceTab({
   const [requestError, setRequestError] = useState<string | null>(null);
   const [requestSuccess, setRequestSuccess] = useState(false);
   const [requesting, setRequesting] = useState(false);
+  const [payingSubscription, setPayingSubscription] = useState(false);
+  const [subPayMessage, setSubPayMessage] = useState<string | null>(null);
+  const [subPayError, setSubPayError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<FinanceSection>(
     () => sectionFromTabParam(searchParams.get("tab")) ?? "earnings",
   );
@@ -207,6 +213,31 @@ export default function FinanceTab({
       setRequestError(result.error ?? "Something went wrong");
     }
     setRequesting(false);
+  }
+
+  async function handlePaySubscription() {
+    setSubPayMessage(null);
+    setSubPayError(null);
+    setPayingSubscription(true);
+    const result = await payMySubscriptionFromBalance();
+    setPayingSubscription(false);
+    if (result.ok) {
+      if (result.charged) {
+        setSubPayMessage("Subscription paid from your balance");
+        router.refresh();
+      } else if (result.reason === "already_charged_this_period") {
+        setSubPayMessage("Already paid this period.");
+        router.refresh();
+      } else {
+        setSubPayMessage(result.reason ?? "No charge applied.");
+      }
+    } else if (result.error === "insufficient_balance") {
+      setSubPayError(
+        "Your balance is too low to cover the subscription. (Card payment coming soon.)",
+      );
+    } else {
+      setSubPayError(result.error);
+    }
   }
 
   const CARD = "rounded-[12px] border-[0.5px] border-[rgba(28,28,26,0.12)] bg-white";
@@ -341,9 +372,35 @@ export default function FinanceTab({
               </div>
             </>
           ) : (
-            <p className="mt-2 text-[11px] font-medium text-zinc-600">
-              You&apos;re on the {planLabel}.
-            </p>
+            <>
+              <p className="mt-2 text-[11px] font-medium text-zinc-600">
+                You&apos;re on the {planLabel}.
+              </p>
+              {subPaidThisPeriod ? (
+                <p className="mt-2 text-[11px] text-zinc-500">
+                  ✓ Subscription paid for this period
+                </p>
+              ) : (
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    disabled={payingSubscription}
+                    onClick={() => void handlePaySubscription()}
+                    className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50"
+                  >
+                    {payingSubscription
+                      ? "Paying…"
+                      : `Pay TTD ${(priceMinor / 100).toLocaleString("en-TT", { maximumFractionDigits: 0 })} from balance`}
+                  </button>
+                  {subPayMessage ? (
+                    <p className="mt-2 text-[11px] text-emerald-700">{subPayMessage}</p>
+                  ) : null}
+                  {subPayError ? (
+                    <p className="mt-2 text-[11px] text-red-600">{subPayError}</p>
+                  ) : null}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

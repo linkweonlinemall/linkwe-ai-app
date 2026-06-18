@@ -5,6 +5,7 @@ import FinanceTab from "@/app/(dashboard)/dashboard/vendor/components/tabs/finan
 import { getSession } from "@/lib/auth/session";
 import { assertDashboardRole } from "@/lib/auth/assert-role";
 import { getAIUsageState } from "@/lib/finance/ai-usage";
+import { getCurrentPeriodKey } from "@/lib/finance/ai-usage-period";
 import { prisma } from "@/lib/prisma";
 
 export default async function VendorFinancePage() {
@@ -64,6 +65,13 @@ export default async function VendorFinancePage() {
 
   const aiUsage = await getAIUsageState(store);
 
+  const subPeriodKey = getCurrentPeriodKey(store.planRenewsAt);
+  const subIdempotencyKey = `subscription:${store.id}:${subPeriodKey}`;
+  const subPaidThisPeriod = !!(await prisma.vendorLedgerEntry.findUnique({
+    where: { idempotencyKey: subIdempotencyKey },
+    select: { id: true },
+  }));
+
   return (
     <div className="px-6 py-8">
       <Link
@@ -92,6 +100,7 @@ export default async function VendorFinancePage() {
         aiUsed={aiUsage.used}
         aiAllowance={aiUsage.allowance}
         aiRemaining={aiUsage.remaining}
+        subPaidThisPeriod={subPaidThisPeriod}
       />
     </div>
   );
