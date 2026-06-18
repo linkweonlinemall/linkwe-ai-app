@@ -192,6 +192,7 @@ model Store {
   owner            User                @relation("StoreOwner", fields: [ownerId], references: [id])
   ledgerEntries    VendorLedgerEntry[]
   payoutThreshold  VendorThreshold?
+  aiUsage          AIUsage[]
   warehouses       Warehouse[]
   images           StoreImage[]
   savedBy          SavedStore[]
@@ -877,6 +878,20 @@ model RateLimit {
   @@index([key])
   @@index([resetAt])
   @@map("rate_limits")
+}
+
+model AIUsage {
+  id        String   @id @default(cuid())
+  storeId   String   @map("store_id")
+  periodKey String   @map("period_key")
+  count     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, periodKey])
+  @@index([storeId])
+  @@map("ai_usage")
 }
 
 model AIChatSession {

@@ -16,6 +16,7 @@ import {
 import { isTrustedHostedImageUrl } from "@/lib/images/trusted-host"
 import { createProductFromAIRaw } from "@/app/actions/ai-vendor"
 import { checkProductCap } from "@/lib/finance/product-cap"
+import { consumeAIUse } from "@/lib/finance/ai-usage"
 import { getStorePlan } from "@/lib/finance/store-plan"
 import {
   getVendorInventoryAlerts,
@@ -608,7 +609,12 @@ export async function POST(req: NextRequest) {
 
   const store = await prisma.store.findFirst({
     where: { ownerId: session.userId },
-    select: { id: true, subscriptionPlan: true, subscriptionStatus: true },
+    select: {
+      id: true,
+      subscriptionPlan: true,
+      subscriptionStatus: true,
+      planRenewsAt: true,
+    },
   })
   if (!store) {
     return new Response("No store found", { status: 400 })
@@ -636,6 +642,18 @@ export async function POST(req: NextRequest) {
     uploadedImageUrls?: string[]
   }
   const messages: IncomingMessage[] = body.messages ?? []
+
+  const last = messages.at(-1)
+  if (last?.role === "user") {
+    const usage = await consumeAIUse(store)
+    if (!usage.ok) {
+      return new Response(JSON.stringify({ error: usage.reason }), {
+        status: 429,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+  }
+
   const focusProductIdFromBody =
     typeof body.focusProductId === "string"
       ? body.focusProductId.trim()
