@@ -1549,7 +1549,7 @@ export async function POST(req: NextRequest) {
           return
         }
 
-        let systemPrompt = VENDOR_SYSTEM_PROMPT
+        let dynamicExtra: string | undefined
         if (uploadedImageUrlsPayload.length > 0) {
           const n = uploadedImageUrlsPayload.length
           let extra = `
@@ -1632,8 +1632,25 @@ If SYSTEM notes further down report an issue with attaching to a product gallery
             extra +=
               "\nIf you know which draft product the vendor is updating, use attach_product_images with that product_id.\nIf the vendor mentions an event, use upload_event_cover_image or upload_event_gallery_image with the correct eventId.\n"
           }
-          systemPrompt = VENDOR_SYSTEM_PROMPT + extra
+          dynamicExtra = extra
         }
+
+        const systemBlocks: Anthropic.TextBlockParam[] = [
+          {
+            type: "text",
+            text: VENDOR_SYSTEM_PROMPT,
+            cache_control: { type: "ephemeral" },
+          },
+        ]
+        if (dynamicExtra) {
+          systemBlocks.push({ type: "text", text: dynamicExtra })
+        }
+
+        const toolsWithCache = VENDOR_TOOLS.map((t, i) =>
+          i === VENDOR_TOOLS.length - 1
+            ? { ...t, cache_control: { type: "ephemeral" as const } }
+            : t,
+        )
 
         const cleanMessages: Anthropic.MessageParam[] = messages
           .filter((m) => m.role === "user" || m.role === "assistant")
@@ -1679,6 +1696,8 @@ If SYSTEM notes further down report an issue with attaching to a product gallery
         let toolRound = 0
         let promptTokensTotal = 0
         let completionTokensTotal = 0
+        let cacheCreationTokens = 0
+        let cacheReadTokens = 0
 
         for (;;) {
           if (toolRound++ >= MAX_TOOL_ROUNDS) {
@@ -1688,8 +1707,8 @@ If SYSTEM notes further down report an issue with attaching to a product gallery
           const messageStream = client.messages.stream({
             model: "claude-sonnet-4-5",
             max_tokens: 4096,
-            system: systemPrompt,
-            tools: VENDOR_TOOLS,
+            system: systemBlocks,
+            tools: toolsWithCache,
             tool_choice: { type: "auto" },
             messages: currentMessages,
           })
@@ -1702,6 +1721,8 @@ If SYSTEM notes further down report an issue with attaching to a product gallery
           if (final.usage) {
             promptTokensTotal += final.usage.input_tokens ?? 0
             completionTokensTotal += final.usage.output_tokens ?? 0
+            cacheCreationTokens += final.usage.cache_creation_input_tokens ?? 0
+            cacheReadTokens += final.usage.cache_read_input_tokens ?? 0
           }
 
           if (final.stop_reason !== "tool_use") {
@@ -1756,7 +1777,7 @@ If SYSTEM notes further down report an issue with attaching to a product gallery
         }
 
         console.log(
-          `[ai-tokens] route=rex store=${store.id} model=claude-sonnet-4-5 prompt=${promptTokensTotal} completion=${completionTokensTotal}`,
+          `[ai-tokens] route=rex store=${store.id} model=claude-sonnet-4-5 prompt=${promptTokensTotal} completion=${completionTokensTotal} cacheWrite=${cacheCreationTokens} cacheRead=${cacheReadTokens}`,
         )
         await recordAITokens(
           store.id,

@@ -335,7 +335,26 @@ Start your response with one short sentence, then paste the code block above exa
           }
         }
 
-        const systemWithContext = LINKWE_SYSTEM_PROMPT + productContext
+        const systemBlocks: Anthropic.TextBlockParam[] = [
+          {
+            type: "text",
+            text: LINKWE_SYSTEM_PROMPT,
+            cache_control: { type: "ephemeral" },
+          },
+        ]
+        if (productContext) {
+          systemBlocks.push({ type: "text", text: productContext })
+        }
+
+        const zaraToolsWithCache: Anthropic.Tool[] = [
+          ADD_TO_CART_TOOL,
+          ADD_MULTIPLE_TO_CART_TOOL,
+          SEARCH_EVENTS_TOOL as Anthropic.Tool,
+          {
+            ...ADD_EVENT_TICKETS_TO_CART_TOOL,
+            cache_control: { type: "ephemeral" as const },
+          },
+        ]
 
         const cleanMessages: Anthropic.MessageParam[] = messages
           .filter((m) => m.role === "user" || m.role === "assistant")
@@ -353,13 +372,15 @@ Start your response with one short sentence, then paste the code block above exa
         let continueLoop = true
         let promptTokensTotal = 0
         let completionTokensTotal = 0
+        let cacheCreationTokens = 0
+        let cacheReadTokens = 0
 
         while (continueLoop) {
           const messageStream = client.messages.stream({
             model: "claude-sonnet-4-5",
             max_tokens: 4096,
-            system: systemWithContext,
-            tools: [ADD_TO_CART_TOOL, ADD_MULTIPLE_TO_CART_TOOL, SEARCH_EVENTS_TOOL as Anthropic.Tool, ADD_EVENT_TICKETS_TO_CART_TOOL],
+            system: systemBlocks,
+            tools: zaraToolsWithCache,
             tool_choice: { type: "auto" },
             messages: currentMessages,
           })
@@ -372,6 +393,8 @@ Start your response with one short sentence, then paste the code block above exa
           if (response.usage) {
             promptTokensTotal += response.usage.input_tokens ?? 0
             completionTokensTotal += response.usage.output_tokens ?? 0
+            cacheCreationTokens += response.usage.cache_creation_input_tokens ?? 0
+            cacheReadTokens += response.usage.cache_read_input_tokens ?? 0
           }
 
           if (response.stop_reason === "tool_use") {
@@ -711,7 +734,7 @@ Start your response with one short sentence, then paste the code block above exa
         }
 
         console.log(
-          `[ai-tokens] route=zara model=claude-sonnet-4-5 prompt=${promptTokensTotal} completion=${completionTokensTotal}`,
+          `[ai-tokens] route=zara model=claude-sonnet-4-5 prompt=${promptTokensTotal} completion=${completionTokensTotal} cacheWrite=${cacheCreationTokens} cacheRead=${cacheReadTokens}`,
         )
 
         send("[DONE]")
