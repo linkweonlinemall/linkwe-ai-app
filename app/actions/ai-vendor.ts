@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import type { ProductCondition, Prisma } from "@prisma/client"
 import { getSession } from "@/lib/auth/session"
 import { prisma } from "@/lib/prisma"
+import { checkProductCap } from "@/lib/finance/product-cap"
 
 /** Same behavior as `sanitizeSlug` in `app/actions/product.ts` (not exported there). */
 function sanitizeSlug(raw: string): string {
@@ -89,11 +90,19 @@ export async function createProductFromAI(
 
   const store = await prisma.store.findFirst({
     where: { ownerId: session.userId },
-    select: { id: true },
+    select: { id: true, subscriptionPlan: true, subscriptionStatus: true },
   })
   if (!store) {
     return { ok: false, error: "No store found for your account." }
   }
+
+  const cap = await checkProductCap(
+    store.id,
+    store.subscriptionPlan,
+    store.subscriptionStatus,
+    1,
+  )
+  if (!cap.ok) return { ok: false, error: cap.reason }
 
   const baseSlug = sanitizeSlug(name) || "product"
   const slug = await uniqueProductSlug(baseSlug)

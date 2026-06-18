@@ -15,6 +15,7 @@ import {
 } from "@/app/actions/ai-vendor-image"
 import { isTrustedHostedImageUrl } from "@/lib/images/trusted-host"
 import { createProductFromAIRaw } from "@/app/actions/ai-vendor"
+import { checkProductCap } from "@/lib/finance/product-cap"
 import {
   getVendorInventoryAlerts,
   getVendorRecentOrders,
@@ -606,7 +607,7 @@ export async function POST(req: NextRequest) {
 
   const store = await prisma.store.findFirst({
     where: { ownerId: session.userId },
-    select: { id: true },
+    select: { id: true, subscriptionPlan: true, subscriptionStatus: true },
   })
   if (!store) {
     return new Response("No store found", { status: 400 })
@@ -708,6 +709,20 @@ export async function POST(req: NextRequest) {
               content: JSON.stringify({
                 ok: false,
                 error: "Product name is required.",
+              }),
+            }
+          }
+          const cap = await checkProductCap(
+            store.id,
+            store.subscriptionPlan,
+            store.subscriptionStatus,
+            1,
+          )
+          if (!cap.ok) {
+            return {
+              content: JSON.stringify({
+                ok: false,
+                error: cap.reason,
               }),
             }
           }

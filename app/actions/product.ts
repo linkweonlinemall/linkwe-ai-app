@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import type { Prisma, ProductCondition, WeightUnit, LicenceType } from "@prisma/client";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { checkProductCap } from "@/lib/finance/product-cap";
 import { uploadFile } from "@/lib/uploads/upload";
 
 const PRODUCTS_PATH = "/dashboard/vendor/products";
@@ -88,11 +89,19 @@ export async function createProduct(
 
   const store = await prisma.store.findFirst({
     where: { ownerId: session.userId },
-    select: { id: true },
+    select: { id: true, subscriptionPlan: true, subscriptionStatus: true },
   });
   if (!store) {
     return { ok: false, errors: { _general: "No store found for your account." } };
   }
+
+  const cap = await checkProductCap(
+    store.id,
+    store.subscriptionPlan,
+    store.subscriptionStatus,
+    1,
+  );
+  if (!cap.ok) return { ok: false, errors: { _general: cap.reason } };
 
   const name = String(formData.get("name") ?? "").trim();
   const slugRaw = String(formData.get("slug") ?? "").trim();

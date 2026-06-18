@@ -5,6 +5,7 @@ import ExcelJS from "exceljs"
 import { parse } from "csv-parse/sync"
 import { getSession } from "@/lib/auth/session"
 import { prisma } from "@/lib/prisma"
+import { checkProductCap } from "@/lib/finance/product-cap"
 
 type CSVRow = Record<string, string>
 
@@ -93,7 +94,7 @@ export async function bulkUploadFromCSV(
 
   const store = await prisma.store.findFirst({
     where: { ownerId: session.userId },
-    select: { id: true },
+    select: { id: true, subscriptionPlan: true, subscriptionStatus: true },
   })
   if (!store) {
     return {
@@ -121,6 +122,24 @@ export async function bulkUploadFromCSV(
       created: 0,
       failed: [{ row: 0, name: "", error: "Invalid file format" }],
       createdProducts: [],
+    }
+  }
+
+  const nonServiceRowCount = productType === "service" ? 0 : rows.length
+  if (nonServiceRowCount > 0) {
+    const cap = await checkProductCap(
+      store.id,
+      store.subscriptionPlan,
+      store.subscriptionStatus,
+      nonServiceRowCount,
+    )
+    if (!cap.ok) {
+      return {
+        total: rows.length,
+        created: 0,
+        failed: [{ row: 0, name: "", error: cap.reason }],
+        createdProducts: [],
+      }
     }
   }
 
