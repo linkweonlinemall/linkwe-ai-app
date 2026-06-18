@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import type { Prisma, StoreStatus, StoreSubscriptionStatus, VendorSubscriptionPlan } from "@prisma/client";
 
 import { getSession } from "@/lib/auth/session";
+import { chargeSubscriptionFromBalance } from "@/lib/finance/subscription-billing";
 import { prisma } from "@/lib/prisma";
 
 export async function getAdminStores(filters: {
@@ -99,6 +100,33 @@ export async function setVendorPlan(storeId: string, plan: string) {
   });
   revalidatePath("/dashboard/admin/stores");
   return { ok: true };
+}
+
+export async function chargeVendorSubscriptionFromBalance(storeId: string) {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") redirect("/login");
+
+  const store = await prisma.store.findUnique({
+    where: { id: storeId },
+    select: { id: true, subscriptionPlan: true, planRenewsAt: true },
+  });
+  if (!store) return { ok: false, error: "Store not found" };
+
+  const result = await chargeSubscriptionFromBalance(
+    store.id,
+    store.subscriptionPlan,
+    store.planRenewsAt,
+  );
+
+  revalidatePath("/dashboard/admin/stores");
+
+  return result.ok
+    ? {
+        ok: true,
+        charged: "charged" in result ? result.charged : false,
+        reason: "reason" in result ? result.reason : undefined,
+      }
+    : { ok: false, error: result.reason };
 }
 
 export async function adminDeleteStore(storeId: string) {

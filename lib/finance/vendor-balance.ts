@@ -3,6 +3,7 @@ export const VENDOR_BALANCE_DEBIT_TYPES = [
   "DEBIT_PLATFORM_FEE",
   "DEBIT_PAYOUT",
   "DEBIT_REFUND",
+  "DEBIT_SUBSCRIPTION",
 ] as const;
 
 export function isVendorBalanceDebit(entryType: string): boolean {

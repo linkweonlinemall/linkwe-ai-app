@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import type { IdVerificationStatus, StoreStatus } from "@prisma/client";
 import { useState } from "react";
 
-import { adminDeleteStore, setVendorPlan, updateStoreStatus } from "@/app/actions/admin-stores";
+import {
+  adminDeleteStore,
+  chargeVendorSubscriptionFromBalance,
+  setVendorPlan,
+  updateStoreStatus,
+} from "@/app/actions/admin-stores";
 
 type StoreRow = {
   id: string;
@@ -114,6 +119,23 @@ export default function AdminStoresClient({
     await setVendorPlan(id, plan);
     setLoading(null);
     router.refresh();
+  }
+
+  async function handleChargeSubscription(id: string) {
+    if (loading === "bulk") return;
+    setLoading(id);
+    const result = await chargeVendorSubscriptionFromBalance(id);
+    setLoading(null);
+    router.refresh();
+    if (result.ok) {
+      if (result.charged) {
+        alert("Charged from balance");
+      } else {
+        alert(`Not charged: ${result.reason ?? "unknown"}`);
+      }
+    } else {
+      alert(`Not charged: ${result.error ?? "unknown"}`);
+    }
   }
 
   async function handleDelete(id: string, name: string) {
@@ -366,6 +388,15 @@ export default function AdminStoresClient({
                     <option value="GROWTH">Growth</option>
                     <option value="PRO">Pro</option>
                   </select>
+                  <button
+                    type="button"
+                    title="Charge subscription from balance"
+                    disabled={loading === store.id || loading === "bulk"}
+                    className="rounded-lg border border-zinc-200 px-2 py-1.5 text-xs text-zinc-600 transition-colors hover:bg-zinc-50 disabled:opacity-50"
+                    onClick={() => void handleChargeSubscription(store.id)}
+                  >
+                    Charge sub (balance)
+                  </button>
                   <select
                     value={store.status}
                     disabled={loading === store.id || loading === "bulk"}
