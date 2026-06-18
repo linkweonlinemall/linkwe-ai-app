@@ -79,6 +79,9 @@ type Props = {
   payoutRequests: PayoutRequest[];
   subscriptionPlan: string;
   subscriptionStatus: string;
+  aiUsed: number;
+  aiAllowance: number;
+  aiRemaining: number;
 };
 
 function formatTTD(minor: number): string {
@@ -101,6 +104,9 @@ export default function FinanceTab({
   payoutRequests,
   subscriptionPlan,
   subscriptionStatus,
+  aiUsed,
+  aiAllowance,
+  aiRemaining,
 }: Props) {
   const searchParams = useSearchParams();
   const { plan, limits } = getStorePlan({ subscriptionPlan, subscriptionStatus });
@@ -114,7 +120,7 @@ export default function FinanceTab({
   const aiLine =
     limits.aiMonthlyAllowance === 0
       ? "No AI assistant"
-      : `${limits.aiMonthlyAllowance} AI uses/month`;
+      : `${aiUsed} of ${aiAllowance} AI uses used · ${aiRemaining} left this period`;
   const [requestAmount, setRequestAmount] = useState("");
   const [requestError, setRequestError] = useState<string | null>(null);
   const [requestSuccess, setRequestSuccess] = useState(false);

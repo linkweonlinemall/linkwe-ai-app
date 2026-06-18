@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import type { ProductCondition, Prisma } from "@prisma/client"
 import { getSession } from "@/lib/auth/session"
+import { getAIUsageState } from "@/lib/finance/ai-usage"
 import { prisma } from "@/lib/prisma"
 import { checkProductCap } from "@/lib/finance/product-cap"
 
@@ -231,6 +232,25 @@ export async function assertVendorSession(): Promise<{ ok: true } | { ok: false 
     return { ok: false }
   }
   return { ok: true }
+}
+
+export async function getMyAIUsage(): Promise<
+  { ok: true; allowance: number; used: number; remaining: number } | { ok: false }
+> {
+  const session = await getSession()
+  if (!session || session.role !== "VENDOR") return { ok: false }
+  const store = await prisma.store.findFirst({
+    where: { ownerId: session.userId },
+    select: {
+      id: true,
+      subscriptionPlan: true,
+      subscriptionStatus: true,
+      planRenewsAt: true,
+    },
+  })
+  if (!store) return { ok: false }
+  const { allowance, used, remaining } = await getAIUsageState(store)
+  return { ok: true, allowance, used, remaining }
 }
 
 export async function generateCSVTemplate(): Promise<string> {

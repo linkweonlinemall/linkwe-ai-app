@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Sora } from "next/font/google"
 import ReactMarkdown from "react-markdown"
-import { assertVendorSession } from "@/app/actions/ai-vendor"
+import { assertVendorSession, getMyAIUsage } from "@/app/actions/ai-vendor"
 import {
   createVendorChat,
   saveVendorChatMessage,
@@ -131,6 +131,8 @@ export default function VendorAIAssistantPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [attachedPreviews, setAttachedPreviews] = useState<string[]>([])
   const [focusedEventId, setFocusedEventId] = useState<string | null>(null)
+  const [aiRemaining, setAiRemaining] = useState<number | null>(null)
+  const [aiAllowance, setAiAllowance] = useState<number | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const chatFileInputRef = useRef<HTMLInputElement>(null)
@@ -147,6 +149,12 @@ export default function VendorAIAssistantPage() {
         return
       }
       setAllowed(true)
+      void getMyAIUsage().then((usage) => {
+        if (usage.ok) {
+          setAiAllowance(usage.allowance)
+          setAiRemaining(usage.remaining)
+        }
+      })
     })
   }, [router])
 
@@ -418,6 +426,32 @@ export default function VendorAIAssistantPage() {
           return
         }
 
+        if (res.status === 429) {
+          cancelAnimationFrame(rafHandle)
+          finalized = true
+          const errBody = (await res.json().catch(() => ({}))) as {
+            error?: string
+          }
+          const errText =
+            errBody.error ??
+            "You've used all your AI uses for this period."
+          setAiRemaining(0)
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId ? { ...m, content: errText } : m
+            )
+          )
+          void (async () => {
+            try {
+              await saveVendorChatMessage(saveChatId, "assistant", errText)
+            } catch (logErr) {
+              console.error("saveVendorChatMessage assistant (429)", logErr)
+            }
+          })()
+          setLoading(false)
+          return
+        }
+
         const reader = res.body?.getReader()
         const decoder = new TextDecoder()
 
@@ -433,6 +467,7 @@ export default function VendorAIAssistantPage() {
               const p = JSON.parse(data) as {
                 text?: string
                 error?: string
+                aiRemaining?: number
                 productId?: string
                 focusProductId?: string
                 focusEventId?: string
@@ -440,6 +475,9 @@ export default function VendorAIAssistantPage() {
                   productId: string
                   images: string[]
                 }
+              }
+              if (typeof p.aiRemaining === "number") {
+                setAiRemaining(p.aiRemaining)
               }
               if (p.galleryUpdate?.images?.length) {
                 setProductImages(p.galleryUpdate.images)
@@ -672,6 +710,12 @@ export default function VendorAIAssistantPage() {
             <p className="mt-1 text-[11px] leading-tight text-zinc-400">
               Your AI business partner
             </p>
+            {aiAllowance != null && aiAllowance > 0 ? (
+              <p className="mt-0.5 text-[11px] leading-tight text-zinc-400">
+                {aiRemaining ?? aiAllowance} of {aiAllowance} uses left this
+                period
+              </p>
+            ) : null}
           </div>
           <Link
             href="/dashboard/vendor"

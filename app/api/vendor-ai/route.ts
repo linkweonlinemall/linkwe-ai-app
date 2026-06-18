@@ -643,6 +643,7 @@ export async function POST(req: NextRequest) {
   }
   const messages: IncomingMessage[] = body.messages ?? []
 
+  let aiRemainingToSend: number | undefined
   const last = messages.at(-1)
   if (last?.role === "user") {
     const usage = await consumeAIUse(store)
@@ -652,6 +653,7 @@ export async function POST(req: NextRequest) {
         headers: { "Content-Type": "application/json" },
       })
     }
+    aiRemainingToSend = usage.remaining
   }
 
   const focusProductIdFromBody =
@@ -674,6 +676,10 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       const send = (data: string) => {
         controller.enqueue(encoder.encode(`data: ${data}\n\n`))
+      }
+
+      if (aiRemainingToSend !== undefined) {
+        send(JSON.stringify({ aiRemaining: aiRemainingToSend }))
       }
 
       let galleryUpdateSent = false

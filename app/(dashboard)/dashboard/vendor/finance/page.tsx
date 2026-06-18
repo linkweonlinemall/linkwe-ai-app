@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import FinanceTab from "@/app/(dashboard)/dashboard/vendor/components/tabs/finance-tab";
 import { getSession } from "@/lib/auth/session";
 import { assertDashboardRole } from "@/lib/auth/assert-role";
+import { getAIUsageState } from "@/lib/finance/ai-usage";
 import { prisma } from "@/lib/prisma";
 
 export default async function VendorFinancePage() {
@@ -29,8 +30,10 @@ export default async function VendorFinancePage() {
   const store = await prisma.store.findFirst({
     where: { ownerId: session.userId },
     select: {
+      id: true,
       subscriptionPlan: true,
       subscriptionStatus: true,
+      planRenewsAt: true,
       ledgerEntries: {
         select: {
           id: true,
@@ -59,6 +62,8 @@ export default async function VendorFinancePage() {
   });
   if (!store) redirect("/onboarding/business/step-3");
 
+  const aiUsage = await getAIUsageState(store);
+
   return (
     <div className="px-6 py-8">
       <Link
@@ -84,6 +89,9 @@ export default async function VendorFinancePage() {
         payoutRequests={store.payoutRequests}
         subscriptionPlan={store.subscriptionPlan}
         subscriptionStatus={store.subscriptionStatus}
+        aiUsed={aiUsage.used}
+        aiAllowance={aiUsage.allowance}
+        aiRemaining={aiUsage.remaining}
       />
     </div>
   );

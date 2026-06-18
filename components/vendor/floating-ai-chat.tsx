@@ -9,6 +9,7 @@ import {
   getVendorChats,
   getVendorChatMessages,
 } from "@/app/actions/vendor-chat"
+import { getMyAIUsage } from "@/app/actions/ai-vendor"
 import { uploadVendorChatImages } from "@/app/actions/ai-vendor-image"
 
 async function compressImage(
@@ -116,15 +117,23 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
   const [focusedProductId, setFocusedProductId] = useState<string | null>(null)
   const [focusedEventId, setFocusedEventId] = useState<string | null>(null)
   const [attachedPreviews, setAttachedPreviews] = useState<string[]>([])
+  const [aiRemaining, setAiRemaining] = useState<number | null>(null)
+  const [aiAllowance, setAiAllowance] = useState<number | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (open) {
+    if (open && aiEnabled) {
       getVendorChats("vendor").then(setChatList)
+      void getMyAIUsage().then((r) => {
+        if (r.ok) {
+          setAiAllowance(r.allowance)
+          setAiRemaining(r.remaining)
+        }
+      })
       setTimeout(() => inputRef.current?.focus(), 100)
     }
-  }, [open])
+  }, [open, aiEnabled])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -300,6 +309,28 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
           }),
         })
 
+        if (res.status === 429) {
+          cancelAnimationFrame(rafHandle)
+          finalized = true
+          const errBody = (await res.json().catch(() => ({}))) as {
+            error?: string
+          }
+          setAiRemaining(0)
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: Date.now().toString() + "-err",
+              role: "assistant",
+              content:
+                errBody.error ??
+                "You've used all your AI uses for this period.",
+            },
+          ])
+          setLoading(false)
+          setTimeout(() => inputRef.current?.focus(), 50)
+          return
+        }
+
         const reader = res.body?.getReader()
         if (!reader) {
           cancelAnimationFrame(rafHandle)
@@ -334,11 +365,15 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
                 focusProductId?: string
                 focusEventId?: string
                 text?: string
+                aiRemaining?: number
                 galleryUpdate?: {
                   productId: string
                   images: string[]
                 }
                 eventGalleryUpdate?: { eventId: string }
+              }
+              if (typeof parsed.aiRemaining === "number") {
+                setAiRemaining(parsed.aiRemaining)
               }
               if (parsed.productId) {
                 setCreatedProductId(parsed.productId)
@@ -426,16 +461,23 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
               borderBottom: "1px solid rgba(255,255,255,0.08)",
             }}
           >
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-white">Rex</span>
-              <span
-                className="h-2 w-2 shrink-0 rounded-full"
-                style={{
-                  backgroundColor: "#22c55e",
-                  boxShadow: "0 0 6px #22c55e",
-                }}
-                aria-hidden
-              />
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-white">Rex</span>
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{
+                    backgroundColor: "#22c55e",
+                    boxShadow: "0 0 6px #22c55e",
+                  }}
+                  aria-hidden
+                />
+              </div>
+              {aiAllowance != null && aiAllowance > 0 ? (
+                <span className="text-[10px] text-zinc-500">
+                  {aiRemaining ?? aiAllowance} of {aiAllowance} uses left
+                </span>
+              ) : null}
             </div>
             <div className="flex items-center gap-2">
               <a
