@@ -3,10 +3,13 @@
 import type { AccountType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getAppBaseUrl } from "@/lib/app-base-url";
 import { getSession } from "@/lib/auth/session";
 import { chargeSubscriptionFromBalance } from "@/lib/finance/subscription-billing";
+import { PLAN_PRICE_MINOR } from "@/lib/finance/plan-limits";
 import { isVendorBalanceDebit } from "@/lib/finance/vendor-balance";
 import { prisma } from "@/lib/prisma";
+import { stripe } from "@/lib/stripe/stripe";
 
 export async function saveVendorBankDetails(formData: FormData): Promise<void> {
   const session = await getSession();
@@ -141,4 +144,63 @@ export async function payMySubscriptionFromBalance(): Promise<
   }
 
   return { ok: false, error: result.reason };
+}
+
+export async function startSubscriptionCheckout(
+  targetPlan: string,
+): Promise<{ ok: true; checkoutUrl: string } | { ok: false; error: string }> {
+  const session = await getSession();
+  if (!session || session.role !== "VENDOR") return { ok: false, error: "Not authorized" };
+
+  const plan = targetPlan === "PRO" ? "PRO" : targetPlan === "GROWTH" ? "GROWTH" : null;
+  if (!plan) return { ok: false, error: "Invalid plan" };
+
+  const priceMinor = PLAN_PRICE_MINOR[plan];
+
+  const store = await prisma.store.findFirst({
+    where: { ownerId: session.userId },
+    select: { id: true, name: true, stripeCustomerId: true },
+  });
+  if (!store) return { ok: false, error: "No store found" };
+
+  let customerId = store.stripeCustomerId;
+  if (!customerId) {
+    const customer = await stripe.customers.create({
+      name: store.name,
+      metadata: { storeId: store.id, userId: session.userId },
+    });
+    customerId = customer.id;
+    await prisma.store.update({
+      where: { id: store.id },
+      data: { stripeCustomerId: customerId },
+    });
+  }
+
+  const baseUrl = getAppBaseUrl();
+  const checkoutSession = await stripe.checkout.sessions.create({
+    mode: "subscription",
+    customer: customerId,
+    line_items: [
+      {
+        price_data: {
+          currency: "ttd",
+          product_data: {
+            name: `LinkWe ${plan.charAt(0) + plan.slice(1).toLowerCase()} Plan`,
+          },
+          unit_amount: priceMinor,
+          recurring: { interval: "month" },
+        },
+        quantity: 1,
+      },
+    ],
+    success_url: `${baseUrl}/dashboard/vendor/finance?sub=success`,
+    cancel_url: `${baseUrl}/dashboard/vendor/finance?sub=cancelled`,
+    metadata: { subscriptionStoreId: store.id, targetPlan: plan, userId: session.userId },
+    subscription_data: {
+      metadata: { subscriptionStoreId: store.id, targetPlan: plan },
+    },
+  });
+
+  if (!checkoutSession.url) return { ok: false, error: "Could not create checkout session" };
+  return { ok: true, checkoutUrl: checkoutSession.url };
 }

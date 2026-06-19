@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { NotificationType } from "@prisma/client";
+import { NotificationType, StoreSubscriptionStatus, VendorSubscriptionPlan } from "@prisma/client";
 
 import { handleBookingPaymentIntentSucceeded } from "@/lib/finance/booking-payment";
 import { createSplitOrdersFromMainOrder } from "@/lib/fulfillment/split-orders";
@@ -125,6 +125,29 @@ export async function POST(request: NextRequest) {
           await prisma.onDemandRequest.update({
             where: { id: requestId },
             data: { status: "CONFIRMED" },
+          });
+        }
+
+        const subStoreId = checkoutSession.metadata?.subscriptionStoreId;
+        const targetPlan = checkoutSession.metadata?.targetPlan;
+        if (
+          checkoutSession.mode === "subscription" &&
+          subStoreId &&
+          (targetPlan === "GROWTH" || targetPlan === "PRO")
+        ) {
+          const subscriptionId =
+            typeof checkoutSession.subscription === "string"
+              ? checkoutSession.subscription
+              : (checkoutSession.subscription?.id ?? null);
+          await prisma.store.updateMany({
+            where: { id: subStoreId },
+            data: {
+              subscriptionPlan: targetPlan as VendorSubscriptionPlan,
+              subscriptionStatus: StoreSubscriptionStatus.ACTIVE,
+              stripeSubscriptionId: subscriptionId,
+              // Refined in 5b-2 from subscription current_period_end / invoice.paid
+              planRenewsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            },
           });
         }
         break;

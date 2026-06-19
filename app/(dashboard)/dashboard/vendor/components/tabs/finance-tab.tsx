@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { payMySubscriptionFromBalance, requestPayout, saveVendorBankDetails } from "@/app/actions/vendor";
+import { payMySubscriptionFromBalance, requestPayout, saveVendorBankDetails, startSubscriptionCheckout } from "@/app/actions/vendor";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import { getCommissionRate } from "@/lib/finance/commission";
@@ -129,8 +129,10 @@ export default function FinanceTab({
   const [requestSuccess, setRequestSuccess] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [payingSubscription, setPayingSubscription] = useState(false);
+  const [subscribing, setSubscribing] = useState(false);
   const [subPayMessage, setSubPayMessage] = useState<string | null>(null);
   const [subPayError, setSubPayError] = useState<string | null>(null);
+  const subCheckoutStatus = searchParams.get("sub");
   const [activeSection, setActiveSection] = useState<FinanceSection>(
     () => sectionFromTabParam(searchParams.get("tab")) ?? "earnings",
   );
@@ -238,6 +240,18 @@ export default function FinanceTab({
     } else {
       setSubPayError(result.error);
     }
+  }
+
+  async function handleSubscribeByCard(targetPlan: string) {
+    setSubPayError(null);
+    setSubscribing(true);
+    const result = await startSubscriptionCheckout(targetPlan);
+    if (result.ok) {
+      window.location.href = result.checkoutUrl;
+      return;
+    }
+    setSubscribing(false);
+    setSubPayError(result.error);
   }
 
   const CARD = "rounded-[12px] border-[0.5px] border-[rgba(28,28,26,0.12)] bg-white";
@@ -348,6 +362,13 @@ export default function FinanceTab({
           </span>
         </div>
         <div className="mt-3 rounded-lg border border-zinc-100 bg-zinc-50 p-2.5">
+          {subCheckoutStatus === "success" ? (
+            <p className="mb-2 text-[11px] text-emerald-700">
+              Subscription started — your plan is now active
+            </p>
+          ) : subCheckoutStatus === "cancelled" ? (
+            <p className="mb-2 text-[11px] text-zinc-500">Checkout cancelled</p>
+          ) : null}
           <p className="text-[11px] text-zinc-500">
             Product commission: {productCommissionPct}% · {aiLine}
           </p>
@@ -357,7 +378,7 @@ export default function FinanceTab({
                 Upgrade to Growth plan for TTD 200/month to reduce your commission from 15% to 12% and
                 unlock 300 AI uses per month.
               </p>
-              <div className="mt-2 flex gap-2">
+              <div className="mt-2 flex flex-wrap gap-2">
                 <button
                   type="button"
                   className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:opacity-90"
@@ -368,6 +389,23 @@ export default function FinanceTab({
                   }}
                 >
                   Upgrade Plan
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
+                  style={{ backgroundColor: "#D4450A" }}
+                  disabled={subscribing}
+                  onClick={() => void handleSubscribeByCard("GROWTH")}
+                >
+                  {subscribing ? "Redirecting…" : "Upgrade to Growth — TTD 200/mo"}
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50"
+                  disabled={subscribing}
+                  onClick={() => void handleSubscribeByCard("PRO")}
+                >
+                  Go Pro — TTD 450/mo
                 </button>
               </div>
             </>
@@ -384,7 +422,7 @@ export default function FinanceTab({
                 <div className="mt-2">
                   <button
                     type="button"
-                    disabled={payingSubscription}
+                    disabled={payingSubscription || subscribing}
                     onClick={() => void handlePaySubscription()}
                     className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50"
                   >
@@ -400,6 +438,14 @@ export default function FinanceTab({
                   ) : null}
                 </div>
               )}
+              <button
+                type="button"
+                disabled={subscribing || payingSubscription}
+                onClick={() => void handleSubscribeByCard(plan)}
+                className="mt-2 text-[11px] font-medium text-zinc-500 underline-offset-2 hover:text-zinc-700 hover:underline disabled:opacity-50"
+              >
+                {subscribing ? "Redirecting to checkout…" : "Pay by card instead"}
+              </button>
             </>
           )}
         </div>
