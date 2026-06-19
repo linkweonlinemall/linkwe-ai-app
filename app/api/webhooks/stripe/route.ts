@@ -20,6 +20,43 @@ function getTicketPayoutEligibleAt(endDate: Date | null, startDate: Date): Date 
   return new Date(base.getTime() + TICKET_PAYOUT_HOLD_HOURS * 60 * 60 * 1000);
 }
 
+async function resolveRenewalDate(
+  subscriptionId: string | null,
+  fallbackUnix?: number | null,
+): Promise<Date> {
+  if (fallbackUnix && fallbackUnix > 0) return new Date(fallbackUnix * 1000);
+  if (subscriptionId) {
+    try {
+      const sub = await stripe.subscriptions.retrieve(subscriptionId, { expand: ["items"] });
+      const periodEnd = sub.items?.data?.[0]?.current_period_end;
+      if (periodEnd) return new Date(periodEnd * 1000);
+    } catch (e) {
+      console.error("[webhook] could not retrieve subscription for period end", e);
+    }
+  }
+  return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+}
+
+async function handleSubscriptionInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
+  const subStoreId = invoice.parent?.subscription_details?.metadata?.subscriptionStoreId;
+  if (!subStoreId) return;
+
+  const subRef = invoice.parent?.subscription_details?.subscription;
+  const subscriptionId = typeof subRef === "string" ? subRef : (subRef?.id ?? null);
+  const lineEnd =
+    invoice.lines?.data?.find((l) => l.subscription)?.period?.end ?? invoice.period_end ?? null;
+  const renewsAt = await resolveRenewalDate(subscriptionId, lineEnd);
+
+  await prisma.store.updateMany({
+    where: { id: subStoreId },
+    data: {
+      subscriptionStatus: StoreSubscriptionStatus.ACTIVE,
+      planRenewsAt: renewsAt,
+      ...(subscriptionId ? { stripeSubscriptionId: subscriptionId } : {}),
+    },
+  });
+}
+
 // ── Ticket order fulfilment ────────────────────────────────────────────────────
 // Idempotent: updateMany only matches PENDING_PAYMENT; a second Stripe retry
 // gets count=0 and exits immediately without re-incrementing sold counts or
@@ -139,17 +176,53 @@ export async function POST(request: NextRequest) {
             typeof checkoutSession.subscription === "string"
               ? checkoutSession.subscription
               : (checkoutSession.subscription?.id ?? null);
+          const planRenewsAt = await resolveRenewalDate(subscriptionId, null);
           await prisma.store.updateMany({
             where: { id: subStoreId },
             data: {
               subscriptionPlan: targetPlan as VendorSubscriptionPlan,
               subscriptionStatus: StoreSubscriptionStatus.ACTIVE,
               stripeSubscriptionId: subscriptionId,
-              // Refined in 5b-2 from subscription current_period_end / invoice.paid
-              planRenewsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              planRenewsAt,
             },
           });
         }
+        break;
+      }
+
+      case "invoice.paid":
+      case "invoice.payment_succeeded": {
+        const invoice = event.data.object as Stripe.Invoice;
+        await handleSubscriptionInvoicePaid(invoice);
+        break;
+      }
+
+      case "invoice.payment_failed": {
+        const invoice = event.data.object as Stripe.Invoice;
+        const subStoreId = invoice.parent?.subscription_details?.metadata?.subscriptionStoreId;
+        if (!subStoreId) break;
+
+        await prisma.store.updateMany({
+          where: { id: subStoreId, subscriptionStatus: StoreSubscriptionStatus.ACTIVE },
+          data: { subscriptionStatus: StoreSubscriptionStatus.PAST_DUE },
+        });
+        break;
+      }
+
+      case "customer.subscription.deleted": {
+        const subscription = event.data.object as Stripe.Subscription;
+        const subStoreId = subscription.metadata?.subscriptionStoreId;
+        if (!subStoreId) break;
+
+        await prisma.store.updateMany({
+          where: { id: subStoreId, stripeSubscriptionId: subscription.id },
+          data: {
+            subscriptionPlan: VendorSubscriptionPlan.STARTER,
+            subscriptionStatus: StoreSubscriptionStatus.NONE,
+            stripeSubscriptionId: null,
+            planRenewsAt: null,
+          },
+        });
         break;
       }
 
