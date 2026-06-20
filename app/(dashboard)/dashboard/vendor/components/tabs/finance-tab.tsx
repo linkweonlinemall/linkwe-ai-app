@@ -83,6 +83,8 @@ type Props = {
   aiAllowance: number;
   aiRemaining: number;
   subPaidThisPeriod: boolean;
+  isCardBilled: boolean;
+  planRenewsAt: Date | string | null;
 };
 
 function formatTTD(minor: number): string {
@@ -109,6 +111,8 @@ export default function FinanceTab({
   aiAllowance,
   aiRemaining,
   subPaidThisPeriod,
+  isCardBilled,
+  planRenewsAt,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -237,6 +241,8 @@ export default function FinanceTab({
       setSubPayError(
         "Your balance is too low to cover the subscription. (Card payment coming soon.)",
       );
+    } else if (result.error === "card_subscription_active") {
+      setSubPayError("You're billed automatically by card — no balance payment needed.");
     } else {
       setSubPayError(result.error);
     }
@@ -414,7 +420,14 @@ export default function FinanceTab({
               <p className="mt-2 text-[11px] font-medium text-zinc-600">
                 You&apos;re on the {planLabel}.
               </p>
-              {subPaidThisPeriod ? (
+              {isCardBilled ? (
+                <p className="mt-2 text-[11px] text-zinc-500">
+                  💳 Billed automatically to your card
+                  {planRenewsAt
+                    ? ` · renews ${formatDate(planRenewsAt)}`
+                    : " each month"}
+                </p>
+              ) : subPaidThisPeriod ? (
                 <p className="mt-2 text-[11px] text-zinc-500">
                   ✓ Subscription paid for this period
                 </p>
@@ -438,14 +451,16 @@ export default function FinanceTab({
                   ) : null}
                 </div>
               )}
-              <button
-                type="button"
-                disabled={subscribing || payingSubscription}
-                onClick={() => void handleSubscribeByCard(plan)}
-                className="mt-2 text-[11px] font-medium text-zinc-500 underline-offset-2 hover:text-zinc-700 hover:underline disabled:opacity-50"
-              >
-                {subscribing ? "Redirecting to checkout…" : "Pay by card instead"}
-              </button>
+              {!isCardBilled ? (
+                <button
+                  type="button"
+                  disabled={subscribing || payingSubscription}
+                  onClick={() => void handleSubscribeByCard(plan)}
+                  className="mt-2 text-[11px] font-medium text-zinc-500 underline-offset-2 hover:text-zinc-700 hover:underline disabled:opacity-50"
+                >
+                  {subscribing ? "Redirecting to checkout…" : "Pay by card instead"}
+                </button>
+              ) : null}
             </>
           )}
         </div>

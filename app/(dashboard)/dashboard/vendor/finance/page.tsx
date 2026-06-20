@@ -35,6 +35,7 @@ export default async function VendorFinancePage() {
       subscriptionPlan: true,
       subscriptionStatus: true,
       planRenewsAt: true,
+      stripeSubscriptionId: true,
       ledgerEntries: {
         select: {
           id: true,
@@ -101,6 +102,8 @@ export default async function VendorFinancePage() {
         aiAllowance={aiUsage.allowance}
         aiRemaining={aiUsage.remaining}
         subPaidThisPeriod={subPaidThisPeriod}
+        isCardBilled={!!store.stripeSubscriptionId}
+        planRenewsAt={store.planRenewsAt}
       />
     </div>
   );

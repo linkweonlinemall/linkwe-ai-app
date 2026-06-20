@@ -127,9 +127,18 @@ export async function payMySubscriptionFromBalance(): Promise<
 
   const store = await prisma.store.findFirst({
     where: { ownerId: session.userId },
-    select: { id: true, subscriptionPlan: true, planRenewsAt: true },
+    select: {
+      id: true,
+      subscriptionPlan: true,
+      planRenewsAt: true,
+      stripeSubscriptionId: true,
+    },
   });
   if (!store) return { ok: false, error: "No store found" };
+
+  if (store.stripeSubscriptionId) {
+    return { ok: false, error: "card_subscription_active" };
+  }
 
   const result = await chargeSubscriptionFromBalance(
     store.id,
