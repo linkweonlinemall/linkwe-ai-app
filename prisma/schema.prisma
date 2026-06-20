@@ -169,6 +169,7 @@ model Store {
   subscriptionPlan VendorSubscriptionPlan @default(STARTER) @map("subscription_plan")
   subscriptionStatus   StoreSubscriptionStatus @default(NONE) @map("subscription_status")
   planRenewsAt         DateTime?               @map("plan_renews_at")
+  pastDueSince         DateTime?               @map("past_due_since")
   stripeCustomerId     String?                 @map("stripe_customer_id")
   stripeSubscriptionId String?                 @map("stripe_subscription_id")
   isAvailableNow   Boolean     @default(false)

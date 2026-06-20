@@ -52,6 +52,7 @@ async function handleSubscriptionInvoicePaid(invoice: Stripe.Invoice): Promise<v
     data: {
       subscriptionStatus: StoreSubscriptionStatus.ACTIVE,
       planRenewsAt: renewsAt,
+      pastDueSince: null,
       ...(subscriptionId ? { stripeSubscriptionId: subscriptionId } : {}),
     },
   });
@@ -204,7 +205,10 @@ export async function POST(request: NextRequest) {
 
         await prisma.store.updateMany({
           where: { id: subStoreId, subscriptionStatus: StoreSubscriptionStatus.ACTIVE },
-          data: { subscriptionStatus: StoreSubscriptionStatus.PAST_DUE },
+          data: {
+            subscriptionStatus: StoreSubscriptionStatus.PAST_DUE,
+            pastDueSince: new Date(),
+          },
         });
         break;
       }
