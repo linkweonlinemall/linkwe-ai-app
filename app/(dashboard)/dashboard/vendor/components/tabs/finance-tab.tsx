@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { payMySubscriptionFromBalance, requestPayout, saveVendorBankDetails, startSubscriptionCheckout } from "@/app/actions/vendor";
+import { cancelAutoRenew, payMySubscriptionFromBalance, requestPayout, resumeAutoRenew, saveVendorBankDetails, startSubscriptionCheckout } from "@/app/actions/vendor";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import { getCommissionRate } from "@/lib/finance/commission";
@@ -86,6 +86,7 @@ type Props = {
   isCardBilled: boolean;
   planRenewsAt: Date | string | null;
   pastDueSince: Date | string | null;
+  autoRenew: boolean;
 };
 
 function formatTTD(minor: number): string {
@@ -115,6 +116,7 @@ export default function FinanceTab({
   isCardBilled,
   planRenewsAt,
   pastDueSince,
+  autoRenew,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -138,6 +140,7 @@ export default function FinanceTab({
   const [subscribing, setSubscribing] = useState(false);
   const [subPayMessage, setSubPayMessage] = useState<string | null>(null);
   const [subPayError, setSubPayError] = useState<string | null>(null);
+  const [autoRenewLoading, setAutoRenewLoading] = useState(false);
   const subCheckoutStatus = searchParams.get("sub");
   const [activeSection, setActiveSection] = useState<FinanceSection>(
     () => sectionFromTabParam(searchParams.get("tab")) ?? "earnings",
@@ -260,6 +263,22 @@ export default function FinanceTab({
     }
     setSubscribing(false);
     setSubPayError(result.error);
+  }
+
+  async function handleCancelAutoRenew() {
+    setAutoRenewLoading(true);
+    const r = await cancelAutoRenew();
+    setAutoRenewLoading(false);
+    if (r.ok) router.refresh();
+    else setSubPayError(r.error);
+  }
+
+  async function handleResumeAutoRenew() {
+    setAutoRenewLoading(true);
+    const r = await resumeAutoRenew();
+    setAutoRenewLoading(false);
+    if (r.ok) router.refresh();
+    else setSubPayError(r.error);
   }
 
   const CARD = "rounded-[12px] border-[0.5px] border-[rgba(28,28,26,0.12)] bg-white";
@@ -450,12 +469,43 @@ export default function FinanceTab({
                   ) : null}
                 </div>
               ) : isCardBilled ? (
-                <p className="mt-2 text-[11px] text-zinc-500">
-                  💳 Billed automatically to your card
-                  {planRenewsAt
-                    ? ` · renews ${formatDate(planRenewsAt)}`
-                    : " each month"}
-                </p>
+                <div className="mt-2">
+                  {autoRenew ? (
+                    <>
+                      <p className="text-[11px] text-zinc-500">
+                        💳 Billed automatically to your card
+                        {planRenewsAt
+                          ? ` · renews ${formatDate(planRenewsAt)}`
+                          : " each month"}
+                      </p>
+                      <button
+                        type="button"
+                        disabled={autoRenewLoading}
+                        onClick={() => void handleCancelAutoRenew()}
+                        className="mt-2 text-[11px] font-medium text-zinc-500 underline-offset-2 hover:text-zinc-700 hover:underline disabled:opacity-50"
+                      >
+                        {autoRenewLoading ? "Updating…" : "Turn off auto-renewal"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-[11px] text-amber-700">
+                        ⏸ Auto-renewal off
+                        {planRenewsAt
+                          ? ` · access until ${formatDate(planRenewsAt)}`
+                          : " · access until period end"}
+                      </p>
+                      <button
+                        type="button"
+                        disabled={autoRenewLoading}
+                        onClick={() => void handleResumeAutoRenew()}
+                        className="mt-2 text-[11px] font-medium text-zinc-500 underline-offset-2 hover:text-zinc-700 hover:underline disabled:opacity-50"
+                      >
+                        {autoRenewLoading ? "Updating…" : "Turn auto-renewal back on"}
+                      </button>
+                    </>
+                  )}
+                </div>
               ) : subPaidThisPeriod ? (
                 <p className="mt-2 text-[11px] text-zinc-500">
                   ✓ Subscription paid for this period

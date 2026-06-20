@@ -225,6 +225,7 @@ export async function POST(request: NextRequest) {
             subscriptionStatus: StoreSubscriptionStatus.NONE,
             stripeSubscriptionId: null,
             planRenewsAt: null,
+            autoRenew: true,
           },
         });
         break;

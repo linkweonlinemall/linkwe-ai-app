@@ -213,3 +213,53 @@ export async function startSubscriptionCheckout(
   if (!checkoutSession.url) return { ok: false, error: "Could not create checkout session" };
   return { ok: true, checkoutUrl: checkoutSession.url };
 }
+
+export async function cancelAutoRenew(): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await getSession();
+  if (!session || session.role !== "VENDOR") return { ok: false, error: "Not authorized" };
+
+  const store = await prisma.store.findFirst({
+    where: { ownerId: session.userId },
+    select: { id: true, stripeSubscriptionId: true },
+  });
+  if (!store) return { ok: false, error: "No store found" };
+  if (!store.stripeSubscriptionId) return { ok: false, error: "No active card subscription" };
+
+  try {
+    await stripe.subscriptions.update(store.stripeSubscriptionId, {
+      cancel_at_period_end: true,
+    });
+  } catch (e) {
+    console.error("[autoRenew] cancel failed", e);
+    return { ok: false, error: "Could not update subscription" };
+  }
+
+  await prisma.store.update({ where: { id: store.id }, data: { autoRenew: false } });
+  revalidatePath("/dashboard/vendor/finance");
+  return { ok: true };
+}
+
+export async function resumeAutoRenew(): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await getSession();
+  if (!session || session.role !== "VENDOR") return { ok: false, error: "Not authorized" };
+
+  const store = await prisma.store.findFirst({
+    where: { ownerId: session.userId },
+    select: { id: true, stripeSubscriptionId: true },
+  });
+  if (!store) return { ok: false, error: "No store found" };
+  if (!store.stripeSubscriptionId) return { ok: false, error: "No active card subscription" };
+
+  try {
+    await stripe.subscriptions.update(store.stripeSubscriptionId, {
+      cancel_at_period_end: false,
+    });
+  } catch (e) {
+    console.error("[autoRenew] resume failed", e);
+    return { ok: false, error: "Could not update subscription" };
+  }
+
+  await prisma.store.update({ where: { id: store.id }, data: { autoRenew: true } });
+  revalidatePath("/dashboard/vendor/finance");
+  return { ok: true };
+}

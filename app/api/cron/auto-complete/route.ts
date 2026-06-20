@@ -89,6 +89,7 @@ export async function GET(request: Request) {
           stripeSubscriptionId: null,
           planRenewsAt: null,
           pastDueSince: null,
+          autoRenew: true,
         },
       });
       downgraded++;

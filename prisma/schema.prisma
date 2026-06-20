@@ -172,6 +172,7 @@ model Store {
   pastDueSince         DateTime?               @map("past_due_since")
   stripeCustomerId     String?                 @map("stripe_customer_id")
   stripeSubscriptionId String?                 @map("stripe_subscription_id")
+  autoRenew            Boolean                 @default(true) @map("auto_renew")
   isAvailableNow   Boolean     @default(false)
   staffMembers     StaffMember[]
   createdAt        DateTime    @default(now()) @map("created_at")
