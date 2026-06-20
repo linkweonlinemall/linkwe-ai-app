@@ -17,11 +17,6 @@ const ROLE_CARDS: { role: UserRole; title: string; body: string }[] = [
     body: "Manage your store, products, orders, and earnings.",
   },
   {
-    role: "COURIER",
-    title: "Courier",
-    body: "Courier workspace for delivery assignments and settings.",
-  },
-  {
     role: "ADMIN",
     title: "Admin",
     body: "Oversee orders, payouts, deliveries, and platform operations.",

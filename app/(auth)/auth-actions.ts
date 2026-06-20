@@ -38,7 +38,7 @@ function validateFullName(name: string): string | null {
 
 function parseSignupKind(raw: FormDataEntryValue | null): SignupKind | null {
   const v = String(raw ?? "");
-  if (v === "CUSTOMER" || v === "BUSINESS" || v === "COURIER") return v;
+  if (v === "CUSTOMER" || v === "BUSINESS") return v;
   return null;
 }
 

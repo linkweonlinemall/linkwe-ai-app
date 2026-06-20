@@ -78,7 +78,6 @@ function initialsDisplay(name: string): string {
 function accountRoleLabel(dashboardHref: string | undefined, userHref: string | undefined): string {
   const h = dashboardHref ?? userHref ?? "";
   if (h.includes("/dashboard/vendor")) return "Vendor";
-  if (h.includes("/dashboard/courier")) return "Courier";
   if (h.includes("/dashboard/admin")) return "Admin";
   return "Customer";
 }

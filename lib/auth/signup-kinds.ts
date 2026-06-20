@@ -3,7 +3,7 @@
  * Phase A uses a single `User.role` per account.
  */
 
-export type SignupKind = "CUSTOMER" | "BUSINESS" | "COURIER";
+export type SignupKind = "CUSTOMER" | "BUSINESS";
 
 /** Mirrors Prisma `UserRole` enum values used at signup */
 export const UserRoleValue = {
@@ -24,8 +24,6 @@ export function roleForSignup(kind: SignupKind | string | null | undefined): Reg
   switch (kind) {
     case "BUSINESS":
       return UserRoleValue.VENDOR;
-    case "COURIER":
-      return UserRoleValue.COURIER;
     case "CUSTOMER":
     default:
       return UserRoleValue.CUSTOMER;

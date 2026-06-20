@@ -1,6 +1,5 @@
 import type { Store, User } from "@prisma/client";
 import { getNextBusinessOnboardingStep } from "@/lib/onboarding/business-progress";
-import { getNextCourierOnboardingStep } from "@/lib/onboarding/courier-progress";
 import { prisma } from "@/lib/prisma";
 import { getRoleDashboardPath } from "./redirects";
 
@@ -18,16 +17,6 @@ export function getAuthLandingPath(user: User, store: Pick<Store, "onboardingSte
       return `/onboarding/business/step-${step}`;
     }
     return "/dashboard/vendor";
-  }
-
-  if (user.role === "COURIER") {
-    const nextCourier = getNextCourierOnboardingStep(user);
-    if (nextCourier !== null) {
-      return nextCourier === 2
-        ? "/dashboard/courier/onboarding?step=2"
-        : "/dashboard/courier/onboarding?step=1";
-    }
-    return "/dashboard/courier";
   }
 
   return getRoleDashboardPath(user.role);

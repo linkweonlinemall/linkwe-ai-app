@@ -1,1 +1,35 @@
-Always read CLAUDE_CONTEXT.md before making any changes to this codebase. It contains the full map of routes, components, database models, brand tokens, and architecture decisions for LinkWe. Never guess file paths or component names — they are all in that document.
+# LinkWe — Cursor Rules
+
+LinkWe is a LIVE, in-production multi-vendor marketplace for Trinidad & Tobago.
+This is NOT a new build. Treat all existing code as real and working unless told otherwise.
+Before any change, read ALL_LINKWE.md at the project root — it is the authoritative map of the codebase.
+
+## Stack
+Next.js 16 (App Router), Prisma, PostgreSQL (Neon in production), Server Actions, Tailwind v4, Stripe, Cloudinary, Resend, Vercel.
+
+## Non-negotiable rules
+1. MUTATIONS via Server Actions only. Never create API routes for data mutations (API routes are only for webhooks and similar).
+2. DB access via Prisma only. Never write raw SQL in app code. Never delete dormant/unused models — they are intentional.
+3. PRODUCTION MIGRATIONS — never run prisma migrate dev, prisma db push, or prisma migrate reset against the production (Neon) database. Workflow: edit schema → create migration locally → prisma migrate deploy + prisma generate against LOCAL db only → report the FULL migration SQL + filename so the owner hand-applies it on Neon with a real _prisma_migrations checksum row. Enum changes (ALTER TYPE ... ADD VALUE) run as standalone statements, not inside a transaction.
+4. Local .env points to LOCAL Postgres only. Production uses Neon, configured in Vercel.
+5. After any schema change: prisma migrate deploy → prisma generate → restart the dev server (a stale Prisma client throws PrismaClientValidationError).
+6. Table casing is mixed — confirm real names via the schema, never assume.
+
+## Money / billing / subscription code (extra care — handles real vendor funds)
+- Read the actual current function before editing it. Never guess field names or logic.
+- Ledger writes use positive magnitudes; direction is set by entryType; every write uses an idempotencyKey and checks for an existing row before inserting.
+- Subscription state lives on Store: subscriptionPlan, subscriptionStatus, planRenewsAt, pastDueSince, stripeCustomerId, stripeSubscriptionId, autoRenew. Prices/limits come from lib/finance/plan-limits.ts — never hardcode prices.
+- Use the shared Stripe client in lib/stripe/stripe.ts (apiVersion 2026-03-25.dahlia). Never create a second Stripe instance. Subscriptions priced in TTD; account settles USD via Stripe FX.
+
+## Next.js correctness
+- redirect() never inside try/catch (causes NEXT_REDIRECT loop).
+- Dynamic route params are async: const { id } = await params.
+
+## Style
+- Match existing patterns/components — read neighbouring files first.
+- Brand: scarlet #D4450A, scarlet-hover #B83A09, amber #E8820C, dark #1C1C1A, page bg #F5F5F5, Sora font.
+- Keep changes scoped to what was asked. No unrelated refactors. No new dependencies without flagging.
+
+## Process
+- Make only the requested change. If something nearby looks broken, flag it — don't silently fix it.
+- After a change, report which files changed and confirm npm run build passes.

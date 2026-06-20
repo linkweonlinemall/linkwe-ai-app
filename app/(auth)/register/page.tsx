@@ -8,7 +8,7 @@ import { RegisterHubClient } from "./register-form";
 
 export const metadata: Metadata = {
   title: "Create account",
-  description: "Join LinkWe as a customer, vendor, or courier.",
+  description: "Join LinkWe as a customer or vendor.",
 };
 
 export default async function RegisterHubPage() {

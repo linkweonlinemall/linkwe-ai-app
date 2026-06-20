@@ -130,8 +130,7 @@ export default async function Home() {
     ? await prisma.user.findUnique({ where: { id: session.userId } })
     : null;
   const continueHref = user ? getRoleDashboardPath(user.role) : null;
-  const showHeroDashboard =
-    user?.role === "VENDOR" || user?.role === "COURIER";
+  const showHeroDashboard = user?.role === "VENDOR";
 
   const unreadCount = await getNavUnreadCount();
 

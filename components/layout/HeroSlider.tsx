@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 
 type Props = {
   continueHref: string | null;
-  /** Show "My dashboard" CTA (vendors & couriers only). */
+  /** Show "My dashboard" CTA (vendors only). */
   showDashboardButton?: boolean;
 };
 

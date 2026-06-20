@@ -8,7 +8,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { registerAction, type AuthFormState } from "../auth-actions";
 
-type SignupKind = "CUSTOMER" | "BUSINESS" | "COURIER";
+type SignupKind = "CUSTOMER" | "BUSINESS";
 
 const copy: Record<
   SignupKind,
@@ -33,13 +33,6 @@ const copy: Record<
     nameLabel: "Full name",
     nameHelp: "Legal or account holder name; store branding is set in onboarding.",
     submitLabel: "Create business account",
-  },
-  COURIER: {
-    title: "Courier account",
-    description: "Deliver LinkWe shipments. You will get the Courier role plus a quick orientation before tools go live.",
-    nameLabel: "Full name",
-    nameHelp: "Used for courier communications and payouts later.",
-    submitLabel: "Create courier account",
   },
 };
 
@@ -171,7 +164,7 @@ export function RegisterForm({
   );
 }
 
-type HubRole = "customer" | "vendor" | "courier";
+type HubRole = "customer" | "vendor";
 
 const HUB_ROLES: {
   id: HubRole;
@@ -191,18 +184,11 @@ const HUB_ROLES: {
     title: "Sell as Vendor",
     description: "Open your store and sell products",
   },
-  {
-    id: "courier",
-    icon: "🚗",
-    title: "Work as Courier",
-    description: "Deliver orders and earn money",
-  },
 ];
 
 const HUB_HREF: Record<HubRole, string> = {
   customer: "/register/customer",
   vendor: "/register/business",
-  courier: "/register/courier",
 };
 
 export function RegisterHubClient() {
