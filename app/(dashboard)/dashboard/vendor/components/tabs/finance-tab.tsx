@@ -85,6 +85,7 @@ type Props = {
   subPaidThisPeriod: boolean;
   isCardBilled: boolean;
   planRenewsAt: Date | string | null;
+  pastDueSince: Date | string | null;
 };
 
 function formatTTD(minor: number): string {
@@ -113,6 +114,7 @@ export default function FinanceTab({
   subPaidThisPeriod,
   isCardBilled,
   planRenewsAt,
+  pastDueSince,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -261,6 +263,10 @@ export default function FinanceTab({
   }
 
   const CARD = "rounded-[12px] border-[0.5px] border-[rgba(28,28,26,0.12)] bg-white";
+
+  const downgradeDate = pastDueSince
+    ? new Date(new Date(pastDueSince).getTime() + 7 * 24 * 60 * 60 * 1000)
+    : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -420,7 +426,30 @@ export default function FinanceTab({
               <p className="mt-2 text-[11px] font-medium text-zinc-600">
                 You&apos;re on the {planLabel}.
               </p>
-              {isCardBilled ? (
+              {subscriptionStatus === "PAST_DUE" ? (
+                <div className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2.5">
+                  <p className="text-[11px] font-medium text-red-700">
+                    ⚠️ Your last payment failed.
+                  </p>
+                  <p className="mt-1 text-[11px] text-red-600">
+                    {downgradeDate
+                      ? `Update your card by ${formatDate(downgradeDate)} or your plan will move to Starter.`
+                      : "Update your card soon or your plan will move to Starter."}
+                  </p>
+                  <button
+                    type="button"
+                    disabled={subscribing}
+                    onClick={() => void handleSubscribeByCard(plan)}
+                    className="mt-2 rounded-lg px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                    style={{ backgroundColor: "#D4450A" }}
+                  >
+                    {subscribing ? "Redirecting…" : "Update payment method"}
+                  </button>
+                  {subPayError ? (
+                    <p className="mt-2 text-[11px] text-red-600">{subPayError}</p>
+                  ) : null}
+                </div>
+              ) : isCardBilled ? (
                 <p className="mt-2 text-[11px] text-zinc-500">
                   💳 Billed automatically to your card
                   {planRenewsAt
