@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { saveGalleryUpload } from "@/lib/uploads/save-gallery-upload";
 import { isValidRegion, normalizeRegion } from "@/lib/regions/tt-regions";
 import { validateStoreSlug } from "@/lib/store/slug";
+import { normalizeOpeningHoursForDb } from "@/lib/store/opening-hours-utils";
 
 type TimeSlot = { from: string; to: string };
 type DaySchedule = { closed: boolean; allDay: boolean; slots: TimeSlot[] };
@@ -139,7 +140,7 @@ export async function updateStore(formData: FormData): Promise<void> {
       }
       openingHours[day] = { closed, allDay, slots };
     }
-    parsedOpeningHours = openingHours;
+    parsedOpeningHours = normalizeOpeningHoursForDb(parsedOpeningHours) ?? undefined;
   }
 
   const tagsRaw = String(formData.get("tags") ?? "").trim();

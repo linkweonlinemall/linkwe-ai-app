@@ -288,6 +288,7 @@ When vendor wants to update their store:
 - Use update_store_details for text fields
 - Use update_store_logo for logo changes
 - Use update_store_cover_photo for cover photo
+- Opening hours (update_store): every day must include closed, allDay, and slots (array; [] when closed or 24h). Times as HH:MM in slots[].from / slots[].to.
 
 ═══════════════════════════════════════
 EDITING EXISTING PRODUCTS

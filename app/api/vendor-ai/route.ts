@@ -355,7 +355,11 @@ const UPDATE_STORE_TOOL: Anthropic.Tool = {
       },
       policies: { type: "string", description: "Store policies text" },
       address: { type: "string", description: "Physical address" },
-      openingHours: { type: "object", description: "Opening hours as JSON" },
+      openingHours: {
+        type: "object",
+        description:
+          'Weekly opening hours keyed by lowercase day names (monday through sunday). Each day MUST be { closed: boolean, allDay: boolean, slots: Array<{ from: "HH:MM", to: "HH:MM" }> }. slots must always be an array — use [] when closed or allDay. Example: { monday: { closed: false, allDay: false, slots: [{ from: "09:00", to: "17:00" }] }, sunday: { closed: true, allDay: false, slots: [] } }',
+      },
       socialLinks: { type: "object", description: "Social links as JSON" },
       logoUrl: { type: "string", description: "Logo image URL" },
       coverPhotoUrl: { type: "string", description: "Cover photo URL" },

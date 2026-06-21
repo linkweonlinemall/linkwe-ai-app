@@ -14,6 +14,50 @@ export const WEEK_DAYS = [
 
 export type WeekDay = (typeof WEEK_DAYS)[number];
 
+const CLOSED_DAY_DEFAULT: DaySchedule = { closed: true, allDay: false, slots: [] };
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function normalizeDaySchedule(rawDay: unknown): DaySchedule {
+  if (!isPlainObject(rawDay)) {
+    return { ...CLOSED_DAY_DEFAULT };
+  }
+
+  let closed = Boolean(rawDay.closed);
+  const allDay = Boolean(rawDay.allDay);
+  const slots: TimeSlot[] = Array.isArray(rawDay.slots)
+    ? rawDay.slots
+        .filter((s): s is Record<string, unknown> => isPlainObject(s))
+        .map((s) => ({
+          from: typeof s.from === "string" ? s.from.trim() : "",
+          to: typeof s.to === "string" ? s.to.trim() : "",
+        }))
+        .filter((s) => s.from.length > 0 && s.to.length > 0)
+    : [];
+
+  if (!closed && !allDay && slots.length === 0) {
+    closed = true;
+  }
+
+  return { closed, allDay, slots };
+}
+
+/** Server-side write guard — coerces any incoming JSON to a complete, persist-safe WeekSchedule. */
+export function normalizeOpeningHoursForDb(raw: unknown): WeekSchedule | null {
+  if (raw == null || !isPlainObject(raw)) {
+    return null;
+  }
+
+  const schedule: WeekSchedule = {};
+  for (const day of WEEK_DAYS) {
+    schedule[day] =
+      raw[day] === undefined ? { ...CLOSED_DAY_DEFAULT } : normalizeDaySchedule(raw[day]);
+  }
+  return schedule;
+}
+
 export function getTodayKey(): WeekDay {
   const idx = new Date().getDay();
   const map: WeekDay[] = [

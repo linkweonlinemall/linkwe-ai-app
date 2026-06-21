@@ -2,6 +2,7 @@
 
 import { getSession } from "@/lib/auth/session"
 import { prisma } from "@/lib/prisma"
+import { normalizeOpeningHoursForDb } from "@/lib/store/opening-hours-utils"
 
 export async function getVendorStoreSummary() {
   const session = await getSession()
@@ -242,7 +243,7 @@ export async function updateVendorStoreFields(
   if (fields.amenities !== undefined) data.amenities = fields.amenities.map(a => a.trim()).filter(Boolean)
   if (fields.policies !== undefined) data.policies = fields.policies.trim() || null
   if (fields.address !== undefined) data.address = fields.address.trim() || null
-  if (fields.openingHours !== undefined) data.openingHours = fields.openingHours
+  if (fields.openingHours !== undefined) data.openingHours = normalizeOpeningHoursForDb(fields.openingHours)
   if (fields.socialLinks !== undefined) data.socialLinks = fields.socialLinks
   if (fields.logoUrl !== undefined) data.logoUrl = fields.logoUrl
   if (fields.coverPhotoUrl !== undefined) data.coverPhotoUrl = fields.coverPhotoUrl
