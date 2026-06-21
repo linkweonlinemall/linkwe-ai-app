@@ -43,8 +43,9 @@ function parseTimeToMinutes(value: string): number | null {
 export function formatDayHours(schedule: DaySchedule | undefined): string {
   if (!schedule || schedule.closed) return "Closed";
   if (schedule.allDay) return "Open 24 hours";
-  if (!schedule.slots.length) return "Closed";
-  return schedule.slots.map((s) => `${s.from} – ${s.to}`).join(", ");
+  const slots = schedule.slots ?? [];
+  if (!slots.length) return "Closed";
+  return slots.map((s) => `${s.from} – ${s.to}`).join(", ");
 }
 
 export function getStoreOpenStatus(openingHours: WeekSchedule | null): {
@@ -64,13 +65,14 @@ export function getStoreOpenStatus(openingHours: WeekSchedule | null): {
   if (day.allDay) {
     return { isOpen: true, label: "Open now", detail: "Open 24 hours today" };
   }
-  if (!day.slots.length) {
+  const slots = day.slots ?? [];
+  if (!slots.length) {
     return { isOpen: false, label: "Closed today", detail: "No hours listed for today" };
   }
 
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  for (const slot of day.slots) {
+  for (const slot of slots) {
     const from = parseTimeToMinutes(slot.from);
     const to = parseTimeToMinutes(slot.to);
     if (from == null || to == null) continue;
@@ -79,7 +81,7 @@ export function getStoreOpenStatus(openingHours: WeekSchedule | null): {
     }
   }
 
-  const nextSlot = day.slots[0];
+  const nextSlot = slots[0];
   return {
     isOpen: false,
     label: "Closed now",

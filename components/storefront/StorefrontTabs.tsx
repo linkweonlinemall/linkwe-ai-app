@@ -192,7 +192,7 @@ function StoreTabProductCard({ product }: { product: StoreTabProduct }) {
           <div className="mt-auto flex items-center justify-between border-t border-zinc-100 pt-2">
             <div>
               <p className="text-base font-black" style={{ color: "var(--scarlet)" }}>
-                TTD {product.price.toFixed(2)}
+                TTD {(product.price ?? 0).toFixed(2)}
               </p>
               {compareAt && compareAt > product.price ? (
                 <p className="-mt-0.5 text-xs text-zinc-400 line-through">TTD {compareAt.toFixed(2)}</p>
@@ -694,7 +694,7 @@ export default function StorefrontTabs({
                           <div className="mt-auto flex items-center justify-between border-t border-zinc-100 pt-2">
                             <div>
                               <p className="text-sm font-black text-[#D4450A]">
-                                TTD {service.price.toFixed(2)}
+                                TTD {(service.price ?? 0).toFixed(2)}
                               </p>
                               {service.serviceDuration ? (
                                 <p className="text-[10px] text-zinc-400">

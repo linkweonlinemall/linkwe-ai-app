@@ -218,7 +218,7 @@ function ProductRow({ product }: { product: ProductPreview }) {
       </div>
       <div className="flex shrink-0 items-center gap-2" onClick={(e) => e.stopPropagation()}>
         <p className="text-[13px] font-medium" style={{ color: SCARLET }}>
-          TTD {product.price.toFixed(2)}
+          TTD {(product.price ?? 0).toFixed(2)}
         </p>
         <StoreCompactCartButton
           productId={product.id}
@@ -268,7 +268,7 @@ function ServiceRow({ service }: { service: ServicePreview }) {
       </div>
       <div className="flex shrink-0 items-center gap-2" onClick={(e) => e.stopPropagation()}>
         <p className="text-[13px] font-medium" style={{ color: BLUE }}>
-          TTD {service.price.toFixed(2)}
+          TTD {(service.price ?? 0).toFixed(2)}
         </p>
         <Link
           href={`/service/${service.slug}`}
@@ -327,18 +327,21 @@ export default function StoreAboutTab({
       : null,
   ].filter((item): item is { key: string; platform: string; url: string } => item != null);
 
+  const amenities = store.amenities ?? [];
+  const tags = store.tags ?? [];
+
   const amenityLimit = 5;
-  const hasMoreAmenities = store.amenities.length > amenityLimit;
+  const hasMoreAmenities = amenities.length > amenityLimit;
   const visibleAmenities =
     amenitiesExpanded || !hasMoreAmenities
-      ? store.amenities
-      : store.amenities.slice(0, amenityLimit);
-  const hiddenAmenityCount = store.amenities.length - amenityLimit;
+      ? amenities
+      : amenities.slice(0, amenityLimit);
+  const hiddenAmenityCount = amenities.length - amenityLimit;
 
   const tagLimit = 8;
-  const hasMoreTags = store.tags.length > tagLimit;
-  const visibleTags = tagsExpanded || !hasMoreTags ? store.tags : store.tags.slice(0, tagLimit);
-  const hiddenTagCount = store.tags.length - tagLimit;
+  const hasMoreTags = tags.length > tagLimit;
+  const visibleTags = tagsExpanded || !hasMoreTags ? tags : tags.slice(0, tagLimit);
+  const hiddenTagCount = tags.length - tagLimit;
 
   const galleryImages = store.images ?? [];
   const masonryImages = galleryImages.slice(0, 5);
@@ -567,7 +570,7 @@ export default function StoreAboutTab({
             )}
           </div>
 
-          {store.amenities.length > 0 ? (
+          {amenities.length > 0 ? (
             <div className="mb-3.5 overflow-hidden rounded-xl border border-[0.5px] border-[var(--color-border-tertiary)] bg-white">
               <div className="flex items-center gap-2 border-b border-[0.5px] border-[var(--color-border-tertiary)] px-4 py-3">
                 <Sparkles className="size-[15px] text-[var(--text-muted)]" strokeWidth={1.75} aria-hidden />
@@ -635,7 +638,7 @@ export default function StoreAboutTab({
             </div>
           ) : null}
 
-          {store.tags.length > 0 ? (
+          {tags.length > 0 ? (
             <div className="overflow-hidden rounded-xl border border-[0.5px] border-[var(--color-border-tertiary)] bg-white">
               <div className="flex items-center gap-2 border-b border-[0.5px] border-[var(--color-border-tertiary)] px-4 py-3">
                 <IconTag className="size-[15px] text-[var(--text-muted)]" stroke={1.75} aria-hidden />
