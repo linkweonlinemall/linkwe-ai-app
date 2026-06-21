@@ -10,22 +10,38 @@ const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"
 
 const DEFAULT_SLOT = { from: "08:00", to: "17:00" };
 
+function defaultDaySchedule(day: (typeof DAYS)[number]): DaySchedule {
+  const isWeekend = day === "saturday" || day === "sunday";
+  return {
+    closed: isWeekend,
+    allDay: false,
+    slots: isWeekend ? [] : [{ ...DEFAULT_SLOT }],
+  };
+}
+
+/** In-memory only — coerces malformed DB JSON so slots is always an array. */
+function normalizeHours(initialHours: WeekSchedule): WeekSchedule {
+  const normalized: WeekSchedule = {};
+  for (const day of DAYS) {
+    const entry = initialHours[day];
+    if (!entry || typeof entry !== "object") {
+      normalized[day] = defaultDaySchedule(day);
+      continue;
+    }
+    const closed = typeof entry.closed === "boolean" ? entry.closed : defaultDaySchedule(day).closed;
+    const allDay = typeof entry.allDay === "boolean" ? entry.allDay : false;
+    const slots = Array.isArray(entry.slots) ? entry.slots : [];
+    normalized[day] = { closed, allDay, slots };
+  }
+  return normalized;
+}
+
 type Props = {
   initialHours: WeekSchedule;
 };
 
 export default function OpeningHoursEditor({ initialHours }: Props) {
-  const [schedule, setSchedule] = useState<WeekSchedule>(() => {
-    const s: WeekSchedule = {};
-    for (const day of DAYS) {
-      s[day] = initialHours[day] ?? {
-        closed: day === "saturday" || day === "sunday",
-        allDay: false,
-        slots: day === "saturday" || day === "sunday" ? [] : [{ ...DEFAULT_SLOT }],
-      };
-    }
-    return s;
-  });
+  const [schedule, setSchedule] = useState<WeekSchedule>(() => normalizeHours(initialHours));
 
   function updateDay(day: string, patch: Partial<DaySchedule>) {
     setSchedule((prev) => ({
@@ -94,7 +110,7 @@ export default function OpeningHoursEditor({ initialHours }: Props) {
                     const nowClosed = !d.closed;
                     updateDay(day, {
                       closed: nowClosed,
-                      slots: nowClosed ? [] : d.slots.length > 0 ? d.slots : [{ ...DEFAULT_SLOT }],
+                      slots: nowClosed ? [] : (d.slots ?? []).length > 0 ? (d.slots ?? []) : [{ ...DEFAULT_SLOT }],
                     });
                   }}
                   className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all ${
@@ -149,7 +165,7 @@ export default function OpeningHoursEditor({ initialHours }: Props) {
 
             {!d.closed && !d.allDay ? (
               <div className="ml-28 flex flex-col gap-2 sm:ml-32">
-                {d.slots.map((slot, i) => (
+                {(d.slots ?? []).map((slot, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <input
                       type="time"
@@ -166,7 +182,7 @@ export default function OpeningHoursEditor({ initialHours }: Props) {
                       name={`hours_${day}_to_${i}`}
                       className="w-36 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm focus:border-[#D4450A] focus:outline-none"
                     />
-                    {i === 0 && d.slots.length < 3 ? (
+                    {i === 0 && (d.slots ?? []).length < 3 ? (
                       <button
                         type="button"
                         onClick={() => addSlot(day)}
@@ -188,7 +204,7 @@ export default function OpeningHoursEditor({ initialHours }: Props) {
                     ) : null}
                   </div>
                 ))}
-                {d.slots.length === 0 ? (
+                {(d.slots ?? []).length === 0 ? (
                   <button
                     type="button"
                     onClick={() => addSlot(day)}
@@ -206,7 +222,7 @@ export default function OpeningHoursEditor({ initialHours }: Props) {
 
             <input type="hidden" name={`hours_${day}_closed`} value={d.closed ? "on" : ""} />
             <input type="hidden" name={`hours_${day}_allDay`} value={d.allDay ? "on" : ""} />
-            <input type="hidden" name={`hours_${day}_slotCount`} value={String(d.slots.length)} />
+            <input type="hidden" name={`hours_${day}_slotCount`} value={String((d.slots ?? []).length)} />
           </div>
         );
       })}
