@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { isStoreSellable } from "@/lib/store/sellable-store";
 
 export async function getCart() {
   const session = await getSession();
@@ -60,10 +61,21 @@ export async function addToCart(
 
   const product = await prisma.product.findUnique({
     where: { id: productId },
-    select: { id: true, stock: true, isPublished: true, hasVariants: true },
+    select: {
+      id: true,
+      stock: true,
+      isPublished: true,
+      hasVariants: true,
+      store: {
+        select: {
+          status: true,
+          owner: { select: { idVerificationStatus: true } },
+        },
+      },
+    },
   });
 
-  if (!product || !product.isPublished) {
+  if (!product || !product.isPublished || !isStoreSellable(product.store)) {
     return { ok: false, error: "product_not_found" };
   }
 
@@ -180,12 +192,26 @@ export async function addEventTicketToCart(
       isVisible: true,
       saleStartDate: true,
       saleEnds: true,
-      event: { select: { status: true, title: true } },
+      event: {
+        select: {
+          status: true,
+          title: true,
+          store: {
+            select: {
+              status: true,
+              owner: { select: { idVerificationStatus: true } },
+            },
+          },
+        },
+      },
     },
   });
 
   if (!ticketType) return { ok: false, error: "Ticket type not found.", code: "ticket_type_not_found" };
   if (ticketType.event.status !== "PUBLISHED") return { ok: false, error: "This event is not available.", code: "event_not_published" };
+  if (!isStoreSellable(ticketType.event.store)) {
+    return { ok: false, error: "This event is not available.", code: "event_not_published" };
+  }
   if (!ticketType.isVisible) return { ok: false, error: "These tickets are not on sale.", code: "not_visible" };
 
   const now = new Date();

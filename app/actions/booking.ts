@@ -20,6 +20,7 @@ import {
 } from "@/lib/booking/slots";
 import { parseStoreOpeningHours } from "@/lib/services/opening-hours";
 import { getAvailableSlots } from "@/lib/services/get-available-slots";
+import { isStoreSellable } from "@/lib/store/sellable-store";
 import {
   calendarDateAnchorTrinidad,
   dayRangeTrinidad,
@@ -184,7 +185,14 @@ export async function createBooking(input: {
       availableTo: true,
       isAvailable: true,
       storeId: true,
-      store: { select: { id: true, openingHours: true } },
+      store: {
+        select: {
+          id: true,
+          openingHours: true,
+          status: true,
+          owner: { select: { idVerificationStatus: true } },
+        },
+      },
       bookingSlots: {
         where: {
           date: { gte: dayStart, lte: dayEnd },
@@ -202,6 +210,8 @@ export async function createBooking(input: {
   });
 
   if (!service) return { error: "Service not found" };
+
+  if (!isStoreSellable(service.store)) return { error: "Service not found" };
 
   if (!service.isAvailable) return { error: "slot_unavailable" };
 
@@ -335,11 +345,22 @@ export async function createBookingPaymentIntent(
       id: true,
       status: true,
       totalPrice: true,
-      product: { select: { depositAmount: true } },
+      product: {
+        select: {
+          depositAmount: true,
+          store: {
+            select: {
+              status: true,
+              owner: { select: { idVerificationStatus: true } },
+            },
+          },
+        },
+      },
     },
   });
 
   if (!booking) return { error: "Booking not found" };
+  if (!isStoreSellable(booking.product.store)) return { error: "Booking not found" };
   if (booking.status !== BookingStatus.PENDING) {
     return { error: "This booking is not awaiting payment" };
   }

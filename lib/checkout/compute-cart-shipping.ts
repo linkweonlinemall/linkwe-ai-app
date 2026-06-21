@@ -53,7 +53,14 @@ const checkoutCartInclude = {
       weight: true,
       weightUnit: true,
       isDigital: true,
-      store: { select: { id: true, name: true } },
+      store: {
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          owner: { select: { idVerificationStatus: true } },
+        },
+      },
     },
   },
 } as const;

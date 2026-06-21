@@ -15,6 +15,7 @@ import {
   assertAvailableSeatsForCheckout,
   InsufficientSeatsError,
 } from "@/lib/tickets/sold-counts";
+import { isStoreSellable } from "@/lib/store/sellable-store";
 
 export type CreateTicketPaymentIntentResult =
   | { ok: true; clientSecret: string; ticketOrderId: string; free: false }
@@ -117,10 +118,24 @@ export async function createTicketPaymentIntent(
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    select: { id: true, title: true, isPublished: true, status: true },
+    select: {
+      id: true,
+      title: true,
+      isPublished: true,
+      status: true,
+      store: {
+        select: {
+          status: true,
+          owner: { select: { idVerificationStatus: true } },
+        },
+      },
+    },
   });
   if (!event) return { ok: false, error: "Event not found." };
   if (!event.isPublished || event.status !== "PUBLISHED") {
+    return { ok: false, error: "This event is not available for ticket purchase." };
+  }
+  if (!isStoreSellable(event.store)) {
     return { ok: false, error: "This event is not available for ticket purchase." };
   }
 

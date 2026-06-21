@@ -19,6 +19,7 @@ import { BASE_URL } from "@/lib/email/resend";
 import { VENDOR_DASHBOARD_ORDERS_TAB_HREF } from "@/lib/routes/vendor-dashboard";
 import { createNotification } from "@/app/actions/notifications";
 import { NotificationType } from "@prisma/client";
+import { isStoreSellable } from "@/lib/store/sellable-store";
 
 export type CheckoutItem = {
   productId: string;
@@ -73,6 +74,9 @@ export async function createPaymentIntent(
 
   for (const item of cartItems) {
     if (!item.product.isPublished) {
+      return { ok: false, error: `${item.product.name} is no longer available.` };
+    }
+    if (!isStoreSellable(item.product.store)) {
       return { ok: false, error: `${item.product.name} is no longer available.` };
     }
     if (item.product.stock !== null && item.product.stock < item.quantity) {

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe/stripe";
+import { isStoreSellable } from "@/lib/store/sellable-store";
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
@@ -31,12 +32,24 @@ export async function POST(req: NextRequest) {
       status: true,
       totalPrice: true,
       product: {
-        select: { depositAmount: true },
+        select: {
+          depositAmount: true,
+          store: {
+            select: {
+              status: true,
+              owner: { select: { idVerificationStatus: true } },
+            },
+          },
+        },
       },
     },
   });
 
   if (!booking) {
+    return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+  }
+
+  if (!isStoreSellable(booking.product.store)) {
     return NextResponse.json({ error: "Booking not found" }, { status: 404 });
   }
 
