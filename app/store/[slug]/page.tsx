@@ -15,6 +15,7 @@ import { getApprovedPartnerContent } from "@/app/actions/cross-store";
 import { getSavedStoreIds } from "@/app/actions/wishlist";
 import { getStoreReviewsNew, getUserStoreReview } from "@/app/actions/reviews";
 import { tw } from "@/lib/design-system";
+import { isStoreSellable } from "@/lib/store/sellable-store";
 
 type WeekSchedule = Record<
   string,
@@ -30,14 +31,32 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: "Store — LinkWe", description: "Shop on LinkWe" };
   }
 
+  const session = await getSession();
+
   const store = await prisma.store.findUnique({
     where: { slug: normalized },
-    select: { name: true, tagline: true },
+    select: {
+      name: true,
+      tagline: true,
+      ownerId: true,
+      status: true,
+      owner: { select: { idVerificationStatus: true } },
+    },
   });
 
+  if (!store) {
+    return { title: "Store — LinkWe", description: "Shop on LinkWe" };
+  }
+
+  const isOwner = session != null && store.ownerId === session.userId;
+  const isAdmin = session?.role === "ADMIN";
+  if (!isStoreSellable(store) && !isOwner && !isAdmin) {
+    return { title: "Store — LinkWe", description: "Shop on LinkWe" };
+  }
+
   return {
-    title: store ? `${store.name} — LinkWe` : "Store — LinkWe",
-    description: store?.tagline ?? "Shop on LinkWe",
+    title: `${store.name} — LinkWe`,
+    description: store.tagline ?? "Shop on LinkWe",
   };
 }
 
@@ -101,6 +120,10 @@ export default async function PublicStorePage({ params }: Props) {
   const isOwner = session != null && store.ownerId === session.userId;
   const isAdmin = session?.role === "ADMIN";
   const canEditStore = isOwner || isAdmin;
+
+  if (!isStoreSellable(store) && !canEditStore) {
+    notFound();
+  }
 
   const savedStoreIds = await getSavedStoreIds();
   const isSaved = savedStoreIds.includes(store.id);

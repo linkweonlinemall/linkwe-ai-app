@@ -24,6 +24,7 @@ import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { prisma } from "@/lib/prisma";
 import { typography, radius, shadow, spacing, tw } from "@/lib/design-system";
+import { isStoreSellable } from "@/lib/store/sellable-store";
 
 function formatLabel(value: string): string {
   return value
@@ -139,11 +140,25 @@ export default async function PublicProductPage({ params }: Props) {
       downloadExpiryDays: true,
       previewUrl: true,
       licenceType: true,
-      store: { select: { name: true, slug: true, logoUrl: true, region: true } },
+      store: {
+        select: {
+          name: true,
+          slug: true,
+          logoUrl: true,
+          region: true,
+          ownerId: true,
+          status: true,
+          owner: { select: { idVerificationStatus: true } },
+        },
+      },
     },
   });
 
   if (!product?.isPublished) notFound();
+
+  const isOwner = session != null && product.store.ownerId === session.userId;
+  const isAdmin = session?.role === "ADMIN";
+  if (!isStoreSellable(product.store) && !isOwner && !isAdmin) notFound();
 
   const [reviewData, userReview, { items: linkedItems }, featureButtonState] =
     await Promise.all([

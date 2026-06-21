@@ -33,6 +33,7 @@ import {
   formatEventTime,
 } from "@/lib/events/format-datetime";
 import { prisma } from "@/lib/prisma";
+import { isStoreSellable } from "@/lib/store/sellable-store";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -72,7 +73,15 @@ export default async function EventDetailPage({ params }: Props) {
     where: { slug },
     include: {
       store: {
-        select: { name: true, slug: true, logoUrl: true, region: true },
+        select: {
+          name: true,
+          slug: true,
+          logoUrl: true,
+          region: true,
+          ownerId: true,
+          status: true,
+          owner: { select: { idVerificationStatus: true } },
+        },
       },
       ticketTypes: {
         where: { isVisible: true },
@@ -84,6 +93,10 @@ export default async function EventDetailPage({ params }: Props) {
   if (!event || (event.status !== "PUBLISHED" && event.status !== "CANCELLED")) {
     notFound();
   }
+
+  const isOwner = session != null && event.store.ownerId === session.userId;
+  const isAdmin = session?.role === "ADMIN";
+  if (!isStoreSellable(event.store) && !isOwner && !isAdmin) notFound();
 
   const now = new Date();
   const isPast = new Date(event.startDate) < now;

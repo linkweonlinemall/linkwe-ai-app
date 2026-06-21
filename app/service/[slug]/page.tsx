@@ -20,6 +20,7 @@ import ExpandableDescription from "@/components/ui/ExpandableDescription";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { getServiceCategoryLabel } from "@/lib/categories";
 import { prisma } from "@/lib/prisma";
+import { isStoreSellable } from "@/lib/store/sellable-store";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -142,12 +143,19 @@ export default async function ServiceDetailPage({ params }: Props) {
           region: true,
           logoUrl: true,
           isAvailableNow: true,
+          ownerId: true,
+          status: true,
+          owner: { select: { idVerificationStatus: true } },
         },
       },
     },
   });
 
   if (!service || !service.isPublished || !service.isService) notFound();
+
+  const isOwner = session != null && service.store.ownerId === session.userId;
+  const isAdmin = session?.role === "ADMIN";
+  if (!isStoreSellable(service.store) && !isOwner && !isAdmin) notFound();
 
   const bookingData =
     service.serviceType === "BOOKABLE" || service.serviceType === "VIRTUAL"
