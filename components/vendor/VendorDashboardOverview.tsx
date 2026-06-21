@@ -18,7 +18,9 @@ import {
   IconTrendingUp,
 } from "@tabler/icons-react";
 import { Clock, ShieldCheck } from "lucide-react";
-import type { IdVerificationStatus } from "@prisma/client";
+import type { IdVerificationStatus, StoreStatus } from "@prisma/client";
+
+import GoLiveButton from "@/app/(dashboard)/dashboard/vendor/components/go-live-button";
 
 import type { VendorSplitOrder } from "@/app/(dashboard)/dashboard/vendor/components/tabs/orders-tab";
 import type { VendorDashboardAnalytics } from "@/lib/vendor/vendor-dashboard-analytics";
@@ -104,6 +106,8 @@ export default function VendorDashboardOverview(props: {
   completenessItems: ProfileRowSource[];
   idVerificationStatus: IdVerificationStatus;
   store: {
+    id: string;
+    status: StoreStatus;
     name: string;
     slug: string;
     categoryId: string;
@@ -351,7 +355,7 @@ export default function VendorDashboardOverview(props: {
             </div>
           </div>
 
-          {idVerificationStatus === "APPROVED" ? (
+          {idVerificationStatus === "APPROVED" && store.status === "ACTIVE" ? (
             <div className="mx-0 mb-4 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500">
                 <ShieldCheck size={16} className="text-white" />
@@ -359,6 +363,19 @@ export default function VendorDashboardOverview(props: {
               <div>
                 <p className="text-sm font-semibold text-emerald-800">Confirmed to sell</p>
                 <p className="mt-0.5 text-xs text-emerald-600">Store verified and active</p>
+              </div>
+            </div>
+          ) : idVerificationStatus === "APPROVED" ? (
+            <div className="mx-0 mb-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-400">
+                <ShieldCheck size={16} className="text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-amber-800">Identity verified — not live yet</p>
+                <p className="mt-0.5 text-xs text-amber-600">Click Go live to publish your store.</p>
+                <div className="mt-2">
+                  <GoLiveButton storeId={store.id} />
+                </div>
               </div>
             </div>
           ) : idVerificationStatus === "PENDING" ? (

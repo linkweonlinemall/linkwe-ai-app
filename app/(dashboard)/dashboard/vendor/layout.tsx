@@ -30,6 +30,7 @@ export default async function VendorDashboardLayout({
       name: true,
       slug: true,
       logoUrl: true,
+      status: true,
       subscriptionPlan: true,
       subscriptionStatus: true,
     },
@@ -54,6 +55,8 @@ export default async function VendorDashboardLayout({
       storeName={fullStore.name}
       storeSlug={fullStore.slug}
       storeLogoUrl={fullStore.logoUrl}
+      storeStatus={fullStore.status}
+      idVerificationStatus={user.idVerificationStatus}
       userFirstName={firstName}
       unreadCount={unreadCount}
       pendingRequestsCount={counts.pendingRequestsCount}

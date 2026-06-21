@@ -23,6 +23,8 @@ import {
   IconUsers,
 } from "@tabler/icons-react";
 
+import type { IdVerificationStatus, StoreStatus } from "@prisma/client";
+
 import {
   VENDOR_VENDOR_FINANCE_PATH,
   VENDOR_VENDOR_MESSAGES_PATH,
@@ -55,10 +57,31 @@ function isHrefActive(pathname: string, searchParams: ReadonlyURLSearchParams, h
   return pathname.startsWith(`${wantPath}/`);
 }
 
+function storeStatusSubtitle(
+  idVerificationStatus: IdVerificationStatus,
+  storeStatus: StoreStatus,
+): { label: string; dotClass: string } {
+  if (idVerificationStatus !== "APPROVED") {
+    if (idVerificationStatus === "PENDING") {
+      return { label: "Verification pending", dotClass: "bg-amber-400" };
+    }
+    if (idVerificationStatus === "REJECTED") {
+      return { label: "Verification required", dotClass: "bg-red-400" };
+    }
+    return { label: "Setup in progress", dotClass: "bg-zinc-400" };
+  }
+  if (storeStatus === "ACTIVE") {
+    return { label: "Live on LinkWe", dotClass: "bg-emerald-500" };
+  }
+  return { label: "Not live yet", dotClass: "bg-amber-400" };
+}
+
 export type VendorDashboardSidebarProps = {
   storeName: string;
   storeSlug: string;
   storeLogoUrl: string | null;
+  storeStatus: StoreStatus;
+  idVerificationStatus: IdVerificationStatus;
   pendingRequestsCount: number;
   activeOrdersCount: number;
 };
@@ -75,11 +98,14 @@ export default function VendorDashboardSidebar({
   storeName,
   storeSlug,
   storeLogoUrl: _storeLogoUrl,
+  storeStatus,
+  idVerificationStatus,
   pendingRequestsCount,
   activeOrdersCount,
 }: VendorDashboardSidebarProps) {
   const pathname = usePathname() ?? "";
   const searchParams = useSearchParams();
+  const statusSubtitle = storeStatusSubtitle(idVerificationStatus, storeStatus);
 
   const MAIN: NavLeaf[] = [
     { href: "/dashboard/vendor", label: "Dashboard", Icon: IconLayoutDashboard, exact: true },
@@ -185,10 +211,10 @@ export default function VendorDashboardSidebar({
               <p className="truncate text-[12px] font-medium leading-tight text-white">{storeName}</p>
               <p className="mt-1 flex items-center gap-1.5 text-[10px] text-[rgba(255,255,255,0.55)]">
                 <span className="relative inline-flex size-2">
-                  <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex size-2 rounded-full bg-emerald-500 ring-2 ring-[#1C1C1A]" />
+                  <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${statusSubtitle.dotClass}`} />
+                  <span className={`relative inline-flex size-2 rounded-full ring-2 ring-[#1C1C1A] ${statusSubtitle.dotClass}`} />
                 </span>
-                Live on LinkWe
+                {statusSubtitle.label}
               </p>
             </div>
           </div>

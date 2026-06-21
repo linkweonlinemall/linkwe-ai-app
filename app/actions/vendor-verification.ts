@@ -105,10 +105,51 @@ export async function adminVerifyId(userId: string, approve: boolean) {
     },
   });
 
-  await prisma.store.updateMany({
-    where: { ownerId: userId },
-    data: { status: approve ? "ACTIVE" : "DRAFT" },
+  if (!approve) {
+    await prisma.store.updateMany({
+      where: { ownerId: userId, status: "ACTIVE" },
+      data: { status: "PENDING_APPROVAL" },
+    });
+  }
+
+  return { ok: true as const };
+}
+
+export async function setStoreLive(
+  storeId: string,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const session = await getSession();
+  if (!session || session.role !== "VENDOR") redirect("/login");
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { idVerificationStatus: true },
   });
+  if (!user || user.idVerificationStatus !== "APPROVED") {
+    return { ok: false as const, reason: "not_verified" };
+  }
+
+  const id = storeId.trim();
+  if (!id) return { ok: false as const, reason: "missing_store" };
+
+  const store = await prisma.store.findFirst({
+    where: { id, ownerId: session.userId },
+    select: { id: true, slug: true, status: true },
+  });
+  if (!store) return { ok: false as const, reason: "not_owner" };
+
+  if (store.status !== "ACTIVE") {
+    await prisma.store.update({
+      where: { id: store.id },
+      data: { status: "ACTIVE" },
+    });
+  }
+
+  revalidatePath("/dashboard/vendor");
+  revalidatePath("/dashboard/vendor/store/edit");
+  if (store.slug) {
+    revalidatePath(`/store/${store.slug}`);
+  }
 
   return { ok: true as const };
 }

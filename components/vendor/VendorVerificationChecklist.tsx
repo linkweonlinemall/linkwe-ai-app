@@ -4,8 +4,9 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import type { IdVerificationStatus } from "@prisma/client";
+import type { IdVerificationStatus, StoreStatus } from "@prisma/client";
 
+import GoLiveButton from "@/app/(dashboard)/dashboard/vendor/components/go-live-button";
 import { savePayoutDetails, uploadIdDocument } from "@/app/actions/vendor-verification";
 import { toastChangesSaved, toastImageUploaded } from "@/lib/feedback/toasts";
 import { maskBankAccountBullets } from "@/lib/format/banking";
@@ -24,6 +25,8 @@ const TT_BANKS = [
 
 type Props = {
   idStatus: IdVerificationStatus;
+  storeStatus?: StoreStatus;
+  storeId?: string;
   idDocumentUrl: string | null;
   bankName: string | null;
   accountName: string | null;
@@ -35,6 +38,8 @@ type Props = {
 
 export default function VendorVerificationChecklist({
   idStatus,
+  storeStatus,
+  storeId,
   idDocumentUrl,
   bankName,
   accountName,
@@ -53,6 +58,7 @@ export default function VendorVerificationChecklist({
   const [hasPayout, setHasPayout] = useState(Boolean(bankName && accountName && accountNumber));
 
   const idConfirmed = currentIdStatus === "APPROVED";
+  const storeLive = storeStatus === "ACTIVE";
   const idPending = currentIdStatus === "PENDING";
   const idRejected = currentIdStatus === "REJECTED";
   const idUnsubmitted = currentIdStatus === "UNSUBMITTED";
@@ -105,8 +111,25 @@ export default function VendorVerificationChecklist({
             : "border-b border-zinc-100 px-5 py-4"
         }
       >
-        <h2 className="text-sm font-bold text-zinc-900">Confirmed to sell</h2>
-        <p className="mt-0.5 text-xs text-zinc-500">Complete these steps to start selling on LinkWe</p>
+        <h2 className="text-sm font-bold text-zinc-900">
+          {idConfirmed && storeLive
+            ? "Confirmed to sell"
+            : idConfirmed
+              ? "Verified — not live yet"
+              : "Sell on LinkWe"}
+        </h2>
+        <p className="mt-0.5 text-xs text-zinc-500">
+          {idConfirmed && storeLive
+            ? "Your store is live on LinkWe"
+            : idConfirmed
+              ? "Click Go live when you're ready to publish"
+              : "Complete these steps to start selling on LinkWe"}
+        </p>
+        {idConfirmed && !storeLive && storeId ? (
+          <div className="mt-3">
+            <GoLiveButton storeId={storeId} />
+          </div>
+        ) : null}
       </div>
 
       <div className={embedded ? "border-b border-zinc-100 py-4" : "border-b border-zinc-100 px-5 py-4"}>

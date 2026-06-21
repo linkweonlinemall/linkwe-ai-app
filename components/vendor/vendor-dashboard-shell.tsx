@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { usePathname } from "next/navigation";
+import type { IdVerificationStatus, StoreStatus } from "@prisma/client";
 
 import VendorDashboardSidebar from "@/components/vendor/vendor-dashboard-sidebar";
 import VendorDashboardTopbar from "@/components/vendor/vendor-dashboard-topbar";
@@ -13,6 +14,8 @@ export type VendorDashboardShellProps = {
   storeName: string;
   storeSlug: string;
   storeLogoUrl: string | null;
+  storeStatus: StoreStatus;
+  idVerificationStatus: IdVerificationStatus;
   userFirstName: string;
   unreadCount: number;
   pendingRequestsCount: number;
@@ -25,6 +28,8 @@ export default function VendorDashboardShell({
   storeName,
   storeSlug,
   storeLogoUrl,
+  storeStatus,
+  idVerificationStatus,
   userFirstName,
   unreadCount,
   pendingRequestsCount,
@@ -50,6 +55,8 @@ export default function VendorDashboardShell({
           storeName={storeName}
           storeSlug={storeSlug}
           storeLogoUrl={storeLogoUrl}
+          storeStatus={storeStatus}
+          idVerificationStatus={idVerificationStatus}
           pendingRequestsCount={pendingRequestsCount}
           activeOrdersCount={activeOrdersCount}
         />

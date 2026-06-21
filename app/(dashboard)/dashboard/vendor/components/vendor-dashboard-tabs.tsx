@@ -142,6 +142,8 @@ export default function VendorDashboardTabs({
         reviewSummary={reviewSummary}
         idVerificationStatus={idVerificationStatus}
         store={{
+          id: store.id,
+          status: store.status,
           name: store.name,
           slug: store.slug,
           categoryId: store.categoryId,

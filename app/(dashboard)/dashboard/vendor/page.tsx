@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { ShieldCheck } from "lucide-react";
 
+import GoLiveButton from "@/app/(dashboard)/dashboard/vendor/components/go-live-button";
 import VendorDashboardTabs from "@/app/(dashboard)/dashboard/vendor/components/vendor-dashboard-tabs";
 import VendorVerificationChecklist from "@/components/vendor/VendorVerificationChecklist";
 import { getSession } from "@/lib/auth/session";
@@ -160,16 +161,29 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
       dashboardErrorMessage={dashboardErrorMessage}
       idVerificationStatus={user.idVerificationStatus}
       verificationApprovedBanner={
-        user.idVerificationStatus === "APPROVED" ? (
+        user.idVerificationStatus === "APPROVED" && store.status === "ACTIVE" ? (
           <div
-            key="verification-banner"
+            key="verification-banner-live"
             className={`mt-3 flex items-center gap-2 ${radius.card} border border-y border-r border-emerald-100 border-l-4 bg-emerald-50/80 px-4 py-2.5 ${shadow.card}`}
             style={{ borderLeftColor: colors.success }}
           >
             <ShieldCheck className="size-4 shrink-0 text-emerald-700" aria-hidden strokeWidth={2.25} />
-            <div>
+            <div className="min-w-0 flex-1">
               <p className="text-xs font-bold text-emerald-800">Confirmed to sell</p>
-              <p className="text-[10px] text-emerald-600">Identity verified — store is live on LinkWe</p>
+              <p className="text-[10px] text-emerald-600">Identity verified — your store is live.</p>
+            </div>
+          </div>
+        ) : user.idVerificationStatus === "APPROVED" ? (
+          <div
+            key="verification-banner-not-live"
+            className={`mt-3 flex items-center gap-2 ${radius.card} border border-y border-r border-amber-100 border-l-4 bg-amber-50/80 px-4 py-2.5 ${shadow.card}`}
+            style={{ borderLeftColor: "#F59E0B" }}
+          >
+            <ShieldCheck className="size-4 shrink-0 text-amber-700" aria-hidden strokeWidth={2.25} />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-amber-800">Identity verified</p>
+              <p className="text-[10px] text-amber-600">Not live yet — click Go live to publish.</p>
+              <GoLiveButton storeId={store.id} />
             </div>
           </div>
         ) : undefined
@@ -178,6 +192,8 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
         <VendorVerificationChecklist
           embedded
           idStatus={user.idVerificationStatus}
+          storeStatus={store.status}
+          storeId={store.id}
           idDocumentUrl={user.idDocumentUrl}
           bankName={user.bankDetails?.bankName ?? null}
           accountName={user.bankDetails?.accountName ?? null}
