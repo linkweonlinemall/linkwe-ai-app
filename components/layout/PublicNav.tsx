@@ -21,6 +21,7 @@ import {
   IconSettings,
   IconShoppingBag,
   IconShoppingCart,
+  IconTag,
   IconTools,
 } from "@tabler/icons-react";
 
@@ -468,6 +469,14 @@ export default function PublicNav({
               <IconCalendarEvent className="size-4 shrink-0" stroke={1.75} aria-hidden /> Events
             </Link>
             <Link
+              href="/pricing"
+              className={`${desktopNavLinkClass} ${
+                pathname.startsWith("/pricing") ? "bg-white/[0.12] text-white" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white"
+              }`}
+            >
+              <IconTag className="size-4 shrink-0" stroke={1.75} aria-hidden /> Pricing
+            </Link>
+            <Link
               href="/chat"
               className={`${desktopNavLinkClass} ${
                 pathname.startsWith("/chat") ? "bg-white/[0.12] text-white" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white"
@@ -651,6 +660,7 @@ function PublicMoreSheet({
     { href: "/services", label: "Services", Icon: IconTools },
     { href: "/stores", label: "Stores", Icon: IconBuildingStore },
     { href: "/events", label: "Events", Icon: IconCalendarEvent },
+    { href: "/pricing", label: "Pricing", Icon: IconTag },
     { href: "/chat", label: "AI Chat", Icon: IconMessageCircle },
     { href: "/orders", label: "My Orders", Icon: IconPackage, authOnly: true },
     { href: "/wishlist", label: "My Wishlist", Icon: IconHeart, authOnly: true },
