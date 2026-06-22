@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { adminVerifyId } from "@/app/actions/vendor-verification";
+import { getVendorReadiness } from "@/lib/vendor/readiness";
 
 export type VerificationVendor = {
   id: string;
@@ -104,21 +105,29 @@ function OpeningHours({ hours }: { hours: unknown }) {
   );
 }
 
-// Shared readiness calculation — single source of truth used by the dossier
-// header count, the sidebar score badge, and the "Ready" filter tab.
-function vendorReadiness(vendor: VerificationVendor): { pass: number; total: 8 } {
-  const st = vendor.storesOwned[0] ?? null;
-  const checks: boolean[] = [
-    !!vendor.idDocumentUrl,
-    !!vendor.bankDetails,
-    !!vendor.phone,
-    st?.status === "ACTIVE",
-    !!(st?.description?.trim()),
-    !!st?.logoUrl,
-    (st?.images.length ?? 0) > 0,
-    (st?._count.products ?? 0) > 0,
-  ];
-  return { pass: checks.filter(Boolean).length, total: 8 };
+/** Shared 5-item approval readiness — same rules as vendor dashboard checklist. */
+function readinessForVendor(vendor: VerificationVendor) {
+  const store = vendor.storesOwned[0] ?? null;
+  return getVendorReadiness({
+    idDocumentUrl: vendor.idDocumentUrl,
+    phone: vendor.phone,
+    bankDetails: vendor.bankDetails
+      ? {
+          bankName: vendor.bankDetails.bankName,
+          accountName: vendor.bankDetails.accountName,
+          accountNumber: vendor.bankDetails.accountNumber,
+        }
+      : null,
+    store: store ? { logoUrl: store.logoUrl, description: store.description } : null,
+  });
+}
+
+function findVendorById(
+  id: string,
+  pending: VerificationVendor[],
+  reviewed: VerificationVendor[],
+): VerificationVendor | undefined {
+  return pending.find((v) => v.id === id) ?? reviewed.find((v) => v.id === id);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -147,11 +156,12 @@ export default function VerificationClient({ pending, reviewed }: Props) {
 
   const filteredPending =
     filter === "eligible"
-      ? pending.filter((v) => vendorReadiness(v).pass === 8)
+      ? pending.filter((v) => readinessForVendor(v).ready)
       : pending;
-  const readyCount = pending.filter((v) => vendorReadiness(v).pass === 8).length;
+  const readyCount = pending.filter((v) => readinessForVendor(v).ready).length;
 
   const selectedVendor = filteredPending.find((v) => v.id === selectedVendorId) ?? null;
+  const selectedReadiness = selectedVendor ? readinessForVendor(selectedVendor) : null;
   // Convenience: first (and only) store for the selected vendor
   const store = selectedVendor?.storesOwned[0] ?? null;
 
@@ -201,6 +211,24 @@ export default function VerificationClient({ pending, reviewed }: Props) {
 
   async function handleBulk(approve: boolean) {
     if (selected.length === 0) return;
+
+    if (approve) {
+      const selectedVendors = pending.filter((v) => selected.includes(v.id));
+      const notReady = selectedVendors.filter((v) => !readinessForVendor(v).ready);
+      if (notReady.length > 0) {
+        const lines = notReady.map((v) => {
+          const missing = readinessForVendor(v)
+            .checks.filter((c) => !c.ok)
+            .map((c) => c.label);
+          return `• ${v.fullName} — missing: ${missing.join(", ")}`;
+        });
+        const confirmed = window.confirm(
+          `${notReady.length} of ${selected.length} selected vendor${selected.length !== 1 ? "s are" : " is"} not ready:\n\n${lines.join("\n")}\n\nApprove all anyway?`,
+        );
+        if (!confirmed) return;
+      }
+    }
+
     setLoading(true);
     for (const id of selected) {
       await adminVerifyId(id, approve);
@@ -211,6 +239,20 @@ export default function VerificationClient({ pending, reviewed }: Props) {
   }
 
   async function handleSingle(id: string, approve: boolean) {
+    if (approve) {
+      const vendor = findVendorById(id, pending, reviewed);
+      if (vendor) {
+        const readiness = readinessForVendor(vendor);
+        if (!readiness.ready) {
+          const missing = readiness.checks.filter((c) => !c.ok).map((c) => c.label);
+          const confirmed = window.confirm(
+            `This vendor is missing: ${missing.join(", ")}. Approve anyway?`,
+          );
+          if (!confirmed) return;
+        }
+      }
+    }
+
     setLoading(true);
     await adminVerifyId(id, approve);
     setLoading(false);
@@ -474,8 +516,8 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                   const isQueueSelected = selectedVendorId === vendor.id;
                   const isPDF = vendor.idDocumentUrl?.toLowerCase().endsWith(".pdf");
                   const hasDoc = !!vendor.idDocumentUrl;
-                  const readiness = vendorReadiness(vendor);
-                  const allPass = readiness.pass === readiness.total;
+                  const readiness = readinessForVendor(vendor);
+                  const allPass = readiness.ready;
 
                   return (
                     <div
@@ -669,31 +711,13 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                       Readiness checklist
                     </p>
                     <span className="text-[10px] text-zinc-400">
-                      {vendorReadiness(selectedVendor).pass}/{vendorReadiness(selectedVendor).total} checks pass
+                      {selectedReadiness!.pass}/{selectedReadiness!.total} checks pass
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    {[
-                      { label: "ID document", ok: !!selectedVendor.idDocumentUrl },
-                      { label: "Bank details", ok: !!selectedVendor.bankDetails },
-                      { label: "Phone on file", ok: !!selectedVendor.phone },
-                      {
-                        label: store
-                          ? store.status === "ACTIVE"
-                            ? "Store active"
-                            : store.status === "PENDING_APPROVAL"
-                            ? "Store pending approval"
-                            : "Store in draft"
-                          : "No store found",
-                        ok: store?.status === "ACTIVE",
-                      },
-                      { label: "Description", ok: !!(store?.description?.trim()) },
-                      { label: "Logo uploaded", ok: !!store?.logoUrl },
-                      { label: "Gallery images", ok: (store?.images.length ?? 0) > 0 },
-                      { label: "Products listed", ok: (store?._count.products ?? 0) > 0 },
-                    ].map((check) => (
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {selectedReadiness!.checks.map((check) => (
                       <div
-                        key={check.label}
+                        key={check.id}
                         className={`flex items-start gap-1.5 rounded-lg px-2.5 py-2 ${
                           check.ok ? "bg-emerald-50" : "bg-amber-50"
                         }`}
