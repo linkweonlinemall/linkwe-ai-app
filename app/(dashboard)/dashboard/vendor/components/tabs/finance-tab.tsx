@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -281,6 +282,17 @@ export default function FinanceTab({
     else setSubPayError(r.error);
   }
 
+  function handleDowngradeToStarter() {
+    const periodEnd = planRenewsAt
+      ? formatDate(planRenewsAt)
+      : "the end of your billing period";
+    const confirmed = window.confirm(
+      `You will keep your ${planLabel} benefits until ${periodEnd}, then move to the free Starter plan. No refund for the current period.\n\nYou can cancel this downgrade before ${periodEnd} to keep your ${planLabel}.\n\nDowngrade to Starter at period end?`,
+    );
+    if (!confirmed) return;
+    void handleCancelAutoRenew();
+  }
+
   const CARD = "rounded-[12px] border-[0.5px] border-[rgba(28,28,26,0.12)] bg-white";
 
   const downgradeDate = pastDueSince
@@ -481,19 +493,23 @@ export default function FinanceTab({
                       <button
                         type="button"
                         disabled={autoRenewLoading}
-                        onClick={() => void handleCancelAutoRenew()}
+                        onClick={handleDowngradeToStarter}
                         className="mt-2 text-[11px] font-medium text-zinc-500 underline-offset-2 hover:text-zinc-700 hover:underline disabled:opacity-50"
                       >
-                        {autoRenewLoading ? "Updating…" : "Turn off auto-renewal"}
+                        {autoRenewLoading ? "Updating…" : "Downgrade to Starter"}
                       </button>
                     </>
                   ) : (
                     <>
-                      <p className="text-[11px] text-amber-700">
-                        ⏸ Auto-renewal off
+                      <p className="text-[11px] font-medium text-amber-800">
+                        Scheduled to downgrade to Starter
                         {planRenewsAt
-                          ? ` · access until ${formatDate(planRenewsAt)}`
-                          : " · access until period end"}
+                          ? ` on ${formatDate(planRenewsAt)}`
+                          : " at period end"}
+                      </p>
+                      <p className="mt-1 text-[11px] text-amber-700">
+                        You keep your {planLabel} benefits until then. No refund for the current
+                        period.
                       </p>
                       <button
                         type="button"
@@ -501,7 +517,7 @@ export default function FinanceTab({
                         onClick={() => void handleResumeAutoRenew()}
                         className="mt-2 text-[11px] font-medium text-zinc-500 underline-offset-2 hover:text-zinc-700 hover:underline disabled:opacity-50"
                       >
-                        {autoRenewLoading ? "Updating…" : "Turn auto-renewal back on"}
+                        {autoRenewLoading ? "Updating…" : `Keep my ${planLabel}`}
                       </button>
                       {subPaidThisPeriod ? (
                         <p className="mt-2 text-[11px] text-zinc-500">
@@ -555,14 +571,28 @@ export default function FinanceTab({
                 </div>
               )}
               {!isCardBilled ? (
-                <button
-                  type="button"
-                  disabled={subscribing || payingSubscription}
-                  onClick={() => void handleSubscribeByCard(plan)}
-                  className="mt-2 text-[11px] font-medium text-zinc-500 underline-offset-2 hover:text-zinc-700 hover:underline disabled:opacity-50"
-                >
-                  {subscribing ? "Redirecting to checkout…" : "Pay by card instead"}
-                </button>
+                <>
+                  <button
+                    type="button"
+                    disabled={subscribing || payingSubscription}
+                    onClick={() => void handleSubscribeByCard(plan)}
+                    className="mt-2 text-[11px] font-medium text-zinc-500 underline-offset-2 hover:text-zinc-700 hover:underline disabled:opacity-50"
+                  >
+                    {subscribing ? "Redirecting to checkout…" : "Pay by card instead"}
+                  </button>
+                  {subscriptionStatus !== "PAST_DUE" ? (
+                    <p className="mt-2 text-[11px] text-zinc-500">
+                      To change or downgrade your plan,{" "}
+                      <Link
+                        href="/contact"
+                        className="font-medium text-zinc-700 underline-offset-2 hover:underline"
+                      >
+                        contact support
+                      </Link>
+                      .
+                    </p>
+                  ) : null}
+                </>
               ) : null}
             </>
           )}
