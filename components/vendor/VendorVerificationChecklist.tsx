@@ -1,6 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -10,6 +11,7 @@ import GoLiveButton from "@/app/(dashboard)/dashboard/vendor/components/go-live-
 import { savePayoutDetails, uploadIdDocument } from "@/app/actions/vendor-verification";
 import { toastChangesSaved, toastImageUploaded } from "@/lib/feedback/toasts";
 import { maskBankAccountBullets } from "@/lib/format/banking";
+import type { VendorReadinessCheck } from "@/lib/vendor/readiness";
 
 const TT_BANKS = [
   "Republic Bank",
@@ -23,6 +25,15 @@ const TT_BANKS = [
   "FCB Merchant Bank",
 ];
 
+/** Where to fix each readiness item when not complete (null = handled in this panel). */
+const READINESS_FIX_HREF: Record<VendorReadinessCheck["id"], string | null> = {
+  id_document: null,
+  logo: "/dashboard/vendor/store/edit",
+  description: "/dashboard/vendor/store/edit",
+  bank: null,
+  phone: "/dashboard/vendor/settings",
+};
+
 type Props = {
   idStatus: IdVerificationStatus;
   storeStatus?: StoreStatus;
@@ -32,6 +43,12 @@ type Props = {
   accountName: string | null;
   accountNumber: string | null;
   accountType?: string | null;
+  readiness: {
+    checks: VendorReadinessCheck[];
+    pass: number;
+    total: 5;
+    ready: boolean;
+  };
   /** When true, omit outer card chrome for nesting inside Store profile. */
   embedded?: boolean;
 };
@@ -45,6 +62,7 @@ export default function VendorVerificationChecklist({
   accountName,
   accountNumber,
   accountType,
+  readiness,
   embedded = false,
 }: Props) {
   const router = useRouter();
@@ -130,6 +148,81 @@ export default function VendorVerificationChecklist({
             <GoLiveButton storeId={storeId} />
           </div>
         ) : null}
+      </div>
+
+      <div
+        className={
+          embedded
+            ? "border-b border-zinc-100 py-4"
+            : "border-b border-zinc-100 px-5 py-4"
+        }
+      >
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+            Requirements for approval
+          </p>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+              readiness.ready ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
+            }`}
+          >
+            {readiness.pass} of {readiness.total} complete
+          </span>
+        </div>
+        {!readiness.ready ? (
+          <p className="mb-3 text-xs text-amber-700">
+            Complete all five items below so an admin can approve your account.
+          </p>
+        ) : null}
+        <ul className="flex flex-col gap-2">
+          {readiness.checks.map((check) => {
+            const fixHref = check.ok ? null : READINESS_FIX_HREF[check.id];
+            return (
+              <li
+                key={check.id}
+                className={`flex items-start gap-2 rounded-lg px-2.5 py-2 ${
+                  check.ok ? "bg-emerald-50" : "bg-amber-50/80"
+                }`}
+              >
+                <span
+                  className={`mt-px shrink-0 text-[11px] ${check.ok ? "text-emerald-500" : "text-amber-500"}`}
+                  aria-hidden
+                >
+                  {check.ok ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  ) : (
+                    "⚠"
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p
+                    className={`text-xs leading-snug ${
+                      check.ok ? "font-medium text-emerald-800" : "font-medium text-amber-800"
+                    }`}
+                  >
+                    {check.label}
+                  </p>
+                  {!check.ok && fixHref ? (
+                    <Link
+                      href={fixHref}
+                      className="mt-0.5 inline-block text-[11px] font-semibold text-[#D4450A] hover:underline"
+                    >
+                      {check.id === "phone" ? "Update in settings →" : "Edit store profile →"}
+                    </Link>
+                  ) : null}
+                  {!check.ok && check.id === "id_document" ? (
+                    <p className="mt-0.5 text-[11px] text-amber-700">Upload below</p>
+                  ) : null}
+                  {!check.ok && check.id === "bank" ? (
+                    <p className="mt-0.5 text-[11px] text-amber-700">Save payout details below</p>
+                  ) : null}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       </div>
 
       <div className={embedded ? "border-b border-zinc-100 py-4" : "border-b border-zinc-100 px-5 py-4"}>

@@ -9,6 +9,7 @@ import { getSession } from "@/lib/auth/session";
 import { assertDashboardRole } from "@/lib/auth/assert-role";
 import { prisma } from "@/lib/prisma";
 import { getVendorDashboardAnalytics } from "@/lib/vendor/vendor-dashboard-analytics";
+import { getVendorReadiness } from "@/lib/vendor/readiness";
 import { getVendorReviewStatsForStore } from "@/lib/vendor/get-vendor-review-stats";
 import { vendorSplitOrderListSelect } from "@/lib/vendor/vendor-split-order-query";
 import { radius, shadow, colors } from "@/lib/design-system";
@@ -50,6 +51,7 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
       id: true,
       idDocumentUrl: true,
       idVerificationStatus: true,
+      phone: true,
       bankDetails: {
         select: {
           bankName: true,
@@ -139,6 +141,19 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
   const dashboardAnalytics = await getVendorDashboardAnalytics(store.id);
   const reviewSummary = await getVendorReviewStatsForStore(store.id);
 
+  const vendorReadiness = getVendorReadiness({
+    idDocumentUrl: user.idDocumentUrl,
+    phone: user.phone,
+    bankDetails: user.bankDetails
+      ? {
+          bankName: user.bankDetails.bankName,
+          accountName: user.bankDetails.accountName,
+          accountNumber: user.bankDetails.accountNumber,
+        }
+      : null,
+    store: { logoUrl: store.logoUrl, description: store.description },
+  });
+
   return (
     <Suspense
       fallback={
@@ -199,6 +214,7 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
           accountName={user.bankDetails?.accountName ?? null}
           accountNumber={user.bankDetails?.accountNumber ?? null}
           accountType={user.bankDetails?.accountType ?? null}
+          readiness={vendorReadiness}
         />
       }
     />
