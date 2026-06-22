@@ -5,6 +5,8 @@ import { Bot, Check, Minus } from "lucide-react";
 import PublicNav from "@/components/layout/PublicNav";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
+import type { CommissionPlan } from "@/lib/finance/commission";
+import { resolveVendorPlan } from "@/lib/finance/vendor-plan";
 import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { prisma } from "@/lib/prisma";
 
@@ -20,27 +22,73 @@ type PlanFeature = {
   highlight?: boolean;
 };
 
+type VendorPlanId = CommissionPlan;
+
 type PricingPlan = {
+  planId: VendorPlanId;
   name: string;
   tagline: string;
   price: string;
   priceNote: string;
   commission: string;
   cta: string;
-  ctaHref: string;
   featured?: boolean;
   features: PlanFeature[];
 };
 
+type PlanCta = {
+  label: string;
+  href: string | null;
+};
+
+const PLAN_TIER: Record<VendorPlanId, number> = {
+  STARTER: 0,
+  GROWTH: 1,
+  PRO: 2,
+};
+
+const FINANCE_HREF = "/dashboard/vendor/finance";
+
+function registerPlanParam(planId: VendorPlanId): string {
+  return planId.toLowerCase();
+}
+
+function computePlanCta(plan: PricingPlan, viewerPlan: VendorPlanId | null): PlanCta {
+  const registerHref = `/register/business?plan=${registerPlanParam(plan.planId)}`;
+
+  // State A — logged-out, non-vendor, or vendor without store
+  if (viewerPlan === null) {
+    return { label: plan.cta, href: registerHref };
+  }
+
+  // State B — this card matches the viewer's current plan
+  if (viewerPlan === plan.planId) {
+    return { label: "Your current plan", href: null };
+  }
+
+  // Downgrade to Starter — not self-serve
+  if (plan.planId === "STARTER") {
+    return { label: "Free tier included", href: null };
+  }
+
+  // States C/D — upgrade or sidegrade via finance subscribe UI
+  const label =
+    PLAN_TIER[plan.planId] > PLAN_TIER[viewerPlan]
+      ? `Upgrade to ${plan.name}`
+      : `Switch to ${plan.name}`;
+
+  return { label, href: FINANCE_HREF };
+}
+
 const PLANS: PricingPlan[] = [
   {
+    planId: "STARTER",
     name: "Starter",
     tagline: "Everything you need to start selling.",
     price: "Free",
     priceNote: "No monthly fee — pay only when you sell",
     commission: "15% products · 8% services",
     cta: "Start free",
-    ctaHref: "/contact",
     features: [
       { text: "Up to 30 products", included: true },
       { text: "Your own storefront", included: true },
@@ -52,13 +100,13 @@ const PLANS: PricingPlan[] = [
     ],
   },
   {
+    planId: "GROWTH",
     name: "Growth",
     tagline: "For shops ready to scale and sell smarter.",
     price: "TTD 200",
     priceNote: "per month",
     commission: "12% products · 5% services",
     cta: "Upgrade to Growth",
-    ctaHref: "/contact",
     featured: true,
     features: [
       { text: "Up to 300 products", included: true },
@@ -71,13 +119,13 @@ const PLANS: PricingPlan[] = [
     ],
   },
   {
+    planId: "PRO",
     name: "Pro",
     tagline: "Maximum reach, lowest fees, full power.",
     price: "TTD 450",
     priceNote: "per month",
     commission: "8% products · 3% services",
     cta: "Upgrade to Pro",
-    ctaHref: "/contact",
     features: [
       { text: "Unlimited products", included: true },
       { text: "Your own storefront", included: true },
@@ -137,8 +185,17 @@ function FeatureRow({ feature }: { feature: PlanFeature }) {
   );
 }
 
-function PricingCard({ plan }: { plan: PricingPlan }) {
+function PricingCard({ plan, cta }: { plan: PricingPlan; cta: PlanCta }) {
   const isFeatured = plan.featured === true;
+
+  const ctaBaseClass =
+    "mt-6 inline-flex h-11 w-full items-center justify-center rounded-xl text-sm font-semibold transition-colors";
+
+  const ctaActiveClass = isFeatured
+    ? "bg-[#D4450A] text-white hover:bg-[#B83A09]"
+    : "border-2 border-[#D4450A] text-[#D4450A] hover:bg-[#D4450A] hover:text-white";
+
+  const ctaMutedClass = "cursor-default border border-zinc-200 bg-zinc-100 text-zinc-500";
 
   return (
     <article
@@ -170,17 +227,15 @@ function PricingCard({ plan }: { plan: PricingPlan }) {
         <p className="mt-1 text-sm font-semibold text-zinc-800">{plan.commission}</p>
       </div>
 
-      <Link
-        href={plan.ctaHref}
-        className={[
-          "mt-6 inline-flex h-11 w-full items-center justify-center rounded-xl text-sm font-semibold transition-colors",
-          isFeatured
-            ? "bg-[#D4450A] text-white hover:bg-[#B83A09]"
-            : "border-2 border-[#D4450A] text-[#D4450A] hover:bg-[#D4450A] hover:text-white",
-        ].join(" ")}
-      >
-        {plan.cta}
-      </Link>
+      {cta.href ? (
+        <Link href={cta.href} className={`${ctaBaseClass} ${ctaActiveClass}`}>
+          {cta.label}
+        </Link>
+      ) : (
+        <span className={`${ctaBaseClass} ${ctaMutedClass}`} aria-disabled="true">
+          {cta.label}
+        </span>
+      )}
 
       <ul className="mt-6 flex flex-1 flex-col gap-3 border-t border-zinc-100 pt-6">
         {plan.features.map((feature) => (
@@ -196,6 +251,17 @@ export default async function PricingPage() {
   const user = session ? await prisma.user.findUnique({ where: { id: session.userId } }) : null;
   const continueHref = user ? getRoleDashboardPath(user.role) : null;
   const unreadCount = await getNavUnreadCount();
+
+  let viewerPlan: VendorPlanId | null = null;
+  if (session?.role === "VENDOR") {
+    const store = await prisma.store.findFirst({
+      where: { ownerId: session.userId },
+      select: { subscriptionPlan: true },
+    });
+    if (store) {
+      viewerPlan = resolveVendorPlan(store.subscriptionPlan);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
@@ -223,7 +289,7 @@ export default async function PricingPage() {
       <section className="relative z-10 mx-auto max-w-6xl -mt-24 px-4 sm:px-6">
         <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
           {PLANS.map((plan) => (
-            <PricingCard key={plan.name} plan={plan} />
+            <PricingCard key={plan.planId} plan={plan} cta={computePlanCta(plan, viewerPlan)} />
           ))}
         </div>
       </section>
