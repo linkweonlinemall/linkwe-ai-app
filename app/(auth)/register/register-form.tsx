@@ -7,6 +7,7 @@ import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { registerAction, type AuthFormState } from "../auth-actions";
+import type { IntendedPlan } from "@/lib/onboarding/intended-plan";
 
 type SignupKind = "CUSTOMER" | "BUSINESS";
 
@@ -39,9 +40,11 @@ const copy: Record<
 export function RegisterForm({
   signupKind,
   embedded = false,
+  intendedPlan = null,
 }: {
   signupKind: SignupKind;
   embedded?: boolean;
+  intendedPlan?: IntendedPlan | null;
 }) {
   const [state, formAction, pending] = useActionState(registerAction, {} as AuthFormState);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -68,6 +71,9 @@ export function RegisterForm({
 
       <form className={`flex flex-col gap-4 ${embedded ? "" : "mt-8"}`} action={formAction}>
         <input name="signupKind" type="hidden" value={signupKind} />
+        {intendedPlan && signupKind === "BUSINESS" ? (
+          <input name="intendedPlan" type="hidden" value={intendedPlan} />
+        ) : null}
 
         <Input
           required

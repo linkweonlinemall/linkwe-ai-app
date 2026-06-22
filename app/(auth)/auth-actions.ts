@@ -10,6 +10,7 @@ import { getAuthLandingPath } from "@/lib/auth/landing";
 import { safeInternalPath } from "@/lib/auth/redirects";
 import { roleForSignup, type SignupKind } from "@/lib/auth/signup-kinds";
 import { logPrismaError } from "@/lib/log-prisma-error";
+import { parseIntendedPlanParam, setIntendedPlanCookie } from "@/lib/onboarding/intended-plan";
 import { checkRateLimit, resetRateLimit } from "@/lib/security/rate-limit";
 
 export type AuthFormState = {
@@ -123,6 +124,13 @@ export async function registerAction(
   }
 
   await createSessionFromUser(user);
+
+  if (signupKind === "BUSINESS") {
+    const plan = parseIntendedPlanParam(String(formData.get("intendedPlan") ?? ""));
+    if (plan) {
+      await setIntendedPlanCookie(plan);
+    }
+  }
 
   const store =
     user.role === "VENDOR"
