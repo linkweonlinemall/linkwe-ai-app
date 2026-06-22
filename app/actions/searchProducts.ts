@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import type { ChatProduct } from "@/lib/chat/types"
+import { sellableStoreWhere } from "@/lib/store/sellable-store"
 
 interface SearchInput {
   query: string
@@ -101,10 +102,11 @@ export async function searchProducts(input: SearchInput): Promise<ChatProduct[]>
   const regionFilter = region
     ? {
         store: {
+          ...sellableStoreWhere(),
           region: { contains: region, mode: "insensitive" as const },
         },
       }
-    : {}
+    : { store: sellableStoreWhere() }
 
   // Build OR conditions from ALL expanded terms
   const searchConditions =

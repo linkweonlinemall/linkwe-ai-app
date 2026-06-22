@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 
 import { prisma } from "@/lib/prisma"
+import { sellableStoreWhere } from "@/lib/store/sellable-store"
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -13,6 +14,7 @@ export async function GET(req: NextRequest) {
     where: {
       isPublished: true,
       isService: false,
+      store: sellableStoreWhere(),
       ...(category && category !== "all" ? { category } : {}),
       OR: [
         { name: { contains: q, mode: "insensitive" } },

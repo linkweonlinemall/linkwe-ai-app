@@ -38,6 +38,7 @@ import WishlistButton from "@/components/ui/WishlistButton";
 import { EventCard, type EventCardData } from "@/components/events/EventCard";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { PRODUCT_CATEGORIES } from "@/lib/categories";
+import { sellableStoreWhere } from "@/lib/store/sellable-store";
 import { colors, css, radius, shadow, spacing, typography, tw } from "@/lib/design-system";
 
 export const metadata: Metadata = {
@@ -139,6 +140,7 @@ export default async function Home() {
     where: {
       isPublished: true,
       isService: false,
+      store: sellableStoreWhere(),
       OR: [{ isFeatured: true }, { isFeatured: false }],
     },
     select: {
@@ -165,6 +167,7 @@ export default async function Home() {
     where: {
       isPublished: true,
       isService: true,
+      store: sellableStoreWhere(),
     },
     select: {
       id: true,
@@ -184,7 +187,7 @@ export default async function Home() {
   const savedStoreIds = await getSavedStoreIds();
 
   const featuredStoresRaw = await prisma.store.findMany({
-    where: { status: "ACTIVE" },
+    where: sellableStoreWhere(),
     select: {
       id: true,
       name: true,

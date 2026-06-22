@@ -1,9 +1,10 @@
 "use server";
 
 import type { Prisma } from "@prisma/client";
-import { ListingStatus, StoreStatus } from "@prisma/client";
+import { ListingStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { sellableStoreWhere } from "@/lib/store/sellable-store";
 
 const STORE_PAGE_SIZE = 12;
 const PRODUCT_PAGE_SIZE_DEFAULT = 24;
@@ -107,9 +108,7 @@ function previewText(text: string | null | undefined, max = 140): string | null 
  */
 function discoverableStoreEligibility(): Prisma.StoreWhereInput {
   return {
-    status: {
-      in: [StoreStatus.ACTIVE],
-    },
+    ...sellableStoreWhere(),
     OR: [
       { products: { some: { isPublished: true } } },
       { listings: { some: { status: ListingStatus.PUBLISHED } } },
@@ -489,6 +488,7 @@ export async function getStoreProducts(
   const where: Prisma.ProductWhereInput = {
     storeId,
     isPublished: true,
+    store: sellableStoreWhere(),
   };
 
   const [total, rows] = await prisma.$transaction([

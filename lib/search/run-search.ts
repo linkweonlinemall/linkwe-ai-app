@@ -1,7 +1,8 @@
 import type { Prisma } from "@prisma/client";
-import { IdVerificationStatus, ListingStatus, StoreStatus } from "@prisma/client";
+import { ListingStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { sellableStoreWhere } from "@/lib/store/sellable-store";
 import { canonicalRegionValue } from "@/lib/regions/tt-regions";
 import { extractRegionFromQuery } from "@/lib/search/regions";
 import { reviewStatsForProducts, reviewStatsForStores } from "@/lib/search/review-stats";
@@ -60,8 +61,7 @@ function storeTextOrClauses(terms: string): Prisma.StoreWhereInput[] {
 
 function discoverableStoreWhere(): Prisma.StoreWhereInput {
   return {
-    status: StoreStatus.ACTIVE,
-    owner: { idVerificationStatus: IdVerificationStatus.APPROVED },
+    ...sellableStoreWhere(),
     OR: [
       { products: { some: { isPublished: true, isArchived: false } } },
       { listings: { some: { status: ListingStatus.PUBLISHED } } },
@@ -79,6 +79,7 @@ function productBaseWhere(
 ): Prisma.ProductWhereInput {
   const and: Prisma.ProductWhereInput[] = [
     { isPublished: true, isArchived: false, isService },
+    { store: sellableStoreWhere() },
   ];
 
   if (terms) {

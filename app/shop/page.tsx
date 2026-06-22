@@ -20,6 +20,7 @@ import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { prisma } from "@/lib/prisma";
 import { PRODUCT_CATEGORIES } from "@/lib/categories";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
+import { sellableStoreWhere } from "@/lib/store/sellable-store";
 import { typography, radius, shadow, tw } from "@/lib/design-system";
 
 export const metadata: Metadata = {
@@ -123,9 +124,12 @@ export default async function ShopPage({ searchParams }: Props) {
     where: {
       isPublished: true,
       isService: false,
+      store: {
+        ...sellableStoreWhere(),
+        ...(region ? { region } : {}),
+      },
       ...(category ? { category } : {}),
       ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
-      ...(region ? { store: { region } } : {}),
       ...(minPrice !== undefined || maxPrice !== undefined
         ? {
             price: {

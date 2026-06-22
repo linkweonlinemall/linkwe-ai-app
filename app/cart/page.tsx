@@ -12,7 +12,7 @@ import EmptyState from "@/components/ui/empty-state";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { StoreStatus } from "@prisma/client";
+import { sellableStoreWhere } from "@/lib/store/sellable-store";
 import { typography, radius, shadow, spacing, tw } from "@/lib/design-system";
 
 export const metadata: Metadata = {
@@ -75,7 +75,7 @@ async function fetchCartRecommendations(
 
   if (storeSlug) {
     const store = await prisma.store.findFirst({
-      where: { slug: storeSlug, status: StoreStatus.ACTIVE },
+      where: { slug: storeSlug, ...sellableStoreWhere() },
       select: { id: true },
     });
     if (store) {
@@ -85,6 +85,7 @@ async function fetchCartRecommendations(
           isService: false,
           hasVariants: false,
           storeId: store.id,
+          store: sellableStoreWhere(),
           ...baseExclude,
         },
         orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
@@ -101,6 +102,7 @@ async function fetchCartRecommendations(
         isPublished: true,
         isService: false,
         hasVariants: false,
+        store: sellableStoreWhere(),
         ...(usedIds.length > 0 ? { id: { notIn: usedIds } } : {}),
       },
       orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
