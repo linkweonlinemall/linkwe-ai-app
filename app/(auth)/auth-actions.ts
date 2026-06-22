@@ -6,7 +6,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { createSessionFromUser, destroySession } from "@/lib/auth/session";
-import { getAuthLandingPath } from "@/lib/auth/landing";
+import { resolveAuthLandingPath } from "@/lib/auth/landing";
 import { safeInternalPath } from "@/lib/auth/redirects";
 import { roleForSignup, type SignupKind } from "@/lib/auth/signup-kinds";
 import { logPrismaError } from "@/lib/log-prisma-error";
@@ -132,11 +132,7 @@ export async function registerAction(
     }
   }
 
-  const store =
-    user.role === "VENDOR"
-      ? await prisma.store.findFirst({ where: { ownerId: user.id }, select: { onboardingStep: true } })
-      : null;
-  redirect(getAuthLandingPath(user, store));
+  redirect(await resolveAuthLandingPath(user));
 }
 
 export async function loginAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
@@ -181,11 +177,7 @@ export async function loginAction(_prev: AuthFormState, formData: FormData): Pro
   await createSessionFromUser(user);
   resetRateLimit(rateLimitKey);
 
-  const store =
-    user.role === "VENDOR"
-      ? await prisma.store.findFirst({ where: { ownerId: user.id }, select: { onboardingStep: true } })
-      : null;
-  const target = safeInternalPath(callbackUrl || undefined, getAuthLandingPath(user, store));
+  const target = safeInternalPath(callbackUrl || undefined, await resolveAuthLandingPath(user));
   redirect(target);
 }
 

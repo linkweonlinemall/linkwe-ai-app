@@ -6,9 +6,17 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getStoreByOwnerId } from "@/lib/store/get-vendor-store";
 import { saveKycDocumentUpload } from "@/lib/onboarding/save-kyc-upload";
+import {
+  clearIntendedPlanCookie,
+  getIntendedPlanCookie,
+  type IntendedPlan,
+  setIntendedPlanCookie,
+  setPlanPickerConfirmedCookie,
+} from "@/lib/onboarding/intended-plan";
 import { normalizeStoreSlug, validateStoreSlug } from "@/lib/store/slug";
 import { logPrismaError } from "@/lib/log-prisma-error";
 import { isValidRegion, normalizeRegion } from "@/lib/regions/tt-regions";
+import { startSubscriptionCheckout } from "@/app/actions/vendor";
 
 export type BusinessOnboardingState = { error?: string };
 
@@ -16,6 +24,29 @@ function requireVendor(user: NonNullable<Awaited<ReturnType<typeof getCurrentUse
   if (!user) return "You must be signed in.";
   if (user.role !== "VENDOR") return "This onboarding is for business accounts.";
   return null;
+}
+
+function parsePlanChoice(raw: FormDataEntryValue | null): IntendedPlan | null {
+  const v = String(raw ?? "").trim();
+  if (v === "STARTER" || v === "GROWTH" || v === "PRO") return v;
+  return null;
+}
+
+export async function confirmBusinessPlanChoice(
+  _prev: BusinessOnboardingState,
+  formData: FormData,
+): Promise<BusinessOnboardingState> {
+  const user = await getCurrentUser();
+  const gate = requireVendor(user);
+  if (gate) return { error: gate };
+
+  const plan = parsePlanChoice(formData.get("plan"));
+  if (!plan) return { error: "Select a plan to continue." };
+
+  await setIntendedPlanCookie(plan);
+  await setPlanPickerConfirmedCookie();
+
+  redirect("/onboarding/business/step-1");
 }
 
 export async function saveBusinessOnboardingStep1(
@@ -198,6 +229,16 @@ export async function saveBusinessOnboardingStep3(
     logPrismaError("BUSINESS ONBOARDING STEP 3:", error);
     const message = error instanceof Error ? error.message : "Could not save your store.";
     return { error: message };
+  }
+
+  const intendedPlan = await getIntendedPlanCookie();
+  await clearIntendedPlanCookie();
+
+  if (intendedPlan === "GROWTH" || intendedPlan === "PRO") {
+    const checkout = await startSubscriptionCheckout(intendedPlan);
+    if (checkout.ok) {
+      redirect(checkout.checkoutUrl);
+    }
   }
 
   redirect("/dashboard/vendor");

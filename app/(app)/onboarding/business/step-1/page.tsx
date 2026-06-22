@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getNextBusinessOnboardingStep } from "@/lib/onboarding/business-progress";
+import { getPlanPickerConfirmedCookie } from "@/lib/onboarding/intended-plan";
 import { getStoreByOwnerId } from "@/lib/store/get-vendor-store";
 
 import { BusinessStep1Form } from "./step-1-form";
@@ -66,6 +67,7 @@ export default async function BusinessOnboardingStep1Page() {
   const next = getNextBusinessOnboardingStep(user, store);
   if (next === null) redirect("/dashboard/vendor");
   if (next !== 1) redirect(`/onboarding/business/step-${next}`);
+  if (!(await getPlanPickerConfirmedCookie())) redirect("/onboarding/business/plan");
 
   return (
     <>

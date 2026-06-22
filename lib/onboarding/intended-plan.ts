@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 
 export const INTENDED_PLAN_COOKIE_NAME = "lw_intended_plan";
+export const PLAN_PICKER_CONFIRMED_COOKIE_NAME = "lw_plan_picker_confirmed";
 
 export type IntendedPlan = "STARTER" | "GROWTH" | "PRO";
 
@@ -41,4 +42,14 @@ export async function getIntendedPlanCookie(): Promise<IntendedPlan | null> {
 export async function clearIntendedPlanCookie(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.set(INTENDED_PLAN_COOKIE_NAME, "", { ...intendedPlanCookieOptions, maxAge: 0 });
+}
+
+export async function setPlanPickerConfirmedCookie(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.set(PLAN_PICKER_CONFIRMED_COOKIE_NAME, "1", intendedPlanCookieOptions);
+}
+
+export async function getPlanPickerConfirmedCookie(): Promise<boolean> {
+  const cookieStore = await cookies();
+  return cookieStore.get(PLAN_PICKER_CONFIRMED_COOKIE_NAME)?.value === "1";
 }
