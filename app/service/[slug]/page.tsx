@@ -13,6 +13,7 @@ import PublicNav from "@/components/layout/PublicNav";
 import BookingWidget from "@/components/service/BookingWidget";
 import ServiceGallery from "@/components/service/ServiceGallery";
 import OnDemandRequestWidget from "@/components/service/OnDemandRequestWidget";
+import SubscribeButton from "@/components/service/SubscribeButton";
 import ReviewForm from "@/components/ui/ReviewForm";
 import ReviewsList from "@/components/ui/ReviewsList";
 import StarRating from "@/components/ui/StarRating";
@@ -203,6 +204,18 @@ export default async function ServiceDetailPage({ params }: Props) {
       getLinkedContent("SERVICE", service.id),
       getCrossStoreFeatureButtonState("SERVICE", service.id),
     ]);
+
+  const alreadySubscribed =
+    session != null &&
+    service.serviceType === "SUBSCRIPTION" &&
+    !!(await prisma.customerServiceSubscription.findFirst({
+      where: {
+        customerId: session.userId,
+        productId: service.id,
+        status: "ACTIVE",
+      },
+      select: { id: true },
+    }));
 
   const typeInfo = serviceTypeDisplay(service.serviceType);
   const location = locationDisplay(service.serviceLocation);
@@ -773,13 +786,13 @@ export default async function ServiceDetailPage({ params }: Props) {
                     </div>
                   ) : null}
 
-                  <a
-                    href={`/store/${service.store.slug}`}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
-                    style={{ backgroundColor: "#D4450A" }}
-                  >
-                    Contact to subscribe →
-                  </a>
+                  <SubscribeButton
+                    productId={service.id}
+                    serviceSlug={service.slug}
+                    isLoggedIn={session != null}
+                    isOwner={isOwner}
+                    alreadySubscribed={alreadySubscribed}
+                  />
 
                   <p className="text-center text-xs text-zinc-400">
                     TTD {service.price.toFixed(2)} per {service.subscriptionInterval ?? "cycle"}

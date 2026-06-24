@@ -64,6 +64,9 @@ model User {
   ticketOrders          TicketOrder[]
   conversationsAsCustomer Conversation[] @relation("CustomerConversations")
   sentMessages            Message[]        @relation("SentMessages")
+  /// Stripe Customer for customer→vendor service subscriptions (distinct from vendor Store billing).
+  stripeCustomerId        String?                      @map("stripe_customer_id")
+  customerServiceSubscriptions CustomerServiceSubscription[]
 
   @@index([email])
   @@index([createdAt])
@@ -203,6 +206,7 @@ model Store {
   conversations    Conversation[]
   contentLinks     ContentLink[]
   shippingRates    VendorShippingRate[]
+  customerServiceSubscriptions CustomerServiceSubscription[]
 
   @@index([slug])
   @@map("stores")
@@ -1085,6 +1089,13 @@ enum LedgerEntryType {
   TICKET_SALE
   SHIPPING
   SUBSCRIPTION
+  SERVICE_SUBSCRIPTION_RENEWAL
+}
+
+enum CustomerSubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
 }
 
 enum VendorSubscriptionPlan {
@@ -1098,6 +1109,35 @@ enum StoreSubscriptionStatus {
   ACTIVE
   PAST_DUE
   CANCELED
+}
+
+/// Customer subscribed to a vendor's SUBSCRIPTION-type service (Product).
+/// One active row per (customer, product) enforced by partial unique index in DB migration.
+model CustomerServiceSubscription {
+  id                   String                     @id @default(cuid())
+  customerId           String                     @map("customer_id")
+  customer             User                       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  productId            String                     @map("product_id")
+  product              Product                    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  storeId              String                     @map("store_id")
+  store                Store                      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  stripeSubscriptionId String?                    @map("stripe_subscription_id")
+  status               CustomerSubscriptionStatus @default(ACTIVE)
+  currentPeriodEnd     DateTime?                  @map("current_period_end")
+  /// TTD minor units at subscribe time (snapshot).
+  priceMinor           Int                        @map("price_minor")
+  /// Billing interval snapshot: weekly|fortnightly|monthly|quarterly.
+  interval             String
+  cancelAtPeriodEnd    Boolean                    @default(false) @map("cancel_at_period_end")
+  canceledAt           DateTime?                  @map("canceled_at")
+  createdAt            DateTime                   @default(now()) @map("created_at")
+  updatedAt            DateTime                   @updatedAt @map("updated_at")
+
+  @@index([customerId])
+  @@index([productId])
+  @@index([storeId])
+  @@index([stripeSubscriptionId])
+  @@map("customer_service_subscriptions")
 }
 
 /// How vendor gets goods into the warehouse for this split
@@ -1509,6 +1549,7 @@ model Product {
   wishlistItems         WishlistItem[]
   onDemandRequests      OnDemandRequest[]
   reviews               Review[]   @relation("ProductReviews")
+  customerServiceSubscriptions CustomerServiceSubscription[]
 
   @@index([storeId])
   @@index([isPublished])
