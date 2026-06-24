@@ -1,5 +1,7 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+
 import { getAppBaseUrl } from "@/lib/app-base-url";
 import { mapSubscriptionIntervalToStripe } from "@/lib/finance/subscription-interval";
 import { getSession } from "@/lib/auth/session";
@@ -125,4 +127,92 @@ export async function startServiceSubscriptionCheckout(
     console.error("[startServiceSubscriptionCheckout] checkout session failed", e);
     return { ok: false, error: "checkout_failed" };
   }
+}
+
+export async function cancelMyServiceSubscription(
+  subscriptionId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "not_logged_in" };
+
+  const row = await prisma.customerServiceSubscription.findFirst({
+    where: {
+      id: subscriptionId,
+      customerId: session.userId,
+    },
+    select: {
+      id: true,
+      stripeSubscriptionId: true,
+      status: true,
+      cancelAtPeriodEnd: true,
+      product: { select: { slug: true } },
+    },
+  });
+
+  if (!row) return { ok: false, error: "not_found" };
+  if (!row.stripeSubscriptionId) return { ok: false, error: "no_subscription" };
+  if (row.status !== "ACTIVE") return { ok: false, error: "not_active" };
+  if (row.cancelAtPeriodEnd) return { ok: true };
+
+  try {
+    await stripe.subscriptions.update(row.stripeSubscriptionId, {
+      cancel_at_period_end: true,
+    });
+  } catch (e) {
+    console.error("[cancelMyServiceSubscription] stripe failed", e);
+    return { ok: false, error: "stripe_failed" };
+  }
+
+  await prisma.customerServiceSubscription.update({
+    where: { id: row.id },
+    data: { cancelAtPeriodEnd: true },
+  });
+
+  revalidatePath(`/service/${row.product.slug}`);
+  revalidatePath("/dashboard/customer");
+  return { ok: true };
+}
+
+export async function resumeMyServiceSubscription(
+  subscriptionId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "not_logged_in" };
+
+  const row = await prisma.customerServiceSubscription.findFirst({
+    where: {
+      id: subscriptionId,
+      customerId: session.userId,
+    },
+    select: {
+      id: true,
+      stripeSubscriptionId: true,
+      status: true,
+      cancelAtPeriodEnd: true,
+      product: { select: { slug: true } },
+    },
+  });
+
+  if (!row) return { ok: false, error: "not_found" };
+  if (!row.stripeSubscriptionId) return { ok: false, error: "no_subscription" };
+  if (row.status !== "ACTIVE") return { ok: false, error: "not_active" };
+  if (!row.cancelAtPeriodEnd) return { ok: true };
+
+  try {
+    await stripe.subscriptions.update(row.stripeSubscriptionId, {
+      cancel_at_period_end: false,
+    });
+  } catch (e) {
+    console.error("[resumeMyServiceSubscription] stripe failed", e);
+    return { ok: false, error: "stripe_failed" };
+  }
+
+  await prisma.customerServiceSubscription.update({
+    where: { id: row.id },
+    data: { cancelAtPeriodEnd: false },
+  });
+
+  revalidatePath(`/service/${row.product.slug}`);
+  revalidatePath("/dashboard/customer");
+  return { ok: true };
 }

@@ -6,6 +6,7 @@ import { handleBookingPaymentIntentSucceeded } from "@/lib/finance/booking-payme
 import { createSplitOrdersFromMainOrder } from "@/lib/fulfillment/split-orders";
 import {
   handleCustomerServiceSubscriptionCheckout,
+  handleCustomerServiceSubscriptionDeleted,
   handleCustomerServiceSubscriptionInvoiceFailed,
   handleCustomerServiceSubscriptionInvoicePaid,
 } from "@/lib/webhooks/customer-service-subscription";
@@ -225,6 +226,8 @@ export async function POST(request: NextRequest) {
 
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
+        await handleCustomerServiceSubscriptionDeleted(subscription);
+
         const subStoreId = subscription.metadata?.subscriptionStoreId;
         if (!subStoreId) break;
 

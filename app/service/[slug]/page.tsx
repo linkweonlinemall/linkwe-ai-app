@@ -206,17 +206,24 @@ export default async function ServiceDetailPage({ params }: Props) {
       getCrossStoreFeatureButtonState("SERVICE", service.id),
     ]);
 
-  const alreadySubscribed =
-    session != null &&
-    service.serviceType === "SUBSCRIPTION" &&
-    !!(await prisma.customerServiceSubscription.findFirst({
-      where: {
-        customerId: session.userId,
-        productId: service.id,
-        status: "ACTIVE",
-      },
-      select: { id: true },
-    }));
+  const activeSubscription =
+    session != null && service.serviceType === "SUBSCRIPTION"
+      ? await prisma.customerServiceSubscription.findFirst({
+          where: {
+            customerId: session.userId,
+            productId: service.id,
+            status: "ACTIVE",
+          },
+          select: {
+            id: true,
+            cancelAtPeriodEnd: true,
+            currentPeriodEnd: true,
+            stripeSubscriptionId: true,
+          },
+        })
+      : null;
+
+  const alreadySubscribed = activeSubscription != null;
 
   const typeInfo = serviceTypeDisplay(service.serviceType);
   const location = locationDisplay(service.serviceLocation);
@@ -802,6 +809,15 @@ export default async function ServiceDetailPage({ params }: Props) {
                     isLoggedIn={session != null}
                     isOwner={isOwner}
                     alreadySubscribed={alreadySubscribed}
+                    subscription={
+                      activeSubscription
+                        ? {
+                            id: activeSubscription.id,
+                            cancelAtPeriodEnd: activeSubscription.cancelAtPeriodEnd,
+                            currentPeriodEnd: activeSubscription.currentPeriodEnd,
+                          }
+                        : null
+                    }
                   />
 
                   <p className="text-center text-xs text-zinc-400">

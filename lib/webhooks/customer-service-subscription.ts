@@ -255,3 +255,25 @@ export async function handleCustomerServiceSubscriptionInvoiceFailed(
     console.error("[webhook/customer-sub] invoice failed handler error", e);
   }
 }
+
+export async function handleCustomerServiceSubscriptionDeleted(
+  subscription: Stripe.Subscription,
+): Promise<void> {
+  try {
+    if (subscription.metadata?.type !== CUSTOMER_SERVICE_SUBSCRIPTION_TYPE) return;
+
+    const result = await prisma.customerServiceSubscription.updateMany({
+      where: { stripeSubscriptionId: subscription.id },
+      data: {
+        status: CustomerSubscriptionStatus.CANCELED,
+        canceledAt: new Date(),
+      },
+    });
+
+    if (result.count === 0) {
+      console.warn("[webhook/customer-sub] deleted: no row for subscription", subscription.id);
+    }
+  } catch (e) {
+    console.error("[webhook/customer-sub] deleted handler error", e);
+  }
+}
