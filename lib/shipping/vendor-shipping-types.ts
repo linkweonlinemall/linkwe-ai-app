@@ -8,6 +8,7 @@ import {
   REGIONS_TRINIDAD_REMOTE,
   type ShippingZone,
 } from "@/lib/shipping/trinidad-zoning";
+import type { SelfDeliveryZone } from "@/lib/shipping/self-delivery-zones";
 
 /** Billable weight used for LinkWe “customer pays” display (upTo20Lbs tier). */
 export const LINKWE_DISPLAY_WEIGHT_LBS = 20;
@@ -32,8 +33,18 @@ export type LinkWeRateDisplay = {
   rateMinor: number;
 };
 
+export type SelfDeliveryZoneRowData = {
+  zone: SelfDeliveryZone;
+  label: string;
+  regionsPreview: string;
+  rateMinor: number;
+  isSuggested: boolean;
+  active: boolean;
+};
+
 export type VendorShippingSettingsData = {
   shippingMode: "SELF" | "LINKWE";
+  /** Raw DB rows (includes legacy 4-zone rows ignored by the SELF UI). */
   rates: Array<{
     id: string;
     storeId: string;
@@ -43,6 +54,9 @@ export type VendorShippingSettingsData = {
     createdAt: Date;
     updatedAt: Date;
   }>;
+  selfDeliveryZones: SelfDeliveryZoneRowData[];
+  homeZone: SelfDeliveryZone;
+  homeZoneLabel: string;
   linkweRates: LinkWeRateDisplay[];
 };
 

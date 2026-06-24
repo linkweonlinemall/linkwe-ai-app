@@ -3,6 +3,7 @@ import { getCartSubtotal } from "@/lib/checkout/pricing";
 import { prisma } from "@/lib/prisma";
 import { loadStoreShippingConfigs } from "@/lib/shipping/load-store-shipping-configs";
 import { computePerStoreShipping } from "@/lib/shipping/per-store-shipping";
+import { getSelfDeliveryZone } from "@/lib/shipping/self-delivery-zones";
 import { getShippingZone } from "@/lib/shipping/trinidad-zoning";
 
 export type CheckoutCartItem = Awaited<ReturnType<typeof loadCheckoutCart>>[number];
@@ -36,6 +37,18 @@ export type ComputeCartShippingResult =
 function itemWeightLbs(weight: number | null, weightUnit: string | null): number {
   if (!weight) return 0.5;
   return weightUnit === "KG" ? weight * 2.20462 : weight;
+}
+
+/** Order-level shippingZone for MainOrder (metadata; split pricing re-resolves per store from region). */
+function resolveOrderShippingZone(
+  region: string,
+  stores: Array<{ shippingMode: "SELF" | "LINKWE"; allItemsDigitalOrPickup: boolean }>,
+): string {
+  const deliverable = stores.filter((s) => !s.allItemsDigitalOrPickup);
+  if (deliverable.length > 0 && deliverable.every((s) => s.shippingMode === "SELF")) {
+    return getSelfDeliveryZone(region);
+  }
+  return getShippingZone(region);
 }
 
 const checkoutCartInclude = {
@@ -97,40 +110,42 @@ export async function computeCartShippingFromItems(
     itemsByStore.get(sid)!.push(item);
   }
 
-  const zone = getShippingZone(deliveryRegion);
-  const shippingResult = computePerStoreShipping({
-    zone,
-    region: deliveryRegion,
-    stores: storeIds.map((storeId) => {
-      const storeItems = itemsByStore.get(storeId) ?? [];
-      const config = configByStoreId.get(storeId);
-      const storeName =
-        config?.storeName ?? storeItems[0]?.product.store.name ?? "Store";
-      const totalWeightLbs = storeItems.reduce((sum, item) => {
-        if (item.product.isDigital) return sum;
-        const w = itemWeightLbs(item.product.weight, item.product.weightUnit);
-        return sum + w * item.quantity;
-      }, 0);
-      const allItemsDigitalOrPickup =
-        !useDelivery || storeItems.every((item) => item.product.isDigital);
+  const storeInputs = storeIds.map((storeId) => {
+    const storeItems = itemsByStore.get(storeId) ?? [];
+    const config = configByStoreId.get(storeId);
+    const storeName =
+      config?.storeName ?? storeItems[0]?.product.store.name ?? "Store";
+    const totalWeightLbs = storeItems.reduce((sum, item) => {
+      if (item.product.isDigital) return sum;
+      const w = itemWeightLbs(item.product.weight, item.product.weightUnit);
+      return sum + w * item.quantity;
+    }, 0);
+    const allItemsDigitalOrPickup =
+      !useDelivery || storeItems.every((item) => item.product.isDigital);
 
-      return {
-        storeId,
-        storeName,
-        shippingMode: config?.shippingMode ?? "LINKWE",
-        selfRates: config?.selfRates ?? [],
-        totalWeightLbs,
-        allItemsDigitalOrPickup,
-      };
-    }),
+    return {
+      storeId,
+      storeName,
+      shippingMode: config?.shippingMode ?? "LINKWE",
+      selfRates: config?.selfRates ?? [],
+      totalWeightLbs,
+      allItemsDigitalOrPickup,
+    };
   });
+
+  const shippingResult = computePerStoreShipping({
+    region: deliveryRegion,
+    stores: storeInputs,
+  });
+
+  const orderShippingZone = resolveOrderShippingZone(deliveryRegion, storeInputs);
 
   return {
     perStore: shippingResult.perStore,
     totalShippingMinor: shippingResult.totalShippingMinor,
     hasCoverageFailure: shippingResult.hasCoverageFailure,
     blockedStores: shippingResult.blockedStores,
-    zone,
+    zone: orderShippingZone,
     subtotalMinor,
     pricingLines,
     cartItems,

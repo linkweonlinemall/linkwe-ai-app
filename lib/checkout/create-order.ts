@@ -17,6 +17,8 @@ export type CreateMainOrderFromCheckoutInput = {
   buyerId: string;
   /** Region string passed into checkout pricing / zoning (e.g. address `region`). */
   region: string;
+  /** Persisted on MainOrder; pass from checkout resolver (16-zone for all-SELF, else LinkWe 4-zone). */
+  shippingZone?: string;
   totals: CheckoutPricingTotals;
   lines: CreateOrderLineInput[];
   status?: MainOrderStatus;
@@ -30,7 +32,7 @@ export type CreateMainOrderFromCheckoutInput = {
 export async function createMainOrderFromCheckout(
   input: CreateMainOrderFromCheckoutInput,
 ): Promise<{ orderId: string }> {
-  const { buyerId, region, totals, lines, status } = input;
+  const { buyerId, region, shippingZone, totals, lines, status } = input;
   if (lines.length === 0) {
     throw new Error("Cannot create an order with no line items.");
   }
@@ -40,7 +42,7 @@ export async function createMainOrderFromCheckout(
       data: {
         buyerId,
         region,
-        shippingZone: getShippingZone(region),
+        shippingZone: shippingZone ?? getShippingZone(region),
         subtotalMinor: totals.subtotalMinor,
         shippingMinor: totals.shippingMinor,
         totalMinor: totals.totalMinor,

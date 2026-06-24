@@ -1,8 +1,8 @@
 import { getCheckoutShipping } from "@/lib/checkout/pricing";
-import { isVendorShippingZone } from "@/lib/shipping/vendor-shipping-types";
+import { getSelfDeliveryZone } from "@/lib/shipping/self-delivery-zones";
 
 export type PerStoreShippingInput = {
-  zone: string;
+  /** Customer delivery region (checkout dropdown slug). Each store resolves its own zone by mode. */
   region: string;
   stores: Array<{
     storeId: string;
@@ -46,10 +46,8 @@ function computeStoreShipping(
   }
 
   if (mode === "SELF") {
-    const canonicalZone = isVendorShippingZone(input.zone) ? input.zone : null;
-    const rate = canonicalZone
-      ? store.selfRates.find((r) => r.zone === canonicalZone && r.active)
-      : undefined;
+    const selfZone = getSelfDeliveryZone(input.region);
+    const rate = store.selfRates.find((r) => r.zone === selfZone && r.active);
     if (rate) {
       return {
         storeId: store.storeId,

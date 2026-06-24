@@ -32,7 +32,8 @@ export default async function VendorShippingPage() {
 
         <ShippingSettingsClient
           initialMode={settings.shippingMode}
-          initialRates={settings.rates}
+          initialSelfZoneRows={settings.selfDeliveryZones}
+          homeZoneLabel={settings.homeZoneLabel}
           linkweRates={settings.linkweRates}
         />
       </div>

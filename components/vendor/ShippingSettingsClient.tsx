@@ -11,27 +11,30 @@ import {
 import { toastChangesSaved, toastFormError } from "@/lib/feedback/toasts";
 import { ttdToMinor } from "@/lib/finance/commission";
 import {
-  SHIPPING_ZONES,
+  SELF_DELIVERY_ZONE_GROUPS,
+  getSelfDeliveryZoneRegionLabels,
+  type SelfDeliveryZone,
+} from "@/lib/shipping/self-delivery-zones";
+import {
   ZONE_DEFINITIONS,
   type LinkWeRateDisplay,
+  type SelfDeliveryZoneRowData,
   type VendorShippingZone,
 } from "@/lib/shipping/vendor-shipping-types";
 
-type RateRecord = {
-  zone: string;
-  rateMinor: number;
-  active: boolean;
-};
-
-type ZoneRowState = {
-  zone: VendorShippingZone;
+type SelfZoneRowState = {
+  zone: SelfDeliveryZone;
+  label: string;
+  regionsPreview: string;
   priceInput: string;
   active: boolean;
+  isSuggested: boolean;
 };
 
 type Props = {
   initialMode: "SELF" | "LINKWE";
-  initialRates: RateRecord[];
+  initialSelfZoneRows: SelfDeliveryZoneRowData[];
+  homeZoneLabel: string;
   linkweRates: LinkWeRateDisplay[];
 };
 
@@ -39,15 +42,68 @@ function formatTtd(minor: number): string {
   return `TTD ${(minor / 100).toFixed(2)}`;
 }
 
-function buildZoneRows(rates: RateRecord[]): ZoneRowState[] {
-  return SHIPPING_ZONES.map((zone) => {
-    const existing = rates.find((r) => r.zone === zone);
-    return {
-      zone,
-      priceInput: existing ? (existing.rateMinor / 100).toFixed(2) : "",
-      active: existing?.active ?? true,
-    };
-  });
+function buildSelfZoneRows(rows: SelfDeliveryZoneRowData[]): SelfZoneRowState[] {
+  return rows.map((row) => ({
+    zone: row.zone,
+    label: row.label,
+    regionsPreview: row.regionsPreview,
+    priceInput: (row.rateMinor / 100).toFixed(2),
+    active: row.active,
+    isSuggested: row.isSuggested,
+  }));
+}
+
+const ZONE_REGION_PREVIEW_COUNT = 6;
+
+function ZoneRegionsPreview({ zone }: { zone: SelfDeliveryZone }) {
+  const allLabels = useMemo(() => getSelfDeliveryZoneRegionLabels(zone), [zone]);
+  const [expanded, setExpanded] = useState(false);
+  const hasMore = allLabels.length > ZONE_REGION_PREVIEW_COUNT;
+  const previewText = allLabels.slice(0, ZONE_REGION_PREVIEW_COUNT).join(", ");
+  const panelId = `zone-regions-${zone}`;
+
+  if (!hasMore) {
+    return (
+      <p className="mt-1 text-xs leading-relaxed text-[#7c7b77]">{allLabels.join(", ")}</p>
+    );
+  }
+
+  return (
+    <div className="mt-1">
+      {!expanded ? (
+        <p className="text-xs leading-relaxed text-[#7c7b77]">
+          {previewText}
+          {", "}
+          <button
+            type="button"
+            aria-expanded={false}
+            aria-controls={panelId}
+            onClick={() => setExpanded(true)}
+            className="font-medium text-[#D4450A] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4450A]/40"
+          >
+            and more
+          </button>
+        </p>
+      ) : null}
+      {expanded ? (
+        <div
+          id={panelId}
+          className="rounded-lg bg-zinc-50 px-3 py-2 text-xs leading-relaxed text-[#7c7b77] ring-1 ring-zinc-100"
+        >
+          {allLabels.join(", ")}
+          <button
+            type="button"
+            aria-expanded
+            aria-controls={panelId}
+            onClick={() => setExpanded(false)}
+            className="mt-2 block font-medium text-[#D4450A] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4450A]/40"
+          >
+            Show less
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function Toggle({
@@ -87,14 +143,25 @@ function Toggle({
 
 export default function ShippingSettingsClient({
   initialMode,
-  initialRates,
+  initialSelfZoneRows,
+  homeZoneLabel,
   linkweRates,
 }: Props) {
   const router = useRouter();
   const [mode, setMode] = useState<"SELF" | "LINKWE">(initialMode);
-  const [zoneRows, setZoneRows] = useState<ZoneRowState[]>(() => buildZoneRows(initialRates));
+  const [zoneRows, setZoneRows] = useState<SelfZoneRowState[]>(() =>
+    buildSelfZoneRows(initialSelfZoneRows),
+  );
   const [isModePending, startModeTransition] = useTransition();
   const [isRatesPending, startRatesTransition] = useTransition();
+
+  const rowsByZone = useMemo(() => {
+    const map = new Map<SelfDeliveryZone, SelfZoneRowState>();
+    for (const row of zoneRows) {
+      map.set(row.zone, row);
+    }
+    return map;
+  }, [zoneRows]);
 
   const linkweByZone = useMemo(() => {
     const map = new Map<VendorShippingZone, number>();
@@ -118,8 +185,12 @@ export default function ShippingSettingsClient({
     });
   }
 
-  function updateZoneRow(zone: VendorShippingZone, patch: Partial<ZoneRowState>) {
-    setZoneRows((rows) => rows.map((r) => (r.zone === zone ? { ...r, ...patch } : r)));
+  function updateZoneRow(zone: SelfDeliveryZone, patch: Partial<SelfZoneRowState>) {
+    setZoneRows((rows) =>
+      rows.map((r) =>
+        r.zone === zone ? { ...r, ...patch, isSuggested: patch.isSuggested ?? false } : r,
+      ),
+    );
   }
 
   function handleSaveRates() {
@@ -136,6 +207,7 @@ export default function ShippingSettingsClient({
         return;
       }
       toastChangesSaved("Shipping rates saved");
+      setZoneRows((rows) => rows.map((r) => ({ ...r, isSuggested: false })));
       router.refresh();
     });
   }
@@ -206,73 +278,83 @@ export default function ShippingSettingsClient({
         </div>
       </section>
 
-      {/* SELF mode */}
+      {/* SELF mode — 16 self-delivery zones */}
       {mode === "SELF" ? (
         <section className="rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
           <div className="border-b border-zinc-100 px-5 py-4">
             <h2 className="font-bold text-[#1C1C1A]">Your delivery rates</h2>
-            <p className="mt-0.5 text-xs text-[#7c7b77]">
-              Set a price per zone. Turn off zones you do not deliver to.
+            <p className="mt-1 text-xs leading-relaxed text-[#7c7b77]">
+              Rates are pre-filled based on your store location ({homeZoneLabel}) — adjust any
+              zone, or turn off zones you do not deliver to.
             </p>
           </div>
 
-          <ul className="divide-y divide-zinc-50">
-            {ZONE_DEFINITIONS.map((def) => {
-              const row = zoneRows.find((r) => r.zone === def.zone)!;
-              return (
-                <li
-                  key={def.zone}
-                  className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-[#1C1C1A]">
-                      {def.label}
-                      <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-zinc-400">
-                        {def.zone}
-                      </span>
-                    </p>
-                    <p className="mt-1 text-xs leading-relaxed text-[#7c7b77]">
-                      {def.regionsPreview}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-4 sm:shrink-0">
-                    <label className="flex flex-col gap-1">
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
-                        Rate
-                      </span>
-                      <div className="relative">
-                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400">
-                          TTD
-                        </span>
-                        <input
-                          type="number"
-                          min={0}
-                          step={0.01}
-                          inputMode="decimal"
-                          disabled={!row.active || isRatesPending}
-                          value={row.priceInput}
-                          onChange={(e) => updateZoneRow(def.zone, { priceInput: e.target.value })}
-                          placeholder="0.00"
-                          className="w-full min-w-[7.5rem] rounded-lg border border-zinc-200 py-2 pl-11 pr-3 text-sm text-[#1C1C1A] outline-none focus:border-[#D4450A] focus:ring-1 focus:ring-[#D4450A] disabled:bg-zinc-50 disabled:text-zinc-400 sm:w-32"
-                        />
+          {SELF_DELIVERY_ZONE_GROUPS.map((group) => (
+            <div key={group.title}>
+              <div className="border-b border-zinc-100 bg-zinc-50/80 px-5 py-2.5">
+                <h3 className="text-[10px] font-bold uppercase tracking-wide text-zinc-500">
+                  {group.title}
+                </h3>
+              </div>
+              <ul className="divide-y divide-zinc-50">
+                {group.zones.map((zone) => {
+                  const row = rowsByZone.get(zone)!;
+                  return (
+                    <li
+                      key={zone}
+                      className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-[#1C1C1A]">{row.label}</p>
+                        <ZoneRegionsPreview zone={zone} />
                       </div>
-                    </label>
 
-                    <div className="flex items-center gap-2">
-                      <Toggle
-                        checked={row.active}
-                        disabled={isRatesPending}
-                        label={`Deliver to ${def.label}`}
-                        onChange={(active) => updateZoneRow(def.zone, { active })}
-                      />
-                      <span className="text-xs text-[#7c7b77]">Deliver here</span>
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                      <div className="flex flex-wrap items-center gap-4 sm:shrink-0">
+                        <label className="flex flex-col gap-1">
+                          <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+                            Rate
+                            {row.isSuggested ? (
+                              <span className="rounded bg-amber-50 px-1.5 py-0.5 font-bold normal-case tracking-normal text-amber-700 ring-1 ring-amber-200/80">
+                                Suggested
+                              </span>
+                            ) : null}
+                          </span>
+                          <div className="relative">
+                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400">
+                              TTD
+                            </span>
+                            <input
+                              type="number"
+                              min={0}
+                              step={0.01}
+                              inputMode="decimal"
+                              disabled={!row.active || isRatesPending}
+                              value={row.priceInput}
+                              onChange={(e) =>
+                                updateZoneRow(zone, { priceInput: e.target.value })
+                              }
+                              placeholder="0.00"
+                              className="w-full min-w-[7.5rem] rounded-lg border border-zinc-200 py-2 pl-11 pr-3 text-sm text-[#1C1C1A] outline-none focus:border-[#D4450A] focus:ring-1 focus:ring-[#D4450A] disabled:bg-zinc-50 disabled:text-zinc-400 sm:w-32"
+                            />
+                          </div>
+                        </label>
+
+                        <div className="flex items-center gap-2">
+                          <Toggle
+                            checked={row.active}
+                            disabled={isRatesPending}
+                            label={`Deliver to ${row.label}`}
+                            onChange={(active) => updateZoneRow(zone, { active })}
+                          />
+                          <span className="text-xs text-[#7c7b77]">Deliver here</span>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
 
           <div className="border-t border-zinc-100 px-5 py-4">
             <button
@@ -287,7 +369,7 @@ export default function ShippingSettingsClient({
         </section>
       ) : null}
 
-      {/* LINKWE mode */}
+      {/* LINKWE mode — unchanged 4-zone courier display */}
       {mode === "LINKWE" ? (
         <section className="rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
           <div className="border-b border-zinc-100 px-5 py-4">

@@ -175,7 +175,6 @@ export async function createSplitOrdersFromMainOrder(mainOrderId: string): Promi
     const configByStoreId = new Map(configs.map((c) => [c.storeId, c]));
 
     const shippingResult = computePerStoreShipping({
-      zone: mainOrder.shippingZone,
       region: mainOrder.region,
       stores: storeIds.map((storeId) => {
         const storeItems = itemsByStore.get(storeId) ?? [];

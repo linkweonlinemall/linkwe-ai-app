@@ -4,16 +4,34 @@ import type { StoreShippingMode } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import { getSession } from "@/lib/auth/session";
+import { ttdToMinor } from "@/lib/finance/commission";
 import { prisma } from "@/lib/prisma";
 import {
+  SELF_DELIVERY_ZONE_LABELS,
+  SELF_DELIVERY_ZONES,
+  getDefaultRatesForHomeZone,
+  getSelfDeliveryZoneRegionsPreview,
+  isSelfDeliveryZone,
+  mapStoreRegionToHomeZone,
+} from "@/lib/shipping/self-delivery-zones";
+import {
   getAllLinkWeDisplayRates,
-  isVendorShippingZone,
+  type SelfDeliveryZoneRowData,
   type VendorShippingRateInput,
   type VendorShippingSettingsData,
 } from "@/lib/shipping/vendor-shipping-types";
 
 const SHIPPING_PAGE = "/dashboard/vendor/shipping";
 const NO_STORE_ERROR = "Store not found.";
+
+/**
+ * Optional one-time Neon cleanup for pre-launch legacy self-delivery rows (run manually):
+ *
+ * DELETE FROM vendor_shipping_rates
+ * WHERE zone IN ('METRO', 'EXTENDED', 'REMOTE', 'TOBAGO_METRO');
+ *
+ * Load logic ignores those rows for the SELF UI; checkout still reads them until Phase 3.
+ */
 
 type ActionError = { ok: false; error: string };
 type ActionOk = { ok: true };
@@ -34,6 +52,39 @@ async function requireCallerStore(): Promise<
   return { ok: true, storeId: store.id };
 }
 
+function buildSelfDeliveryZoneRows(
+  storeRegion: string | null,
+  savedRates: Array<{ zone: string; rateMinor: number; active: boolean }>,
+): Pick<VendorShippingSettingsData, "selfDeliveryZones" | "homeZone" | "homeZoneLabel"> {
+  const homeZone = mapStoreRegionToHomeZone(storeRegion ?? "");
+  const defaultsMajor = getDefaultRatesForHomeZone(homeZone);
+
+  const savedByZone = new Map(
+    savedRates
+      .filter((row) => isSelfDeliveryZone(row.zone))
+      .map((row) => [row.zone, row] as const),
+  );
+
+  const selfDeliveryZones: SelfDeliveryZoneRowData[] = SELF_DELIVERY_ZONES.map((zone) => {
+    const saved = savedByZone.get(zone);
+    const defaultMajor = defaultsMajor[zone];
+    return {
+      zone,
+      label: SELF_DELIVERY_ZONE_LABELS[zone],
+      regionsPreview: getSelfDeliveryZoneRegionsPreview(zone),
+      rateMinor: saved ? saved.rateMinor : ttdToMinor(defaultMajor),
+      isSuggested: !saved,
+      active: saved?.active ?? true,
+    };
+  });
+
+  return {
+    selfDeliveryZones,
+    homeZone,
+    homeZoneLabel: SELF_DELIVERY_ZONE_LABELS[homeZone],
+  };
+}
+
 export async function getVendorShippingSettings(): Promise<
   | ({ ok: true } & VendorShippingSettingsData)
   | ActionError
@@ -46,6 +97,7 @@ export async function getVendorShippingSettings(): Promise<
       where: { id: storeResult.storeId },
       select: {
         shippingMode: true,
+        region: true,
         shippingRates: {
           orderBy: { zone: "asc" },
         },
@@ -54,10 +106,13 @@ export async function getVendorShippingSettings(): Promise<
 
     if (!store) return { ok: false, error: NO_STORE_ERROR };
 
+    const selfDelivery = buildSelfDeliveryZoneRows(store.region, store.shippingRates);
+
     return {
       ok: true,
       shippingMode: store.shippingMode,
       rates: store.shippingRates,
+      ...selfDelivery,
       linkweRates: getAllLinkWeDisplayRates(),
     };
   } catch (e) {
@@ -96,19 +151,34 @@ export async function setShippingRates(
     return { ok: false, error: "At least one zone rate is required." };
   }
 
+  if (rates.length !== SELF_DELIVERY_ZONES.length) {
+    return { ok: false, error: "All 16 delivery zones must be included." };
+  }
+
   const storeResult = await requireCallerStore();
   if (!storeResult.ok) return storeResult;
 
+  const seenZones = new Set<string>();
   for (const row of rates) {
-    if (!isVendorShippingZone(row.zone)) {
-      return { ok: false, error: `Unknown zone: ${row.zone}` };
+    if (!isSelfDeliveryZone(row.zone)) {
+      return { ok: false, error: `Unknown self-delivery zone: ${row.zone}` };
     }
+    if (seenZones.has(row.zone)) {
+      return { ok: false, error: `Duplicate zone: ${row.zone}` };
+    }
+    seenZones.add(row.zone);
     const minor = Number(row.rateMinor);
     if (!Number.isFinite(minor) || minor < 0 || !Number.isInteger(minor)) {
       return { ok: false, error: "Rates must be whole minor units (≥ 0)." };
     }
     if (typeof row.active !== "boolean") {
       return { ok: false, error: "Each zone must include an active flag." };
+    }
+  }
+
+  for (const zone of SELF_DELIVERY_ZONES) {
+    if (!seenZones.has(zone)) {
+      return { ok: false, error: `Missing zone: ${zone}` };
     }
   }
 
