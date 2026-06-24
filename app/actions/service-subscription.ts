@@ -77,6 +77,95 @@ export async function getMyServiceSubscriptions(): Promise<
   return { ok: true, subscriptions };
 }
 
+export type StoreSubscriberRow = {
+  id: string;
+  status: "ACTIVE" | "PAST_DUE" | "CANCELED";
+  cancelAtPeriodEnd: boolean;
+  currentPeriodEnd: Date | null;
+  canceledAt: Date | null;
+  priceMinor: number;
+  interval: string;
+  createdAt: Date;
+  customer: { fullName: string | null };
+  product: { name: string; slug: string };
+};
+
+export type StoreSubscribersSummary = {
+  activeCount: number;
+  monthlyRecurringRevenueMinor: number;
+};
+
+function priceMinorToMonthlyMinor(priceMinor: number, interval: string): number {
+  const key = interval.trim().toLowerCase();
+  switch (key) {
+    case "weekly":
+      return Math.round((priceMinor * 52) / 12);
+    case "fortnightly":
+      return Math.round((priceMinor * 26) / 12);
+    case "monthly":
+      return priceMinor;
+    case "quarterly":
+      return Math.round(priceMinor / 3);
+    default:
+      return priceMinor;
+  }
+}
+
+export async function getMyStoreSubscribers(): Promise<
+  | { ok: true; subscribers: StoreSubscriberRow[]; summary: StoreSubscribersSummary }
+  | { ok: false; error: "not_logged_in" | "not_vendor" | "no_store" }
+> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "not_logged_in" };
+  if (session.role !== "VENDOR") return { ok: false, error: "not_vendor" };
+
+  const store = await prisma.store.findFirst({
+    where: { ownerId: session.userId },
+    select: { id: true },
+  });
+  if (!store) return { ok: false, error: "no_store" };
+
+  const rows = await prisma.customerServiceSubscription.findMany({
+    where: { storeId: store.id },
+    select: {
+      id: true,
+      status: true,
+      cancelAtPeriodEnd: true,
+      currentPeriodEnd: true,
+      canceledAt: true,
+      priceMinor: true,
+      interval: true,
+      createdAt: true,
+      customer: { select: { fullName: true } },
+      product: { select: { name: true, slug: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const statusRank = (status: StoreSubscriberRow["status"]) => (status === "CANCELED" ? 1 : 0);
+
+  const subscribers = [...rows].sort((a, b) => {
+    const byStatus = statusRank(a.status) - statusRank(b.status);
+    if (byStatus !== 0) return byStatus;
+    return b.createdAt.getTime() - a.createdAt.getTime();
+  });
+
+  const activeRows = subscribers.filter((s) => s.status === "ACTIVE");
+  const monthlyRecurringRevenueMinor = activeRows.reduce(
+    (sum, row) => sum + priceMinorToMonthlyMinor(row.priceMinor, row.interval),
+    0,
+  );
+
+  return {
+    ok: true,
+    subscribers,
+    summary: {
+      activeCount: activeRows.length,
+      monthlyRecurringRevenueMinor,
+    },
+  };
+}
+
 export async function startServiceSubscriptionCheckout(
   productId: string,
 ): Promise<{ ok: true; checkoutUrl: string } | { ok: false; error: string }> {
