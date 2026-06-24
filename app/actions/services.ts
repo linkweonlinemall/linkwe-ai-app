@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { BookingPaymentMode, QuotePriceType } from "@prisma/client";
 
+import { mapSubscriptionIntervalToStripe } from "@/lib/finance/subscription-interval";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth/session";
 import { sellableStoreWhere } from "@/lib/store/sellable-store";
@@ -10,6 +11,20 @@ import {
   findVendorServicesForAvailability,
   vendorServiceListSelect,
 } from "@/lib/vendor/vendor-service-query";
+
+function normalizeSubscriptionInterval(
+  serviceType: string,
+  rawInterval: string | null,
+): { interval: string | null } | { error: string } {
+  if (serviceType !== "SUBSCRIPTION") {
+    return { interval: rawInterval };
+  }
+  const normalized = rawInterval?.trim().toLowerCase() ?? "";
+  if (!mapSubscriptionIntervalToStripe(normalized)) {
+    return { error: "A billing interval is required for subscription services." };
+  }
+  return { interval: normalized };
+}
 
 function slugify(text: string): string {
   return text
@@ -159,6 +174,10 @@ export async function createService(formData: FormData) {
 
   if (!name || !serviceType || Number.isNaN(price)) return { error: "Missing required fields" };
 
+  const intervalResult = normalizeSubscriptionInterval(serviceType, subscriptionInterval);
+  if ("error" in intervalResult) return { error: intervalResult.error };
+  const resolvedSubscriptionInterval = intervalResult.interval;
+
   let slug = slugify(name);
   const existing = await prisma.product.findUnique({ where: { slug } });
   if (existing) slug = `${slug}-${Date.now()}`;
@@ -192,7 +211,7 @@ export async function createService(formData: FormData) {
       minimumQuoteAmount:
         minimumQuoteAmount !== null && !Number.isNaN(minimumQuoteAmount) ? minimumQuoteAmount : null,
       siteVisitRequired,
-      subscriptionInterval,
+      subscriptionInterval: resolvedSubscriptionInterval,
       sessionsIncluded:
         sessionsIncluded !== null && !Number.isNaN(sessionsIncluded) ? sessionsIncluded : null,
       subscriptionCancellationDays:
@@ -331,6 +350,10 @@ export async function updateService(id: string, formData: FormData) {
 
   if (!name || !serviceType || Number.isNaN(price)) return { error: "Missing required fields" };
 
+  const intervalResult = normalizeSubscriptionInterval(serviceType, subscriptionInterval);
+  if ("error" in intervalResult) return { error: intervalResult.error };
+  const resolvedSubscriptionInterval = intervalResult.interval;
+
   await prisma.product.update({
     where: { id },
     data: {
@@ -367,7 +390,7 @@ export async function updateService(id: string, formData: FormData) {
       minimumQuoteAmount:
         minimumQuoteAmount !== null && !Number.isNaN(minimumQuoteAmount) ? minimumQuoteAmount : null,
       siteVisitRequired,
-      subscriptionInterval,
+      subscriptionInterval: resolvedSubscriptionInterval,
       sessionsIncluded:
         sessionsIncluded !== null && !Number.isNaN(sessionsIncluded) ? sessionsIncluded : null,
       subscriptionCancellationDays:

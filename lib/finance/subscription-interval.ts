@@ -11,6 +11,18 @@ const INTERVAL_MAP: Record<string, StripeRecurringInterval> = {
   quarterly: { interval: "month", interval_count: 3 },
 };
 
+const INTERVAL_DISPLAY: Record<string, string> = {
+  weekly: "per week",
+  fortnightly: "every 2 weeks",
+  monthly: "per month",
+  quarterly: "per quarter",
+};
+
+/** Canonical billing interval keys accepted by mapSubscriptionIntervalToStripe. */
+export const SUBSCRIPTION_INTERVAL_KEYS = Object.keys(INTERVAL_MAP) as Array<
+  keyof typeof INTERVAL_MAP
+>;
+
 /**
  * Maps Product.subscriptionInterval strings to Stripe price recurring config.
  * Returns null for unknown or empty values (callers should treat as invalid).
@@ -21,4 +33,13 @@ export function mapSubscriptionIntervalToStripe(
   if (!interval) return null;
   const key = interval.trim().toLowerCase();
   return INTERVAL_MAP[key] ?? null;
+}
+
+/** Customer-facing price suffix, e.g. "per month". Falls back to "per cycle" when unknown. */
+export function formatSubscriptionIntervalDisplay(
+  interval: string | null | undefined,
+): string {
+  if (!interval) return "per cycle";
+  const key = interval.trim().toLowerCase();
+  return INTERVAL_DISPLAY[key] ?? "per cycle";
 }

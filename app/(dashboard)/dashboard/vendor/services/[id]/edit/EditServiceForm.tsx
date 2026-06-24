@@ -9,6 +9,7 @@ import RelatedItemsPanel from "@/components/vendor/RelatedItemsPanel";
 import RichTextEditor from "@/components/ui/RichTextEditor";
 import type { ContentLinkItem } from "@/lib/content-links/types";
 import { SERVICE_CATEGORIES } from "@/lib/categories";
+import { mapSubscriptionIntervalToStripe } from "@/lib/finance/subscription-interval";
 
 const SERVICE_TYPES = [
   { value: "BOOKABLE", label: "Bookable", description: "Customer picks a date and time", icon: "📅" },
@@ -135,6 +136,14 @@ export default function EditServiceForm({
     e.preventDefault();
     setLoading(true);
     setError(null);
+    if (
+      serviceType === "SUBSCRIPTION" &&
+      !mapSubscriptionIntervalToStripe(subscriptionInterval)
+    ) {
+      setError("Choose a billing interval.");
+      setLoading(false);
+      return;
+    }
     const formData = new FormData(e.currentTarget);
     formData.set("serviceType", serviceType);
     formData.set("serviceLocation", serviceLocation);
@@ -498,15 +507,21 @@ export default function EditServiceForm({
 
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
-                Billing interval
+                Billing interval{" "}
+                {serviceType === "SUBSCRIPTION" ? (
+                  <span className="text-[#D4450A]">*</span>
+                ) : null}
               </label>
               <select
                 name="subscriptionInterval"
                 value={subscriptionInterval}
+                required={serviceType === "SUBSCRIPTION"}
                 onChange={(e) => setSubscriptionInterval(e.target.value)}
                 className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-sm focus:border-[#D4450A] focus:outline-none"
               >
-                <option value="">Select interval</option>
+                <option value="" disabled>
+                  Select interval
+                </option>
                 <option value="weekly">Weekly</option>
                 <option value="fortnightly">Fortnightly (every 2 weeks)</option>
                 <option value="monthly">Monthly</option>

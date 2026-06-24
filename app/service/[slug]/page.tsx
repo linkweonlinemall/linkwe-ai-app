@@ -20,6 +20,7 @@ import StarRating from "@/components/ui/StarRating";
 import ExpandableDescription from "@/components/ui/ExpandableDescription";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { getServiceCategoryLabel } from "@/lib/categories";
+import { formatSubscriptionIntervalDisplay } from "@/lib/finance/subscription-interval";
 import { prisma } from "@/lib/prisma";
 import { isStoreSellable } from "@/lib/store/sellable-store";
 
@@ -641,6 +642,15 @@ export default async function ServiceDetailPage({ params }: Props) {
                       </p>
                     )}
                   </div>
+                ) : service.serviceType === "SUBSCRIPTION" ? (
+                  <div>
+                    <p className="text-4xl font-black tracking-tight" style={{ color: "#D4450A" }}>
+                      TTD {service.price.toFixed(2)}
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-400">
+                      {formatSubscriptionIntervalDisplay(service.subscriptionInterval)}
+                    </p>
+                  </div>
                 ) : (
                   <div>
                     <p className="text-4xl font-black tracking-tight" style={{ color: "#D4450A" }}>
@@ -795,7 +805,8 @@ export default async function ServiceDetailPage({ params }: Props) {
                   />
 
                   <p className="text-center text-xs text-zinc-400">
-                    TTD {service.price.toFixed(2)} per {service.subscriptionInterval ?? "cycle"}
+                    TTD {service.price.toFixed(2)}{" "}
+                    {formatSubscriptionIntervalDisplay(service.subscriptionInterval)}
                   </p>
                 </div>
               ) : service.serviceType === "ON_DEMAND" ? (
