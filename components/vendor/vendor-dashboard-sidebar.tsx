@@ -14,6 +14,7 @@ import {
   IconLink,
   IconMessageCircle,
   IconPackage,
+  IconRefresh,
   IconSettings,
   IconShoppingBag,
   IconStar,
@@ -113,6 +114,7 @@ export default function VendorDashboardSidebar({
     { href: "/dashboard/vendor/services", label: "My Services", Icon: IconTools },
     { href: "/dashboard/vendor/events", label: "Events", Icon: IconTicket },
     { href: "/dashboard/vendor/bookings", label: "Bookings", Icon: IconCalendarEvent },
+    { href: "/dashboard/vendor/subscribers", label: "Subscribers", Icon: IconRefresh },
     {
       href: "/dashboard/vendor/requests",
       label: "Requests",
