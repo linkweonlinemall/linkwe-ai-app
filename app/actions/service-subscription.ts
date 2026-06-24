@@ -9,6 +9,74 @@ import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe/stripe";
 import { isStoreSellable } from "@/lib/store/sellable-store";
 
+export type MyServiceSubscriptionRow = {
+  id: string;
+  status: "ACTIVE" | "PAST_DUE" | "CANCELED";
+  cancelAtPeriodEnd: boolean;
+  currentPeriodEnd: Date | null;
+  canceledAt: Date | null;
+  priceMinor: number;
+  interval: string;
+  createdAt: Date;
+  product: {
+    name: string;
+    slug: string;
+    images: string[];
+    isPublished: boolean;
+  };
+  store: {
+    name: string;
+    slug: string;
+  };
+};
+
+export async function getMyServiceSubscriptions(): Promise<
+  { ok: true; subscriptions: MyServiceSubscriptionRow[] } | { ok: false; error: "not_logged_in" }
+> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "not_logged_in" };
+
+  const rows = await prisma.customerServiceSubscription.findMany({
+    where: { customerId: session.userId },
+    select: {
+      id: true,
+      status: true,
+      cancelAtPeriodEnd: true,
+      currentPeriodEnd: true,
+      canceledAt: true,
+      priceMinor: true,
+      interval: true,
+      createdAt: true,
+      product: {
+        select: {
+          name: true,
+          slug: true,
+          images: true,
+          isPublished: true,
+        },
+      },
+      store: {
+        select: {
+          name: true,
+          slug: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const statusRank = (status: MyServiceSubscriptionRow["status"]) =>
+    status === "CANCELED" ? 1 : 0;
+
+  const subscriptions = [...rows].sort((a, b) => {
+    const byStatus = statusRank(a.status) - statusRank(b.status);
+    if (byStatus !== 0) return byStatus;
+    return b.createdAt.getTime() - a.createdAt.getTime();
+  });
+
+  return { ok: true, subscriptions };
+}
+
 export async function startServiceSubscriptionCheckout(
   productId: string,
 ): Promise<{ ok: true; checkoutUrl: string } | { ok: false; error: string }> {

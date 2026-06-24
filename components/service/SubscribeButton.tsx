@@ -163,10 +163,10 @@ export default function SubscribeButton({
           </>
         )}
         <Link
-          href="/dashboard/customer"
+          href="/dashboard/customer/subscriptions"
           className="text-center text-xs font-semibold text-[#D4450A] underline-offset-2 hover:underline"
         >
-          View dashboard →
+          My subscriptions →
         </Link>
         {manageError ? <p className="text-center text-xs text-red-600">{manageError}</p> : null}
       </div>
