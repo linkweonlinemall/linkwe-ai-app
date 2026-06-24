@@ -4,6 +4,11 @@ import { NotificationType, StoreSubscriptionStatus, VendorSubscriptionPlan } fro
 
 import { handleBookingPaymentIntentSucceeded } from "@/lib/finance/booking-payment";
 import { createSplitOrdersFromMainOrder } from "@/lib/fulfillment/split-orders";
+import {
+  handleCustomerServiceSubscriptionCheckout,
+  handleCustomerServiceSubscriptionInvoiceFailed,
+  handleCustomerServiceSubscriptionInvoicePaid,
+} from "@/lib/webhooks/customer-service-subscription";
 import { createNotification } from "@/app/actions/notifications";
 import { BASE_URL } from "@/lib/email/resend";
 import { sendEmail } from "@/lib/email/send";
@@ -157,6 +162,8 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case "checkout.session.completed": {
         const checkoutSession = event.data.object as Stripe.Checkout.Session;
+        await handleCustomerServiceSubscriptionCheckout(checkoutSession);
+
         const requestId = checkoutSession.metadata?.requestId;
 
         if (requestId) {
@@ -194,12 +201,15 @@ export async function POST(request: NextRequest) {
       case "invoice.paid":
       case "invoice.payment_succeeded": {
         const invoice = event.data.object as Stripe.Invoice;
+        await handleCustomerServiceSubscriptionInvoicePaid(invoice);
         await handleSubscriptionInvoicePaid(invoice);
         break;
       }
 
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
+        await handleCustomerServiceSubscriptionInvoiceFailed(invoice);
+
         const subStoreId = invoice.parent?.subscription_details?.metadata?.subscriptionStoreId;
         if (!subStoreId) break;
 
