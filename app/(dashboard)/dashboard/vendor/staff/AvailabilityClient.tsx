@@ -133,7 +133,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
     if (!openingHours) return false;
     return WEEKDAY_KEYS.some((key) => {
       const day = openingHours[key];
-      return day && !day.closed && day.slots.length > 0;
+      return day && !day.closed && (day.slots?.length ?? 0) > 0;
     });
   }, [openingHours]);
 
@@ -291,7 +291,11 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
           <div className="mt-4 grid grid-cols-7 gap-1.5 sm:gap-2">
             {WEEKDAY_KEYS.map((key, i) => {
               const day = openingHours[key];
-              const label = formatDayHoursLabel(day ?? { closed: true, allDay: false, slots: [] });
+              const label = formatDayHoursLabel(
+                day
+                  ? { ...day, slots: day.slots ?? [] }
+                  : { closed: true, allDay: false, slots: [] },
+              );
               const open = !!label;
               return (
                 <div
