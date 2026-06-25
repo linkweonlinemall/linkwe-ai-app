@@ -349,9 +349,8 @@ Start your response with one short sentence, then paste the code block above exa
         const zaraToolsWithCache: Anthropic.Tool[] = [
           ADD_TO_CART_TOOL,
           ADD_MULTIPLE_TO_CART_TOOL,
-          SEARCH_EVENTS_TOOL as Anthropic.Tool,
           {
-            ...ADD_EVENT_TICKETS_TO_CART_TOOL,
+            ...(SEARCH_EVENTS_TOOL as Anthropic.Tool),
             cache_control: { type: "ephemeral" as const },
           },
         ]
