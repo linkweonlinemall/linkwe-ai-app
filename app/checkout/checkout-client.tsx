@@ -52,6 +52,11 @@ type CheckoutClientProps = {
 
 const mobilePrimaryBtn = `flex w-full min-h-[44px] items-center justify-center ${radius.button} py-3.5 text-base font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60 ${tw.bgScarlet}`;
 
+function getRegionOptionLabel(slug: string): string {
+  const match = TRINIDAD_ONBOARDING_REGION_OPTIONS.find((r) => r.value === slug);
+  return match?.label ?? slug.replace(/_/g, " ");
+}
+
 function PaymentForm({ orderId, onBack }: { orderId: string; onBack: () => void }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -133,12 +138,70 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
   const [orderId, setOrderId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [regionDetectionFailed, setRegionDetectionFailed] = useState(false);
+  /** Pin-derived region suggestion — never applied without explicit customer confirmation. */
+  const [suggestedRegion, setSuggestedRegion] = useState<string | null>(null);
+  /** Pin/address geocode could not match any known delivery area. */
+  const [pinRegionUnmatched, setPinRegionUnmatched] = useState(false);
+  /** Blocks payment until pin suggestion is reconciled with deliveryRegion. */
+  const [regionNeedsConfirmation, setRegionNeedsConfirmation] = useState(false);
   const [shippingBreakdown, setShippingBreakdown] =
     useState<CheckoutShippingBreakdownResult | null>(null);
   const [shippingLoading, setShippingLoading] = useState(false);
 
   const regionLabel = deliveryRegion.replace(/_/g, " ");
+
+  useEffect(() => {
+    if (!useDelivery || allDigital) {
+      setSuggestedRegion(null);
+      setPinRegionUnmatched(false);
+      setRegionNeedsConfirmation(false);
+    }
+  }, [useDelivery, allDigital]);
+
+  function handlePinRegionDetected(detected: string | null) {
+    if (detected) {
+      setSuggestedRegion(detected);
+      setPinRegionUnmatched(false);
+      setRegionNeedsConfirmation(detected !== deliveryRegion);
+      return;
+    }
+    setSuggestedRegion(null);
+    setPinRegionUnmatched(true);
+    setRegionNeedsConfirmation(true);
+  }
+
+  function handleDeliveryRegionChange(nextRegion: string) {
+    setDeliveryRegion(nextRegion);
+    setPinRegionUnmatched(false);
+    if (suggestedRegion) {
+      setRegionNeedsConfirmation(suggestedRegion !== nextRegion);
+    } else {
+      setRegionNeedsConfirmation(false);
+    }
+  }
+
+  function clearDeliveryRegionSelection() {
+    setDeliveryRegion("");
+    setSuggestedRegion(null);
+    setPinRegionUnmatched(false);
+    setRegionNeedsConfirmation(false);
+  }
+
+  function confirmCurrentDeliveryRegion() {
+    setPinRegionUnmatched(false);
+    setRegionNeedsConfirmation(false);
+  }
+
+  function acceptSuggestedRegion() {
+    if (!suggestedRegion) return;
+    setDeliveryRegion(suggestedRegion);
+    setRegionNeedsConfirmation(false);
+  }
+
+  function keepCurrentDeliveryRegion() {
+    setSuggestedRegion(null);
+    setRegionNeedsConfirmation(false);
+  }
 
   const needsShippingQuote = !allDigital && useDelivery && Boolean(deliveryRegion);
 
@@ -173,10 +236,13 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
 
   const displayTotal = subtotal + totalShippingMinor / 100;
 
+  const needsRegionConfirmation = !allDigital && useDelivery && regionNeedsConfirmation;
+
   const payBlocked =
     loading ||
     (!allDigital && !anyDelivery && !anyPickup) ||
     hasCoverageFailure ||
+    needsRegionConfirmation ||
     (needsShippingQuote && shippingLoading);
 
   async function proceedToPayment() {
@@ -191,6 +257,11 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
 
     if (!allDigital && useDelivery && !deliveryRegion) {
       setError("Please select your delivery region.");
+      return;
+    }
+
+    if (!allDigital && useDelivery && regionNeedsConfirmation) {
+      setError("Please confirm your delivery region matches your pin location before continuing.");
       return;
     }
 
@@ -404,22 +475,13 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
 
                   {useDelivery ? (
                     <div className="mt-4 flex flex-col gap-3">
-                      {regionDetectionFailed ? (
-                        <p className="text-base text-amber-700">
-                          We couldn&apos;t detect your region from the map pin. Please choose your delivery region
-                          below.
-                        </p>
-                      ) : null}
                       <Select
                         className={`${radius.card} min-h-[44px] border bg-white px-4 py-3 text-base ${
-                          regionDetectionFailed ? "border-amber-400" : "border-zinc-200"
+                          regionNeedsConfirmation ? "border-amber-400" : "border-zinc-200"
                         }`}
                         label="Select your delivery region"
                         value={deliveryRegion}
-                        onChange={(e) => {
-                          setDeliveryRegion(e.target.value);
-                          setRegionDetectionFailed(false);
-                        }}
+                        onChange={(e) => handleDeliveryRegionChange(e.target.value)}
                       >
                         <option value="">Choose your region...</option>
                         {TRINIDAD_ONBOARDING_REGION_OPTIONS.map((r) => (
@@ -435,7 +497,7 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
                             className="!px-0 !py-2 min-h-[44px] text-sm text-zinc-500 hover:bg-transparent hover:text-zinc-900"
                             type="button"
                             variant="ghost"
-                            onClick={() => setDeliveryRegion("")}
+                            onClick={clearDeliveryRegionSelection}
                           >
                             ← Change region
                           </Button>
@@ -453,15 +515,62 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
                             initialAddress=""
                             initialLat={null}
                             initialLng={null}
-                            onRegionDetected={(detected) => {
-                              if (detected) {
-                                setDeliveryRegion(detected);
-                                setRegionDetectionFailed(false);
-                              } else {
-                                setRegionDetectionFailed(true);
-                              }
-                            }}
+                            onRegionDetected={handlePinRegionDetected}
                           />
+
+                          {suggestedRegion && suggestedRegion === deliveryRegion ? (
+                            <p className="text-sm text-emerald-700">
+                              ✓ Pin matches your selected region: {getRegionOptionLabel(suggestedRegion)}
+                            </p>
+                          ) : null}
+
+                          {suggestedRegion && suggestedRegion !== deliveryRegion ? (
+                            <div
+                              className={`${radius.card} border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900`}
+                            >
+                              <p>
+                                Your pin looks like it&apos;s in{" "}
+                                <span className="font-semibold">{getRegionOptionLabel(suggestedRegion)}</span>, but
+                                you selected{" "}
+                                <span className="font-semibold">{getRegionOptionLabel(deliveryRegion)}</span>.
+                                Which is correct?
+                              </p>
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  onClick={acceptSuggestedRegion}
+                                  className={`min-h-[44px] ${radius.button} bg-[#D4450A] px-4 py-2 text-sm font-semibold text-white hover:opacity-90`}
+                                >
+                                  Use {getRegionOptionLabel(suggestedRegion)}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={keepCurrentDeliveryRegion}
+                                  className={`min-h-[44px] ${radius.button} border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50`}
+                                >
+                                  Keep {getRegionOptionLabel(deliveryRegion)}
+                                </button>
+                              </div>
+                            </div>
+                          ) : null}
+
+                          {pinRegionUnmatched ? (
+                            <div
+                              className={`${radius.card} border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900`}
+                            >
+                              <p>
+                                We couldn&apos;t match your pin to a delivery area. Please confirm your region
+                                below.
+                              </p>
+                              <button
+                                type="button"
+                                onClick={confirmCurrentDeliveryRegion}
+                                className={`mt-3 min-h-[44px] ${radius.button} border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50`}
+                              >
+                                Confirm {getRegionOptionLabel(deliveryRegion)}
+                              </button>
+                            </div>
+                          ) : null}
                         </>
                       ) : null}
 
@@ -486,6 +595,12 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
             </div>
 
             {coverageWarning ? <div className="mt-4">{coverageWarning}</div> : null}
+
+            {needsRegionConfirmation ? (
+              <p className="mt-4 text-base text-amber-700">
+                Please confirm your delivery region matches your pin location before continuing.
+              </p>
+            ) : null}
 
             <button
               type="button"
@@ -556,6 +671,11 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
 
           {step === "details" ? (
             <div className="px-4 pb-2 pt-1">
+              {needsRegionConfirmation ? (
+                <p className="mb-2 text-sm text-amber-700">
+                  Confirm your delivery region before continuing.
+                </p>
+              ) : null}
               <button
                 type="button"
                 onClick={() => void proceedToPayment()}

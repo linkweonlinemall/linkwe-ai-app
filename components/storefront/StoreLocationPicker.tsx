@@ -208,6 +208,7 @@ function LocationPickerShared({
             setAddressDetectionNote(
               "We found your location in Trinidad & Tobago but could not identify your specific area. Please select your region below.",
             );
+            onRegionDetectedRef.current?.(null);
           } else {
             setAddressDetectionNote(null);
           }

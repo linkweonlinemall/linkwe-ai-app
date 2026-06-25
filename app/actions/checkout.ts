@@ -20,6 +20,7 @@ import { VENDOR_DASHBOARD_ORDERS_TAB_HREF } from "@/lib/routes/vendor-dashboard"
 import { createNotification } from "@/app/actions/notifications";
 import { NotificationType } from "@prisma/client";
 import { isStoreSellable } from "@/lib/store/sellable-store";
+import { isValidRegion } from "@/lib/regions/tt-regions";
 
 export type CheckoutItem = {
   productId: string;
@@ -81,6 +82,16 @@ export async function createPaymentIntent(
     }
     if (item.product.stock !== null && item.product.stock < item.quantity) {
       return { ok: false, error: `Not enough stock for ${item.product.name}.` };
+    }
+  }
+
+  const cartRequiresDelivery =
+    useDelivery && cartItems.some((item) => !item.product.isDigital);
+
+  if (cartRequiresDelivery) {
+    const region = deliveryRegion.trim();
+    if (!region || !isValidRegion(region)) {
+      return { ok: false, error: "Please select a valid delivery region." };
     }
   }
 
