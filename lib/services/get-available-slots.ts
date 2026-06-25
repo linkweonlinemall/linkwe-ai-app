@@ -64,7 +64,7 @@ function resolveHoursForDay(
   if (service.useStoreHours) {
     return getStoreHoursRangeForDay(openingHours, dayKey);
   }
-  if (!service.availableDays.includes(dayKey)) return null;
+  if (!(service.availableDays ?? []).includes(dayKey)) return null;
   if (!service.availableFrom || !service.availableTo) return null;
   return { from: service.availableFrom, to: service.availableTo };
 }
@@ -114,10 +114,10 @@ export function getAvailableSlots(
 
   if (service.useStoreHours) {
     const daySchedule = getDayScheduleForDate(openingHours, dateStr);
-    if (!daySchedule || daySchedule.closed || daySchedule.slots.length === 0) {
+    if (!daySchedule || daySchedule.closed || (daySchedule.slots?.length ?? 0) === 0) {
       return [];
     }
-  } else if (!service.availableDays.includes(dayKey)) {
+  } else if (!(service.availableDays ?? []).includes(dayKey)) {
     return [];
   }
 

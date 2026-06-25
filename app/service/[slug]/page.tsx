@@ -258,7 +258,7 @@ export default async function ServiceDetailPage({ params }: Props) {
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
           <div className="flex flex-col gap-6 lg:col-span-7">
-            <ServiceGallery images={service.images} name={service.name} />
+            <ServiceGallery images={service.images ?? []} name={service.name} />
 
             <div>
               <div className="mb-2 flex flex-wrap items-center gap-2">

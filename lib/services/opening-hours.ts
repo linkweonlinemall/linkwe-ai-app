@@ -64,7 +64,7 @@ export function getStoreHoursRangeForDay(
 ): { from: string; to: string } | null {
   if (!openingHours) return null;
   const day = openingHours[dayKey];
-  if (!day || day.closed || day.slots.length === 0) return null;
+  if (!day || day.closed || (day.slots?.length ?? 0) === 0) return null;
   const slot = day.slots[0]!;
   return { from: slot.from, to: slot.to };
 }

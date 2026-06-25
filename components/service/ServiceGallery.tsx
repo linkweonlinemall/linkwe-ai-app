@@ -2,17 +2,18 @@
 import { useState } from "react";
 
 type Props = {
-  images: string[];
+  images: string[] | null | undefined;
   name: string;
 };
 
 export default function ServiceGallery({ images, name }: Props) {
+  const safeImages = Array.isArray(images) ? images : [];
   const [activeIndex, setActiveIndex] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomOrigin, setZoomOrigin] = useState("center center");
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
-  if (images.length === 0) {
+  if (safeImages.length === 0) {
     return (
       <div className="flex aspect-[4/3] w-full items-center justify-center rounded-2xl bg-gradient-to-br from-zinc-100 to-zinc-200 text-6xl">
         🛎️
@@ -20,7 +21,7 @@ export default function ServiceGallery({ images, name }: Props) {
     );
   }
 
-  const activeImage = images[activeIndex];
+  const activeImage = safeImages[activeIndex];
 
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -53,14 +54,14 @@ export default function ServiceGallery({ images, name }: Props) {
           />
 
           {/* Arrow nav */}
-          {images.length > 1 ? (
+          {safeImages.length > 1 ? (
             <>
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setIsZoomed(false);
-                  setActiveIndex((i) => (i === 0 ? images.length - 1 : i - 1));
+                  setActiveIndex((i) => (i === 0 ? safeImages.length - 1 : i - 1));
                 }}
                 className="absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 shadow-md backdrop-blur-sm hover:bg-white transition-all opacity-0 hover:opacity-100 group-hover:opacity-100"
                 style={{ opacity: 1 }}
@@ -74,7 +75,7 @@ export default function ServiceGallery({ images, name }: Props) {
                 onClick={(e) => {
                   e.stopPropagation();
                   setIsZoomed(false);
-                  setActiveIndex((i) => (i === images.length - 1 ? 0 : i + 1));
+                  setActiveIndex((i) => (i === safeImages.length - 1 ? 0 : i + 1));
                 }}
                 className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 shadow-md backdrop-blur-sm hover:bg-white transition-all"
                 style={{ opacity: 1 }}
@@ -87,7 +88,7 @@ export default function ServiceGallery({ images, name }: Props) {
               {/* Counter + expand hint */}
               <div className="absolute bottom-3 left-3 flex items-center gap-2">
                 <span className="rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
-                  {activeIndex + 1} / {images.length}
+                  {activeIndex + 1} / {safeImages.length}
                 </span>
               </div>
               <div className="absolute bottom-3 right-3">
@@ -106,9 +107,9 @@ export default function ServiceGallery({ images, name }: Props) {
         </div>
 
         {/* Thumbnail strip */}
-        {images.length > 1 ? (
+        {safeImages.length > 1 ? (
           <div className="flex gap-2 overflow-x-auto pb-1">
-            {images.map((img, i) => (
+            {safeImages.map((img, i) => (
               <button
                 key={img}
                 type="button"
@@ -149,11 +150,11 @@ export default function ServiceGallery({ images, name }: Props) {
           </button>
 
           {/* Nav */}
-          {images.length > 1 ? (
+          {safeImages.length > 1 ? (
             <>
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setActiveIndex((i) => (i === 0 ? images.length - 1 : i - 1)); }}
+                onClick={(e) => { e.stopPropagation(); setActiveIndex((i) => (i === 0 ? safeImages.length - 1 : i - 1)); }}
                 className="absolute left-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/25 transition-colors"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -162,7 +163,7 @@ export default function ServiceGallery({ images, name }: Props) {
               </button>
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setActiveIndex((i) => (i === images.length - 1 ? 0 : i + 1)); }}
+                onClick={(e) => { e.stopPropagation(); setActiveIndex((i) => (i === safeImages.length - 1 ? 0 : i + 1)); }}
                 className="absolute right-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/25 transition-colors"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -174,16 +175,16 @@ export default function ServiceGallery({ images, name }: Props) {
 
           {/* Full image */}
           <img
-            src={images[activeIndex]}
+            src={safeImages[activeIndex]}
             alt={name}
             className="max-h-[88vh] max-w-[88vw] rounded-2xl object-contain shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           />
 
           {/* Thumbnail strip in lightbox */}
-          {images.length > 1 ? (
+          {safeImages.length > 1 ? (
             <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-2 overflow-x-auto rounded-2xl bg-black/40 p-2 backdrop-blur-sm">
-              {images.map((img, i) => (
+              {safeImages.map((img, i) => (
                 <button
                   key={img}
                   type="button"
@@ -199,9 +200,9 @@ export default function ServiceGallery({ images, name }: Props) {
           ) : null}
 
           {/* Counter */}
-          {images.length > 1 ? (
+          {safeImages.length > 1 ? (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
-              {activeIndex + 1} / {images.length}
+              {activeIndex + 1} / {safeImages.length}
             </div>
           ) : null}
         </div>
