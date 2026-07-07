@@ -38,6 +38,7 @@ export default async function VendorFinancePage() {
       pastDueSince: true,
       stripeSubscriptionId: true,
       autoRenew: true,
+      aiTopupCreditsRemaining: true,
       ledgerEntries: {
         select: {
           id: true,

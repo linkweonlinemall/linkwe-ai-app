@@ -7,11 +7,18 @@ export type AIUsageStoreInput = {
   subscriptionPlan: string | null;
   subscriptionStatus?: string | null;
   planRenewsAt: Date | null;
+  aiTopupCreditsRemaining: number;
 };
 
 export async function getAIUsageState(
   store: AIUsageStoreInput,
-): Promise<{ allowance: number; used: number; remaining: number; periodKey: string }> {
+): Promise<{
+  allowance: number;
+  used: number;
+  remaining: number;
+  periodKey: string;
+  topupRemaining: number;
+}> {
   const allowance = getStorePlan({
     subscriptionPlan: store.subscriptionPlan,
     subscriptionStatus: store.subscriptionStatus,
@@ -33,13 +40,14 @@ export async function getAIUsageState(
     used,
     remaining: Math.max(0, allowance - used),
     periodKey,
+    topupRemaining: store.aiTopupCreditsRemaining,
   };
 }
 
 export async function consumeAIUse(
   store: AIUsageStoreInput,
 ): Promise<
-  | { ok: true; remaining: number }
+  | { ok: true; remaining: number; usedTopup?: true }
   | { ok: false; reason: string; allowance: number; used: number }
 > {
   const allowance = getStorePlan({
@@ -48,15 +56,6 @@ export async function consumeAIUse(
   }).limits.aiMonthlyAllowance;
 
   const periodKey = getCurrentPeriodKey(store.planRenewsAt);
-
-  if (allowance <= 0) {
-    return {
-      ok: false,
-      reason: "AI is not included on your plan.",
-      allowance: 0,
-      used: 0,
-    };
-  }
 
   const row = await prisma.aIUsage.findUnique({
     where: {
@@ -67,31 +66,40 @@ export async function consumeAIUse(
 
   const used = row?.count ?? 0;
 
-  if (used >= allowance) {
-    return {
-      ok: false,
-      reason: `You've used all ${allowance} of your AI uses for this period. They reset on your next plan renewal.`,
-      allowance,
-      used,
-    };
+  if (allowance > 0 && used < allowance) {
+    const updated = await prisma.aIUsage.upsert({
+      where: {
+        storeId_periodKey: { storeId: store.id, periodKey },
+      },
+      create: {
+        storeId: store.id,
+        periodKey,
+        count: 1,
+      },
+      update: {
+        count: { increment: 1 },
+      },
+      select: { count: true },
+    });
+
+    return { ok: true, remaining: allowance - updated.count };
   }
 
-  const updated = await prisma.aIUsage.upsert({
-    where: {
-      storeId_periodKey: { storeId: store.id, periodKey },
-    },
-    create: {
-      storeId: store.id,
-      periodKey,
-      count: 1,
-    },
-    update: {
-      count: { increment: 1 },
-    },
-    select: { count: true },
+  const spent = await prisma.store.updateMany({
+    where: { id: store.id, aiTopupCreditsRemaining: { gt: 0 } },
+    data: { aiTopupCreditsRemaining: { decrement: 1 } },
   });
 
-  return { ok: true, remaining: allowance - updated.count };
+  if (spent.count === 1) {
+    return { ok: true, remaining: 0, usedTopup: true };
+  }
+
+  return {
+    ok: false,
+    reason: "You're out of AI uses. Buy more AI uses or upgrade your plan.",
+    allowance,
+    used,
+  };
 }
 
 export async function recordAITokens(

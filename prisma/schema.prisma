@@ -176,6 +176,7 @@ model Store {
   stripeCustomerId     String?                 @map("stripe_customer_id")
   stripeSubscriptionId String?                 @map("stripe_subscription_id")
   autoRenew            Boolean                 @default(true) @map("auto_renew")
+  aiTopupCreditsRemaining Int                  @default(0) @map("ai_topup_credits_remaining")
   isAvailableNow   Boolean     @default(false)
   staffMembers     StaffMember[]
   createdAt        DateTime    @default(now()) @map("created_at")
@@ -198,6 +199,7 @@ model Store {
   ledgerEntries    VendorLedgerEntry[]
   payoutThreshold  VendorThreshold?
   aiUsage          AIUsage[]
+  aiTopupPurchases AITopupPurchase[]
   warehouses       Warehouse[]
   images           StoreImage[]
   savedBy          SavedStore[]
@@ -900,6 +902,22 @@ model AIUsage {
   @@unique([storeId, periodKey])
   @@index([storeId])
   @@map("ai_usage")
+}
+
+model AITopupPurchase {
+  id                    String    @id @default(cuid())
+  storeId               String    @map("store_id")
+  usesPurchased         Int       @map("uses_purchased")
+  pricePaidMinor        Int       @map("price_paid_minor")
+  currency              String    @default("ttd")
+  stripePaymentIntentId String    @unique @map("stripe_payment_intent_id")
+  status                String    @default("PENDING")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  paidAt                DateTime? @map("paid_at")
+  store                 Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+  @@map("ai_topup_purchases")
 }
 
 model AIChatSession {

@@ -14,14 +14,19 @@ export default async function AIAssistantLayout({
 
   const store = await prisma.store.findFirst({
     where: { ownerId: session.userId },
-    select: { subscriptionPlan: true, subscriptionStatus: true },
+    select: {
+      subscriptionPlan: true,
+      subscriptionStatus: true,
+      aiTopupCreditsRemaining: true,
+    },
   })
   if (store) {
+    const planAllowance = getStorePlan({
+      subscriptionPlan: store.subscriptionPlan,
+      subscriptionStatus: store.subscriptionStatus,
+    }).limits.aiMonthlyAllowance
     const aiEnabled =
-      getStorePlan({
-        subscriptionPlan: store.subscriptionPlan,
-        subscriptionStatus: store.subscriptionStatus,
-      }).limits.aiMonthlyAllowance > 0
+      planAllowance > 0 || store.aiTopupCreditsRemaining > 0
     if (!aiEnabled) redirect("/dashboard/vendor/finance")
   }
 

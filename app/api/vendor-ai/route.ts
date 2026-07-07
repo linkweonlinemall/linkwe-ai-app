@@ -618,17 +618,19 @@ export async function POST(req: NextRequest) {
       subscriptionPlan: true,
       subscriptionStatus: true,
       planRenewsAt: true,
+      aiTopupCreditsRemaining: true,
     },
   })
   if (!store) {
     return new Response("No store found", { status: 400 })
   }
 
+  const planAllowance = getStorePlan({
+    subscriptionPlan: store.subscriptionPlan,
+    subscriptionStatus: store.subscriptionStatus,
+  }).limits.aiMonthlyAllowance
   const aiEnabled =
-    getStorePlan({
-      subscriptionPlan: store.subscriptionPlan,
-      subscriptionStatus: store.subscriptionStatus,
-    }).limits.aiMonthlyAllowance > 0
+    planAllowance > 0 || store.aiTopupCreditsRemaining > 0
   if (!aiEnabled) {
     return new Response(
       JSON.stringify({

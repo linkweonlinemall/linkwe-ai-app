@@ -33,15 +33,17 @@ export default async function VendorDashboardLayout({
       status: true,
       subscriptionPlan: true,
       subscriptionStatus: true,
+      aiTopupCreditsRemaining: true,
     },
   });
   if (!fullStore) redirect("/onboarding/business/step-3");
 
+  const planAllowance = getStorePlan({
+    subscriptionPlan: fullStore.subscriptionPlan,
+    subscriptionStatus: fullStore.subscriptionStatus,
+  }).limits.aiMonthlyAllowance;
   const aiEnabled =
-    getStorePlan({
-      subscriptionPlan: fullStore.subscriptionPlan,
-      subscriptionStatus: fullStore.subscriptionStatus,
-    }).limits.aiMonthlyAllowance > 0;
+    planAllowance > 0 || fullStore.aiTopupCreditsRemaining > 0;
 
   const [counts, unreadCount] = await Promise.all([
     getVendorNavCounts(fullStore.id),
