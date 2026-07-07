@@ -8,8 +8,9 @@ import {
   startPreparing,
 } from "@/app/actions/fulfillment";
 import { getSession } from "@/lib/auth/session";
+import { calculateEarningsMinor, getCommissionRate } from "@/lib/finance/commission";
+import { resolveVendorPlan } from "@/lib/finance/vendor-plan";
 import { getCourierPickupFeeMinor } from "@/lib/fulfillment/courier-pickup-rates";
-import { calculateCommissionMinor, calculateVendorNetMinor } from "@/lib/platform/commission";
 import { prisma } from "@/lib/prisma";
 import { getSplitProgressSteps, getSplitStepIndex } from "@/lib/orders/split-progress";
 import { vendorSplitOrderDetailSelect } from "@/lib/vendor/vendor-split-order-query";
@@ -113,6 +114,24 @@ function formatRegion(region: string): string {
   return region.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+function lineItemImageUrl(imageUrl: string | null | undefined): string | null {
+  const url = imageUrl?.trim();
+  return url ? url : null;
+}
+
+function LineItemThumbnail({ imageUrl, alt }: { imageUrl: string | null; alt: string }) {
+  return (
+    <div className="size-10 shrink-0 overflow-hidden rounded-lg bg-zinc-100">
+      {imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- remote Cloudinary / listing URLs
+        <img src={imageUrl} alt={alt} className="h-full w-full object-cover" />
+      ) : (
+        <div className="h-full w-full" aria-hidden />
+      )}
+    </div>
+  );
+}
+
 export default async function VendorOrderDetailPage({ params }: Props) {
   const session = await getSession();
   if (!session) redirect("/login");
@@ -136,8 +155,13 @@ export default async function VendorOrderDetailPage({ params }: Props) {
   const mainRef = `LW-${splitOrder.mainOrderId.slice(-8).toUpperCase()}`;
   const flowSteps = getSplitProgressSteps(shippingMode, "vendor");
   const stepIndex = getSplitStepIndex(splitOrder.status, shippingMode);
-  const commissionMinor = calculateCommissionMinor(splitOrder.subtotalMinor);
-  const netAfterCommission = calculateVendorNetMinor(splitOrder.subtotalMinor);
+  const plan = resolveVendorPlan(splitOrder.store.subscriptionPlan);
+  const { commissionMinor, netMinor: netAfterCommission } = calculateEarningsMinor(
+    splitOrder.subtotalMinor,
+    "product",
+    plan,
+  );
+  const commissionRatePct = Math.round(getCommissionRate("product", plan) * 100);
   const pickupFeeMinor =
     splitOrder.vendorInboundMethod === "PICKUP_REQUESTED"
       ? getCourierPickupFeeMinor(splitOrder.store.region ?? "", 1)
@@ -250,14 +274,22 @@ export default async function VendorOrderDetailPage({ params }: Props) {
                     </tr>
                   </thead>
                   <tbody>
-                    {splitOrder.items.map((item) => (
+                    {splitOrder.items.map((item) => {
+                      const imageUrl = lineItemImageUrl(item.listing?.imageUrl);
+                      return (
                       <tr key={item.id} className="border-b border-zinc-100">
-                        <td className="py-2 pr-2 font-medium text-zinc-900">{item.titleSnapshot}</td>
+                        <td className="py-2 pr-2">
+                          <div className="flex items-center gap-2">
+                            <LineItemThumbnail imageUrl={imageUrl} alt={item.titleSnapshot} />
+                            <span className="font-medium text-zinc-900">{item.titleSnapshot}</span>
+                          </div>
+                        </td>
                         <td className="py-2 pr-2 text-zinc-600">{item.quantity}</td>
                         <td className="py-2 pr-2 text-right text-zinc-600">{formatMinor(item.unitPriceMinor)}</td>
                         <td className="py-2 text-right font-medium text-zinc-900">{formatMinor(item.lineTotalMinor)}</td>
                       </tr>
-                    ))}
+                    );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -407,7 +439,11 @@ export default async function VendorOrderDetailPage({ params }: Props) {
                   <dd className="font-medium text-zinc-900">{formatMinor(splitOrder.subtotalMinor)}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-zinc-500">Commission (12%)</dt>
+                  <dt className="text-zinc-500">Shipping</dt>
+                  <dd className="font-medium text-zinc-900">{formatMinor(splitOrder.shippingMinor)}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-zinc-500">Commission ({commissionRatePct}%)</dt>
                   <dd className="font-medium text-zinc-700">−{formatMinor(commissionMinor)}</dd>
                 </div>
                 {pickupFeeMinor > 0 ? (

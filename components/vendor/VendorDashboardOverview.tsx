@@ -99,6 +99,12 @@ function DeltaLine({ pct }: { pct: number | null }) {
 
 const CARD_BORDER = "border-[0.5px] border-[rgba(28,28,26,0.12)]";
 
+function StatComingSoon() {
+  return (
+    <p className="mt-3 text-sm font-medium text-[#a09f9b]">Coming soon</p>
+  );
+}
+
 export default function VendorDashboardOverview(props: {
   analytics: VendorDashboardAnalytics;
   recentOrders: VendorSplitOrder[];
@@ -130,10 +136,6 @@ export default function VendorDashboardOverview(props: {
   const salesFmt = analytics.salesThisMonthTtd.toLocaleString("en-TT", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  });
-  const convFmt = analytics.conversionRatePct.toLocaleString("en-TT", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
   });
 
   const categoryLabel = getStoreCategoryLabel(store.categoryId);
@@ -167,8 +169,13 @@ export default function VendorDashboardOverview(props: {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-3">
         <div className={`rounded-[12px] bg-white dash-card-pad p-4 ${CARD_BORDER}`}>
           <div className="flex items-start justify-between gap-2">
-            <span className="text-[11px] text-[#7c7b77]">Total sales</span>
-            <span className="flex size-[26px] items-center justify-center rounded-lg bg-[#FEF0EB] text-[#D4450A]">
+            <div>
+              <span className="text-[11px] text-[#7c7b77]">Settled earnings</span>
+              <p className="mt-0.5 text-[10px] leading-snug text-[#a09f9b]">
+                After commission · completed orders
+              </p>
+            </div>
+            <span className="flex size-[26px] shrink-0 items-center justify-center rounded-lg bg-[#FEF0EB] text-[#D4450A]">
               <IconCoin className="size-4" stroke={1.75} aria-hidden />
             </span>
           </div>
@@ -192,10 +199,8 @@ export default function VendorDashboardOverview(props: {
               <IconEye className="size-4" stroke={1.75} aria-hidden />
             </span>
           </div>
-          <p className="mt-3 text-[22px] font-medium tabular-nums text-[#1C1C1A]">
-            {analytics.profileViewsTotal.toLocaleString("en-TT")}
-          </p>
-          <DeltaLine pct={analytics.profileViewsChangePct} />
+          <StatComingSoon />
+          <p className="mt-1 text-[10px] text-[#a09f9b]">Not yet tracked</p>
         </div>
         <div className={`rounded-[12px] bg-white dash-card-pad p-4 ${CARD_BORDER}`}>
           <div className="flex items-start justify-between gap-2">
@@ -204,8 +209,8 @@ export default function VendorDashboardOverview(props: {
               <IconPercentage className="size-4" stroke={1.75} aria-hidden />
             </span>
           </div>
-          <p className="mt-3 text-[22px] font-medium tabular-nums text-[#1C1C1A]">{`${convFmt}%`}</p>
-          <DeltaLine pct={analytics.conversionChangePct} />
+          <StatComingSoon />
+          <p className="mt-1 text-[10px] text-[#a09f9b]">Not yet tracked</p>
         </div>
       </div>
 
@@ -272,13 +277,21 @@ export default function VendorDashboardOverview(props: {
                 recentOrders.map((o) => {
                   const first = o.items[0];
                   const title = first?.titleSnapshot ?? "Order";
+                  const thumbnailUrl = first?.listing?.imageUrl?.trim() || null;
                   const pill = pillForSplitStatus(o.status);
                   return (
                     <div
                       key={o.id}
                       className="flex items-start gap-3 border-b border-[rgba(28,28,26,0.06)] px-4 py-[11px] last:border-b-0"
                     >
-                      <div className="size-9 shrink-0 rounded-[8px] bg-[#F7F5F2]" aria-hidden />
+                      <div className="size-9 shrink-0 overflow-hidden rounded-[8px] bg-[#F7F5F2]">
+                        {thumbnailUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- remote Cloudinary / listing URLs
+                          <img src={thumbnailUrl} alt={title} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="h-full w-full" aria-hidden />
+                        )}
+                      </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[12px] font-medium text-[#1C1C1A]">{title}</p>
                         <p className="mt-0.5 text-[10px] text-[#7c7b77]">

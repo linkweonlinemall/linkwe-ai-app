@@ -12,6 +12,7 @@ export type SplitOrderItem = {
   quantity: number;
   unitPriceMinor: number;
   lineTotalMinor: number;
+  listing: { imageUrl: string | null };
 };
 
 export type VendorSplitOrder = {
@@ -19,6 +20,7 @@ export type VendorSplitOrder = {
   mainOrderId: string;
   status: string;
   subtotalMinor: number;
+  shippingMinor: number;
   currency: string;
   createdAt: Date | string;
   pickupRegion: string | null;
@@ -108,6 +110,11 @@ function getStatusBadge(status: string): { label: string; className: string } {
         label: "Completed",
         className: "bg-[#EAF3DE] text-[#3B6D11]",
       };
+    case "CANCELLED":
+      return {
+        label: "Cancelled",
+        className: "bg-[#F7F5F2] text-[#7c7b77]",
+      };
     default:
       return {
         label: status.replace(/_/g, " "),
@@ -122,6 +129,32 @@ function primaryItemTitle(order: VendorSplitOrder): string {
 
 function totalItemQuantity(order: VendorSplitOrder): number {
   return order.items.reduce((sum, item) => sum + item.quantity, 0);
+}
+
+function itemImageUrl(item: SplitOrderItem | undefined): string | null {
+  const url = item?.listing?.imageUrl?.trim();
+  return url ? url : null;
+}
+
+function OrderItemThumbnail({
+  imageUrl,
+  alt,
+  className = "size-10 shrink-0",
+}: {
+  imageUrl: string | null;
+  alt: string;
+  className?: string;
+}) {
+  return (
+    <div className={`overflow-hidden rounded-lg bg-[#F7F5F2] ${className}`}>
+      {imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- remote Cloudinary / listing URLs
+        <img src={imageUrl} alt={alt} className="h-full w-full object-cover" />
+      ) : (
+        <div className="h-full w-full" aria-hidden />
+      )}
+    </div>
+  );
 }
 
 export default function OrdersTab({ splitOrders }: Props) {
@@ -158,11 +191,13 @@ export default function OrdersTab({ splitOrders }: Props) {
     ].includes(o.status),
   );
   const completed = splitOrders.filter((o) => ["DELIVERED", "COMPLETED"].includes(o.status));
+  const cancelled = splitOrders.filter((o) => o.status === "CANCELLED");
 
   function renderOrderCard(order: VendorSplitOrder) {
     const badge = getStatusBadge(order.status);
     const ref = `#LW-${order.mainOrderId.slice(-8).toUpperCase()}`;
     const primary = primaryItemTitle(order);
+    const thumbnailUrl = itemImageUrl(order.items[0]);
     const region = formatRegion(order.mainOrder.region ?? "—");
     const qty = totalItemQuantity(order);
     const needsAction = order.status === "AWAITING_VENDOR_ACTION";
@@ -179,6 +214,7 @@ export default function OrdersTab({ splitOrders }: Props) {
 
           {/* Column 2 — product */}
           <div className="flex min-w-0 flex-1 items-start gap-2">
+            <OrderItemThumbnail imageUrl={thumbnailUrl} alt={primary} />
             <p
               className="min-w-0 truncate font-medium text-[#1C1C1A]"
               title={order.items.map((i) => i.titleSnapshot).join(", ")}
@@ -199,6 +235,9 @@ export default function OrdersTab({ splitOrders }: Props) {
               <span className="min-w-0 truncate">{region}</span>
             </p>
             <p className="font-semibold tabular-nums text-[#1C1C1A]">{formatMinor(order.subtotalMinor)}</p>
+            <p className="text-[10px] tabular-nums text-[var(--text-muted)]">
+              Shipping {formatMinor(order.shippingMinor)}
+            </p>
             <span
               className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${badge.className}`}
             >
@@ -248,6 +287,7 @@ export default function OrdersTab({ splitOrders }: Props) {
       {actionRequired.length > 0 ? section("Action required", "text-red-600", actionRequired) : null}
       {inProgress.length > 0 ? section("In progress", "text-[#7c7b77]", inProgress) : null}
       {completed.length > 0 ? section("Completed", "text-[#7c7b77]", completed) : null}
+      {cancelled.length > 0 ? section("Cancelled", "text-[#7c7b77]", cancelled) : null}
     </div>
   );
 }

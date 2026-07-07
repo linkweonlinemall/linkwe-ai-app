@@ -11,6 +11,7 @@ export const vendorSplitOrderListSelect = {
   mainOrderId: true,
   status: true,
   subtotalMinor: true,
+  shippingMinor: true,
   currency: true,
   createdAt: true,
   vendorInboundMethod: true,
@@ -22,6 +23,9 @@ export const vendorSplitOrderListSelect = {
       quantity: true,
       unitPriceMinor: true,
       lineTotalMinor: true,
+      listing: {
+        select: { imageUrl: true },
+      },
     },
   },
   mainOrder: {
@@ -60,6 +64,7 @@ export const vendorSplitOrderDetailSelect = {
   storeId: true,
   status: true,
   subtotalMinor: true,
+  shippingMinor: true,
   vendorInboundMethod: true,
   store: {
     select: {
@@ -68,6 +73,7 @@ export const vendorSplitOrderDetailSelect = {
       address: true,
       logoUrl: true,
       shippingMode: true,
+      subscriptionPlan: true,
     },
   },
   items: {
@@ -77,6 +83,9 @@ export const vendorSplitOrderDetailSelect = {
       quantity: true,
       unitPriceMinor: true,
       lineTotalMinor: true,
+      listing: {
+        select: { imageUrl: true },
+      },
     },
   },
   mainOrder: {
