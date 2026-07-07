@@ -104,6 +104,7 @@ export default async function VendorFinancePage() {
         aiUsed={aiUsage.used}
         aiAllowance={aiUsage.allowance}
         aiRemaining={aiUsage.remaining}
+        topupRemaining={aiUsage.topupRemaining}
         subPaidThisPeriod={subPaidThisPeriod}
         isCardBilled={!!store.stripeSubscriptionId}
         planRenewsAt={store.planRenewsAt}

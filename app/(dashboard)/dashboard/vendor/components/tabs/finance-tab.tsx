@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { cancelAutoRenew, payMySubscriptionFromBalance, requestPayout, resumeAutoRenew, saveVendorBankDetails, startSubscriptionCheckout } from "@/app/actions/vendor";
+import AITopupCheckout from "@/components/vendor/ai-topup-checkout";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import { getCommissionRate } from "@/lib/finance/commission";
@@ -83,6 +84,7 @@ type Props = {
   aiUsed: number;
   aiAllowance: number;
   aiRemaining: number;
+  topupRemaining: number;
   subPaidThisPeriod: boolean;
   isCardBilled: boolean;
   planRenewsAt: Date | string | null;
@@ -113,6 +115,7 @@ export default function FinanceTab({
   aiUsed,
   aiAllowance,
   aiRemaining,
+  topupRemaining,
   subPaidThisPeriod,
   isCardBilled,
   planRenewsAt,
@@ -131,8 +134,10 @@ export default function FinanceTab({
       : `TTD ${(priceMinor / 100).toLocaleString("en-TT", { maximumFractionDigits: 0 })}/mo`;
   const aiLine =
     limits.aiMonthlyAllowance === 0
-      ? "No AI assistant"
+      ? "No monthly AI allowance"
       : `${aiUsed} of ${aiAllowance} AI uses used · ${aiRemaining} left this period`;
+  const topupLine =
+    topupRemaining > 0 ? ` · ${topupRemaining} top-up use${topupRemaining !== 1 ? "s" : ""} remaining` : "";
   const [requestAmount, setRequestAmount] = useState("");
   const [requestError, setRequestError] = useState<string | null>(null);
   const [requestSuccess, setRequestSuccess] = useState(false);
@@ -414,7 +419,9 @@ export default function FinanceTab({
           ) : null}
           <p className="text-[11px] text-zinc-500">
             Product commission: {productCommissionPct}% · {aiLine}
+            {topupLine}
           </p>
+          <AITopupCheckout topupRemaining={topupRemaining} />
           {plan === "STARTER" ? (
             <>
               <p className="mt-2 text-[11px] text-zinc-500">

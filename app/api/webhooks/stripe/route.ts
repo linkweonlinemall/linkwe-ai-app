@@ -136,6 +136,59 @@ async function handleTicketOrderPaid(
   });
 }
 
+// ── AI top-up fulfilment ───────────────────────────────────────────────────────
+// Idempotent: updateMany only matches PENDING; duplicate Stripe retries get
+// count=0 and exit without re-incrementing aiTopupCreditsRemaining.
+async function handleAITopupPaymentSucceeded(paymentIntentId: string): Promise<void> {
+  let credited = false;
+  try {
+    credited = await prisma.$transaction(async (tx) => {
+      const claimed = await tx.aITopupPurchase.updateMany({
+        where: { stripePaymentIntentId: paymentIntentId, status: "PENDING" },
+        data: { status: "PAID", paidAt: new Date() },
+      });
+
+      if (claimed.count === 0) {
+        return false;
+      }
+
+      const purchase = await tx.aITopupPurchase.findUnique({
+        where: { stripePaymentIntentId: paymentIntentId },
+        select: { storeId: true, usesPurchased: true },
+      });
+
+      if (!purchase) {
+        throw new Error(
+          `[webhook/ai-topup] purchase row missing after PENDING claim: ${paymentIntentId}`,
+        );
+      }
+
+      await tx.store.update({
+        where: { id: purchase.storeId },
+        data: { aiTopupCreditsRemaining: { increment: purchase.usesPurchased } },
+      });
+
+      return true;
+    });
+  } catch (e) {
+    console.error("[webhook/ai-topup] credit failed", paymentIntentId, e);
+    throw e;
+  }
+
+  if (!credited) {
+    const existing = await prisma.aITopupPurchase.findUnique({
+      where: { stripePaymentIntentId: paymentIntentId },
+      select: { id: true },
+    });
+    if (!existing) {
+      console.warn(
+        "[webhook/ai-topup] no AITopupPurchase row for PaymentIntent — skipping credit",
+        paymentIntentId,
+      );
+    }
+  }
+}
+
 export async function POST(request: NextRequest) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!webhookSecret) {
@@ -263,6 +316,11 @@ export async function POST(request: NextRequest) {
         const ticketOrderId = paymentIntent.metadata?.ticketOrderId;
         if (ticketOrderId) {
           await handleTicketOrderPaid(ticketOrderId, paymentIntent.id);
+        }
+
+        const aiTopupStoreId = paymentIntent.metadata?.aiTopupStoreId;
+        if (aiTopupStoreId) {
+          await handleAITopupPaymentSucceeded(paymentIntent.id);
         }
         break;
       }
