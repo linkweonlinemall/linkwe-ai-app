@@ -98,7 +98,9 @@ function resolveParticipantRole(
 
 export async function getOrCreateConversation(
   storeId: string,
-): Promise<{ ok: true; conversationId: string } | { ok: false; error: string }> {
+): Promise<
+  { ok: true; conversationId: string; created: boolean } | { ok: false; error: string }
+> {
   const session = await getSession();
   if (!session) return { ok: false, error: "Sign in to message this store." };
 
@@ -115,22 +117,48 @@ export async function getOrCreateConversation(
     return { ok: false, error: "You cannot message your own store." };
   }
 
-  const conversation = await prisma.conversation.upsert({
+  const existing = await prisma.conversation.findUnique({
     where: {
       customerId_storeId: {
         customerId: session.userId,
         storeId: store.id,
       },
     },
-    create: {
-      customerId: session.userId,
-      storeId: store.id,
-    },
-    update: {},
     select: { id: true },
   });
+  if (existing) {
+    return { ok: true, conversationId: existing.id, created: false };
+  }
 
-  return { ok: true, conversationId: conversation.id };
+  try {
+    const conversation = await prisma.conversation.create({
+      data: {
+        customerId: session.userId,
+        storeId: store.id,
+      },
+      select: { id: true },
+    });
+    return { ok: true, conversationId: conversation.id, created: true };
+  } catch (err) {
+    const isUniqueViolation =
+      typeof err === "object" &&
+      err !== null &&
+      "code" in err &&
+      (err as { code: string }).code === "P2002";
+    if (!isUniqueViolation) throw err;
+
+    const raced = await prisma.conversation.findUnique({
+      where: {
+        customerId_storeId: {
+          customerId: session.userId,
+          storeId: store.id,
+        },
+      },
+      select: { id: true },
+    });
+    if (!raced) throw err;
+    return { ok: true, conversationId: raced.id, created: false };
+  }
 }
 
 export async function sendMessage(

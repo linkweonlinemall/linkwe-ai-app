@@ -13,6 +13,7 @@ import PublicNav from "@/components/layout/PublicNav";
 import BookingWidget from "@/components/service/BookingWidget";
 import ServiceGallery from "@/components/service/ServiceGallery";
 import OnDemandRequestWidget from "@/components/service/OnDemandRequestWidget";
+import QuoteContactButton from "@/components/service/QuoteContactButton";
 import SubscribeButton from "@/components/service/SubscribeButton";
 import ReviewForm from "@/components/ui/ReviewForm";
 import ReviewsList from "@/components/ui/ReviewsList";
@@ -743,13 +744,14 @@ export default async function ServiceDetailPage({ params }: Props) {
                           : "Describe your requirements and get a custom quote from this provider."}
                     </p>
                   </div>
-                  <a
-                    href={`/store/${service.store.slug}`}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
-                    style={{ backgroundColor: "#D4450A" }}
-                  >
-                    Contact provider →
-                  </a>
+                  <QuoteContactButton
+                    storeId={service.store.id}
+                    storeSlug={service.store.slug}
+                    serviceName={service.name}
+                    serviceSlug={service.slug}
+                    isLoggedIn={session != null}
+                    isOwnStore={isOwner}
+                  />
                 </div>
               ) : service.serviceType === "SUBSCRIPTION" ? (
                 <div className="flex flex-col gap-3">
