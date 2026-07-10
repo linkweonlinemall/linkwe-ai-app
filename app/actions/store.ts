@@ -140,7 +140,7 @@ export async function updateStore(formData: FormData): Promise<void> {
       }
       openingHours[day] = { closed, allDay, slots };
     }
-    parsedOpeningHours = normalizeOpeningHoursForDb(parsedOpeningHours) ?? undefined;
+    parsedOpeningHours = normalizeOpeningHoursForDb(openingHours) ?? undefined;
   }
 
   const tagsRaw = String(formData.get("tags") ?? "").trim();
