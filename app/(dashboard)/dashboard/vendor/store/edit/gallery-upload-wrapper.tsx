@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { ComponentProps } from "react";
+import { useStoreEditUpload } from "./store-edit-upload-context";
 
 type GalleryImage = { id: string; url: string; position: number };
 
@@ -12,6 +12,7 @@ type Props = {
 
 export default function GalleryUploadWrapper({ images, slotsAvailable }: Props) {
   const [mounted, setMounted] = useState(false);
+  const { setGalleryUploading } = useStoreEditUpload();
 
   useEffect(() => {
     setMounted(true);
@@ -27,5 +28,5 @@ export default function GalleryUploadWrapper({ images, slotsAvailable }: Props) 
   }
 
   const GalleryUploadLazy = require("./gallery-upload").default;
-  return <GalleryUploadLazy images={images} slotsAvailable={slotsAvailable} />;
+  return <GalleryUploadLazy images={images} slotsAvailable={slotsAvailable} onUploadingChange={setGalleryUploading} />;
 }

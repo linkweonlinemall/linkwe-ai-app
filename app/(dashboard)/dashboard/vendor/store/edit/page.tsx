@@ -11,7 +11,9 @@ import Textarea from "@/components/ui/Textarea";
 import CategoryPicker from "@/components/ui/CategoryPicker";
 import GalleryUploadWrapper from "./gallery-upload-wrapper";
 import StoreAmenitiesPicker from "./store-amenities-picker";
-import CompressedFileInput from "@/components/ui/CompressedFileInput";
+import { StoreEditUploadProvider } from "./store-edit-upload-context";
+import { StoreEditFileInput } from "./store-edit-file-input";
+import { StoreEditSaveButton } from "./store-edit-save-button";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
@@ -96,6 +98,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
   const parsedSocialLinks = (store.socialLinks as Record<string, string> | null) ?? {};
 
   return (
+    <StoreEditUploadProvider>
     <div className="mx-auto max-w-4xl px-6 pt-6 pb-12">
       <div className="mb-6 flex items-center justify-between">
         <div>
@@ -175,7 +178,8 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
             />
             <div className="flex items-start gap-4">
               <div className="min-w-0 flex-1">
-                <CompressedFileInput
+                <StoreEditFileInput
+                  uploadKey="logo"
                   accept="image/*"
                   className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-900"
                   helperText="Leave empty to keep your current logo. JPEG, PNG, or WebP. Max 8MB."
@@ -236,7 +240,8 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
           </h2>
           <div className="flex items-start gap-4">
             <div className="min-w-0 flex-1">
-              <CompressedFileInput
+              <StoreEditFileInput
+                uploadKey="cover"
                 accept="image/*"
                 className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-900"
                 helperText="This image appears as a banner at the top of your store page. Recommended size: 1200 × 400px. Leave empty to keep the current cover photo."
@@ -459,14 +464,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
       <GalleryUploadWrapper images={store.images} slotsAvailable={10 - store.images.length} />
 
       <div className="mt-6 flex flex-col gap-3">
-        <button
-          type="submit"
-          form="vendor-store-edit-form"
-          className="w-full rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-          style={{ backgroundColor: "var(--scarlet)" }}
-        >
-          Save changes
-        </button>
+        <StoreEditSaveButton />
         <Link
           className="inline-flex h-11 items-center justify-center rounded-lg border border-zinc-300 px-4 text-sm font-medium text-zinc-900 hover:bg-zinc-50"
           href={publicStorePath}
@@ -477,5 +475,6 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
         </Link>
       </div>
     </div>
+    </StoreEditUploadProvider>
   );
 }

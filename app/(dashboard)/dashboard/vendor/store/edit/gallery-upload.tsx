@@ -14,15 +14,18 @@ type AddGalleryResult =
 type Props = {
   images: GalleryImage[];
   slotsAvailable: number;
+  onUploadingChange?: (v: boolean) => void;
 };
 
-export default function GalleryUpload({ images: initialImages, slotsAvailable: initialSlots }: Props) {
+export default function GalleryUpload({ images: initialImages, slotsAvailable: initialSlots, onUploadingChange }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [images, setImages] = useState<GalleryImage[]>(initialImages);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadState, setUploadState] = useState<{ total: number; done: number } | null>(null);
+  const [uploadErrors, setUploadErrors] = useState<string[]>([]);
 
   useEffect(() => {
     setImages(initialImages);
@@ -40,22 +43,57 @@ export default function GalleryUpload({ images: initialImages, slotsAvailable: i
       alert(`You can only add ${slotsAvailable} more photo${slotsAvailable === 1 ? "" : "s"}. Only the first ${slotsAvailable} will be uploaded.`);
     }
 
-    const filesToUpload = await Promise.all(
-      fileArray.slice(0, slotsAvailable).map((file) => compressImageFile(file)),
+    const uploadCount = Math.min(fileArray.length, slotsAvailable);
+    setUploadState({ total: uploadCount, done: 0 });
+    setUploadErrors([]);
+    onUploadingChange?.(true);
+
+    const results = await Promise.allSettled(
+      fileArray.slice(0, uploadCount).map(async (file) => {
+        try {
+          const compressed = await compressImageFile(file);
+          setUploadState((prev) => (prev ? { ...prev, done: prev.done + 1 } : prev));
+          return compressed;
+        } catch {
+          setUploadState((prev) => (prev ? { ...prev, done: prev.done + 1 } : prev));
+          throw new Error(`compression_failed:${file.name}`);
+        }
+      }),
     );
 
+    const succeeded = results
+      .filter((r): r is PromiseFulfilledResult<File> => r.status === "fulfilled")
+      .map((r) => r.value);
+    const failed = results
+      .filter((r): r is PromiseRejectedResult => r.status === "rejected")
+      .map((r) => {
+        const msg: string = r.reason?.message ?? "";
+        return msg.startsWith("compression_failed:") ? msg.slice("compression_failed:".length) : "Unknown file";
+      });
+
+    if (failed.length > 0) setUploadErrors(failed);
+
+    if (succeeded.length === 0) {
+      setUploadState(null);
+      onUploadingChange?.(false);
+      return;
+    }
+
     const formData = new FormData();
-    filesToUpload.forEach((file) => {
-      formData.append("galleryImages", file);
-    });
+    succeeded.forEach((file) => formData.append("galleryImages", file));
 
     startTransition(async () => {
-      const result = (await addStoreImageClient(formData)) as AddGalleryResult;
-      if (result.ok) {
-        router.refresh();
-        if (result.newImages) setImages(result.newImages);
+      try {
+        const result = (await addStoreImageClient(formData)) as AddGalleryResult;
+        if (result.ok) {
+          router.refresh();
+          if (result.newImages) setImages(result.newImages);
+        }
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      } finally {
+        setUploadState(null);
+        onUploadingChange?.(false);
       }
-      if (fileInputRef.current) fileInputRef.current.value = "";
     });
   }
 
@@ -166,15 +204,55 @@ export default function GalleryUpload({ images: initialImages, slotsAvailable: i
             ref={fileInputRef}
             accept="image/*"
             className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-900"
-            disabled={isPending}
+            disabled={isPending || uploadState !== null}
             multiple
             name="galleryImages"
             onChange={handleFileChange}
             type="file"
           />
-          <span className="text-xs font-normal text-zinc-500">
-            {isPending ? "Uploading..." : "Photos save automatically when selected. JPEG, PNG, or WebP. Max 20MB each."}
-          </span>
+          <div className="mt-1 space-y-1" aria-live="polite">
+            {/* Compression phase */}
+            {uploadState !== null && (
+              <>
+                <p className="flex items-center gap-1.5 text-xs font-medium text-zinc-700">
+                  <span
+                    aria-hidden
+                    className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-zinc-200 border-t-[#D4450A] shrink-0"
+                  />
+                  Optimizing {uploadState.done} of {uploadState.total}…
+                </p>
+                <p className="text-xs text-zinc-400">
+                  Large photos are optimized before upload — this can take a moment. Please keep this page open.
+                </p>
+              </>
+            )}
+            {/* Server-action phase */}
+            {uploadState === null && isPending && (
+              <p className="flex items-center gap-1.5 text-xs font-medium text-zinc-700">
+                <span
+                  aria-hidden
+                  className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-zinc-200 border-t-[#D4450A] shrink-0"
+                />
+                Saving to gallery…
+              </p>
+            )}
+            {/* Per-file compression errors */}
+            {uploadErrors.map((name, i) => (
+              <p key={i} className="flex items-start gap-1.5 text-xs text-red-600">
+                <span aria-hidden className="mt-px shrink-0 font-semibold">✗</span>
+                <span>
+                  <span className="font-medium">{name}</span>
+                  {" — "}couldn't be optimized. Try a different image format.
+                </span>
+              </p>
+            ))}
+            {/* Idle helper text */}
+            {uploadState === null && !isPending && (
+              <span className="text-xs font-normal text-zinc-500">
+                Photos save automatically when selected. JPEG, PNG, or WebP. Max 20MB each.
+              </span>
+            )}
+          </div>
         </label>
       ) : null}
     </div>
