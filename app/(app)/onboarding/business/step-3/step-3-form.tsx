@@ -2,11 +2,11 @@
 
 import { useActionState, useState } from "react";
 
+import CompressedFileInput from "@/components/ui/CompressedFileInput";
 import Input from "@/components/ui/Input";
 import RegionSelect from "@/components/ui/RegionSelect";
 import CategoryPicker from "@/components/ui/CategoryPicker";
 import { saveBusinessOnboardingStep3, type BusinessOnboardingState } from "../actions";
-import { compressFileListIntoInput } from "@/lib/images/compress-image";
 
 type Props = {
   defaultName: string;
@@ -23,6 +23,7 @@ function WizardFormFooter({
   isLastStep,
   pending,
   pendingLabel,
+  disabled = false,
 }: {
   currentStep: number;
   showBack: boolean;
@@ -30,8 +31,12 @@ function WizardFormFooter({
   isLastStep: boolean;
   pending: boolean;
   pendingLabel: string;
+  /** Extra disable condition (e.g. image upload in flight). Button is blocked
+   *  but the label doesn't change to pendingLabel. */
+  disabled?: boolean;
 }) {
   const stepsLength = 3;
+  const isDisabled = pending || disabled;
   return (
     <div
       className="mt-8 flex items-center justify-between pt-6"
@@ -53,7 +58,8 @@ function WizardFormFooter({
       </span>
       <button
         type="submit"
-        disabled={pending}
+        disabled={isDisabled}
+        title={disabled && !pending ? "Wait for image uploads to finish" : undefined}
         className="rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
         style={{ backgroundColor: "var(--scarlet)" }}
       >
@@ -72,12 +78,7 @@ export function BusinessStep3Form({
 }: Props) {
   const [state, formAction, pending] = useActionState(saveBusinessOnboardingStep3, {} as BusinessOnboardingState);
   const [categoryId, setCategoryId] = useState(defaultCategoryId);
-
-  async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    await compressFileListIntoInput(e.target, files);
-  }
+  const [imagesUploading, setImagesUploading] = useState(false);
 
   return (
     <form className="flex flex-col gap-4" action={formAction}>
@@ -107,13 +108,12 @@ export function BusinessStep3Form({
         placeholder="Short line shoppers see first"
         type="text"
       />
-      <Input
+      <CompressedFileInput
         accept="image/jpeg,image/png,image/webp"
         className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5"
         label="Logo (optional)"
         name="logo"
-        onChange={handleLogoChange}
-        type="file"
+        onUploadingChange={setImagesUploading}
       />
 
       {state.error ? (
@@ -129,6 +129,7 @@ export function BusinessStep3Form({
         isLastStep
         pending={pending}
         pendingLabel="Saving…"
+        disabled={imagesUploading}
       />
     </form>
   );

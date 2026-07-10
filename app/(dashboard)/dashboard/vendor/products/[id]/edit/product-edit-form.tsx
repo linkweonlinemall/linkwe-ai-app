@@ -12,8 +12,8 @@ import ProductVariantEditor from "@/components/vendor/ProductVariantEditor";
 import type { ContentLinkItem } from "@/lib/content-links/types";
 import { reorderProductImages } from "@/app/actions/ai-vendor-image";
 import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
+import CompressedFileInput from "@/components/ui/CompressedFileInput";
 import Input from "@/components/ui/Input";
-import { compressFileListIntoInput } from "@/lib/images/compress-image";
 import RichTextEditor from "@/components/ui/RichTextEditor";
 import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
@@ -136,20 +136,20 @@ export function ProductEditForm({
   const [digitalFileSizeKb, setDigitalFileSizeKb] = useState<number | null>(product.fileSizeKb ?? null);
   const [uploadingDigital, setUploadingDigital] = useState(false);
   const [digitalUploadError, setDigitalUploadError] = useState<string | null>(null);
+  const [imagesUploading, setImagesUploading] = useState(false);
   const digitalFileRef = useRef<HTMLInputElement>(null);
 
-  const onNewFilesChange = async (e: import("react").ChangeEvent<HTMLInputElement>) => {
-    const input = e.target;
-    const list = input.files;
-    if (!list?.length) {
+  // Files arrive pre-compressed from CompressedFileInput — read directly.
+  const onNewFilesChange = (e: import("react").ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) {
       setPreviews([]);
       return;
     }
-    const compressedList = await compressFileListIntoInput(input, list);
     const maxNew = Math.max(0, 10 - remainingImages.length);
     const next: { url: string; name: string }[] = [];
-    for (let i = 0; i < Math.min(compressedList.length, maxNew); i++) {
-      const f = compressedList[i];
+    for (let i = 0; i < Math.min(files.length, maxNew); i++) {
+      const f = files[i];
       next.push({ url: URL.createObjectURL(f), name: f.name });
     }
     setPreviews((prev) => {
@@ -208,7 +208,8 @@ export function ProductEditForm({
           form="product-form"
           name="intent"
           value="save"
-          disabled={pending}
+          disabled={pending || imagesUploading}
+          title={imagesUploading ? "Wait for image uploads to finish" : undefined}
           className="rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
           style={{ backgroundColor: "var(--scarlet)" }}
         >
@@ -639,7 +640,7 @@ export function ProductEditForm({
                 </div>
               )}
             </div>
-            <Input
+            <CompressedFileInput
               accept="image/jpeg,image/png,image/webp"
               className="text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-zinc-200 file:px-4 file:py-2"
               disabled={!canAddMore}
@@ -648,8 +649,8 @@ export function ProductEditForm({
               label="Add images"
               multiple
               name="newImages"
-              type="file"
               onChange={onNewFilesChange}
+              onUploadingChange={setImagesUploading}
             />
           </div>
         </div>
@@ -766,7 +767,8 @@ export function ProductEditForm({
             type="submit"
             name="intent"
             value="save"
-            disabled={pending}
+            disabled={pending || imagesUploading}
+            title={imagesUploading ? "Wait for image uploads to finish" : undefined}
             className="inline-flex h-11 min-w-[160px] items-center justify-center rounded-lg border-2 border-[#D4450A] bg-white px-4 text-sm font-medium text-[#D4450A] hover:bg-[#fff5f0] disabled:opacity-60"
           >
             Save changes
@@ -776,7 +778,8 @@ export function ProductEditForm({
               type="submit"
               name="intent"
               value="unpublish"
-              disabled={pending}
+              disabled={pending || imagesUploading}
+              title={imagesUploading ? "Wait for image uploads to finish" : undefined}
               className="inline-flex h-11 min-w-[180px] items-center justify-center rounded-lg bg-[#D4450A] px-4 text-sm font-medium text-white hover:bg-[#B83A08] disabled:opacity-60"
             >
               Save and unpublish
@@ -786,7 +789,8 @@ export function ProductEditForm({
               type="submit"
               name="intent"
               value="publish"
-              disabled={pending}
+              disabled={pending || imagesUploading}
+              title={imagesUploading ? "Wait for image uploads to finish" : undefined}
               className="inline-flex h-11 min-w-[180px] items-center justify-center rounded-lg bg-[#D4450A] px-4 text-sm font-medium text-white hover:bg-[#B83A08] disabled:opacity-60"
             >
               Save and publish

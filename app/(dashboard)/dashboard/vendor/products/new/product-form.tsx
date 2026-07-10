@@ -5,7 +5,7 @@ import { useActionState, useCallback, useRef, useState } from "react";
 import type { ProductFieldErrors } from "@/app/actions/product";
 import { createProduct } from "@/app/actions/product";
 import { uploadDigitalFile } from "@/app/actions/digital-upload";
-import { compressFileListIntoInput } from "@/lib/images/compress-image";
+import CompressedFileInput from "@/components/ui/CompressedFileInput";
 import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
 import ProductVariantEditor, { type VariantRow } from "@/components/vendor/ProductVariantEditor";
 import Input from "@/components/ui/Input";
@@ -75,6 +75,7 @@ export function ProductForm() {
   const [digitalFileSizeKb, setDigitalFileSizeKb] = useState<number | null>(null);
   const [uploadingDigital, setUploadingDigital] = useState(false);
   const [digitalUploadError, setDigitalUploadError] = useState<string | null>(null);
+  const [imagesUploading, setImagesUploading] = useState(false);
   const digitalFileRef = useRef<HTMLInputElement>(null);
 
   const onNameChange = useCallback(
@@ -85,18 +86,17 @@ export function ProductForm() {
     [slugManual],
   );
 
-  const onFilesChange = async (e: import("react").ChangeEvent<HTMLInputElement>) => {
-    const input = e.target;
-    const list = input.files;
-    if (!list?.length) {
+  // Files arrive pre-compressed from CompressedFileInput — read directly.
+  const onFilesChange = (e: import("react").ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) {
       setPreviews([]);
       return;
     }
-    const compressedList = await compressFileListIntoInput(input, list);
     const next: { url: string; name: string }[] = [];
-    const max = Math.min(compressedList.length, 10);
+    const max = Math.min(files.length, 10);
     for (let i = 0; i < max; i++) {
-      const f = compressedList[i];
+      const f = files[i];
       next.push({ url: URL.createObjectURL(f), name: f.name });
     }
     setPreviews((prev) => {
@@ -149,7 +149,8 @@ export function ProductForm() {
           form="product-form"
           name="intent"
           value="publish"
-          disabled={pending}
+          disabled={pending || imagesUploading}
+          title={imagesUploading ? "Wait for image uploads to finish" : undefined}
           className="rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
           style={{ backgroundColor: "var(--scarlet)" }}
         >
@@ -527,7 +528,7 @@ export function ProductForm() {
             Images
           </h2>
           <div className="space-y-4">
-            <Input
+            <CompressedFileInput
               accept="image/jpeg,image/png,image/webp"
               className="text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-zinc-200 file:px-4 file:py-2"
               error={fieldError("images")}
@@ -535,8 +536,8 @@ export function ProductForm() {
               label="Product images"
               multiple
               name="images"
-              type="file"
               onChange={onFilesChange}
+              onUploadingChange={setImagesUploading}
             />
             {previews.length > 0 ? (
               <div className="flex flex-wrap gap-2">
@@ -648,7 +649,8 @@ export function ProductForm() {
             type="submit"
             name="intent"
             value="draft"
-            disabled={pending}
+            disabled={pending || imagesUploading}
+            title={imagesUploading ? "Wait for image uploads to finish" : undefined}
             className="inline-flex h-11 min-w-[140px] items-center justify-center rounded-lg border-2 border-[#D4450A] bg-white px-4 text-sm font-medium text-[#D4450A] hover:bg-[#fff5f0] disabled:opacity-60"
           >
             Save as draft
@@ -657,7 +659,8 @@ export function ProductForm() {
             type="submit"
             name="intent"
             value="publish"
-            disabled={pending}
+            disabled={pending || imagesUploading}
+            title={imagesUploading ? "Wait for image uploads to finish" : undefined}
             className="inline-flex h-11 min-w-[140px] items-center justify-center rounded-lg bg-[#D4450A] px-4 text-sm font-medium text-white hover:bg-[#B83A08] disabled:opacity-60"
           >
             Publish

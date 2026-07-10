@@ -1,14 +1,14 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import type { ListingStatus } from "@prisma/client";
 import { ListingMainImage } from "@/components/listing-main-image";
+import CompressedFileInput from "@/components/ui/CompressedFileInput";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
 import { updateListingAction, type EditListingFormState } from "./actions";
-import { compressFileListIntoInput } from "@/lib/images/compress-image";
 
 type Props = {
   listingId: string;
@@ -23,12 +23,7 @@ type Props = {
 export function EditListingForm({ listingId, title, slug, imageUrl, shortDescription, priceMinor, status }: Props) {
   const [state, formAction, pending] = useActionState(updateListingAction, {} as EditListingFormState);
   const priceDefault = (priceMinor / 100).toFixed(2);
-
-  async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    await compressFileListIntoInput(e.target, files);
-  }
+  const [imagesUploading, setImagesUploading] = useState(false);
 
   return (
     <div className="w-full max-w-lg rounded-xl border border-zinc-200 bg-white p-8 shadow-sm">
@@ -75,14 +70,13 @@ export function EditListingForm({ listingId, title, slug, imageUrl, shortDescrip
           />
         </div>
 
-        <Input
+        <CompressedFileInput
           accept="image/jpeg,image/png,image/webp,image/gif"
           className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-900"
           helperText="JPEG, PNG, WebP, or GIF — max 5MB."
           label="Replace image (optional)"
           name="image"
-          onChange={handleImageChange}
-          type="file"
+          onUploadingChange={setImagesUploading}
         />
 
         <label className="flex cursor-pointer items-start gap-3 text-sm text-zinc-800">
@@ -129,7 +123,8 @@ export function EditListingForm({ listingId, title, slug, imageUrl, shortDescrip
 
         <button
           className="inline-flex h-11 items-center justify-center rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60"
-          disabled={pending}
+          disabled={pending || imagesUploading}
+          title={imagesUploading ? "Wait for image uploads to finish" : undefined}
           type="submit"
         >
           {pending ? "Saving…" : "Save changes"}

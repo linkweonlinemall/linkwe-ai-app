@@ -1,21 +1,16 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 
+import CompressedFileInput from "@/components/ui/CompressedFileInput";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import { createListingAction, type ListingFormState } from "./actions";
-import { compressFileListIntoInput } from "@/lib/images/compress-image";
 
 export function ListingCreateForm() {
   const [state, formAction, pending] = useActionState(createListingAction, {} as ListingFormState);
-
-  async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    await compressFileListIntoInput(e.target, files);
-  }
+  const [imagesUploading, setImagesUploading] = useState(false);
 
   return (
     <div className="w-full max-w-lg rounded-xl border border-zinc-200 bg-white p-8 shadow-sm">
@@ -48,14 +43,13 @@ export function ListingCreateForm() {
           type="text"
         />
 
-        <Input
+        <CompressedFileInput
           accept="image/jpeg,image/png,image/webp,image/gif"
           className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-900"
           helperText="JPEG, PNG, WebP, or GIF — max 5MB. Stored on the server for local dev."
           label="Main image (optional)"
           name="image"
-          onChange={handleImageChange}
-          type="file"
+          onUploadingChange={setImagesUploading}
         />
 
         <Textarea
@@ -90,7 +84,8 @@ export function ListingCreateForm() {
 
         <button
           className="inline-flex h-11 items-center justify-center rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60"
-          disabled={pending}
+          disabled={pending || imagesUploading}
+          title={imagesUploading ? "Wait for image uploads to finish" : undefined}
           type="submit"
         >
           {pending ? "Saving…" : "Create listing"}
