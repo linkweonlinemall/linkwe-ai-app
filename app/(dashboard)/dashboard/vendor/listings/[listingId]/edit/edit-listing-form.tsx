@@ -8,6 +8,7 @@ import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
 import { updateListingAction, type EditListingFormState } from "./actions";
+import { compressFileListIntoInput } from "@/lib/images/compress-image";
 
 type Props = {
   listingId: string;
@@ -22,6 +23,12 @@ type Props = {
 export function EditListingForm({ listingId, title, slug, imageUrl, shortDescription, priceMinor, status }: Props) {
   const [state, formAction, pending] = useActionState(updateListingAction, {} as EditListingFormState);
   const priceDefault = (priceMinor / 100).toFixed(2);
+
+  async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    await compressFileListIntoInput(e.target, files);
+  }
 
   return (
     <div className="w-full max-w-lg rounded-xl border border-zinc-200 bg-white p-8 shadow-sm">
@@ -74,6 +81,7 @@ export function EditListingForm({ listingId, title, slug, imageUrl, shortDescrip
           helperText="JPEG, PNG, WebP, or GIF — max 5MB."
           label="Replace image (optional)"
           name="image"
+          onChange={handleImageChange}
           type="file"
         />
 

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useRef, useTransition, useState, useEffect, type ChangeEvent, type DragEvent } from "react";
 import { addStoreImageClient, removeStoreImageClient, reorderStoreGallery } from "@/app/actions/store";
+import { compressImageFile } from "@/lib/images/compress-image";
 
 type GalleryImage = { id: string; url: string; position: number };
 
@@ -29,7 +30,7 @@ export default function GalleryUpload({ images: initialImages, slotsAvailable: i
 
   const slotsAvailable = 10 - images.length;
 
-  function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
@@ -39,8 +40,12 @@ export default function GalleryUpload({ images: initialImages, slotsAvailable: i
       alert(`You can only add ${slotsAvailable} more photo${slotsAvailable === 1 ? "" : "s"}. Only the first ${slotsAvailable} will be uploaded.`);
     }
 
+    const filesToUpload = await Promise.all(
+      fileArray.slice(0, slotsAvailable).map((file) => compressImageFile(file)),
+    );
+
     const formData = new FormData();
-    fileArray.slice(0, slotsAvailable).forEach((file) => {
+    filesToUpload.forEach((file) => {
       formData.append("galleryImages", file);
     });
 

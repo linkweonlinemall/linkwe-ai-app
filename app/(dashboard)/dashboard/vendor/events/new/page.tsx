@@ -11,6 +11,7 @@ import {
 import RichTextEditor from "@/components/ui/RichTextEditor";
 import { TT_REGIONS } from "@/lib/regions/tt-regions";
 import LineupEditor, { type Performer } from "@/components/events/LineupEditor";
+import { compressImageFile } from "@/lib/images/compress-image";
 
 // ─── Event categories ─────────────────────────────────────────────────────────
 
@@ -169,8 +170,9 @@ export default function NewEventPage() {
     if (!file) return;
     setCoverUploading(true);
     setCoverError(null);
+    const compressed = await compressImageFile(file);
     const fd = new FormData();
-    fd.append("image", file);
+    fd.append("image", compressed);
     const result = await uploadEventCoverImage(fd);
     if ("error" in result) {
       setCoverError(result.error);
@@ -187,8 +189,9 @@ export default function NewEventPage() {
     setGalleryUploading(true);
     for (const file of files) {
       if (galleryImages.length >= 6) break;
+      const compressed = await compressImageFile(file);
       const fd = new FormData();
-      fd.append("image", file);
+      fd.append("image", compressed);
       const result = await uploadEventGalleryImage(fd);
       if ("url" in result) {
         setGalleryImages((prev) => [...prev, result.url].slice(0, 6));

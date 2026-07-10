@@ -13,6 +13,7 @@ import type { ContentLinkItem } from "@/lib/content-links/types";
 import { reorderProductImages } from "@/app/actions/ai-vendor-image";
 import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
 import Input from "@/components/ui/Input";
+import { compressFileListIntoInput } from "@/lib/images/compress-image";
 import RichTextEditor from "@/components/ui/RichTextEditor";
 import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
@@ -137,16 +138,18 @@ export function ProductEditForm({
   const [digitalUploadError, setDigitalUploadError] = useState<string | null>(null);
   const digitalFileRef = useRef<HTMLInputElement>(null);
 
-  const onNewFilesChange = (e: import("react").ChangeEvent<HTMLInputElement>) => {
-    const list = e.target.files;
+  const onNewFilesChange = async (e: import("react").ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const list = input.files;
     if (!list?.length) {
       setPreviews([]);
       return;
     }
+    const compressedList = await compressFileListIntoInput(input, list);
     const maxNew = Math.max(0, 10 - remainingImages.length);
     const next: { url: string; name: string }[] = [];
-    for (let i = 0; i < Math.min(list.length, maxNew); i++) {
-      const f = list[i];
+    for (let i = 0; i < Math.min(compressedList.length, maxNew); i++) {
+      const f = compressedList[i];
       next.push({ url: URL.createObjectURL(f), name: f.name });
     }
     setPreviews((prev) => {

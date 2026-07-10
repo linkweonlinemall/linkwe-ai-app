@@ -6,6 +6,7 @@ import Input from "@/components/ui/Input";
 import RegionSelect from "@/components/ui/RegionSelect";
 import CategoryPicker from "@/components/ui/CategoryPicker";
 import { saveBusinessOnboardingStep3, type BusinessOnboardingState } from "../actions";
+import { compressFileListIntoInput } from "@/lib/images/compress-image";
 
 type Props = {
   defaultName: string;
@@ -72,6 +73,12 @@ export function BusinessStep3Form({
   const [state, formAction, pending] = useActionState(saveBusinessOnboardingStep3, {} as BusinessOnboardingState);
   const [categoryId, setCategoryId] = useState(defaultCategoryId);
 
+  async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    await compressFileListIntoInput(e.target, files);
+  }
+
   return (
     <form className="flex flex-col gap-4" action={formAction}>
       <Input required className="text-base" defaultValue={defaultName} label="Store name" name="name" type="text" />
@@ -105,6 +112,7 @@ export function BusinessStep3Form({
         className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5"
         label="Logo (optional)"
         name="logo"
+        onChange={handleLogoChange}
         type="file"
       />
 

@@ -17,6 +17,7 @@ import {
 import { parseAssistantMessage } from "@/lib/chat/parseMessage"
 import type { ChatMessage, ChatProduct } from "@/lib/chat/types"
 import type { CartItem } from "@/lib/cart/cart-store"
+import { compressImageFile } from "@/lib/images/compress-image"
 
 const SUGGESTIONS = [
   "Style me for a fete 🎉",
@@ -570,16 +571,17 @@ export default function ShoppingChat({
     setShowHistory(false)
   }
 
-  function handleImageSelect(e: ChangeEvent<HTMLInputElement>) {
+  async function handleImageSelect(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
 
+    const compressed = await compressImageFile(file)
     const reader = new FileReader()
     reader.onload = () => {
       const result = reader.result as string
       setImagePreview(result)
     }
-    reader.readAsDataURL(file)
+    reader.readAsDataURL(compressed)
   }
 
   function handleSend() {

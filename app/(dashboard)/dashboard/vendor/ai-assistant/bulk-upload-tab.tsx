@@ -8,6 +8,7 @@ import DraggableImageGrid from "@/components/vendor/draggable-image-grid"
 import type { BulkResult, ProductType } from "@/app/actions/ai-bulk-upload"
 import { bulkUploadFromCSV, generateBulkTemplate } from "@/app/actions/ai-bulk-upload"
 import { reorderProductImages } from "@/app/actions/ai-vendor-image"
+import { compressImageFile } from "@/lib/images/compress-image"
 
 const PRODUCT_TYPES: {
   type: ProductType
@@ -612,8 +613,9 @@ Be direct, specific, and helpful. Use Trinidadian tone. Keep it under 200 words.
               setUploading(true)
               setImageUploadError(null)
               for (const file of files) {
+                const compressed = await compressImageFile(file)
                 const fd = new FormData()
-                fd.append("image", file)
+                fd.append("image", compressed)
                 const { uploadProductImage } = await import(
                   "@/app/actions/ai-vendor-image"
                 )
@@ -670,8 +672,9 @@ Be direct, specific, and helpful. Use Trinidadian tone. Keep it under 200 words.
               setUploading(true)
               setImageUploadError(null)
               for (const file of files) {
+                const compressed = await compressImageFile(file)
                 const fd = new FormData()
-                fd.append("image", file)
+                fd.append("image", compressed)
                 const { uploadProductImage } = await import(
                   "@/app/actions/ai-vendor-image"
                 )

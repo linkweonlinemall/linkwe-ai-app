@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Music, X, Plus, User } from "lucide-react";
 import { uploadLineupImage } from "@/app/actions/events";
+import { compressImageFile } from "@/lib/images/compress-image";
 
 export type Performer = {
   name: string;
@@ -60,8 +61,9 @@ export default function LineupEditor({ value, onChange }: Props) {
     if (!file) return;
     setPhotoUploading(true);
     setPhotoError(null);
+    const compressed = await compressImageFile(file);
     const fd = new FormData();
-    fd.append("image", file);
+    fd.append("image", compressed);
     const result = await uploadLineupImage(fd);
     if ("error" in result) {
       setPhotoError(result.error);

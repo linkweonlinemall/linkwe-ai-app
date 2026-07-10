@@ -15,6 +15,7 @@ import LineupEditor, { type Performer } from "@/components/events/LineupEditor";
 import RelatedItemsPanel from "@/components/vendor/RelatedItemsPanel";
 import type { ContentLinkItem } from "@/lib/content-links/types";
 import { TRINIDAD_TIMEZONE, ymdInTrinidad } from "@/lib/timezone/trinidad";
+import { compressImageFile } from "@/lib/images/compress-image";
 
 export const EVENT_CATEGORIES: { group: string; options: { value: string; label: string }[] }[] = [
   {
@@ -244,8 +245,9 @@ export function EditEventForm({
     if (!file) return;
     setCoverUploading(true);
     setCoverError(null);
+    const compressed = await compressImageFile(file);
     const fd = new FormData();
-    fd.append("image", file);
+    fd.append("image", compressed);
     const result = await uploadEventCoverImage(fd);
     if ("error" in result) setCoverError(result.error);
     else setCoverImage(result.url);
@@ -259,8 +261,9 @@ export function EditEventForm({
     setGalleryUploading(true);
     for (const file of files) {
       if (galleryImages.length >= 6) break;
+      const compressed = await compressImageFile(file);
       const fd = new FormData();
-      fd.append("image", file);
+      fd.append("image", compressed);
       const result = await uploadEventGalleryImage(fd);
       if ("url" in result) {
         const urlStr = getImageUrl(result.url);

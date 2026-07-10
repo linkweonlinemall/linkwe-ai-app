@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 
 import { uploadVendorChatImages } from "@/app/actions/ai-vendor-image";
 import { createService } from "@/app/actions/services";
+import { compressImageFile } from "@/lib/images/compress-image";
 import RichTextEditor from "@/components/ui/RichTextEditor";
 import { SERVICE_CATEGORIES } from "@/lib/categories";
 import { mapSubscriptionIntervalToStripe } from "@/lib/finance/subscription-interval";
@@ -46,8 +47,9 @@ export default function NewServicePage() {
     if (!files || files.length === 0) return;
     setUploadingImages(true);
     setError(null);
+    const compressedFiles = await Promise.all(Array.from(files).map((file) => compressImageFile(file)));
     const formData = new FormData();
-    Array.from(files).forEach((file) => formData.append("images", file));
+    compressedFiles.forEach((file) => formData.append("images", file));
     try {
       const result = await uploadVendorChatImages(formData);
       if (result.ok && result.urls) {

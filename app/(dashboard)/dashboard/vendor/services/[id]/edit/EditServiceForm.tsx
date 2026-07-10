@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { uploadVendorChatImages } from "@/app/actions/ai-vendor-image";
 import { updateService } from "@/app/actions/services";
+import { compressImageFile } from "@/lib/images/compress-image";
 import RelatedItemsPanel from "@/components/vendor/RelatedItemsPanel";
 import RichTextEditor from "@/components/ui/RichTextEditor";
 import type { ContentLinkItem } from "@/lib/content-links/types";
@@ -116,8 +117,9 @@ export default function EditServiceForm({
     if (!files || files.length === 0) return;
     setUploadingImages(true);
     setError(null);
+    const compressedFiles = await Promise.all(Array.from(files).map((file) => compressImageFile(file)));
     const formData = new FormData();
-    Array.from(files).forEach((file) => formData.append("images", file));
+    compressedFiles.forEach((file) => formData.append("images", file));
     try {
       const result = await uploadVendorChatImages(formData);
       if (result.ok && result.urls) {

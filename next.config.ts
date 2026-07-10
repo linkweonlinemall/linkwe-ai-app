@@ -22,7 +22,9 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@prisma/client", "@prisma/engines"],
   experimental: {
     serverActions: {
-      bodySizeLimit: "50mb",
+      // Covers AI chat images (Rex vendor assistant) + user uploads that fall
+      // back to the original file if client-side compression fails.
+      bodySizeLimit: "8mb",
     },
   },
   async headers() {

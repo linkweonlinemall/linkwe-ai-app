@@ -11,6 +11,7 @@ import Textarea from "@/components/ui/Textarea";
 import CategoryPicker from "@/components/ui/CategoryPicker";
 import GalleryUploadWrapper from "./gallery-upload-wrapper";
 import StoreAmenitiesPicker from "./store-amenities-picker";
+import CompressedFileInput from "@/components/ui/CompressedFileInput";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
@@ -174,13 +175,12 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
             />
             <div className="flex items-start gap-4">
               <div className="min-w-0 flex-1">
-                <Input
+                <CompressedFileInput
                   accept="image/*"
                   className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-900"
                   helperText="Leave empty to keep your current logo. JPEG, PNG, or WebP. Max 8MB."
                   label="Upload new logo"
                   name="logo"
-                  type="file"
                 />
               </div>
               {store.logoUrl ? (
@@ -236,13 +236,12 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
           </h2>
           <div className="flex items-start gap-4">
             <div className="min-w-0 flex-1">
-              <Input
+              <CompressedFileInput
                 accept="image/*"
                 className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-900"
                 helperText="This image appears as a banner at the top of your store page. Recommended size: 1200 × 400px. Leave empty to keep the current cover photo."
                 label="Cover photo"
                 name="coverPhoto"
-                type="file"
               />
             </div>
             {store.coverPhotoUrl ? (

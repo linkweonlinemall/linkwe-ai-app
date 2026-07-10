@@ -5,6 +5,7 @@ import { useActionState, useCallback, useRef, useState } from "react";
 import type { ProductFieldErrors } from "@/app/actions/product";
 import { createProduct } from "@/app/actions/product";
 import { uploadDigitalFile } from "@/app/actions/digital-upload";
+import { compressFileListIntoInput } from "@/lib/images/compress-image";
 import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
 import ProductVariantEditor, { type VariantRow } from "@/components/vendor/ProductVariantEditor";
 import Input from "@/components/ui/Input";
@@ -84,16 +85,18 @@ export function ProductForm() {
     [slugManual],
   );
 
-  const onFilesChange = (e: import("react").ChangeEvent<HTMLInputElement>) => {
-    const list = e.target.files;
+  const onFilesChange = async (e: import("react").ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const list = input.files;
     if (!list?.length) {
       setPreviews([]);
       return;
     }
+    const compressedList = await compressFileListIntoInput(input, list);
     const next: { url: string; name: string }[] = [];
-    const max = Math.min(list.length, 10);
+    const max = Math.min(compressedList.length, 10);
     for (let i = 0; i < max; i++) {
-      const f = list[i];
+      const f = compressedList[i];
       next.push({ url: URL.createObjectURL(f), name: f.name });
     }
     setPreviews((prev) => {
