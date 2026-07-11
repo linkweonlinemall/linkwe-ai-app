@@ -7,7 +7,7 @@ import {
   Image,
 } from "@react-pdf/renderer";
 
-import { calculateCommissionMinor, calculateVendorNetMinor } from "@/lib/platform/commission";
+import { type CommissionPlan, calculateEarningsMinor, getCommissionRate } from "@/lib/finance/commission";
 
 const NAVY = "#0D3B6E";
 const SCARLET = "#D4450A";
@@ -406,6 +406,8 @@ export type VendorSplitOrder = {
 type Props = {
   splitOrder: VendorSplitOrder;
   qrCodeDataUrl: string;
+  waveDataUrl: string | null;
+  plan: CommissionPlan;
 };
 
 function formatMinor(minor: number): string {
@@ -424,14 +426,14 @@ function formatRegion(region: string): string {
   return region.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
 }
 
-export function VendorInvoiceDocument({ splitOrder, qrCodeDataUrl }: Props) {
+export function VendorInvoiceDocument({ splitOrder, qrCodeDataUrl, waveDataUrl, plan }: Props) {
   const splitRef = splitOrder.referenceNumber ?? `SP-${splitOrder.id.slice(-8).toUpperCase()}`;
   const mainRef =
     splitOrder.mainOrder.referenceNumber ?? `LW-${splitOrder.mainOrderId.slice(-8).toUpperCase()}`;
   const invoiceDate = splitOrder.mainOrder.createdAt;
   const subtotalMinor = splitOrder.subtotalMinor;
-  const commissionMinor = calculateCommissionMinor(subtotalMinor);
-  const netMinor = calculateVendorNetMinor(subtotalMinor);
+  const { commissionMinor, netMinor } = calculateEarningsMinor(subtotalMinor, "product", plan);
+  const commissionPct = Math.round(getCommissionRate("product", plan) * 100);
 
   const fromLines: string[] = [splitOrder.store.name];
   const regionAddr = [formatRegion(splitOrder.store.region), splitOrder.store.address].filter(Boolean).join(" · ");
@@ -442,7 +444,7 @@ export function VendorInvoiceDocument({ splitOrder, qrCodeDataUrl }: Props) {
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.hero}>
-          <Image style={styles.waveOverlay} src="./public/wave.png" />
+          {waveDataUrl ? <Image style={styles.waveOverlay} src={waveDataUrl} /> : null}
           <View style={styles.heroContent}>
             <View style={styles.heroLeft}>
               {splitOrder.store.logoUrl ? (
@@ -534,7 +536,7 @@ export function VendorInvoiceDocument({ splitOrder, qrCodeDataUrl }: Props) {
                 <Text style={styles.subTotalValue}>{formatMinor(subtotalMinor)}</Text>
               </View>
               <View style={styles.deductionRow}>
-                <Text style={styles.deductionLabel}>Platform commission (12%)</Text>
+                <Text style={styles.deductionLabel}>Platform commission ({commissionPct}%)</Text>
                 <Text style={styles.deductionValue}>-{formatMinor(commissionMinor)}</Text>
               </View>
               <View style={styles.grandTotalRow}>

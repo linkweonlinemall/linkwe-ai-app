@@ -197,8 +197,6 @@ export default async function OrderDetailPage({ params }: Props) {
             {getOrderStatusBadge(order.status)}
             <a
               href={`/api/invoice/${order.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
               className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50"
             >
               <svg

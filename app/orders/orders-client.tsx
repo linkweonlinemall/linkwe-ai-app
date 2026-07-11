@@ -277,8 +277,6 @@ export default function OrdersClient({ orders }: Props) {
                     </Link>
                     <a
                       href={`/api/invoice/${order.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
                       className="rounded-lg px-3 py-1.5 text-xs font-medium text-white transition-colors hover:opacity-90"
                       style={{ backgroundColor: "#D4450A" }}
                     >

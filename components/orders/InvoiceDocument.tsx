@@ -458,9 +458,11 @@ type InvoiceOrder = {
 type Props = {
   order: InvoiceOrder;
   qrCodeDataUrl: string;
+  logoDataUrl: string | null;
+  waveDataUrl: string | null;
 };
 
-export function InvoiceDocument({ order, qrCodeDataUrl }: Props) {
+export function InvoiceDocument({ order, qrCodeDataUrl, logoDataUrl, waveDataUrl }: Props) {
   const invoiceNumber = `LW-${order.id.slice(-8).toUpperCase()}`;
 
   return (
@@ -469,11 +471,15 @@ export function InvoiceDocument({ order, qrCodeDataUrl }: Props) {
         {/* Navy hero header */}
         <View style={styles.hero}>
           {/* Wave overlay image on top right */}
-          <Image style={styles.waveOverlay} src="./public/wave.png" />
+          {waveDataUrl ? <Image style={styles.waveOverlay} src={waveDataUrl} /> : null}
           {/* Content layer on top of wave */}
           <View style={styles.heroContent}>
             <View style={styles.heroLeft}>
-              <Image style={styles.logoImage} src="./public/logo.png" />
+              {logoDataUrl ? (
+                <Image style={styles.logoImage} src={logoDataUrl} />
+              ) : (
+                <Text style={styles.brandTagline}>LinkWe</Text>
+              )}
               <Text style={styles.brandTagline}>Trinidad & Tobago Marketplace</Text>
             </View>
             <View style={styles.heroRight}>

@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import { NextRequest, NextResponse } from "next/server";
 import React from "react";
 import type { DocumentProps } from "@react-pdf/renderer";
@@ -7,6 +9,16 @@ import { InvoiceDocument } from "@/components/orders/InvoiceDocument";
 import { getSession } from "@/lib/auth/session";
 import { generateOrderQRCodeDataURL } from "@/lib/orders/qr-code";
 import { prisma } from "@/lib/prisma";
+
+function readPublicImageDataUrl(filename: string): string | null {
+  try {
+    const filePath = path.join(process.cwd(), "public", filename);
+    const buffer = fs.readFileSync(filePath);
+    return `data:image/png;base64,${buffer.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(
   _request: NextRequest,
@@ -57,11 +69,15 @@ export async function GET(
   }
 
   const qrCodeDataUrl = await generateOrderQRCodeDataURL(orderId);
+  const logoDataUrl = readPublicImageDataUrl("linkwe-new-log-dark.png");
+  const waveDataUrl = readPublicImageDataUrl("wave.png");
 
   const buffer = await renderToBuffer(
     React.createElement(InvoiceDocument, {
       order,
       qrCodeDataUrl,
+      logoDataUrl,
+      waveDataUrl,
     }) as React.ReactElement<DocumentProps>,
   );
 
