@@ -23,6 +23,7 @@ export default async function BookingConfirmationPage({ searchParams }: Props) {
           endTime: true,
           status: true,
           totalPrice: true,
+          amountPaid: true,
           product: {
             select: {
               name: true,
@@ -49,12 +50,18 @@ export default async function BookingConfirmationPage({ searchParams }: Props) {
         </Suspense>
         <div className="mb-4 text-5xl">✅</div>
         <h1 className="text-2xl font-black text-zinc-900">
-          {booking?.status === "PENDING" ? "Payment received" : "Booking confirmed!"}
+          {booking?.status === "DEPOSIT_PAID"
+            ? "Deposit received!"
+            : booking?.status === "PENDING"
+              ? "Payment received"
+              : "Booking confirmed!"}
         </h1>
         <p className="mt-2 text-sm text-zinc-500">
-          {booking?.status === "PENDING"
-            ? "Your payment was successful. The provider will confirm your booking shortly."
-            : "Your payment was successful and your booking is confirmed."}
+          {booking?.status === "DEPOSIT_PAID"
+            ? "Your deposit was paid. The remaining balance is due on arrival."
+            : booking?.status === "PENDING"
+              ? "Your payment was successful. The provider will confirm your booking shortly."
+              : "Your payment was successful and your booking is confirmed."}
         </p>
 
         {booking ? (
@@ -79,10 +86,37 @@ export default async function BookingConfirmationPage({ searchParams }: Props) {
                   {formatTime(booking.startTime)} – {formatTime(booking.endTime)}
                 </span>
               </div>
-              <div className="mt-0.5 flex justify-between border-t border-zinc-100 pt-1.5">
-                <span className="font-semibold text-zinc-700">Total paid</span>
-                <span className="font-black text-[#D4450A]">TTD {booking.totalPrice.toFixed(2)}</span>
-              </div>
+              {booking.status === "DEPOSIT_PAID" ? (
+                <>
+                  <div className="mt-0.5 flex justify-between border-t border-zinc-100 pt-1.5">
+                    <span className="font-semibold text-zinc-700">Deposit paid</span>
+                    <span className="font-black text-[#D4450A]">
+                      TTD {(booking.amountPaid ?? 0).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Balance due on arrival</span>
+                    <span className="font-semibold text-zinc-900">
+                      TTD {Math.max(0, booking.totalPrice - (booking.amountPaid ?? 0)).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Total</span>
+                    <span className="font-semibold text-zinc-900">
+                      TTD {booking.totalPrice.toFixed(2)}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="mt-0.5 flex justify-between border-t border-zinc-100 pt-1.5">
+                  <span className="font-semibold text-zinc-700">
+                    {booking.amountPaid != null ? "Paid" : "Total"}
+                  </span>
+                  <span className="font-black text-[#D4450A]">
+                    TTD {(booking.amountPaid ?? booking.totalPrice).toFixed(2)}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         ) : null}

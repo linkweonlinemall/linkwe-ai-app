@@ -14,6 +14,7 @@ type Booking = {
   endTime: string;
   status: string;
   totalPrice: number;
+  amountPaid: number | null;
   guestCount: number;
   customerNotes: string | null;
   vendorNotes: string | null;
@@ -48,6 +49,11 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string 
     label: "Pending",
     color: "bg-amber-50 text-amber-700 border-amber-100",
     dot: "bg-amber-500",
+  },
+  DEPOSIT_PAID: {
+    label: "Deposit paid",
+    color: "bg-blue-50 text-blue-700 border-blue-100",
+    dot: "bg-blue-500",
   },
   CONFIRMED: {
     label: "Confirmed",
@@ -521,9 +527,16 @@ export default function VendorBookingsClient({
                         {" · "}
                         {booking.customer?.fullName ?? "Customer"}
                       </p>
-                      <p className="mt-0.5 text-xs font-semibold text-[#D4450A]">
-                        TTD {booking.totalPrice.toFixed(2)}
-                      </p>
+                      {booking.status === "DEPOSIT_PAID" ? (
+                        <p className="mt-0.5 text-xs font-semibold text-[#D4450A]">
+                          TTD {(booking.amountPaid ?? 0).toFixed(2)} deposit · TTD{" "}
+                          {Math.max(0, booking.totalPrice - (booking.amountPaid ?? 0)).toFixed(2)} due
+                        </p>
+                      ) : (
+                        <p className="mt-0.5 text-xs font-semibold text-[#D4450A]">
+                          TTD {(booking.amountPaid ?? booking.totalPrice).toFixed(2)}
+                        </p>
+                      )}
                     </div>
 
                     <svg

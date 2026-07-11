@@ -530,6 +530,7 @@ export async function getVendorBookings(
       endTime: true,
       status: true,
       totalPrice: true,
+      amountPaid: true,
       guestCount: true,
       customerNotes: true,
       vendorNotes: true,
