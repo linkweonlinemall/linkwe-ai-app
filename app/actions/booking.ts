@@ -12,6 +12,7 @@ import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe/stripe";
 import { sendBookingConfirmationEmails } from "@/app/actions/booking-emails";
+import { cancelBookingCore } from "@/lib/finance/cancel-booking";
 import { handleBookingPaymentIntentSucceeded } from "@/lib/finance/booking-payment";
 import {
   generateSlotsForDate,
@@ -594,6 +595,15 @@ export async function updateBookingStatus(
   });
   if (!store) return { error: "No store found" };
 
+  if (status === "CANCELLED") {
+    const bookingExists = await prisma.productBooking.findFirst({
+      where: { id: bookingId, product: vendorBookingServiceWhere(store.id) },
+      select: { id: true },
+    });
+    if (!bookingExists) return { error: "Booking not found" };
+    return cancelBookingCore(bookingId, CancelledBy.VENDOR, vendorNotes ?? null, vendorNotes);
+  }
+
   const booking = await prisma.productBooking.findFirst({
     where: {
       id: bookingId,
@@ -605,11 +615,9 @@ export async function updateBookingStatus(
   const nextStatus =
     status === "CONFIRMED"
       ? BookingStatus.CONFIRMED
-      : status === "CANCELLED"
-        ? BookingStatus.CANCELLED
-        : status === "COMPLETED"
-          ? BookingStatus.COMPLETED
-          : BookingStatus.NO_SHOW;
+      : status === "COMPLETED"
+        ? BookingStatus.COMPLETED
+        : BookingStatus.NO_SHOW;
 
   await prisma.productBooking.update({
     where: { id: bookingId },
@@ -617,13 +625,6 @@ export async function updateBookingStatus(
       status: nextStatus,
       vendorNotes:
         vendorNotes !== undefined ? vendorNotes ?? null : booking.vendorNotes,
-      ...(nextStatus === BookingStatus.CANCELLED
-        ? {
-            cancelledAt: new Date(),
-            cancelledBy: CancelledBy.VENDOR,
-            cancellationReason: vendorNotes ?? null,
-          }
-        : {}),
     },
   });
 

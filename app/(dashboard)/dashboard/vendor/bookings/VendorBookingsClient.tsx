@@ -5,6 +5,8 @@ import { useState } from "react";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
 
+import { toast } from "sonner";
+
 import { updateBookingMeetingLink, updateBookingStatus } from "@/app/actions/booking";
 
 type Booking = {
@@ -146,14 +148,43 @@ export default function VendorBookingsClient({
     if (selectedIds.size === 0) return;
     const ids = [...selectedIds];
     setBulkLoading(true);
+
+    const succeededIds: string[] = [];
+    const failedIds: string[] = [];
+    let firstError = "";
+
     for (const id of ids) {
-      await updateBookingStatus(id, status, vendorNoteInput[id]);
+      const result = await updateBookingStatus(id, status, vendorNoteInput[id]);
+      if (result.ok) {
+        succeededIds.push(id);
+      } else {
+        failedIds.push(id);
+        if (!firstError) firstError = "error" in result ? result.error : "Operation failed";
+      }
     }
-    setLocalBookings((prev) =>
-      prev.map((b) => (ids.includes(b.id) ? { ...b, status } : b)),
-    );
+
+    if (succeededIds.length > 0) {
+      setLocalBookings((prev) =>
+        prev.map((b) => (succeededIds.includes(b.id) ? { ...b, status } : b)),
+      );
+    }
     setSelectedIds(new Set());
     setBulkLoading(false);
+
+    const verb =
+      status === "CANCELLED" ? "cancelled" : status === "CONFIRMED" ? "confirmed" : "completed";
+
+    if (failedIds.length === 0) {
+      toast.success(
+        `${succeededIds.length} booking${succeededIds.length !== 1 ? "s" : ""} ${verb}.`,
+      );
+    } else if (succeededIds.length === 0) {
+      toast.error(firstError);
+    } else {
+      toast.error(
+        `${succeededIds.length} ${verb}, ${failedIds.length} failed: ${firstError}`,
+      );
+    }
   }
 
   function getBookingsForDate(date: Date): Booking[] {
@@ -215,6 +246,23 @@ export default function VendorBookingsClient({
             : b,
         ),
       );
+      if (status === "CANCELLED") {
+        const refunded = "refundedTTD" in result && result.refundedTTD > 0;
+        toast.success(
+          refunded
+            ? `Booking cancelled. TTD ${(result as { refundedTTD: number }).refundedTTD.toFixed(2)} refunded.`
+            : "Booking cancelled.",
+        );
+      } else if (status === "CONFIRMED") {
+        toast.success("Booking confirmed.");
+      } else if (status === "COMPLETED") {
+        toast.success("Booking marked as completed.");
+      } else {
+        toast.success("No-show recorded.");
+      }
+    } else {
+      const errorMsg = "error" in result ? result.error : "Something went wrong.";
+      toast.error(errorMsg);
     }
     setLoadingId(null);
   }
