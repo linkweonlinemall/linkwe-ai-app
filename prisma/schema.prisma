@@ -1684,7 +1684,8 @@ model ProductBooking {
   staffMember        StaffMember? @relation(fields: [staffMemberId], references: [id], onDelete: SetNull)
   reminderSentAt     DateTime?
   /// Total paid via Stripe so far (full or deposit).
-  amountPaid         Float?              @map("amount_paid")
+  amountPaid             Float?              @map("amount_paid")
+  stripePaymentIntentId  String?             @map("stripe_payment_intent_id")
   completedAt        DateTime?           @map("completed_at")
   autoCompleteAt     DateTime?           @map("auto_complete_at")
   markedCompleteBy   String?             @map("marked_complete_by")

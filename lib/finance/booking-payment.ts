@@ -77,6 +77,7 @@ export async function handleBookingPaymentIntentSucceeded(
             status: BookingStatus.DEPOSIT_PAID,
             amountPaid: amountPaid,
             autoCompleteAt,
+            stripePaymentIntentId: paymentIntent.id,
           },
         });
 
@@ -132,6 +133,7 @@ export async function handleBookingPaymentIntentSucceeded(
         status: nextStatus,
         amountPaid: amountPaid,
         autoCompleteAt,
+        stripePaymentIntentId: paymentIntent.id,
       },
     });
 
