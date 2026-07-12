@@ -14,6 +14,7 @@ import { getCourierPickupFeeMinor } from "@/lib/fulfillment/courier-pickup-rates
 import { prisma } from "@/lib/prisma";
 import { getSplitProgressSteps, getSplitStepIndex } from "@/lib/orders/split-progress";
 import { vendorSplitOrderDetailSelect } from "@/lib/vendor/vendor-split-order-query";
+import { MessageCustomerButton } from "./message-customer-button";
 
 type Props = { params: Promise<{ splitOrderId: string }> };
 
@@ -518,13 +519,19 @@ export default async function VendorOrderDetailPage({ params }: Props) {
               <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
                 Quick actions
               </h2>
-              <a
-                href={`/api/vendor-invoice/${splitOrderId}`}
-                className="inline-flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                style={{ backgroundColor: SCARLET }}
-              >
-                Download Invoice
-              </a>
+              <div className="flex flex-col gap-2">
+                <a
+                  href={`/api/vendor-invoice/${splitOrderId}`}
+                  className="inline-flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: SCARLET }}
+                >
+                  Download Invoice
+                </a>
+                <MessageCustomerButton
+                  customerId={splitOrder.mainOrder.buyer.id}
+                  storeId={splitOrder.storeId}
+                />
+              </div>
             </div>
           </div>
         </div>

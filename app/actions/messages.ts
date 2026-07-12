@@ -161,6 +161,73 @@ export async function getOrCreateConversation(
   }
 }
 
+export async function getOrCreateConversationAsVendor(
+  customerId: string,
+  storeId: string,
+): Promise<
+  { ok: true; conversationId: string; created: boolean } | { ok: false; error: string }
+> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "Sign in to message this customer." };
+
+  const trimmedStoreId = storeId?.trim();
+  const trimmedCustomerId = customerId?.trim();
+  if (!trimmedStoreId || !trimmedCustomerId) return { ok: false, error: "Invalid parameters." };
+
+  const store = await prisma.store.findUnique({
+    where: { id: trimmedStoreId },
+    select: { id: true, ownerId: true },
+  });
+  if (!store) return { ok: false, error: "Store not found." };
+
+  if (store.ownerId !== session.userId) {
+    return { ok: false, error: "Not authorized." };
+  }
+
+  const existing = await prisma.conversation.findUnique({
+    where: {
+      customerId_storeId: {
+        customerId: trimmedCustomerId,
+        storeId: store.id,
+      },
+    },
+    select: { id: true },
+  });
+  if (existing) {
+    return { ok: true, conversationId: existing.id, created: false };
+  }
+
+  try {
+    const conversation = await prisma.conversation.create({
+      data: {
+        customerId: trimmedCustomerId,
+        storeId: store.id,
+      },
+      select: { id: true },
+    });
+    return { ok: true, conversationId: conversation.id, created: true };
+  } catch (err) {
+    const isUniqueViolation =
+      typeof err === "object" &&
+      err !== null &&
+      "code" in err &&
+      (err as { code: string }).code === "P2002";
+    if (!isUniqueViolation) throw err;
+
+    const raced = await prisma.conversation.findUnique({
+      where: {
+        customerId_storeId: {
+          customerId: trimmedCustomerId,
+          storeId: store.id,
+        },
+      },
+      select: { id: true },
+    });
+    if (!raced) throw err;
+    return { ok: true, conversationId: raced.id, created: false };
+  }
+}
+
 export async function sendMessage(
   conversationId: string,
   content: string,

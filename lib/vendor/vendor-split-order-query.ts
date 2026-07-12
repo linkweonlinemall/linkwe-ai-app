@@ -97,7 +97,7 @@ export const vendorSplitOrderDetailSelect = {
       totalMinor: true,
       createdAt: true,
       buyer: {
-        select: { fullName: true, email: true },
+        select: { id: true, fullName: true, email: true },
       },
       _count: {
         select: { splitOrders: true },
