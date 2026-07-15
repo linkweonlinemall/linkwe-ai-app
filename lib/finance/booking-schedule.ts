@@ -1,4 +1,14 @@
 /**
+ * Scheduled start of a ProductBooking in UTC (booking date anchor + startTime HH:mm).
+ */
+export function getBookingScheduledStart(bookingDate: Date, startTime: string): Date {
+  const [h, m] = startTime.split(":").map((v) => parseInt(v, 10));
+  const start = new Date(bookingDate);
+  start.setUTCHours(h, m ?? 0, 0, 0);
+  return start;
+}
+
+/**
  * Scheduled end of a ProductBooking in UTC (booking date anchor + endTime HH:mm).
  */
 export function getBookingScheduledEnd(bookingDate: Date, endTime: string): Date {

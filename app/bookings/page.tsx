@@ -3,9 +3,10 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Banknote, Calendar, Clock, ConciergeBell } from "lucide-react";
 
+import CancelBookingButton from "@/components/bookings/CancelBookingButton";
 import MarkBookingCompleteButton from "@/components/bookings/MarkBookingCompleteButton";
 import PublicNav from "@/components/layout/PublicNav";
-import { canCustomerMarkBookingComplete } from "@/lib/finance/booking-ui";
+import { canCustomerMarkBookingComplete, customerCancelState } from "@/lib/finance/booking-ui";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { icn } from "@/lib/iconography";
@@ -41,6 +42,7 @@ export default async function BookingsPage() {
           name: true,
           slug: true,
           images: true,
+          cancellationHours: true,
           store: { select: { name: true, slug: true } },
         },
       },
@@ -147,24 +149,50 @@ export default async function BookingsPage() {
           >
             View service →
           </Link>
-          {booking.status === "COMPLETED" || booking.earningsReleased ? (
-            <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800">
-              Completed
-              {booking.completedAt
-                ? ` · ${formatDate(booking.completedAt)}`
-                : ""}
-            </span>
-          ) : canCustomerMarkBookingComplete({
-              status: booking.status,
-              earningsReleased: booking.earningsReleased,
-              bookingDate: booking.bookingDate,
-              endTime: booking.endTime,
-            }) ? (
-            <MarkBookingCompleteButton
-              bookingId={booking.id}
-              storeName={booking.product.store.name}
-            />
-          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {booking.status === "COMPLETED" || booking.earningsReleased ? (
+              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                Completed
+                {booking.completedAt
+                  ? ` · ${formatDate(booking.completedAt)}`
+                  : ""}
+              </span>
+            ) : canCustomerMarkBookingComplete({
+                status: booking.status,
+                earningsReleased: booking.earningsReleased,
+                bookingDate: booking.bookingDate,
+                endTime: booking.endTime,
+              }) ? (
+              <MarkBookingCompleteButton
+                bookingId={booking.id}
+                storeName={booking.product.store.name}
+              />
+            ) : null}
+            {(() => {
+              const cancelState = customerCancelState({
+                status: booking.status,
+                bookingDate: booking.bookingDate,
+                startTime: booking.startTime,
+                cancellationHours: booking.product.cancellationHours,
+              });
+              if (cancelState === "cancellable") {
+                return (
+                  <CancelBookingButton
+                    bookingId={booking.id}
+                    storeName={booking.product.store.name}
+                  />
+                );
+              }
+              if (cancelState === "too_late") {
+                return (
+                  <span className="text-xs text-zinc-400">
+                    To cancel, message the vendor.
+                  </span>
+                );
+              }
+              return null;
+            })()}
+          </div>
         </div>
       </div>
     );
