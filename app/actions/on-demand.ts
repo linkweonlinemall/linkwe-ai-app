@@ -8,6 +8,7 @@ import { NotificationType } from "@prisma/client";
 import { createNotification } from "@/app/actions/notifications";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { stripe } from "@/lib/stripe/stripe";
 import { uploadFile } from "@/lib/uploads/upload";
 import { sendEmail } from "@/lib/email/send";
 import {
@@ -418,13 +419,6 @@ export async function confirmOnDemandRequest(
 
   if (paymentMethod === "online") {
     try {
-      const Stripe = (await import("stripe")).default;
-      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-        // Pinned API version requested for Checkout; Stripe SDK types follow lib/stripe default.
-        // @ts-expect-error — runtime accepts legacy API versions; types track bundled version only
-        apiVersion: "2024-06-20",
-      });
-
       const baseUrl = BASE_URL;
       const price =
         request.quotedPrice && request.quotedPrice > 0 ? request.quotedPrice : 1;
@@ -435,12 +429,12 @@ export async function confirmOnDemandRequest(
         line_items: [
           {
             price_data: {
-              currency: "usd",
+              currency: "ttd",
               product_data: {
                 name: request.service.name,
-                description: `On-demand service — TTD ${price.toFixed(2)} (paid in USD equivalent)`,
+                description: `On-demand service — TTD ${price.toFixed(2)}`,
               },
-              unit_amount: Math.round(price * 0.148 * 100),
+              unit_amount: Math.round(price * 100),
             },
             quantity: 1,
           },
