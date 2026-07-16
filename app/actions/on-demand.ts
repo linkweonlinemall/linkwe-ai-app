@@ -444,11 +444,6 @@ export async function confirmOnDemandRequest(
         metadata: { requestId, userId: session.userId },
       });
 
-      await prisma.onDemandRequest.update({
-        where: { id: requestId },
-        data: { status: "CONFIRMED" },
-      });
-
       revalidatePath("/my-requests");
       revalidatePath("/dashboard/vendor/requests");
 
