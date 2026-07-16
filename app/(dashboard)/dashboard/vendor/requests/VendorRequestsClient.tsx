@@ -27,6 +27,7 @@ type Request = {
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   PENDING: { label: "Pending", color: "bg-amber-100 text-amber-700" },
   ACCEPTED: { label: "Accepted", color: "bg-emerald-100 text-emerald-700" },
+  CONFIRMED: { label: "Paid", color: "bg-emerald-100 text-emerald-700" },
   DECLINED: { label: "Declined", color: "bg-red-100 text-red-700" },
   COMPLETED: { label: "Completed", color: "bg-blue-100 text-blue-700" },
   CANCELLED: { label: "Cancelled", color: "bg-zinc-100 text-zinc-500" },
@@ -50,6 +51,7 @@ export default function VendorRequestsClient({ initialRequests }: { initialReque
     all: requests.length,
     PENDING: requests.filter((r) => r.status === "PENDING").length,
     ACCEPTED: requests.filter((r) => r.status === "ACCEPTED").length,
+    CONFIRMED: requests.filter((r) => r.status === "CONFIRMED").length,
     COMPLETED: requests.filter((r) => r.status === "COMPLETED").length,
     DECLINED: requests.filter((r) => r.status === "DECLINED").length,
   };
@@ -109,6 +111,7 @@ export default function VendorRequestsClient({ initialRequests }: { initialReque
           { value: "all", label: "All" },
           { value: "PENDING", label: "Pending" },
           { value: "ACCEPTED", label: "Accepted" },
+          { value: "CONFIRMED", label: "Paid" },
           { value: "COMPLETED", label: "Completed" },
           { value: "DECLINED", label: "Declined" },
         ].map((tab) => (
@@ -391,7 +394,7 @@ export default function VendorRequestsClient({ initialRequests }: { initialReque
                         </div>
                       ) : null}
 
-                      {request.status === "ACCEPTED" ? (
+                      {request.status === "ACCEPTED" || request.status === "CONFIRMED" ? (
                         <button
                           type="button"
                           onClick={() => handleComplete(request.id)}
