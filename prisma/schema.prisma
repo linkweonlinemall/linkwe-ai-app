@@ -1759,6 +1759,8 @@ model OnDemandRequest {
   status           OnDemandRequestStatus @default(PENDING)
   vendorNotes      String?
   quotedPrice      Float?
+  amountPaid             Float?   @map("amount_paid")
+  stripePaymentIntentId  String?  @map("stripe_payment_intent_id")
   estimatedArrival String?
   declineReason    String?
   respondedAt      DateTime?
