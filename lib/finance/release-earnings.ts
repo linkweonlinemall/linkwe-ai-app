@@ -26,6 +26,7 @@ export async function createVendorEarningsLedgerPair(
     idempotencyKey: string;
     description: string;
     markedByUserId?: string;
+    metadata?: Prisma.InputJsonValue;
   },
 ) {
   const existing = await tx.vendorLedgerEntry.findUnique({
@@ -58,6 +59,7 @@ export async function createVendorEarningsLedgerPair(
       splitOrderId: input.splitOrderId,
       idempotencyKey: input.idempotencyKey,
       description: input.description,
+      metadata: input.metadata,
       releasedAt: now,
       createdByUserId: input.markedByUserId,
     },
@@ -78,6 +80,7 @@ export async function createVendorEarningsLedgerPair(
       splitOrderId: input.splitOrderId,
       idempotencyKey: `${input.idempotencyKey}:fee`,
       description: `Platform commission on ${input.description}`,
+      metadata: input.metadata,
       releasedAt: now,
       createdByUserId: input.markedByUserId,
     },

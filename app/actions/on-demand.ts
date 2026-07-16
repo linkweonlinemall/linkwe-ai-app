@@ -7,6 +7,9 @@ import { NotificationType } from "@prisma/client";
 
 import { createNotification } from "@/app/actions/notifications";
 import { getSession } from "@/lib/auth/session";
+import { calculateEarnings } from "@/lib/finance/commission";
+import { createVendorEarningsLedgerPair } from "@/lib/finance/release-earnings";
+import { resolveVendorPlan } from "@/lib/finance/vendor-plan";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe/stripe";
 import { uploadFile } from "@/lib/uploads/upload";
@@ -336,22 +339,89 @@ export async function completeOnDemandRequest(requestId: string): Promise<{ ok: 
 
   const store = await prisma.store.findFirst({
     where: { ownerId: session.userId },
-    select: { id: true },
+    select: { id: true, ownerId: true, subscriptionPlan: true },
   });
   if (!store) return { error: "No store found" };
 
-  const found = await prisma.onDemandRequest.findFirst({
+  const request = await prisma.onDemandRequest.findFirst({
     where: { id: requestId, storeId: store.id },
-    select: { id: true },
+    select: {
+      id: true,
+      status: true,
+      amountPaid: true,
+      stripePaymentIntentId: true,
+      customerId: true,
+    },
   });
-  if (!found) return { error: "Request not found" };
+  if (!request) return { error: "Request not found" };
 
-  await prisma.onDemandRequest.update({
-    where: { id: requestId },
-    data: { status: "COMPLETED", completedAt: new Date() },
+  if (request.status === "COMPLETED") {
+    return { error: "Already completed" };
+  }
+
+  const wasPaidOnline =
+    request.amountPaid != null && request.amountPaid > 0 && !!request.stripePaymentIntentId;
+
+  if (!wasPaidOnline) {
+    await prisma.onDemandRequest.update({
+      where: { id: requestId },
+      data: { status: "COMPLETED", completedAt: new Date() },
+    });
+
+    await createNotification({
+      userId: request.customerId,
+      type: NotificationType.ON_DEMAND_REQUEST_COMPLETED,
+      title: "Service completed",
+      body: "Your on-demand service has been marked complete.",
+      linkUrl: "/my-requests",
+    });
+
+    revalidatePath("/dashboard/vendor/requests");
+    revalidatePath("/my-requests");
+    return { ok: true };
+  }
+
+  const plan = resolveVendorPlan(store.subscriptionPlan);
+  const grossTTD = request.amountPaid as number;
+  const { net } = calculateEarnings(grossTTD, "service", plan);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.onDemandRequest.update({
+      where: { id: requestId },
+      data: { status: "COMPLETED", completedAt: new Date() },
+    });
+
+    await createVendorEarningsLedgerPair(tx, {
+      storeId: store.id,
+      ledgerEntryType: "ORDER_REVENUE",
+      grossTTD,
+      itemType: "service",
+      plan,
+      idempotencyKey: `ondemand:${requestId}:complete`,
+      description: "On-demand service completed",
+      markedByUserId: session.userId,
+      metadata: { onDemandRequestId: requestId },
+    });
+  });
+
+  await createNotification({
+    userId: store.ownerId,
+    type: NotificationType.PAYOUT_PROCESSED,
+    title: "On-demand job completed",
+    body: `TTD ${net.toFixed(2)} added to your balance`,
+    linkUrl: "/dashboard/vendor/finance",
+  });
+
+  await createNotification({
+    userId: request.customerId,
+    type: NotificationType.ON_DEMAND_REQUEST_COMPLETED,
+    title: "Service completed",
+    body: "Your on-demand service has been marked complete.",
+    linkUrl: "/my-requests",
   });
 
   revalidatePath("/dashboard/vendor/requests");
+  revalidatePath("/my-requests");
   return { ok: true };
 }
 
