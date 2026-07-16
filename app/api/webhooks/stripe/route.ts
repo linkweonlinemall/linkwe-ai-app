@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { NotificationType, StoreSubscriptionStatus, VendorSubscriptionPlan } from "@prisma/client";
 
+import { minorToTtd } from "@/lib/finance/commission";
 import { handleBookingPaymentIntentSucceeded } from "@/lib/finance/booking-payment";
 import { createSplitOrdersFromMainOrder } from "@/lib/fulfillment/split-orders";
 import {
@@ -221,9 +222,21 @@ export async function POST(request: NextRequest) {
         const requestId = checkoutSession.metadata?.requestId;
 
         if (requestId) {
-          await prisma.onDemandRequest.update({
-            where: { id: requestId },
-            data: { status: "CONFIRMED" },
+          const amountTotal = checkoutSession.amount_total;
+          const amountPaid = amountTotal != null ? minorToTtd(amountTotal) : undefined;
+
+          const pi = checkoutSession.payment_intent;
+          const paymentIntentId = typeof pi === "string" ? pi : (pi?.id ?? null);
+
+          // Idempotent: updateMany only matches non-CONFIRMED rows; a Stripe
+          // retry of an already-confirmed request gets count=0 and is a no-op.
+          await prisma.onDemandRequest.updateMany({
+            where: { id: requestId, status: { not: "CONFIRMED" } },
+            data: {
+              status: "CONFIRMED",
+              amountPaid,
+              stripePaymentIntentId: paymentIntentId ?? undefined,
+            },
           });
         }
 
