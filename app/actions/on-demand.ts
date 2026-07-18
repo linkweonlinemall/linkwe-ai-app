@@ -8,6 +8,7 @@ import { NotificationType } from "@prisma/client";
 import { createNotification } from "@/app/actions/notifications";
 import { getSession } from "@/lib/auth/session";
 import { calculateEarnings } from "@/lib/finance/commission";
+import { cancelOnDemandCore } from "@/lib/finance/cancel-ondemand";
 import { createVendorEarningsLedgerPair } from "@/lib/finance/release-earnings";
 import { resolveVendorPlan } from "@/lib/finance/vendor-plan";
 import { prisma } from "@/lib/prisma";
@@ -287,14 +288,10 @@ export async function declineOnDemandRequest(
   });
   if (!found) return { error: "Request not found" };
 
-  await prisma.onDemandRequest.update({
-    where: { id: requestId },
-    data: {
-      status: "DECLINED",
-      declineReason: reason.trim() || null,
-      respondedAt: new Date(),
-    },
-  });
+  const declineReason = reason.trim() || null;
+
+  const result = await cancelOnDemandCore(requestId, "DECLINED", declineReason);
+  if (!result.ok) return { error: result.error };
 
   const declinedForEmail = await prisma.onDemandRequest.findUnique({
     where: { id: requestId },
@@ -319,17 +316,6 @@ export async function declineOnDemandRequest(
     });
   }
 
-  if (declinedForEmail && found.customerId) {
-    await createNotification({
-      userId: found.customerId,
-      type: NotificationType.ON_DEMAND_REQUEST_DECLINED,
-      title: "Request declined",
-      body: `Unfortunately your request could not be fulfilled${declinedForEmail.declineReason ? ` — ${declinedForEmail.declineReason}` : ""}`,
-      linkUrl: `/my-requests`,
-    });
-  }
-
-  revalidatePath("/dashboard/vendor/requests");
   return { ok: true };
 }
 
@@ -545,19 +531,12 @@ export async function cancelOnDemandRequest(
     where: {
       id: requestId,
       customerId: session.userId,
-      status: { in: ["PENDING", "ACCEPTED"] },
+      status: { in: ["PENDING", "ACCEPTED", "CONFIRMED"] },
     },
     select: { id: true },
   });
 
   if (!request) return { error: "Request not found or cannot be cancelled" };
 
-  await prisma.onDemandRequest.update({
-    where: { id: requestId },
-    data: { status: "CANCELLED" },
-  });
-
-  revalidatePath("/my-requests");
-  revalidatePath("/dashboard/vendor/requests");
-  return { ok: true };
+  return cancelOnDemandCore(requestId, "CANCELLED");
 }
