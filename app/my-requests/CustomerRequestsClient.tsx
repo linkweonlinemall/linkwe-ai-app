@@ -65,6 +65,9 @@ export default function CustomerRequestsClient({
   const [actingId, setActingId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<Record<string, "online" | "arrival">>({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [cancelFeedback, setCancelFeedback] = useState<
+    Record<string, { type: "success" | "error"; text: string }>
+  >({});
 
   function formatDate(d: Date | string) {
     return new Date(d).toLocaleDateString("en-TT", {
@@ -94,6 +97,34 @@ export default function CustomerRequestsClient({
     setActingId(requestId);
     await cancelOnDemandRequest(requestId);
     setRequests((prev) => prev.map((r) => (r.id === requestId ? { ...r, status: "CANCELLED" } : r)));
+    setActingId(null);
+  }
+
+  async function handleCancelConfirmedRequest(requestId: string) {
+    if (!confirm("Cancelling will refund your payment. Are you sure you want to cancel this request?")) return;
+    setActingId(requestId);
+    setCancelFeedback((prev) => {
+      const next = { ...prev };
+      delete next[requestId];
+      return next;
+    });
+    const result = await cancelOnDemandRequest(requestId);
+    if (result.ok) {
+      const refundedTTD = result.refundedTTD ?? 0;
+      setRequests((prev) => prev.map((r) => (r.id === requestId ? { ...r, status: "CANCELLED" } : r)));
+      setCancelFeedback((prev) => ({
+        ...prev,
+        [requestId]: {
+          type: "success",
+          text:
+            refundedTTD > 0
+              ? `Request cancelled. TTD ${refundedTTD.toFixed(2)} refunded to your card.`
+              : "Request cancelled.",
+        },
+      }));
+    } else {
+      setCancelFeedback((prev) => ({ ...prev, [requestId]: { type: "error", text: result.error } }));
+    }
     setActingId(null);
   }
 
@@ -175,6 +206,25 @@ export default function CustomerRequestsClient({
                   >
                     <p className="text-sm font-semibold text-zinc-900">{status.desc}</p>
                   </div>
+
+                  {/* Cancel result feedback */}
+                  {cancelFeedback[request.id] ? (
+                    <div
+                      className={`rounded-xl border px-4 py-3 ${
+                        cancelFeedback[request.id]!.type === "success"
+                          ? "border-emerald-200 bg-emerald-50"
+                          : "border-red-100 bg-red-50"
+                      }`}
+                    >
+                      <p
+                        className={`text-sm font-semibold ${
+                          cancelFeedback[request.id]!.type === "success" ? "text-emerald-800" : "text-red-700"
+                        }`}
+                      >
+                        {cancelFeedback[request.id]!.text}
+                      </p>
+                    </div>
+                  ) : null}
 
                   {/* Description */}
                   <div>
@@ -276,6 +326,21 @@ export default function CustomerRequestsClient({
                     >
                       {actingId === request.id ? "Cancelling..." : "Cancel request"}
                     </button>
+                  ) : null}
+
+                  {/* Cancel button for CONFIRMED */}
+                  {request.status === "CONFIRMED" ? (
+                    <div className="flex flex-col gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleCancelConfirmedRequest(request.id)}
+                        disabled={actingId === request.id}
+                        className="w-full rounded-xl border-2 border-zinc-200 py-2.5 text-sm font-semibold text-zinc-600 transition-colors hover:bg-zinc-50 disabled:opacity-50"
+                      >
+                        {actingId === request.id ? "Cancelling..." : "Cancel request"}
+                      </button>
+                      <p className="text-center text-xs text-zinc-400">Cancelling will refund your payment.</p>
+                    </div>
                   ) : null}
 
                   {/* View service link */}

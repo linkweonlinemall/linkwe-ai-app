@@ -523,9 +523,9 @@ export async function confirmOnDemandRequest(
 
 export async function cancelOnDemandRequest(
   requestId: string,
-): Promise<{ ok: true } | { error: string }> {
+): Promise<{ ok: true; refundedTTD: number } | { ok: false; error: string }> {
   const session = await getSession();
-  if (!session) return { error: "not_logged_in" };
+  if (!session) return { ok: false, error: "not_logged_in" };
 
   const request = await prisma.onDemandRequest.findFirst({
     where: {
@@ -536,7 +536,7 @@ export async function cancelOnDemandRequest(
     select: { id: true },
   });
 
-  if (!request) return { error: "Request not found or cannot be cancelled" };
+  if (!request) return { ok: false, error: "Request not found or cannot be cancelled" };
 
   return cancelOnDemandCore(requestId, "CANCELLED");
 }
