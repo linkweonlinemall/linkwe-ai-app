@@ -1422,6 +1422,11 @@ enum OnDemandRequestStatus {
   CANCELLED
 }
 
+enum RequestType {
+  ON_DEMAND
+  QUOTE
+}
+
 enum EventStatus {
   DRAFT
   PUBLISHED
@@ -1758,6 +1763,7 @@ model OnDemandRequest {
   customerLng      Float?
   customerAddress  String?
   status           OnDemandRequestStatus @default(PENDING)
+  requestType      RequestType           @default(ON_DEMAND) @map("request_type")
   vendorNotes      String?
   quotedPrice      Float?
   amountPaid             Float?   @map("amount_paid")
