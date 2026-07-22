@@ -472,7 +472,7 @@ export default async function OrderDetailPage({ params }: Props) {
                                   <p className="mt-1 text-xs text-zinc-600">
                                     {item.quantity} × TTD {(item.unitPriceMinor / 100).toFixed(2)}
                                   </p>
-                                  {weightLine && weightLine.unitWeightLbs > 0 ? (
+                                  {weightLine && weightLine.unitWeightLbs != null && weightLine.unitWeightLbs > 0 ? (
                                     <p className="mt-0.5 text-xs text-zinc-400">
                                       {formatWeightLbs(weightLine.unitWeightLbs)} lb each
                                     </p>

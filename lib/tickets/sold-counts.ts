@@ -24,9 +24,9 @@ function takenSeatWhere(holdCutoff: Date): Prisma.TicketWhereInput {
 }
 
 /** Ticket.orderId → Ticket.ticketOrder (TicketOrder.status must be PAID). */
-const PAID_TICKET_SOLD_WHERE = {
-  status: { notIn: ["REFUNDED", "CANCELLED"] as const },
-  ticketOrder: { status: "PAID" as const },
+const PAID_TICKET_SOLD_WHERE: Prisma.TicketWhereInput = {
+  status: { notIn: ["REFUNDED", "CANCELLED"] },
+  ticketOrder: { status: "PAID" },
 };
 
 export type TicketTypeAvailability = {
