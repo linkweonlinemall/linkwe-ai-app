@@ -95,8 +95,21 @@ export default function CustomerRequestsClient({
   async function handleCancel(requestId: string) {
     if (!confirm("Cancel this request?")) return;
     setActingId(requestId);
-    await cancelOnDemandRequest(requestId);
-    setRequests((prev) => prev.map((r) => (r.id === requestId ? { ...r, status: "CANCELLED" } : r)));
+    setCancelFeedback((prev) => {
+      const next = { ...prev };
+      delete next[requestId];
+      return next;
+    });
+    const result = await cancelOnDemandRequest(requestId);
+    if (result.ok) {
+      setRequests((prev) => prev.map((r) => (r.id === requestId ? { ...r, status: "CANCELLED" } : r)));
+      setCancelFeedback((prev) => ({
+        ...prev,
+        [requestId]: { type: "success", text: "Request cancelled." },
+      }));
+    } else {
+      setCancelFeedback((prev) => ({ ...prev, [requestId]: { type: "error", text: result.error } }));
+    }
     setActingId(null);
   }
 
