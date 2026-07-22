@@ -16,9 +16,6 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "lh3.googleusercontent.com", pathname: "/**" },
     ],
   },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   serverExternalPackages: ["@prisma/client", "@prisma/engines"],
   experimental: {
     serverActions: {
