@@ -9,6 +9,7 @@ type Request = {
   id: string;
   description: string;
   status: string;
+  requestType: "ON_DEMAND" | "QUOTE";
   quotedPrice: number | null;
   estimatedArrival: string | null;
   declineReason: string | null;
@@ -79,7 +80,8 @@ export default function CustomerRequestsClient({
   }
 
   async function handleConfirm(requestId: string) {
-    const method = paymentMethod[requestId] ?? "arrival";
+    const request = requests.find((r) => r.id === requestId);
+    const method = request?.requestType === "QUOTE" ? "online" : paymentMethod[requestId] ?? "arrival";
     setActingId(requestId);
     const result = await confirmOnDemandRequest(requestId, method);
     if ("ok" in result) {
@@ -162,7 +164,8 @@ export default function CustomerRequestsClient({
       {requests.map((request) => {
         const status = STATUS_CONFIG[request.status] ?? STATUS_CONFIG.PENDING;
         const expanded = expandedId === request.id;
-        const method = paymentMethod[request.id] ?? "arrival";
+        const isQuote = request.requestType === "QUOTE";
+        const method = isQuote ? "online" : paymentMethod[request.id] ?? "arrival";
 
         return (
           <div
@@ -217,7 +220,11 @@ export default function CustomerRequestsClient({
                             : "border-zinc-100 bg-zinc-50"
                     }`}
                   >
-                    <p className="text-sm font-semibold text-zinc-900">{status.desc}</p>
+                    <p className="text-sm font-semibold text-zinc-900">
+                      {isQuote && request.status === "CONFIRMED"
+                        ? "Quote paid — the provider will be in touch"
+                        : status.desc}
+                    </p>
                   </div>
 
                   {/* Cancel result feedback */}
@@ -280,31 +287,35 @@ export default function CustomerRequestsClient({
                   {/* Confirmation actions for ACCEPTED */}
                   {request.status === "ACCEPTED" ? (
                     <div className="flex flex-col gap-3">
-                      <p className="text-xs font-bold text-zinc-700">How would you like to pay?</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          { value: "arrival", label: "💵 Pay on arrival" },
-                          { value: "online", label: "💳 Pay online" },
-                        ].map((opt) => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() =>
-                              setPaymentMethod((prev) => ({
-                                ...prev,
-                                [request.id]: opt.value as "online" | "arrival",
-                              }))
-                            }
-                            className={`rounded-xl border-2 py-3 text-xs font-bold transition-all ${
-                              method === opt.value
-                                ? "border-[#D4450A] bg-[#D4450A]/5 text-[#D4450A]"
-                                : "border-zinc-200 text-zinc-600 hover:border-zinc-300"
-                            }`}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
+                      {isQuote ? null : (
+                        <>
+                          <p className="text-xs font-bold text-zinc-700">How would you like to pay?</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {[
+                              { value: "arrival", label: "💵 Pay on arrival" },
+                              { value: "online", label: "💳 Pay online" },
+                            ].map((opt) => (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() =>
+                                  setPaymentMethod((prev) => ({
+                                    ...prev,
+                                    [request.id]: opt.value as "online" | "arrival",
+                                  }))
+                                }
+                                className={`rounded-xl border-2 py-3 text-xs font-bold transition-all ${
+                                  method === opt.value
+                                    ? "border-[#D4450A] bg-[#D4450A]/5 text-[#D4450A]"
+                                    : "border-zinc-200 text-zinc-600 hover:border-zinc-300"
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
                       <button
                         type="button"
                         onClick={() => handleConfirm(request.id)}
@@ -314,9 +325,13 @@ export default function CustomerRequestsClient({
                       >
                         {actingId === request.id
                           ? "Confirming..."
-                          : method === "online"
-                            ? "Confirm & pay online"
-                            : "Confirm — pay on arrival"}
+                          : isQuote
+                            ? request.quotedPrice && request.quotedPrice > 0
+                              ? `Pay quote — TTD ${request.quotedPrice.toFixed(2)}`
+                              : "Confirm & pay online"
+                            : method === "online"
+                              ? "Confirm & pay online"
+                              : "Confirm — pay on arrival"}
                       </button>
                       <button
                         type="button"

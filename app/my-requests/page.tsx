@@ -38,7 +38,7 @@ export default async function MyRequestsPage() {
           </h1>
           <p className="mt-1 text-sm text-zinc-500">Track your on-demand service requests</p>
         </div>
-        <CustomerRequestsClient initialRequests={requests as any} />
+        <CustomerRequestsClient initialRequests={requests} />
       </div>
     </div>
   );

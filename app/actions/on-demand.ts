@@ -526,6 +526,7 @@ export async function getCustomerOnDemandRequests() {
       id: true,
       description: true,
       status: true,
+      requestType: true,
       quotedPrice: true,
       estimatedArrival: true,
       declineReason: true,
@@ -550,17 +551,23 @@ export async function confirmOnDemandRequest(
       id: true,
       quotedPrice: true,
       storeId: true,
+      requestType: true,
       service: { select: { name: true } },
     },
   });
 
   if (!request) return { error: "Request not found or not in accepted state" };
 
+  if (request.requestType === "QUOTE" && paymentMethod !== "online") {
+    return { error: "Quotes must be paid online." };
+  }
+
   if (paymentMethod === "online") {
     try {
       const baseUrl = BASE_URL;
       const price =
         request.quotedPrice && request.quotedPrice > 0 ? request.quotedPrice : 1;
+      const itemLabel = request.requestType === "QUOTE" ? "Quote" : "On-demand service";
 
       const checkoutSession = await stripe.checkout.sessions.create({
         mode: "payment",
@@ -571,7 +578,7 @@ export async function confirmOnDemandRequest(
               currency: "ttd",
               product_data: {
                 name: request.service.name,
-                description: `On-demand service — TTD ${price.toFixed(2)}`,
+                description: `${itemLabel} — TTD ${price.toFixed(2)}`,
               },
               unit_amount: Math.round(price * 100),
             },
@@ -590,7 +597,7 @@ export async function confirmOnDemandRequest(
       return { ok: true, checkoutUrl: checkoutSession.url };
     } catch (err) {
       console.error("Stripe error:", err);
-      return { error: "Payment failed. Please try again or pay on arrival." };
+      return { error: "Payment failed. Please try again." };
     }
   }
 
