@@ -26,6 +26,8 @@ export default function QuoteRequestWidget({
   serviceId,
   storeId,
   serviceName,
+  quotePriceType,
+  minimumQuoteAmount,
   siteVisitRequired,
   isLoggedIn,
   isOwnStore,
@@ -130,8 +132,18 @@ export default function QuoteRequestWidget({
     );
   }
 
+  const pricingNote =
+    quotePriceType === "FREE_QUOTE"
+      ? "This provider offers free quotes."
+      : quotePriceType === "CALLOUT_FEE"
+        ? "A call-out fee may apply; final price after assessment."
+        : quotePriceType === "STARTING_FROM" && minimumQuoteAmount && minimumQuoteAmount > 0
+          ? `Quotes typically start from TTD ${minimumQuoteAmount.toFixed(2)}.`
+          : null;
+
   return (
     <div className="flex flex-col gap-4">
+      {pricingNote ? <p className="text-xs text-zinc-500">{pricingNote}</p> : null}
       <div>
         <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
           Describe what you need <span className="text-[#D4450A]">*</span>
