@@ -269,6 +269,7 @@ export async function getVendorOnDemandRequests(filter?: string) {
       customerLat: true,
       customerLng: true,
       status: true,
+      requestType: true,
       quotedPrice: true,
       estimatedArrival: true,
       declineReason: true,
@@ -284,7 +285,7 @@ export async function getVendorOnDemandRequests(filter?: string) {
 
 export async function acceptOnDemandRequest(
   requestId: string,
-  input: { quotedPrice: number; estimatedArrival: string; vendorNotes?: string },
+  input: { quotedPrice: number; estimatedArrival?: string; vendorNotes?: string },
 ): Promise<{ ok: true } | { error: string }> {
   const session = await getSession();
   if (!session) return { error: "Not authenticated" };
@@ -306,7 +307,7 @@ export async function acceptOnDemandRequest(
     data: {
       status: "ACCEPTED",
       quotedPrice: input.quotedPrice,
-      estimatedArrival: input.estimatedArrival,
+      estimatedArrival: input.estimatedArrival?.trim() ? input.estimatedArrival.trim() : null,
       vendorNotes: input.vendorNotes?.trim() ?? null,
       respondedAt: new Date(),
     },

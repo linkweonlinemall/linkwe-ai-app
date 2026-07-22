@@ -16,6 +16,7 @@ type Request = {
   photos: string[];
   customerAddress: string | null;
   status: string;
+  requestType: "ON_DEMAND" | "QUOTE";
   quotedPrice: number | null;
   estimatedArrival: string | null;
   declineReason: string | null;
@@ -47,38 +48,59 @@ export default function VendorRequestsClient({ initialRequests }: { initialReque
   const [declineReason, setDeclineReason] = useState<Record<string, string>>({});
   const [actionMode, setActionMode] = useState<Record<string, "accept" | "decline" | null>>({});
 
-  const filtered = filter === "all" ? requests : requests.filter((r) => r.status === filter);
+  const filtered =
+    filter === "all"
+      ? requests.filter((r) => r.requestType !== "QUOTE")
+      : filter === "QUOTES"
+        ? requests.filter((r) => r.requestType === "QUOTE")
+        : requests.filter((r) => r.requestType !== "QUOTE" && r.status === filter);
+
+  const onDemandRequests = requests.filter((r) => r.requestType !== "QUOTE");
 
   const counts = {
-    all: requests.length,
-    PENDING: requests.filter((r) => r.status === "PENDING").length,
-    ACCEPTED: requests.filter((r) => r.status === "ACCEPTED").length,
-    CONFIRMED: requests.filter((r) => r.status === "CONFIRMED").length,
-    COMPLETED: requests.filter((r) => r.status === "COMPLETED").length,
-    DECLINED: requests.filter((r) => r.status === "DECLINED").length,
+    all: onDemandRequests.length,
+    PENDING: onDemandRequests.filter((r) => r.status === "PENDING").length,
+    ACCEPTED: onDemandRequests.filter((r) => r.status === "ACCEPTED").length,
+    CONFIRMED: onDemandRequests.filter((r) => r.status === "CONFIRMED").length,
+    COMPLETED: onDemandRequests.filter((r) => r.status === "COMPLETED").length,
+    DECLINED: onDemandRequests.filter((r) => r.status === "DECLINED").length,
+    QUOTES: requests.filter((r) => r.requestType === "QUOTE").length,
   };
 
-  async function handleAccept(requestId: string) {
+  async function handleAccept(requestId: string, requestType: "ON_DEMAND" | "QUOTE") {
     const price = parseFloat(quotedPrice[requestId] ?? "0");
+    if (!price || price <= 0) {
+      alert("Please enter a price.");
+      return;
+    }
     const arrival = estimatedArrival[requestId] ?? "";
-    if (!arrival) {
+    if (requestType === "ON_DEMAND" && !arrival) {
       alert("Please set an estimated arrival time.");
       return;
     }
     setActingId(requestId);
-    await acceptOnDemandRequest(requestId, {
+    const result = await acceptOnDemandRequest(requestId, {
       quotedPrice: price,
-      estimatedArrival: arrival,
+      estimatedArrival: requestType === "QUOTE" ? undefined : arrival,
       vendorNotes: vendorNotes[requestId],
     });
-    setRequests((prev) =>
-      prev.map((r) =>
-        r.id === requestId
-          ? { ...r, status: "ACCEPTED", quotedPrice: price, estimatedArrival: arrival }
-          : r,
-      ),
-    );
-    setActionMode((prev) => ({ ...prev, [requestId]: null }));
+    if ("error" in result) {
+      alert(result.error);
+    } else {
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.id === requestId
+            ? {
+                ...r,
+                status: "ACCEPTED",
+                quotedPrice: price,
+                estimatedArrival: requestType === "QUOTE" ? null : arrival,
+              }
+            : r,
+        ),
+      );
+      setActionMode((prev) => ({ ...prev, [requestId]: null }));
+    }
     setActingId(null);
   }
 
@@ -126,6 +148,7 @@ export default function VendorRequestsClient({ initialRequests }: { initialReque
           { value: "CONFIRMED", label: "Paid" },
           { value: "COMPLETED", label: "Completed" },
           { value: "DECLINED", label: "Declined" },
+          { value: "QUOTES", label: "Quotes" },
         ].map((tab) => (
           <button
             key={tab.value}
@@ -184,6 +207,9 @@ export default function VendorRequestsClient({ initialRequests }: { initialReque
                       <p className="text-sm font-bold text-zinc-900">{request.service.name}</p>
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${status.color}`}>
                         {status.label}
+                      </span>
+                      <span className="rounded-full bg-zinc-50 px-2 py-0.5 text-[10px] font-semibold text-zinc-400">
+                        {request.requestType === "QUOTE" ? "Quote" : "On-demand"}
                       </span>
                     </div>
                     <p className="mt-0.5 line-clamp-1 text-xs text-zinc-500">{request.description}</p>
@@ -307,39 +333,41 @@ export default function VendorRequestsClient({ initialRequests }: { initialReque
                                   className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none"
                                 />
                               </div>
-                              <div>
-                                <label className="mb-1 block text-xs font-semibold text-zinc-700">
-                                  Estimated arrival <span className="text-[#D4450A]">*</span>
-                                </label>
-                                <select
-                                  value={estimatedArrival[request.id] ?? ""}
-                                  onChange={(e) =>
-                                    setEstimatedArrival((prev) => ({ ...prev, [request.id]: e.target.value }))
-                                  }
-                                  className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none"
-                                >
-                                  <option value="">Select estimated arrival *</option>
-                                  <optgroup label="Quick response">
-                                    <option value="Within 15 minutes">Within 15 minutes</option>
-                                    <option value="Within 30 minutes">Within 30 minutes</option>
-                                    <option value="Within 1 hour">Within 1 hour</option>
-                                    <option value="Within 2 hours">Within 2 hours</option>
-                                    <option value="Within 4 hours">Within 4 hours</option>
-                                  </optgroup>
-                                  <optgroup label="Today">
-                                    <option value="Today morning (8am–12pm)">Today morning (8am–12pm)</option>
-                                    <option value="Today afternoon (12pm–5pm)">Today afternoon (12pm–5pm)</option>
-                                    <option value="Today evening (5pm–8pm)">Today evening (5pm–8pm)</option>
-                                    <option value="Later today">Later today</option>
-                                  </optgroup>
-                                  <optgroup label="Scheduled">
-                                    <option value="Tomorrow morning">Tomorrow morning</option>
-                                    <option value="Tomorrow afternoon">Tomorrow afternoon</option>
-                                    <option value="This week">This week</option>
-                                    <option value="Next week">Next week</option>
-                                  </optgroup>
-                                </select>
-                              </div>
+                              {request.requestType === "ON_DEMAND" ? (
+                                <div>
+                                  <label className="mb-1 block text-xs font-semibold text-zinc-700">
+                                    Estimated arrival <span className="text-[#D4450A]">*</span>
+                                  </label>
+                                  <select
+                                    value={estimatedArrival[request.id] ?? ""}
+                                    onChange={(e) =>
+                                      setEstimatedArrival((prev) => ({ ...prev, [request.id]: e.target.value }))
+                                    }
+                                    className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none"
+                                  >
+                                    <option value="">Select estimated arrival *</option>
+                                    <optgroup label="Quick response">
+                                      <option value="Within 15 minutes">Within 15 minutes</option>
+                                      <option value="Within 30 minutes">Within 30 minutes</option>
+                                      <option value="Within 1 hour">Within 1 hour</option>
+                                      <option value="Within 2 hours">Within 2 hours</option>
+                                      <option value="Within 4 hours">Within 4 hours</option>
+                                    </optgroup>
+                                    <optgroup label="Today">
+                                      <option value="Today morning (8am–12pm)">Today morning (8am–12pm)</option>
+                                      <option value="Today afternoon (12pm–5pm)">Today afternoon (12pm–5pm)</option>
+                                      <option value="Today evening (5pm–8pm)">Today evening (5pm–8pm)</option>
+                                      <option value="Later today">Later today</option>
+                                    </optgroup>
+                                    <optgroup label="Scheduled">
+                                      <option value="Tomorrow morning">Tomorrow morning</option>
+                                      <option value="Tomorrow afternoon">Tomorrow afternoon</option>
+                                      <option value="This week">This week</option>
+                                      <option value="Next week">Next week</option>
+                                    </optgroup>
+                                  </select>
+                                </div>
+                              ) : null}
                               <div>
                                 <label className="mb-1 block text-xs font-semibold text-zinc-700">
                                   Note to customer (optional)
@@ -357,11 +385,15 @@ export default function VendorRequestsClient({ initialRequests }: { initialReque
                               <div className="flex gap-2">
                                 <button
                                   type="button"
-                                  onClick={() => handleAccept(request.id)}
+                                  onClick={() => handleAccept(request.id, request.requestType)}
                                   disabled={actingId === request.id}
                                   className="flex-1 rounded-xl bg-emerald-500 py-2.5 text-sm font-bold text-white hover:bg-emerald-600 disabled:opacity-50"
                                 >
-                                  {actingId === request.id ? "Saving..." : "Confirm acceptance"}
+                                  {actingId === request.id
+                                    ? "Saving..."
+                                    : request.requestType === "QUOTE"
+                                      ? "Send quote"
+                                      : "Confirm acceptance"}
                                 </button>
                                 <button
                                   type="button"
