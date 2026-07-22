@@ -164,6 +164,88 @@ export async function submitOnDemandRequest(input: {
   return { ok: true, requestId: request.id };
 }
 
+export async function submitQuoteRequest(input: {
+  serviceId: string;
+  storeId: string;
+  description: string;
+  photos: string[];
+}): Promise<{ ok: true; requestId: string } | { error: string }> {
+  const session = await getSession();
+  if (!session) return { error: "not_logged_in" };
+
+  if (!input.description.trim()) return { error: "Please describe what you need." };
+  if (input.description.trim().length < 20) {
+    return { error: "Please provide more detail — at least 20 characters." };
+  }
+
+  const product = await prisma.product.findFirst({
+    where: {
+      id: input.serviceId,
+      storeId: input.storeId,
+      isPublished: true,
+      isService: true,
+      isArchived: false,
+      serviceType: "QUOTE",
+    },
+    select: { id: true },
+  });
+  if (!product) return { error: "Service not found or unavailable." };
+
+  const request = await prisma.onDemandRequest.create({
+    data: {
+      serviceId: input.serviceId,
+      storeId: input.storeId,
+      customerId: session.userId,
+      description: input.description.trim(),
+      photos: input.photos,
+      requestType: "QUOTE",
+    },
+  });
+
+  const requestForEmail = await prisma.onDemandRequest.findUnique({
+    where: { id: request.id },
+    select: {
+      description: true,
+      customerAddress: true,
+      service: { select: { name: true } },
+      customer: { select: { fullName: true } },
+      store: { select: { owner: { select: { email: true, fullName: true } } } },
+    },
+  });
+
+  if (requestForEmail) {
+    await sendEmail({
+      to: requestForEmail.store.owner.email,
+      ...newOnDemandRequestVendorEmail({
+        vendorName: requestForEmail.store.owner.fullName ?? "Vendor",
+        serviceName: requestForEmail.service.name,
+        customerName: requestForEmail.customer.fullName ?? "Customer",
+        description: requestForEmail.description,
+        address: requestForEmail.customerAddress,
+        dashboardUrl: `${BASE_URL}/dashboard/vendor/requests`,
+      }),
+    });
+  }
+
+  const vendorStore = await prisma.store.findFirst({
+    where: { id: input.storeId },
+    select: { ownerId: true },
+  });
+  if (vendorStore) {
+    const desc = request.description.trim();
+    await createNotification({
+      userId: vendorStore.ownerId,
+      type: NotificationType.ON_DEMAND_REQUEST_RECEIVED,
+      title: "New quote request",
+      body: desc.slice(0, 80) + (desc.length > 80 ? "..." : ""),
+      linkUrl: `/dashboard/vendor/requests`,
+    });
+  }
+
+  revalidatePath("/dashboard/vendor/requests");
+  return { ok: true, requestId: request.id };
+}
+
 export async function getVendorOnDemandRequests(filter?: string) {
   const session = await getSession();
   if (!session) return [];

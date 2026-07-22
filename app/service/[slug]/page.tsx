@@ -13,7 +13,7 @@ import PublicNav from "@/components/layout/PublicNav";
 import BookingWidget from "@/components/service/BookingWidget";
 import ServiceGallery from "@/components/service/ServiceGallery";
 import OnDemandRequestWidget from "@/components/service/OnDemandRequestWidget";
-import QuoteContactButton from "@/components/service/QuoteContactButton";
+import QuoteRequestWidget from "@/components/service/QuoteRequestWidget";
 import SubscribeButton from "@/components/service/SubscribeButton";
 import ReviewForm from "@/components/ui/ReviewForm";
 import ReviewsList from "@/components/ui/ReviewsList";
@@ -744,13 +744,16 @@ export default async function ServiceDetailPage({ params }: Props) {
                           : "Describe your requirements and get a custom quote from this provider."}
                     </p>
                   </div>
-                  <QuoteContactButton
+                  <QuoteRequestWidget
+                    serviceId={service.id}
                     storeId={service.store.id}
-                    storeSlug={service.store.slug}
                     serviceName={service.name}
-                    serviceSlug={service.slug}
+                    quotePriceType={service.quotePriceType}
+                    minimumQuoteAmount={service.minimumQuoteAmount}
+                    siteVisitRequired={service.siteVisitRequired}
                     isLoggedIn={session != null}
                     isOwnStore={isOwner}
+                    serviceSlug={service.slug}
                   />
                 </div>
               ) : service.serviceType === "SUBSCRIPTION" ? (
