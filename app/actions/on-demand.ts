@@ -272,26 +272,26 @@ export async function acceptOnDemandRequest(
 export async function declineOnDemandRequest(
   requestId: string,
   reason: string,
-): Promise<{ ok: true } | { error: string }> {
+): Promise<{ ok: true; refundedTTD: number } | { ok: false; error: string }> {
   const session = await getSession();
-  if (!session) return { error: "Not authenticated" };
+  if (!session) return { ok: false, error: "Not authenticated" };
 
   const store = await prisma.store.findFirst({
     where: { ownerId: session.userId },
     select: { id: true },
   });
-  if (!store) return { error: "No store found" };
+  if (!store) return { ok: false, error: "No store found" };
 
   const found = await prisma.onDemandRequest.findFirst({
     where: { id: requestId, storeId: store.id },
     select: { id: true, customerId: true },
   });
-  if (!found) return { error: "Request not found" };
+  if (!found) return { ok: false, error: "Request not found" };
 
   const declineReason = reason.trim() || null;
 
   const result = await cancelOnDemandCore(requestId, "DECLINED", declineReason);
-  if (!result.ok) return { error: result.error };
+  if (!result.ok) return { ok: false, error: result.error };
 
   const declinedForEmail = await prisma.onDemandRequest.findUnique({
     where: { id: requestId },
@@ -316,7 +316,7 @@ export async function declineOnDemandRequest(
     });
   }
 
-  return { ok: true };
+  return { ok: true, refundedTTD: result.refundedTTD };
 }
 
 export async function completeOnDemandRequest(requestId: string): Promise<{ ok: true } | { error: string }> {

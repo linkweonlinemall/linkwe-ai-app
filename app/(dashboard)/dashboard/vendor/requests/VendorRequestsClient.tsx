@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { toast } from "sonner";
+
 import {
   acceptOnDemandRequest,
   completeOnDemandRequest,
@@ -80,11 +82,21 @@ export default function VendorRequestsClient({ initialRequests }: { initialReque
     setActingId(null);
   }
 
-  async function handleDecline(requestId: string) {
+  async function handleDecline(requestId: string, wording: "declined" | "cancelled" = "declined") {
     setActingId(requestId);
-    await declineOnDemandRequest(requestId, declineReason[requestId] ?? "");
-    setRequests((prev) => prev.map((r) => (r.id === requestId ? { ...r, status: "DECLINED" } : r)));
-    setActionMode((prev) => ({ ...prev, [requestId]: null }));
+    const result = await declineOnDemandRequest(requestId, declineReason[requestId] ?? "");
+    if (result.ok === true) {
+      setRequests((prev) => prev.map((r) => (r.id === requestId ? { ...r, status: "DECLINED" } : r)));
+      setActionMode((prev) => ({ ...prev, [requestId]: null }));
+      const verb = wording === "cancelled" ? "cancelled" : "declined";
+      toast.success(
+        result.refundedTTD > 0
+          ? `Request ${verb}. TTD ${result.refundedTTD.toFixed(2)} refunded to the customer.`
+          : `Request ${verb}.`,
+      );
+    } else {
+      toast.error(result.error);
+    }
     setActingId(null);
   }
 
@@ -395,14 +407,60 @@ export default function VendorRequestsClient({ initialRequests }: { initialReque
                       ) : null}
 
                       {request.status === "ACCEPTED" || request.status === "CONFIRMED" ? (
-                        <button
-                          type="button"
-                          onClick={() => handleComplete(request.id)}
-                          disabled={actingId === request.id}
-                          className="w-full rounded-xl bg-[#1A7FB5] py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-                        >
-                          {actingId === request.id ? "Marking..." : "Mark as completed ✓"}
-                        </button>
+                        <div className="flex flex-col gap-3">
+                          {mode === "decline" && request.status === "CONFIRMED" ? (
+                            <div className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
+                              <p className="text-xs font-bold text-red-800">Cancel &amp; refund this request</p>
+                              <textarea
+                                value={declineReason[request.id] ?? ""}
+                                onChange={(e) =>
+                                  setDeclineReason((prev) => ({ ...prev, [request.id]: e.target.value }))
+                                }
+                                placeholder="Reason for cancelling (optional — customer will see this)"
+                                rows={2}
+                                className="w-full resize-none rounded-lg border border-red-200 bg-white px-3 py-2 text-sm focus:outline-none"
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDecline(request.id, "cancelled")}
+                                  disabled={actingId === request.id}
+                                  className="flex-1 rounded-xl bg-red-500 py-2.5 text-sm font-bold text-white hover:bg-red-600 disabled:opacity-50"
+                                >
+                                  {actingId === request.id ? "Cancelling..." : "Confirm cancel & refund"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setActionMode((prev) => ({ ...prev, [request.id]: null }))}
+                                  className="rounded-xl border border-zinc-200 px-4 text-sm text-zinc-600 hover:bg-zinc-50"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleComplete(request.id)}
+                                disabled={actingId === request.id}
+                                className="flex-1 rounded-xl bg-[#1A7FB5] py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                              >
+                                {actingId === request.id ? "Marking..." : "Mark as completed ✓"}
+                              </button>
+                              {request.status === "CONFIRMED" ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setActionMode((prev) => ({ ...prev, [request.id]: "decline" }))}
+                                  disabled={actingId === request.id}
+                                  className="rounded-xl border-2 border-red-200 px-4 text-sm font-bold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
+                                >
+                                  Cancel & refund
+                                </button>
+                              ) : null}
+                            </div>
+                          )}
+                        </div>
                       ) : null}
                     </div>
                   </div>
