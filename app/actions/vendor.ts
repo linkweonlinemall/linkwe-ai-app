@@ -173,46 +173,51 @@ export async function startSubscriptionCheckout(
   });
   if (!store) return { ok: false, error: "No store found" };
 
-  let customerId = store.stripeCustomerId;
-  if (!customerId) {
-    const customer = await stripe.customers.create({
-      name: store.name,
-      metadata: { storeId: store.id, userId: session.userId },
-    });
-    customerId = customer.id;
-    await prisma.store.update({
-      where: { id: store.id },
-      data: { stripeCustomerId: customerId },
-    });
-  }
+  try {
+    let customerId = store.stripeCustomerId;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        name: store.name,
+        metadata: { storeId: store.id, userId: session.userId },
+      });
+      customerId = customer.id;
+      await prisma.store.update({
+        where: { id: store.id },
+        data: { stripeCustomerId: customerId },
+      });
+    }
 
-  const baseUrl = getAppBaseUrl();
-  const checkoutSession = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    customer: customerId,
-    line_items: [
-      {
-        price_data: {
-          currency: "ttd",
-          product_data: {
-            name: `LinkWe ${plan.charAt(0) + plan.slice(1).toLowerCase()} Plan`,
+    const baseUrl = getAppBaseUrl();
+    const checkoutSession = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      customer: customerId,
+      line_items: [
+        {
+          price_data: {
+            currency: "ttd",
+            product_data: {
+              name: `LinkWe ${plan.charAt(0) + plan.slice(1).toLowerCase()} Plan`,
+            },
+            unit_amount: priceMinor,
+            recurring: { interval: "month" },
           },
-          unit_amount: priceMinor,
-          recurring: { interval: "month" },
+          quantity: 1,
         },
-        quantity: 1,
+      ],
+      success_url: `${baseUrl}/dashboard/vendor/finance?sub=success`,
+      cancel_url: `${baseUrl}/dashboard/vendor/finance?sub=cancelled`,
+      metadata: { subscriptionStoreId: store.id, targetPlan: plan, userId: session.userId },
+      subscription_data: {
+        metadata: { subscriptionStoreId: store.id, targetPlan: plan },
       },
-    ],
-    success_url: `${baseUrl}/dashboard/vendor/finance?sub=success`,
-    cancel_url: `${baseUrl}/dashboard/vendor/finance?sub=cancelled`,
-    metadata: { subscriptionStoreId: store.id, targetPlan: plan, userId: session.userId },
-    subscription_data: {
-      metadata: { subscriptionStoreId: store.id, targetPlan: plan },
-    },
-  });
+    });
 
-  if (!checkoutSession.url) return { ok: false, error: "Could not create checkout session" };
-  return { ok: true, checkoutUrl: checkoutSession.url };
+    if (!checkoutSession.url) return { ok: false, error: "Could not create checkout session" };
+    return { ok: true, checkoutUrl: checkoutSession.url };
+  } catch (err) {
+    console.error("startSubscriptionCheckout Stripe error:", err);
+    return { ok: false, error: "Could not start checkout. Please try again from your dashboard." };
+  }
 }
 
 export async function cancelAutoRenew(): Promise<{ ok: true } | { ok: false; error: string }> {
