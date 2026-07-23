@@ -64,6 +64,7 @@ type Service = {
   images: string[];
   category: string | null;
   serviceType: string | null;
+  quotePriceType: string | null;
   serviceLocation: string | null;
   serviceDuration: number | null;
   isFeatured: boolean;
@@ -659,9 +660,14 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                         </div>
                         <div className="mt-auto flex items-center justify-between border-t border-zinc-100 pt-2">
                           <div>
-                            <p className="text-sm font-black text-[#D4450A]">
-                              TTD {service.price.toFixed(2)}
-                            </p>
+                            {service.serviceType === "QUOTE" && service.quotePriceType === "FREE_QUOTE" ? (
+                              <p className="text-sm font-black text-[#D4450A]">Free quote</p>
+                            ) : (
+                              <p className="text-sm font-black text-[#D4450A]">
+                                {service.serviceType === "QUOTE" && service.quotePriceType === "STARTING_FROM" ? "From " : ""}
+                                TTD {service.price.toFixed(2)}
+                              </p>
+                            )}
                             {service.reviewCount > 0 ? (
                               <div className="mt-1 flex items-center gap-1">
                                 <div className="flex items-center gap-0.5">

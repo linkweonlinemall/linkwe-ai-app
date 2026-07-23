@@ -570,6 +570,7 @@ export async function getPublicServices(
       images: true,
       category: true,
       serviceType: true,
+      quotePriceType: true,
       serviceLocation: true,
       serviceDuration: true,
       isFeatured: true,
