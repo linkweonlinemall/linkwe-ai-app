@@ -370,37 +370,41 @@ export default function EditServiceForm({
               />
             </div>
           )}
-          <div className="flex items-center justify-between rounded-xl border border-zinc-200 px-4 py-3">
-            <div>
-              <p className="text-sm font-semibold text-zinc-900">Require deposit</p>
-              <p className="text-xs text-zinc-500">Customer pays a deposit to confirm booking</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setRequiresDeposit((v) => !v)}
-              className={`relative h-6 w-11 rounded-full transition-colors ${requiresDeposit ? "bg-[#D4450A]" : "bg-zinc-200"}`}
-            >
-              <div
-                className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                  requiresDeposit ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
-          </div>
-          {requiresDeposit ? (
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
-                Deposit amount (TTD)
-              </label>
-              <input
-                name="depositAmount"
-                type="number"
-                step="0.01"
-                min="0"
-                defaultValue={service.depositAmount ?? ""}
-                className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-sm focus:border-[#D4450A] focus:bg-white focus:outline-none"
-              />
-            </div>
+          {(serviceType === "BOOKABLE" || serviceType === "VIRTUAL") ? (
+            <>
+              <div className="flex items-center justify-between rounded-xl border border-zinc-200 px-4 py-3">
+                <div>
+                  <p className="text-sm font-semibold text-zinc-900">Require deposit</p>
+                  <p className="text-xs text-zinc-500">Customer pays a deposit to confirm booking</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRequiresDeposit((v) => !v)}
+                  className={`relative h-6 w-11 rounded-full transition-colors ${requiresDeposit ? "bg-[#D4450A]" : "bg-zinc-200"}`}
+                >
+                  <div
+                    className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                      requiresDeposit ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+              {requiresDeposit ? (
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
+                    Deposit amount (TTD)
+                  </label>
+                  <input
+                    name="depositAmount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    defaultValue={service.depositAmount ?? ""}
+                    className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-sm focus:border-[#D4450A] focus:bg-white focus:outline-none"
+                  />
+                </div>
+              ) : null}
+            </>
           ) : null}
         </div>
       </div>
