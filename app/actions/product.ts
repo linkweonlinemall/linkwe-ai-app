@@ -197,6 +197,10 @@ export async function createProduct(
 
   const isPublished = intent === "publish";
 
+  if (isDigital && isPublished && !digitalFileUrl) {
+    return { ok: false, errors: { _general: "Add a downloadable file before publishing a digital product." } };
+  }
+
   const data: Prisma.ProductCreateInput = {
     store: { connect: { id: store.id } },
     name,
@@ -429,6 +433,10 @@ export async function updateProduct(
     isPublished = current?.isPublished ?? false;
   } else {
     isPublished = false;
+  }
+
+  if (isDigital && isPublished && !digitalFileUrl) {
+    return { ok: false, errors: { _general: "Add a downloadable file before publishing a digital product." } };
   }
 
   try {

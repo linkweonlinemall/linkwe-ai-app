@@ -173,6 +173,10 @@ export async function createService(formData: FormData) {
     : null;
 
   if (!name || !serviceType || Number.isNaN(price)) return { error: "Missing required fields" };
+  if (serviceType === "QUOTE" && !quotePriceType) return { error: "Please choose a quote pricing type." };
+  if (requiresDeposit && !(depositAmount != null && Number.isFinite(depositAmount) && depositAmount > 0)) {
+    return { error: "Enter a deposit amount, or turn off 'require deposit'." };
+  }
 
   const intervalResult = normalizeSubscriptionInterval(serviceType, subscriptionInterval);
   if ("error" in intervalResult) return { error: intervalResult.error };
@@ -349,6 +353,10 @@ export async function updateService(id: string, formData: FormData) {
     : null;
 
   if (!name || !serviceType || Number.isNaN(price)) return { error: "Missing required fields" };
+  if (serviceType === "QUOTE" && !quotePriceType) return { error: "Please choose a quote pricing type." };
+  if (requiresDeposit && !(depositAmount != null && Number.isFinite(depositAmount) && depositAmount > 0)) {
+    return { error: "Enter a deposit amount, or turn off 'require deposit'." };
+  }
 
   const intervalResult = normalizeSubscriptionInterval(serviceType, subscriptionInterval);
   if ("error" in intervalResult) return { error: intervalResult.error };
