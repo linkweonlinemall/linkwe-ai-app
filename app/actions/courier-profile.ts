@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { normalizeTTPhone } from "@/lib/phone";
 
 export async function updateCourierProfile(
   formData: FormData
@@ -13,7 +14,13 @@ export async function updateCourierProfile(
   }
   const vehicleType = String(formData.get("vehicleType") ?? "").trim() || null;
   const courierBio = String(formData.get("courierBio") ?? "").trim() || null;
-  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const phoneRaw = String(formData.get("phone") ?? "").trim();
+  let phone: string | null = null;
+  if (phoneRaw.length > 0) {
+    const parsed = normalizeTTPhone(phoneRaw);
+    if (!parsed.ok) return { ok: false, error: parsed.error };
+    phone = parsed.normalized;
+  }
 
   try {
     await prisma.user.update({

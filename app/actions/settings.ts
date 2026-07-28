@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
+import { normalizeTTPhone } from "@/lib/phone";
 
 import { getSession } from "@/lib/auth/session";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
@@ -16,14 +18,41 @@ export async function updateProfile(input: {
 
   if (!input.fullName.trim()) return { error: "Name is required" };
 
-  await prisma.user.update({
-    where: { id: session.userId },
-    data: {
-      fullName: input.fullName.trim(),
-      phone: input.phone?.trim() || null,
-      region: input.region?.trim() || null,
-    },
-  });
+  let phone: string | null = null;
+  const phoneRaw = input.phone?.trim() ?? "";
+  if (phoneRaw.length > 0) {
+    const parsed = normalizeTTPhone(phoneRaw);
+    if (!parsed.ok) return { error: parsed.error };
+    phone = parsed.normalized;
+  }
+
+  if (phone) {
+    const phoneTaken = await prisma.user.findFirst({
+      where: { phone, NOT: { id: session.userId } },
+      select: { id: true },
+    });
+    if (phoneTaken) return { error: "That phone number is already in use." };
+  }
+
+  try {
+    await prisma.user.update({
+      where: { id: session.userId },
+      data: {
+        fullName: input.fullName.trim(),
+        phone,
+        region: input.region?.trim() || null,
+      },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const target = error.meta?.target;
+      const targets = Array.isArray(target) ? target.map(String) : target != null ? [String(target)] : [];
+      if (targets.some((t) => t.toLowerCase().includes("phone"))) {
+        return { error: "That phone number is already in use." };
+      }
+    }
+    throw error;
+  }
 
   revalidatePath("/dashboard/customer/settings");
   revalidatePath("/dashboard/vendor/settings");

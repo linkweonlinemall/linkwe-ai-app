@@ -87,6 +87,7 @@ export function BusinessStep1Form({ defaultFullName, defaultPhone, defaultRegion
               className="flex-1 rounded-r-lg border border-l-0 border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2"
               defaultValue={defaultPhone}
               id="step1-phone"
+              maxLength={8}
               name="phone"
               placeholder="XXX-XXXX"
               type="tel"

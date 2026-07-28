@@ -13,6 +13,7 @@ import {
   setIntendedPlanCookie,
   setPlanPickerConfirmedCookie,
 } from "@/lib/onboarding/intended-plan";
+import { normalizeTTPhone } from "@/lib/phone";
 import { normalizeStoreSlug, validateStoreSlug } from "@/lib/store/slug";
 import { logPrismaError } from "@/lib/log-prisma-error";
 import { isValidRegion, normalizeRegion } from "@/lib/regions/tt-regions";
@@ -69,7 +70,12 @@ export async function saveBusinessOnboardingStep1(
     return { error: "Please select a valid region." };
   }
 
-  const phone = phoneRaw.length > 0 ? phoneRaw : null;
+  let phone: string | null = null;
+  if (phoneRaw.length > 0) {
+    const parsed = normalizeTTPhone(phoneRaw);
+    if (!parsed.ok) return { error: parsed.error };
+    phone = parsed.normalized;
+  }
   if (phone) {
     const phoneTaken = await prisma.user.findFirst({
       where: { phone, NOT: { id: user!.id } },

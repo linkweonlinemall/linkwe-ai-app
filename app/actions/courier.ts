@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getSession } from "@/lib/auth/session";
 import { isValidRegion, normalizeRegion } from "@/lib/regions/tt-regions";
+import { normalizeTTPhone } from "@/lib/phone";
 
 export type CourierOnboardingFormState = { error?: string };
 
@@ -49,12 +50,6 @@ function parseStep(raw: FormDataEntryValue | null): number {
   return n === 1 || n === 2 ? n : 0;
 }
 
-function isValidCourierPhone(phone: string): boolean {
-  const t = phone.trim();
-  if (!t) return false;
-  if (!/^\+?[\d\s\-]+$/.test(t)) return false;
-  return /\d/.test(t);
-}
 
 /**
  * Persists courier onboarding for the signed-in user (userId in form must match session).
@@ -100,17 +95,17 @@ export async function saveCourierOnboardingStep(
       redirect("/dashboard/courier/onboarding?step=1");
     }
 
-    const phone = String(formData.get("phone") ?? "").trim();
-    if (!phone || !isValidCourierPhone(phone)) {
-      return { error: "Please enter a valid phone number" };
-    }
+    const phoneRaw = String(formData.get("phone") ?? "").trim();
+    if (!phoneRaw) return { error: "Please enter a valid phone number" };
+    const parsedPhone = normalizeTTPhone(phoneRaw);
+    if (!parsedPhone.ok) return { error: parsedPhone.error };
     const courierBio = String(formData.get("courierBio") ?? "").trim() || null;
 
     try {
       await prisma.user.update({
         where: { id: user.id },
         data: {
-          phone,
+          phone: parsedPhone.normalized,
           courierBio,
           courierOnboardingStep: 2,
         },
