@@ -4,6 +4,7 @@ import { ShieldCheck } from "lucide-react";
 
 import GoLiveButton from "@/app/(dashboard)/dashboard/vendor/components/go-live-button";
 import VendorDashboardTabs from "@/app/(dashboard)/dashboard/vendor/components/vendor-dashboard-tabs";
+import OpenForBusinessChecklist from "@/components/vendor/OpenForBusinessChecklist";
 import VendorVerificationChecklist from "@/components/vendor/VendorVerificationChecklist";
 import { getSession } from "@/lib/auth/session";
 import { assertDashboardRole } from "@/lib/auth/assert-role";
@@ -90,6 +91,7 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
       longitude: true,
       address: true,
       images: { select: { id: true } },
+      _count: { select: { products: true } },
     },
   });
   if (!store) redirect("/onboarding/business/step-3");
@@ -154,6 +156,10 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
     store: { logoUrl: store.logoUrl, description: store.description },
   });
 
+  const hasBankDetailsForCard =
+    vendorReadiness.checks.find((c) => c.id === "bank")?.ok ?? false;
+  const hasProduct = store._count.products > 0;
+
   return (
     <Suspense
       fallback={
@@ -175,6 +181,14 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
       dashboardSuccessMessage={dashboardSuccessMessage}
       dashboardErrorMessage={dashboardErrorMessage}
       idVerificationStatus={user.idVerificationStatus}
+      openForBusinessChecklist={
+        <OpenForBusinessChecklist
+          verificationStatus={user.idVerificationStatus}
+          hasBankDetails={hasBankDetailsForCard}
+          hasProduct={hasProduct}
+          storeStatus={store.status}
+        />
+      }
       verificationApprovedBanner={
         user.idVerificationStatus === "APPROVED" && store.status === "ACTIVE" ? (
           <div

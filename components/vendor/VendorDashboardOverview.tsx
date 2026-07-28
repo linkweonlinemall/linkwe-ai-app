@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { SplitOrderStatus } from "@prisma/client";
@@ -111,6 +112,7 @@ export default function VendorDashboardOverview(props: {
   reviewSummary: ReviewSummary;
   completenessItems: ProfileRowSource[];
   idVerificationStatus: IdVerificationStatus;
+  openForBusinessChecklist?: ReactNode;
   store: {
     id: string;
     status: StoreStatus;
@@ -122,7 +124,7 @@ export default function VendorDashboardOverview(props: {
     coverPhotoUrl: string | null;
   };
 }) {
-  const { analytics, recentOrders, reviewSummary, completenessItems, idVerificationStatus, store } = props;
+  const { analytics, recentOrders, reviewSummary, completenessItems, idVerificationStatus, openForBusinessChecklist, store } = props;
 
   const { rows: profileRows, pct: profilePct } = profileRowsForCard(completenessItems);
   const overallPct = completenessItems.length
@@ -145,6 +147,7 @@ export default function VendorDashboardOverview(props: {
 
   return (
     <div className="space-y-5 font-sans max-md:[&_.dash-card-pad]:p-3">
+      {openForBusinessChecklist}
       {overallPct < 100 ? (
         <div className={`mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-[#B5D4F4] bg-[#EBF5FB] px-4 py-3 max-md:flex-col max-md:items-start`}>
           <div className="flex min-w-0 items-start gap-3">

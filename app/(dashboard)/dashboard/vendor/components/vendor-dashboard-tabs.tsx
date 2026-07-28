@@ -85,6 +85,8 @@ export type VendorDashboardTabsProps = {
   /** Shown inside the store header card after action buttons when ID verification is approved. */
   verificationApprovedBanner?: ReactNode;
   verificationChecklist?: ReactNode;
+  /** Four-gate "Open for business" checklist — renders above the profile % banner. Auto-hides when all gates pass. */
+  openForBusinessChecklist?: ReactNode;
 };
 
 function tabIdFromSearchParams(sp: ReturnType<typeof useSearchParams>): TabId {
@@ -108,6 +110,7 @@ export default function VendorDashboardTabs({
   idVerificationStatus,
   verificationApprovedBanner,
   verificationChecklist,
+  openForBusinessChecklist,
 }: VendorDashboardTabsProps) {
   const searchParams = useSearchParams();
   const activeTab = tabIdFromSearchParams(searchParams);
@@ -141,6 +144,7 @@ export default function VendorDashboardTabs({
         recentOrders={recentOrders}
         reviewSummary={reviewSummary}
         idVerificationStatus={idVerificationStatus}
+        openForBusinessChecklist={openForBusinessChecklist}
         store={{
           id: store.id,
           status: store.status,
