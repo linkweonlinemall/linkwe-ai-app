@@ -239,6 +239,7 @@ export async function saveBusinessOnboardingStep3(
     if (checkout.ok) {
       redirect(checkout.checkoutUrl);
     }
+    redirect("/dashboard/vendor?upgrade=failed");
   }
 
   redirect("/dashboard/vendor");

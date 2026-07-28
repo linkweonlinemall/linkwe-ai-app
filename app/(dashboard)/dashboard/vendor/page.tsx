@@ -21,7 +21,7 @@ const DASHBOARD_MESSAGES: Record<string, string> = {
   store_saved: "Store saved successfully.",
 };
 
-type Props = { searchParams: Promise<{ error?: string; success?: string; tab?: string }> };
+type Props = { searchParams: Promise<{ error?: string; success?: string; tab?: string; upgrade?: string }> };
 
 const LEGACY_TAB_ROUTES: Record<string, string> = {
   orders: "/dashboard/vendor/orders",
@@ -123,6 +123,10 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
     dashboardSuccessKey && DASHBOARD_MESSAGES[dashboardSuccessKey]
       ? DASHBOARD_MESSAGES[dashboardSuccessKey]
       : null;
+  const dashboardWarningMessage =
+    sp.upgrade === "failed"
+      ? "Your plan upgrade didn't go through, so you're on the Starter plan for now. You can upgrade anytime from Finance."
+      : null;
 
   const completenessItems = [
     { label: "Store logo", done: !!store.logoUrl },
@@ -180,6 +184,7 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
       initialAvailableNow={store.isAvailableNow}
       dashboardSuccessMessage={dashboardSuccessMessage}
       dashboardErrorMessage={dashboardErrorMessage}
+      dashboardWarningMessage={dashboardWarningMessage}
       idVerificationStatus={user.idVerificationStatus}
       openForBusinessChecklist={
         <OpenForBusinessChecklist

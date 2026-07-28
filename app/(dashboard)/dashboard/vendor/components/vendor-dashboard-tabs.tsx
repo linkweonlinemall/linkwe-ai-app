@@ -81,6 +81,7 @@ export type VendorDashboardTabsProps = {
   initialAvailableNow: boolean;
   dashboardSuccessMessage: string | null;
   dashboardErrorMessage: string | null;
+  dashboardWarningMessage: string | null;
   idVerificationStatus: IdVerificationStatus;
   /** Shown inside the store header card after action buttons when ID verification is approved. */
   verificationApprovedBanner?: ReactNode;
@@ -107,6 +108,7 @@ export default function VendorDashboardTabs({
   initialAvailableNow,
   dashboardSuccessMessage,
   dashboardErrorMessage,
+  dashboardWarningMessage,
   idVerificationStatus,
   verificationApprovedBanner,
   verificationChecklist,
@@ -129,6 +131,15 @@ export default function VendorDashboardTabs({
           role="status"
         >
           {dashboardSuccessMessage}
+        </p>
+      ) : null}
+
+      {dashboardWarningMessage ? (
+        <p
+          className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+          role="status"
+        >
+          {dashboardWarningMessage}
         </p>
       ) : null}
 
