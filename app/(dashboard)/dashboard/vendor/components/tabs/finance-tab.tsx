@@ -414,8 +414,6 @@ export default function FinanceTab({
             <p className="mb-2 text-[11px] text-emerald-700">
               Subscription started — your plan is now active
             </p>
-          ) : subCheckoutStatus === "cancelled" ? (
-            <p className="mb-2 text-[11px] text-zinc-500">Checkout cancelled</p>
           ) : null}
           <p className="text-[11px] text-zinc-500">
             Product commission: {productCommissionPct}% · {aiLine}

@@ -205,7 +205,7 @@ export async function startSubscriptionCheckout(
         },
       ],
       success_url: `${baseUrl}/dashboard/vendor/finance?sub=success`,
-      cancel_url: `${baseUrl}/dashboard/vendor/finance?sub=cancelled`,
+      cancel_url: `${baseUrl}/dashboard/vendor?upgrade=cancelled`,
       metadata: { subscriptionStoreId: store.id, targetPlan: plan, userId: session.userId },
       subscription_data: {
         metadata: { subscriptionStoreId: store.id, targetPlan: plan },

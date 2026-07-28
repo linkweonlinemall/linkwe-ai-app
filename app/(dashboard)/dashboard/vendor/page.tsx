@@ -126,7 +126,9 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
   const dashboardWarningMessage =
     sp.upgrade === "failed"
       ? "Your plan upgrade didn't go through, so you're on the Starter plan for now. You can upgrade anytime from Finance."
-      : null;
+      : sp.upgrade === "cancelled"
+        ? "Plan upgrade cancelled — you're on the Starter plan. You can upgrade anytime from Finance."
+        : null;
 
   const completenessItems = [
     { label: "Store logo", done: !!store.logoUrl },
