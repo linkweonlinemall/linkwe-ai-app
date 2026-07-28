@@ -174,8 +174,15 @@ export async function createService(formData: FormData) {
 
   if (!name || !serviceType || Number.isNaN(price)) return { error: "Missing required fields" };
   if (serviceType === "QUOTE" && !quotePriceType) return { error: "Please choose a quote pricing type." };
+  if ((serviceType === "BOOKABLE" || serviceType === "VIRTUAL") && (!serviceDuration || serviceDuration <= 0 || Number.isNaN(serviceDuration))) {
+    return { error: "Enter a duration for this bookable service." };
+  }
+  if (price > 10_000_000) return { error: "Price is too high — please check the amount." };
   if (requiresDeposit && !(depositAmount != null && Number.isFinite(depositAmount) && depositAmount > 0)) {
     return { error: "Enter a deposit amount, or turn off 'require deposit'." };
+  }
+  if (depositAmount != null && depositAmount > 10_000_000) {
+    return { error: "Deposit amount is too high — please check the amount." };
   }
 
   const intervalResult = normalizeSubscriptionInterval(serviceType, subscriptionInterval);
@@ -354,8 +361,15 @@ export async function updateService(id: string, formData: FormData) {
 
   if (!name || !serviceType || Number.isNaN(price)) return { error: "Missing required fields" };
   if (serviceType === "QUOTE" && !quotePriceType) return { error: "Please choose a quote pricing type." };
+  if ((serviceType === "BOOKABLE" || serviceType === "VIRTUAL") && (!serviceDuration || serviceDuration <= 0 || Number.isNaN(serviceDuration))) {
+    return { error: "Enter a duration for this bookable service." };
+  }
+  if (price > 10_000_000) return { error: "Price is too high — please check the amount." };
   if (requiresDeposit && !(depositAmount != null && Number.isFinite(depositAmount) && depositAmount > 0)) {
     return { error: "Enter a deposit amount, or turn off 'require deposit'." };
+  }
+  if (depositAmount != null && depositAmount > 10_000_000) {
+    return { error: "Deposit amount is too high — please check the amount." };
   }
 
   const intervalResult = normalizeSubscriptionInterval(serviceType, subscriptionInterval);

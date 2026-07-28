@@ -70,6 +70,7 @@ function validatePhysicalProductFields(data: {
   else {
     const p = Number(data.priceRaw);
     if (!Number.isFinite(p) || p < 0) errors.price = "Enter a valid price.";
+    else if (p > 10_000_000) errors.price = "Price is too high — please check the amount.";
   }
   const cond = data.conditionRaw as ProductCondition;
   if (!["NEW", "USED", "REFURBISHED"].includes(cond)) {
@@ -165,6 +166,13 @@ export async function createProduct(
   const compareAtPrice = optionalFloat(compareRaw);
   const stock = optionalInt(stockRaw);
 
+  if (compareAtPrice !== null && compareAtPrice > 10_000_000) {
+    return { ok: false, errors: { compareAtPrice: "Price is too high — please check the amount." } };
+  }
+  if (compareAtPrice !== null && compareAtPrice > 0 && compareAtPrice <= price) {
+    return { ok: false, errors: { compareAtPrice: "Compare-at price must be higher than the actual price." } };
+  }
+
   let baseSlug = sanitizeSlug(slugRaw);
   if (!baseSlug) baseSlug = sanitizeSlug(name) || "product";
   const slug = await uniqueProductSlug(baseSlug);
@@ -176,6 +184,9 @@ export async function createProduct(
 
   const imageUrls: string[] = [];
   for (const file of imageFiles) {
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      return { ok: false, errors: { images: "Only JPG, PNG, and WebP images are allowed." } };
+    }
     try {
       imageUrls.push(await uploadFile(file, "products"));
     } catch {
@@ -396,12 +407,22 @@ export async function updateProduct(
   const compareAtPrice = optionalFloat(compareRaw);
   const stock = optionalInt(stockRaw);
 
+  if (compareAtPrice !== null && compareAtPrice > 10_000_000) {
+    return { ok: false, errors: { compareAtPrice: "Price is too high — please check the amount." } };
+  }
+  if (compareAtPrice !== null && compareAtPrice > 0 && compareAtPrice <= price) {
+    return { ok: false, errors: { compareAtPrice: "Compare-at price must be higher than the actual price." } };
+  }
+
   let baseSlug = sanitizeSlug(slugRaw);
   if (!baseSlug) baseSlug = sanitizeSlug(name) || "product";
   const slug = await uniqueProductSlug(baseSlug, productId);
 
   const newUrls: string[] = [];
   for (const file of newFiles) {
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      return { ok: false, errors: { images: "Only JPG, PNG, and WebP images are allowed." } };
+    }
     try {
       newUrls.push(await uploadFile(file, "products"));
     } catch {

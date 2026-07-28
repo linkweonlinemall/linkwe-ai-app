@@ -765,7 +765,7 @@ export default function NewServicePage() {
         <div className="rounded-2xl border border-zinc-200 bg-white p-5">
           <p className="mb-3 text-sm font-bold text-zinc-900">Service images</p>
           <p className="mb-3 text-xs text-zinc-500">
-            Add up to 5 photos — the first image will be shown as the cover.
+            Add up to 10 photos — the first image will be shown as the cover.
           </p>
 
           {/* Image previews */}
