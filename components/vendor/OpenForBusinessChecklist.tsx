@@ -7,6 +7,7 @@ type Props = {
   hasBankDetails: boolean;
   hasProduct: boolean;
   storeStatus: StoreStatus;
+  emailVerified: boolean;
 };
 
 type RowState = "done" | "pending" | "warn" | "todo";
@@ -80,14 +81,32 @@ export default function OpenForBusinessChecklist({
   hasBankDetails,
   hasProduct,
   storeStatus,
+  emailVerified,
 }: Props) {
   const allDone =
     verificationStatus === "APPROVED" &&
     hasBankDetails &&
     hasProduct &&
-    storeStatus === "ACTIVE";
+    storeStatus === "ACTIVE" &&
+    emailVerified;
 
   if (allDone) return null;
+
+  const emailRow: RowDef = emailVerified
+    ? {
+        id: "email",
+        label: "Verify your email",
+        state: "done",
+        helperText: "Email verified",
+        href: null,
+      }
+    : {
+        id: "email",
+        label: "Verify your email",
+        state: "todo",
+        helperText: "Check your inbox for a verification link",
+        href: null,
+      };
 
   const verifyRow: RowDef =
     verificationStatus === "APPROVED"
@@ -178,7 +197,7 @@ export default function OpenForBusinessChecklist({
         href: null,
       };
 
-  const rows = [verifyRow, bankRow, productRow, liveRow];
+  const rows = [emailRow, verifyRow, bankRow, productRow, liveRow];
 
   return (
     <div className="mb-5 rounded-[12px] border-[0.5px] border-[rgba(28,28,26,0.12)] bg-white px-4 py-4">

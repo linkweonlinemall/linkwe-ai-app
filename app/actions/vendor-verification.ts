@@ -123,10 +123,13 @@ export async function setStoreLive(
 
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
-    select: { idVerificationStatus: true },
+    select: { idVerificationStatus: true, emailVerified: true },
   });
   if (!user || user.idVerificationStatus !== "APPROVED") {
     return { ok: false as const, reason: "not_verified" };
+  }
+  if (!user.emailVerified) {
+    return { ok: false as const, reason: "email_not_verified" };
   }
 
   const id = storeId.trim();

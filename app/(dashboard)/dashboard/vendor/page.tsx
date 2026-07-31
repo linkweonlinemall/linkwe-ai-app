@@ -52,6 +52,7 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
       id: true,
       idDocumentUrl: true,
       idVerificationStatus: true,
+      emailVerified: true,
       phone: true,
       bankDetails: {
         select: {
@@ -194,6 +195,7 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
           hasBankDetails={hasBankDetailsForCard}
           hasProduct={hasProduct}
           storeStatus={store.status}
+          emailVerified={!!user.emailVerified}
         />
       }
       verificationApprovedBanner={

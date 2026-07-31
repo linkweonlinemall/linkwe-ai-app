@@ -4,7 +4,9 @@ import { redirect } from "next/navigation";
 import type { UserRole } from "@prisma/client";
 import { logoutAction } from "@/app/(auth)/auth-actions";
 import NotificationBell from "@/components/ui/NotificationBell";
+import EmailVerifyBanner from "@/components/EmailVerifyBanner";
 import { getSession } from "@/lib/auth/session";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 
 const ROLE_LABEL: Record<UserRole, string> = {
@@ -43,7 +45,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const roleLabel = ROLE_LABEL[session.role] ?? session.role;
 
-  const unreadCount = await getNavUnreadCount();
+  const [unreadCount, user] = await Promise.all([getNavUnreadCount(), getCurrentUser()]);
 
   return (
     <div className="flex h-dvh min-h-0 flex-col overflow-hidden bg-[#F5F5F5]">
@@ -76,6 +78,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </form>
         </div>
       </header>
+      <EmailVerifyBanner emailVerified={!!user?.emailVerified} />
       <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
     </div>
   );

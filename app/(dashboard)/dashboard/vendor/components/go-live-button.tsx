@@ -21,6 +21,8 @@ export default function GoLiveButton({ storeId }: { storeId: string }) {
       }
       if (result.reason === "not_verified") {
         setError("Complete identity verification before going live.");
+      } else if (result.reason === "email_not_verified") {
+        setError("Please verify your email before going live.");
       } else {
         setError("Could not publish your store. Try again or contact support.");
       }
