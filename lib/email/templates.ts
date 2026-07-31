@@ -280,6 +280,23 @@ export function ticketConfirmationEmail(data: {
   };
 }
 
+export function verifyEmailAddressEmail(data: {
+  fullName: string;
+  verifyUrl: string;
+}): { subject: string; html: string } {
+  const content = `
+    ${heading("Verify your email")}
+    ${para(`Hi ${data.fullName}, thanks for signing up for LinkWe.`)}
+    ${para("Please confirm your email address to finish setting up your account.")}
+    ${btn("Verify email", data.verifyUrl)}
+    ${para("This link expires in 1 hour. If you did not create a LinkWe account, you can safely ignore this email.")}
+  `;
+  return {
+    subject: "Verify your email — LinkWe",
+    html: wrap(content, "Confirm your LinkWe email"),
+  };
+}
+
 export function newReviewVendorEmail(data: {
   vendorName: string;
   reviewerName: string;

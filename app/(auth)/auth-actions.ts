@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { createSessionFromUser, destroySession } from "@/lib/auth/session";
+import { sendVerificationEmail } from "@/lib/auth/email-verification";
 import { resolveAuthLandingPath } from "@/lib/auth/landing";
 import { safeInternalPath } from "@/lib/auth/redirects";
 import { roleForSignup, type SignupKind } from "@/lib/auth/signup-kinds";
@@ -121,6 +122,12 @@ export async function registerAction(
     logPrismaError("REGISTER CREATE ERROR:", error);
     const message = error instanceof Error ? error.message : String(error);
     return { error: message };
+  }
+
+  try {
+    await sendVerificationEmail(user);
+  } catch (error) {
+    logPrismaError("SEND VERIFICATION EMAIL ERROR:", error);
   }
 
   await createSessionFromUser(user);
