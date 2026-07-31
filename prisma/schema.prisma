@@ -15,6 +15,9 @@ model User {
   passwordHash           String?                @map("password_hash")
   resetToken             String?                @map("reset_token")
   resetTokenExpiry       DateTime?              @map("reset_token_expiry")
+  emailVerified          DateTime?              @map("email_verified")
+  emailVerifyToken       String?                @map("email_verify_token")
+  emailVerifyTokenExpiry DateTime?              @map("email_verify_token_expiry")
   fullName               String                 @map("full_name")
   role                   UserRole               @default(CUSTOMER)
   /// Trinidad region key (dropdown), same normalization family as shipping.
