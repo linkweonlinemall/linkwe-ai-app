@@ -350,7 +350,14 @@ export default function NewServicePage() {
           </div>
         </div>
 
-        {(serviceType === "BOOKABLE" || serviceType === "VIRTUAL") ? (
+        {serviceType === "VIRTUAL" ? (
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+            <p className="mb-1 text-sm font-bold text-zinc-900">Payment preference</p>
+            <p className="text-xs text-zinc-500">Virtual services are paid online.</p>
+          </div>
+        ) : null}
+
+        {serviceType === "BOOKABLE" ? (
           <div className="rounded-2xl border border-zinc-200 bg-white p-5">
             <p className="mb-3 text-sm font-bold text-zinc-900">Payment preference</p>
             <div className="flex flex-col gap-2">

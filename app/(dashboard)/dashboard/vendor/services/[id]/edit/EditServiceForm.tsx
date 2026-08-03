@@ -406,35 +406,44 @@ export default function EditServiceForm({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-5">
-        <p className="mb-3 text-sm font-bold text-zinc-900">Payment preference</p>
-        <div className="flex flex-col gap-2">
-          {PAYMENT_MODES.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => setPaymentMode(opt.value)}
-              className={`flex items-start gap-3 rounded-xl border-2 p-3 text-left transition-all ${
-                paymentMode === opt.value
-                  ? "border-[#D4450A] bg-[#D4450A]/5"
-                  : "border-zinc-200 hover:border-zinc-300"
-              }`}
-            >
-              <span className="text-xl">{opt.icon}</span>
-              <div>
-                <p
-                  className={`text-sm font-semibold ${
-                    paymentMode === opt.value ? "text-[#D4450A]" : "text-zinc-900"
-                  }`}
-                >
-                  {opt.label}
-                </p>
-                <p className="text-xs text-zinc-500">{opt.description}</p>
-              </div>
-            </button>
-          ))}
+      {serviceType === "VIRTUAL" ? (
+        <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+          <p className="mb-1 text-sm font-bold text-zinc-900">Payment preference</p>
+          <p className="text-xs text-zinc-500">Virtual services are paid online.</p>
         </div>
-      </div>
+      ) : null}
+
+      {serviceType === "BOOKABLE" ? (
+        <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+          <p className="mb-3 text-sm font-bold text-zinc-900">Payment preference</p>
+          <div className="flex flex-col gap-2">
+            {PAYMENT_MODES.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setPaymentMode(opt.value)}
+                className={`flex items-start gap-3 rounded-xl border-2 p-3 text-left transition-all ${
+                  paymentMode === opt.value
+                    ? "border-[#D4450A] bg-[#D4450A]/5"
+                    : "border-zinc-200 hover:border-zinc-300"
+                }`}
+              >
+                <span className="text-xl">{opt.icon}</span>
+                <div>
+                  <p
+                    className={`text-sm font-semibold ${
+                      paymentMode === opt.value ? "text-[#D4450A]" : "text-zinc-900"
+                    }`}
+                  >
+                    {opt.label}
+                  </p>
+                  <p className="text-xs text-zinc-500">{opt.description}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {serviceType === "BOOKABLE" || serviceType === "VIRTUAL" ? (
         <div className="rounded-2xl border border-zinc-200 bg-white p-5">

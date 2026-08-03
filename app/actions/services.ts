@@ -122,11 +122,14 @@ export async function createService(formData: FormData) {
     "ON_ARRIVAL_ONLY",
     "CUSTOMER_CHOOSES",
   ] as const;
-  const bookingPaymentMode = allowedPaymentModes.includes(
-    bookingPaymentModeRaw as (typeof allowedPaymentModes)[number],
-  )
-    ? (bookingPaymentModeRaw as BookingPaymentMode)
-    : BookingPaymentMode.CUSTOMER_CHOOSES;
+  const bookingPaymentMode =
+    serviceType === "VIRTUAL"
+      ? BookingPaymentMode.ONLINE_ONLY
+      : allowedPaymentModes.includes(
+            bookingPaymentModeRaw as (typeof allowedPaymentModes)[number],
+          )
+        ? (bookingPaymentModeRaw as BookingPaymentMode)
+        : BookingPaymentMode.CUSTOMER_CHOOSES;
 
   // Quote fields
   const responseTime = (formData.get("responseTime") as string) || null;
@@ -309,11 +312,14 @@ export async function updateService(id: string, formData: FormData) {
     "ON_ARRIVAL_ONLY",
     "CUSTOMER_CHOOSES",
   ] as const;
-  const bookingPaymentMode = allowedPaymentModes.includes(
-    bookingPaymentModeRaw as (typeof allowedPaymentModes)[number],
-  )
-    ? (bookingPaymentModeRaw as BookingPaymentMode)
-    : BookingPaymentMode.CUSTOMER_CHOOSES;
+  const bookingPaymentMode =
+    serviceType === "VIRTUAL"
+      ? BookingPaymentMode.ONLINE_ONLY
+      : allowedPaymentModes.includes(
+            bookingPaymentModeRaw as (typeof allowedPaymentModes)[number],
+          )
+        ? (bookingPaymentModeRaw as BookingPaymentMode)
+        : BookingPaymentMode.CUSTOMER_CHOOSES;
 
   // Quote fields
   const responseTime = (formData.get("responseTime") as string) || null;

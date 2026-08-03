@@ -176,6 +176,7 @@ export async function createBooking(input: {
       requiresDeposit: true,
       requiresApproval: true,
       bookingPaymentMode: true,
+      serviceType: true,
       serviceDuration: true,
       durationMinutes: true,
       bufferMinutes: true,
@@ -215,6 +216,25 @@ export async function createBooking(input: {
   if (!isStoreSellable(service.store)) return { error: "Service not found" };
 
   if (!service.isAvailable) return { error: "slot_unavailable" };
+
+  if (service.serviceType === "VIRTUAL") {
+    if (input.paymentMethod !== "online") {
+      return { error: "Virtual services must be paid online." };
+    }
+  } else {
+    if (
+      service.bookingPaymentMode === "ONLINE_ONLY" &&
+      input.paymentMethod !== "online"
+    ) {
+      return { error: "This service requires online payment." };
+    }
+    if (
+      service.bookingPaymentMode === "ON_ARRIVAL_ONLY" &&
+      input.paymentMethod !== "arrival"
+    ) {
+      return { error: "This service is pay-on-arrival only." };
+    }
+  }
 
   const openingHours = parseStoreOpeningHours(service.store.openingHours);
   const durationMinutes = service.durationMinutes || service.serviceDuration || 60;
