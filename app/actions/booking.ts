@@ -600,14 +600,26 @@ export async function getVendorBookings(
   }));
 }
 
+const VENDOR_SETTABLE_STATUSES = ["CONFIRMED", "CANCELLED", "NO_SHOW"] as const;
+type VendorSettableStatus = (typeof VENDOR_SETTABLE_STATUSES)[number];
+
 // Update booking status (vendor action)
 export async function updateBookingStatus(
   bookingId: string,
-  status: "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW",
+  status: VendorSettableStatus,
   vendorNotes?: string,
 ) {
   const session = await getSession();
   if (!session) return { error: "Not authenticated" };
+
+  // Runtime defense-in-depth: TS narrows the param type above, but a crafted
+  // call to this server action (bypassing the client bundle) could still send
+  // "COMPLETED" as a raw string. Completion must only ever happen via the
+  // customer's markBookingComplete or the auto-complete cron, both of which
+  // release earnings; a vendor-triggered COMPLETED write would orphan them.
+  if (!VENDOR_SETTABLE_STATUSES.includes(status)) {
+    return { error: "Only the customer can mark a service complete." };
+  }
 
   const store = await prisma.store.findFirst({
     where: { ownerId: session.userId },
@@ -633,11 +645,7 @@ export async function updateBookingStatus(
   if (!booking) return { error: "Booking not found" };
 
   const nextStatus =
-    status === "CONFIRMED"
-      ? BookingStatus.CONFIRMED
-      : status === "COMPLETED"
-        ? BookingStatus.COMPLETED
-        : BookingStatus.NO_SHOW;
+    status === "CONFIRMED" ? BookingStatus.CONFIRMED : BookingStatus.NO_SHOW;
 
   await prisma.productBooking.update({
     where: { id: bookingId },

@@ -144,7 +144,7 @@ export default function VendorBookingsClient({
     }
   }
 
-  async function handleBulkStatus(status: "CONFIRMED" | "CANCELLED" | "COMPLETED") {
+  async function handleBulkStatus(status: "CONFIRMED" | "CANCELLED") {
     if (selectedIds.size === 0) return;
     const ids = [...selectedIds];
     setBulkLoading(true);
@@ -171,8 +171,7 @@ export default function VendorBookingsClient({
     setSelectedIds(new Set());
     setBulkLoading(false);
 
-    const verb =
-      status === "CANCELLED" ? "cancelled" : status === "CONFIRMED" ? "confirmed" : "completed";
+    const verb = status === "CANCELLED" ? "cancelled" : "confirmed";
 
     if (failedIds.length === 0) {
       toast.success(
@@ -226,7 +225,7 @@ export default function VendorBookingsClient({
 
   async function handleStatusUpdate(
     bookingId: string,
-    status: "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW",
+    status: "CONFIRMED" | "CANCELLED" | "NO_SHOW",
   ) {
     setLoadingId(bookingId);
     const result = await updateBookingStatus(
@@ -255,8 +254,6 @@ export default function VendorBookingsClient({
         );
       } else if (status === "CONFIRMED") {
         toast.success("Booking confirmed.");
-      } else if (status === "COMPLETED") {
-        toast.success("Booking marked as completed.");
       } else {
         toast.success("No-show recorded.");
       }
@@ -363,14 +360,6 @@ export default function VendorBookingsClient({
               className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
             >
               ✓ Confirm all
-            </button>
-            <button
-              type="button"
-              disabled={bulkLoading}
-              onClick={() => void handleBulkStatus("COMPLETED")}
-              className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              ✓ Complete all
             </button>
             <button
               type="button"
@@ -766,14 +755,10 @@ export default function VendorBookingsClient({
                       ) : null}
                       {booking.status === "CONFIRMED" && !upcoming ? (
                         <>
-                          <button
-                            type="button"
-                            disabled={loading}
-                            onClick={() => void handleStatusUpdate(booking.id, "COMPLETED")}
-                            className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50"
-                          >
-                            ✓ Mark completed
-                          </button>
+                          <span className="text-xs text-zinc-400">
+                            Awaiting customer confirmation — you&apos;ll be paid when they
+                            confirm, or automatically after 48h.
+                          </span>
                           <button
                             type="button"
                             disabled={loading}
