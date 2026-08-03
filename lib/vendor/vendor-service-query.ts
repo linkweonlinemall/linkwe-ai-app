@@ -33,6 +33,23 @@ export const vendorServiceDetailSelect = {
   isPublished: true,
   images: true,
   maxGroupSize: true,
+  bookingPaymentMode: true,
+  quotePriceType: true,
+  responseTime: true,
+  minimumQuoteAmount: true,
+  siteVisitRequired: true,
+  subscriptionInterval: true,
+  sessionsIncluded: true,
+  subscriptionCancellationDays: true,
+  subscriptionTrialPeriod: true,
+  subscriptionTrialPrice: true,
+  subscriptionCanPause: true,
+  subscriptionPauseMaxWeeks: true,
+  travelFee: true,
+  serviceRadius: true,
+  estimatedResponseMins: true,
+  virtualPlatform: true,
+  virtualMeetingInfo: true,
 } satisfies Prisma.ProductSelect;
 
 /** Availability columns (migration 20260527203854) — omit when DB lags schema. */

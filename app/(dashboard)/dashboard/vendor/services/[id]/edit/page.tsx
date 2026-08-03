@@ -30,7 +30,7 @@ export default async function EditServicePage({ params }: Props) {
 
   if (!core) redirect("/dashboard/vendor/services");
 
-  const service = { ...core, ...vendorServiceEditFormDefaults() };
+  const service = { ...vendorServiceEditFormDefaults(), ...core };
 
   const { items: initialRelatedItems } = await getLinkedContent("SERVICE", core.id, {
     includeUnpublished: true,
