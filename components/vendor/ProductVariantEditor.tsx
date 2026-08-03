@@ -113,6 +113,7 @@ export default function ProductVariantEditor({
     return imgs;
   });
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ total: number; done: number } | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -226,7 +227,10 @@ export default function ProductVariantEditor({
   async function handleVariantImageUpload(index: number, files: FileList | null) {
     if (!files || files.length === 0) return;
     setUploadingIndex(index);
-    const { urls } = await compressAndUploadImages(Array.from(files), uploadVendorChatImages);
+    setUploadProgress({ total: files.length, done: 0 });
+    const { urls } = await compressAndUploadImages(Array.from(files), uploadVendorChatImages, {
+      onProgress: (done) => setUploadProgress((prev) => (prev ? { ...prev, done } : prev)),
+    });
     if (urls.length > 0) {
       setVariantImages((prev) => ({
         ...prev,
@@ -234,6 +238,7 @@ export default function ProductVariantEditor({
       }));
     }
     setUploadingIndex(null);
+    setUploadProgress(null);
   }
 
   function removeVariantImage(variantIndex: number, imageUrl: string) {
@@ -567,6 +572,11 @@ export default function ProductVariantEditor({
                           <label
                             className={`w-10 h-10 rounded-lg border-2 border-dashed border-zinc-300 flex items-center justify-center cursor-pointer hover:border-[#D4450A] transition-colors
                               ${uploadingIndex === i ? "opacity-50" : ""}`}
+                            title={
+                              uploadingIndex === i && uploadProgress
+                                ? `Uploading ${uploadProgress.done} of ${uploadProgress.total}…`
+                                : undefined
+                            }
                           >
                             {uploadingIndex === i ? (
                               <div className="w-3 h-3 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin" />

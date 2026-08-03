@@ -31,6 +31,7 @@ export default function OnDemandRequestWidget({
   const [locationKey, setLocationKey] = useState(0);
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ total: number; done: number } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -61,12 +62,16 @@ export default function OnDemandRequestWidget({
     const files = e.target.files;
     if (!files || files.length === 0) return;
     setUploadingPhotos(true);
-    const { urls, error: uploadError } = await compressAndUploadImages(Array.from(files), uploadOnDemandPhotos);
+    setUploadProgress({ total: files.length, done: 0 });
+    const { urls, error: uploadError } = await compressAndUploadImages(Array.from(files), uploadOnDemandPhotos, {
+      onProgress: (done) => setUploadProgress((prev) => (prev ? { ...prev, done } : prev)),
+    });
     if (urls.length > 0) {
       setPhotos((prev) => [...prev, ...urls].slice(0, 5));
     }
     if (uploadError) setError(uploadError);
     setUploadingPhotos(false);
+    setUploadProgress(null);
   }
 
   async function handleSubmit() {
@@ -209,7 +214,9 @@ export default function OnDemandRequestWidget({
                 {uploadingPhotos ? (
                   <>
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600" />
-                    Uploading...
+                    {uploadProgress
+                      ? `Uploading ${uploadProgress.done} of ${uploadProgress.total}…`
+                      : "Uploading..."}
                   </>
                 ) : (
                   <>

@@ -40,19 +40,24 @@ export default function NewServicePage() {
   const [sessionsIncluded, setSessionsIncluded] = useState<number | null>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [uploadingImages, setUploadingImages] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ total: number; done: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     setUploadingImages(true);
+    setUploadProgress({ total: files.length, done: 0 });
     setError(null);
-    const { urls, error } = await compressAndUploadImages(Array.from(files), uploadVendorChatImages);
+    const { urls, error } = await compressAndUploadImages(Array.from(files), uploadVendorChatImages, {
+      onProgress: (done) => setUploadProgress((prev) => (prev ? { ...prev, done } : prev)),
+    });
     if (urls.length > 0) {
       setUploadedImages((prev) => [...prev, ...urls].slice(0, 10));
     }
     if (error) setError(error);
     setUploadingImages(false);
+    setUploadProgress(null);
     e.target.value = "";
   }
 
@@ -809,7 +814,9 @@ export default function NewServicePage() {
                 {uploadingImages ? (
                   <>
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600" />
-                    Uploading...
+                    {uploadProgress
+                      ? `Uploading ${uploadProgress.done} of ${uploadProgress.total}…`
+                      : "Uploading..."}
                   </>
                 ) : (
                   <>
