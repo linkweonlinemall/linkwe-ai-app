@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import { saveProductVariants, type ProductVariantSaveInput } from "@/app/actions/product-variants";
 import { uploadVendorChatImages } from "@/app/actions/ai-vendor-image";
-import { compressImageFile } from "@/lib/images/compress-image";
+import { compressAndUploadImages } from "@/lib/images/upload-images-client";
 import {
   ATTRIBUTE_REGISTRY,
   COLOUR_OPTIONS,
@@ -226,14 +226,11 @@ export default function ProductVariantEditor({
   async function handleVariantImageUpload(index: number, files: FileList | null) {
     if (!files || files.length === 0) return;
     setUploadingIndex(index);
-    const compressedFiles = await Promise.all(Array.from(files).map((f) => compressImageFile(f)));
-    const fd = new FormData();
-    compressedFiles.forEach((f) => fd.append("images", f));
-    const result = await uploadVendorChatImages(fd);
-    if (result.ok && result.urls) {
+    const { urls } = await compressAndUploadImages(Array.from(files), uploadVendorChatImages);
+    if (urls.length > 0) {
       setVariantImages((prev) => ({
         ...prev,
-        [index]: [...(prev[index] ?? []), ...result.urls],
+        [index]: [...(prev[index] ?? []), ...urls],
       }));
     }
     setUploadingIndex(null);

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { submitQuoteRequest, uploadOnDemandPhotos } from "@/app/actions/on-demand";
-import { compressImageFile } from "@/lib/images/compress-image";
+import { compressAndUploadImages } from "@/lib/images/upload-images-client";
 import { toastFormError } from "@/lib/feedback/toasts";
 
 const SCARLET = "#D4450A";
@@ -48,17 +48,11 @@ export default function QuoteRequestWidget({
     const files = e.target.files;
     if (!files || files.length === 0) return;
     setUploadingPhotos(true);
-    const compressedFiles = await Promise.all(Array.from(files).map((f) => compressImageFile(f)));
-    const formData = new FormData();
-    compressedFiles.forEach((f) => formData.append("images", f));
-    try {
-      const result = await uploadOnDemandPhotos(formData);
-      if (result.ok) {
-        setPhotos((prev) => [...prev, ...result.urls].slice(0, 5));
-      }
-    } catch {
-      // silent
+    const { urls, error: uploadError } = await compressAndUploadImages(Array.from(files), uploadOnDemandPhotos);
+    if (urls.length > 0) {
+      setPhotos((prev) => [...prev, ...urls].slice(0, 5));
     }
+    if (uploadError) setError(uploadError);
     setUploadingPhotos(false);
   }
 

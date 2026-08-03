@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { submitOnDemandRequest, uploadOnDemandPhotos } from "@/app/actions/on-demand";
 import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
-import { compressImageFile } from "@/lib/images/compress-image";
+import { compressAndUploadImages } from "@/lib/images/upload-images-client";
 
 type Props = {
   serviceId: string;
@@ -61,17 +61,11 @@ export default function OnDemandRequestWidget({
     const files = e.target.files;
     if (!files || files.length === 0) return;
     setUploadingPhotos(true);
-    const compressedFiles = await Promise.all(Array.from(files).map((f) => compressImageFile(f)));
-    const formData = new FormData();
-    compressedFiles.forEach((f) => formData.append("images", f));
-    try {
-      const result = await uploadOnDemandPhotos(formData);
-      if (result.ok) {
-        setPhotos((prev) => [...prev, ...result.urls].slice(0, 5));
-      }
-    } catch {
-      // silent
+    const { urls, error: uploadError } = await compressAndUploadImages(Array.from(files), uploadOnDemandPhotos);
+    if (urls.length > 0) {
+      setPhotos((prev) => [...prev, ...urls].slice(0, 5));
     }
+    if (uploadError) setError(uploadError);
     setUploadingPhotos(false);
   }
 

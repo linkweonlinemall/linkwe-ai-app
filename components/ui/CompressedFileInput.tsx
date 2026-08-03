@@ -3,14 +3,7 @@
 import { useState, type ChangeEvent, type ComponentProps } from "react";
 
 import Input from "@/components/ui/Input";
-import { compressImageFile } from "@/lib/images/compress-image";
-
-/**
- * After compression, individual files above this threshold are rejected with a
- * clear message rather than letting the server-action body-size limit silently
- * kill the whole submission.
- */
-const MAX_COMPRESSED_BYTES = 7 * 1024 * 1024; // 7 MB
+import { compressImageFile, MAX_COMPRESSED_BYTES } from "@/lib/images/compress-image";
 
 type FileStatus =
   | { state: "compressing" }

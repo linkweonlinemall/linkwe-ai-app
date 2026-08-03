@@ -6,7 +6,7 @@ import { useRef, useState } from "react";
 
 import { uploadVendorChatImages } from "@/app/actions/ai-vendor-image";
 import { createService } from "@/app/actions/services";
-import { compressImageFile } from "@/lib/images/compress-image";
+import { compressAndUploadImages } from "@/lib/images/upload-images-client";
 import RichTextEditor from "@/components/ui/RichTextEditor";
 import { SERVICE_CATEGORIES } from "@/lib/categories";
 import { mapSubscriptionIntervalToStripe } from "@/lib/finance/subscription-interval";
@@ -47,19 +47,11 @@ export default function NewServicePage() {
     if (!files || files.length === 0) return;
     setUploadingImages(true);
     setError(null);
-    const compressedFiles = await Promise.all(Array.from(files).map((file) => compressImageFile(file)));
-    const formData = new FormData();
-    compressedFiles.forEach((file) => formData.append("images", file));
-    try {
-      const result = await uploadVendorChatImages(formData);
-      if (result.ok && result.urls) {
-        setUploadedImages((prev) => [...prev, ...result.urls].slice(0, 10));
-      } else if (!result.ok) {
-        setError(result.error ?? "Image upload failed.");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Image upload failed.");
+    const { urls, error } = await compressAndUploadImages(Array.from(files), uploadVendorChatImages);
+    if (urls.length > 0) {
+      setUploadedImages((prev) => [...prev, ...urls].slice(0, 10));
     }
+    if (error) setError(error);
     setUploadingImages(false);
     e.target.value = "";
   }

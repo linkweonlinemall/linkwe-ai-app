@@ -3,13 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useRef, useTransition, useState, useEffect, type ChangeEvent, type DragEvent } from "react";
 import { addStoreImageClient, removeStoreImageClient, reorderStoreGallery } from "@/app/actions/store";
-import { compressImageFile } from "@/lib/images/compress-image";
+import { compressAndUploadImages } from "@/lib/images/upload-images-client";
 
 type GalleryImage = { id: string; url: string; position: number };
-
-type AddGalleryResult =
-  | { ok: false; error?: string }
-  | { ok: true; newImages?: GalleryImage[] };
 
 type Props = {
   images: GalleryImage[];
@@ -44,51 +40,21 @@ export default function GalleryUpload({ images: initialImages, slotsAvailable: i
     }
 
     const uploadCount = Math.min(fileArray.length, slotsAvailable);
+    const filesToUpload = fileArray.slice(0, uploadCount);
     setUploadState({ total: uploadCount, done: 0 });
     setUploadErrors([]);
     onUploadingChange?.(true);
 
-    const results = await Promise.allSettled(
-      fileArray.slice(0, uploadCount).map(async (file) => {
-        try {
-          const compressed = await compressImageFile(file);
-          setUploadState((prev) => (prev ? { ...prev, done: prev.done + 1 } : prev));
-          return compressed;
-        } catch {
-          setUploadState((prev) => (prev ? { ...prev, done: prev.done + 1 } : prev));
-          throw new Error(`compression_failed:${file.name}`);
-        }
-      }),
-    );
-
-    const succeeded = results
-      .filter((r): r is PromiseFulfilledResult<File> => r.status === "fulfilled")
-      .map((r) => r.value);
-    const failed = results
-      .filter((r): r is PromiseRejectedResult => r.status === "rejected")
-      .map((r) => {
-        const msg: string = r.reason?.message ?? "";
-        return msg.startsWith("compression_failed:") ? msg.slice("compression_failed:".length) : "Unknown file";
-      });
-
-    if (failed.length > 0) setUploadErrors(failed);
-
-    if (succeeded.length === 0) {
-      setUploadState(null);
-      onUploadingChange?.(false);
-      return;
-    }
-
-    const formData = new FormData();
-    succeeded.forEach((file) => formData.append("galleryImages", file));
-
     startTransition(async () => {
       try {
-        const result = (await addStoreImageClient(formData)) as AddGalleryResult;
-        if (result.ok) {
-          router.refresh();
-          if (result.newImages) setImages(result.newImages);
-        }
+        // One compressed file per request, uploaded sequentially — bounds
+        // every request to a single file regardless of how many were picked.
+        const { urls, error } = await compressAndUploadImages(filesToUpload, addStoreImageClient, {
+          fieldName: "galleryImages",
+          onProgress: (done) => setUploadState((prev) => (prev ? { ...prev, done } : prev)),
+        });
+        if (error) setUploadErrors([error]);
+        if (urls.length > 0) router.refresh();
         if (fileInputRef.current) fileInputRef.current.value = "";
       } finally {
         setUploadState(null);
@@ -211,39 +177,28 @@ export default function GalleryUpload({ images: initialImages, slotsAvailable: i
             type="file"
           />
           <div className="mt-1 space-y-1" aria-live="polite">
-            {/* Compression phase */}
-            {uploadState !== null && (
+            {/* Uploading (each file is optimized then saved before the next starts) */}
+            {(uploadState !== null || isPending) && (
               <>
                 <p className="flex items-center gap-1.5 text-xs font-medium text-zinc-700">
                   <span
                     aria-hidden
                     className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-zinc-200 border-t-[#D4450A] shrink-0"
                   />
-                  Optimizing {uploadState.done} of {uploadState.total}…
+                  {uploadState
+                    ? `Uploading ${uploadState.done} of ${uploadState.total}…`
+                    : "Saving to gallery…"}
                 </p>
                 <p className="text-xs text-zinc-400">
                   Large photos are optimized before upload — this can take a moment. Please keep this page open.
                 </p>
               </>
             )}
-            {/* Server-action phase */}
-            {uploadState === null && isPending && (
-              <p className="flex items-center gap-1.5 text-xs font-medium text-zinc-700">
-                <span
-                  aria-hidden
-                  className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-zinc-200 border-t-[#D4450A] shrink-0"
-                />
-                Saving to gallery…
-              </p>
-            )}
-            {/* Per-file compression errors */}
-            {uploadErrors.map((name, i) => (
+            {/* Upload errors */}
+            {uploadErrors.map((message, i) => (
               <p key={i} className="flex items-start gap-1.5 text-xs text-red-600">
                 <span aria-hidden className="mt-px shrink-0 font-semibold">✗</span>
-                <span>
-                  <span className="font-medium">{name}</span>
-                  {" — "}couldn't be optimized. Try a different image format.
-                </span>
+                <span>{message}</span>
               </p>
             ))}
             {/* Idle helper text */}

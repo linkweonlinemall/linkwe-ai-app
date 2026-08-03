@@ -1,6 +1,14 @@
 import imageCompression from "browser-image-compression";
 
 /**
+ * Hard ceiling for a single file after compression. Anything still over this
+ * is rejected client-side rather than sent to the server — protects both the
+ * server-action body-size limit (next.config.ts) and any single-file caller
+ * that only ever uploads one compressed file per request.
+ */
+export const MAX_COMPRESSED_BYTES = 7 * 1024 * 1024; // 7 MB
+
+/**
  * Compress an image File client-side before it's uploaded, so real phone
  * photos (8-20MB+) don't blow the Next.js server-action body-size limit.
  * Non-image files pass through untouched.
