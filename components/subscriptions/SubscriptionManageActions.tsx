@@ -7,6 +7,7 @@ import {
   cancelMyServiceSubscription,
   resumeMyServiceSubscription,
 } from "@/app/actions/service-subscription";
+import { formatSubscriptionPeriodEnd as formatPeriodEnd } from "@/lib/finance/subscription-format";
 
 type Props = {
   subscriptionId: string;
@@ -28,19 +29,6 @@ function manageErrorMessage(error: string): string {
     default:
       return "Couldn't update — try again.";
   }
-}
-
-function formatPeriodEnd(currentPeriodEnd: Date | string | null): string {
-  if (!currentPeriodEnd) return "the end of your billing period";
-  const date =
-    currentPeriodEnd instanceof Date ? currentPeriodEnd : new Date(currentPeriodEnd);
-  if (Number.isNaN(date.getTime())) return "the end of your billing period";
-  return date.toLocaleDateString("en-TT", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 export default function SubscriptionManageActions({
@@ -122,5 +110,3 @@ export default function SubscriptionManageActions({
     </div>
   );
 }
-
-export { formatPeriodEnd as formatSubscriptionPeriodEnd };

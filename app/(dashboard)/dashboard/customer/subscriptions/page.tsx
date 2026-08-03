@@ -4,11 +4,10 @@ import { redirect } from "next/navigation";
 import { Banknote, ConciergeBell, RefreshCw } from "lucide-react";
 
 import { getMyServiceSubscriptions } from "@/app/actions/service-subscription";
-import SubscriptionManageActions, {
-  formatSubscriptionPeriodEnd,
-} from "@/components/subscriptions/SubscriptionManageActions";
+import SubscriptionManageActions from "@/components/subscriptions/SubscriptionManageActions";
 import { getSession } from "@/lib/auth/session";
 import { formatSubscriptionIntervalDisplay } from "@/lib/finance/subscription-interval";
+import { formatSubscriptionPeriodEnd } from "@/lib/finance/subscription-format";
 import { icn } from "@/lib/iconography";
 
 export const metadata: Metadata = {
