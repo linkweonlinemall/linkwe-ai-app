@@ -15,6 +15,7 @@ type Props = {
   storeId: string;
   serviceName: string;
   quotePriceType: "STARTING_FROM" | "CALLOUT_FEE" | "FREE_QUOTE" | null;
+  price: number | null;
   minimumQuoteAmount: number | null;
   siteVisitRequired: boolean;
   isLoggedIn: boolean;
@@ -27,6 +28,7 @@ export default function QuoteRequestWidget({
   storeId,
   serviceName,
   quotePriceType,
+  price,
   minimumQuoteAmount,
   siteVisitRequired,
   isLoggedIn,
@@ -136,8 +138,8 @@ export default function QuoteRequestWidget({
       ? "This provider offers free quotes."
       : quotePriceType === "CALLOUT_FEE"
         ? "A call-out fee may apply; final price after assessment."
-        : quotePriceType === "STARTING_FROM" && minimumQuoteAmount && minimumQuoteAmount > 0
-          ? `Quotes typically start from TTD ${minimumQuoteAmount.toFixed(2)}.`
+        : quotePriceType === "STARTING_FROM" && price && price > 0
+          ? `Quotes start around TTD ${price.toFixed(2)} — the provider sets the final price.`
           : null;
 
   return (

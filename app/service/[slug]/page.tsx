@@ -643,6 +643,9 @@ export default async function ServiceDetailPage({ params }: Props) {
                         <p className="text-3xl font-black tracking-tight text-[#D4450A]">
                           TTD {service.price.toFixed(2)}
                         </p>
+                        <p className="mt-0.5 text-xs text-zinc-500">
+                          starting guide · provider sets final price
+                        </p>
                       </div>
                     ) : (
                       <p className="text-3xl font-black tracking-tight text-[#D4450A]">
@@ -749,6 +752,7 @@ export default async function ServiceDetailPage({ params }: Props) {
                     storeId={service.store.id}
                     serviceName={service.name}
                     quotePriceType={service.quotePriceType}
+                    price={service.price}
                     minimumQuoteAmount={service.minimumQuoteAmount}
                     siteVisitRequired={service.siteVisitRequired}
                     isLoggedIn={session != null}
