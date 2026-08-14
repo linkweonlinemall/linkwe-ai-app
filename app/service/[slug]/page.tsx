@@ -722,7 +722,13 @@ export default async function ServiceDetailPage({ params }: Props) {
                       isAvailable: bookingData.isAvailable,
                     }}
                     storeOpeningHours={bookingData.store.openingHours}
-                    existingSlots={bookingData.bookingSlots}
+                    existingSlots={bookingData.bookingSlots.map((slot) => ({
+                      ...slot,
+                      // Slot availability is capacity-derived. This also recovers
+                      // stale false flags from cancellations made before the
+                      // cancellation transaction reopened the slot explicitly.
+                      isAvailable: slot.currentBookings < slot.maxBookings,
+                    }))}
                   />
                 ) : (
                   <div className="mt-4 rounded-xl border border-[#e8e8e8] bg-[#F7F5F2] px-4 py-4 text-center">

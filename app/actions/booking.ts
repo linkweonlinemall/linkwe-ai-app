@@ -299,12 +299,19 @@ export async function createBooking(input: {
         isAvailable: true,
       },
     });
-  } else if (!slot.isAvailable || slot.currentBookings >= slot.maxBookings) {
+  } else if (slot.currentBookings >= slot.maxBookings) {
     return { error: "slot_unavailable" };
-  } else if (slot.date.getTime() !== bookingDate.getTime()) {
-    await prisma.productBookingSlot.update({
+  } else if (!slot.isAvailable || slot.date.getTime() !== bookingDate.getTime()) {
+    // Recover capacity flags left stale by bookings cancelled before slot-release
+    // handling updated both currentBookings and isAvailable atomically.
+    slot = await prisma.productBookingSlot.update({
       where: { id: slot.id },
-      data: { date: bookingDate, endTime },
+      data: {
+        ...(!slot.isAvailable ? { isAvailable: true } : {}),
+        ...(slot.date.getTime() !== bookingDate.getTime()
+          ? { date: bookingDate, endTime }
+          : {}),
+      },
     });
   }
 
