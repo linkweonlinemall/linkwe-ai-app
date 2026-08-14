@@ -743,7 +743,7 @@ export default function VendorBookingsClient({
                           </button>
                         </>
                       ) : null}
-                      {booking.status === "CONFIRMED" && upcoming ? (
+                      {["CONFIRMED", "DEPOSIT_PAID"].includes(booking.status) && upcoming ? (
                         <button
                           type="button"
                           disabled={loading}
@@ -753,7 +753,7 @@ export default function VendorBookingsClient({
                           Cancel booking
                         </button>
                       ) : null}
-                      {booking.status === "CONFIRMED" && !upcoming ? (
+                      {["CONFIRMED", "DEPOSIT_PAID"].includes(booking.status) && !upcoming ? (
                         <>
                           <span className="text-xs text-zinc-400">
                             Awaiting customer confirmation — you&apos;ll be paid when they
