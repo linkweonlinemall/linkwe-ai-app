@@ -90,15 +90,35 @@ export default function VendorsTab() {
   const [activeView, setActiveView] = useState<"vendors" | "payouts" | "history">("vendors");
   const [search, setSearch] = useState("");
   const [expandedVendor, setExpandedVendor] = useState<string | null>(null);
-  const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [approveError, setApproveError] = useState<{ id: string; message: string } | null>(null);
   const [selectedPayouts, setSelectedPayouts] = useState<Set<string>>(new Set());
-  const [bulkApproving, setBulkApproving] = useState(false);
+  const [approvalTargets, setApprovalTargets] = useState<PayoutRequest[]>([]);
+  const [confirmingApproval, setConfirmingApproval] = useState(false);
   const [expandedPayout, setExpandedPayout] = useState<string | null>(null);
   const [pendingDeletePayouts, setPendingDeletePayouts] = useState(false);
+
+  async function confirmPayoutApproval() {
+    setConfirmingApproval(true);
+    setApproveError(null);
+    try {
+      for (const req of approvalTargets) {
+        const result = await approvePayoutRequest(req.id);
+        if (!result.ok) {
+          setApproveError({ id: req.id, message: approveErrorMessage(result.error) });
+          return;
+        }
+      }
+      setApprovalTargets([]);
+      setSelectedPayouts(new Set());
+      setExpandedPayout(null);
+      setRefreshKey((k) => k + 1);
+    } finally {
+      setConfirmingApproval(false);
+    }
+  }
 
   useEffect(() => {
     setLoading(true);
@@ -214,24 +234,13 @@ export default function VendorsTab() {
                   <div className="h-4 w-px bg-zinc-200" />
                   <button
                     type="button"
-                    onClick={async () => {
-                      setBulkApproving(true);
-                      try {
-                        const ids = Array.from(selectedPayouts);
-                        for (const id of ids) {
-                          await approvePayoutRequest(id);
-                        }
-                        setSelectedPayouts(new Set());
-                        setRefreshKey((k) => k + 1);
-                      } finally {
-                        setBulkApproving(false);
-                      }
-                    }}
-                    disabled={bulkApproving}
+                    onClick={() =>
+                      setApprovalTargets(payoutRequests.filter((p) => selectedPayouts.has(p.id)))
+                    }
                     className="rounded-lg px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
                     style={{ backgroundColor: "#1B8C5A" }}
                   >
-                    {bulkApproving ? "Approving..." : `Approve Selected (${selectedPayouts.size})`}
+                    {`Review Selected (${selectedPayouts.size})`}
                   </button>
                   <button
                     type="button"
@@ -282,7 +291,6 @@ export default function VendorsTab() {
                 const balanceCovered = bal.available >= req.amountMinor;
                 const remaining = bal.available - req.amountMinor;
                 const canApprove = hasBankDetails && balanceCovered;
-                const isApproving = approvingId === req.id;
 
                 return (
                   <div
@@ -395,26 +403,12 @@ export default function VendorsTab() {
                           </button>
                           <button
                             type="button"
-                            onClick={async () => {
-                              setApprovingId(req.id);
-                              setApproveError(null);
-                              const result = await approvePayoutRequest(req.id);
-                              if (result.ok) {
-                                setExpandedPayout(null);
-                                setRefreshKey((k) => k + 1);
-                              } else {
-                                setApproveError({
-                                  id: req.id,
-                                  message: approveErrorMessage(result.error),
-                                });
-                              }
-                              setApprovingId(null);
-                            }}
-                            disabled={!canApprove || approvingId === req.id}
+                            onClick={() => setApprovalTargets([req])}
+                            disabled={!canApprove}
                             className="rounded-lg px-4 py-2 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
                             style={{ backgroundColor: "#D4450A" }}
                           >
-                            {isApproving ? "Approving..." : "Review & approve →"}
+                            Review & approve →
                           </button>
                         </div>
                       </div>
@@ -893,6 +887,71 @@ export default function VendorsTab() {
           </div>
         </>
       )}
+
+      {approvalTargets.length > 0 ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="approve-payout-title"
+        >
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+            <h3 id="approve-payout-title" className="text-lg font-bold text-zinc-900">
+              Confirm payout approval
+            </h3>
+            <p className="mt-1 text-sm text-zinc-500">
+              Approval immediately deducts the amount from each vendor&apos;s available balance.
+              Bank transfers must still be processed separately.
+            </p>
+
+            <div className="mt-4 max-h-72 space-y-3 overflow-y-auto">
+              {approvalTargets.map((req) => {
+                const balance = calcPayoutBalance(req).available;
+                const bank = req.store.owner?.bankDetails;
+                return (
+                  <div key={req.id} className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="font-semibold text-zinc-900">{req.store.name}</p>
+                        <p className="mt-1 text-xs text-zinc-500">
+                          {bank?.bankName} · ••••{bank?.accountNumber.slice(-4)}
+                        </p>
+                      </div>
+                      <p className="font-bold tabular-nums text-zinc-900">{formatTTD(req.amountMinor)}</p>
+                    </div>
+                    <p className="mt-3 text-xs text-zinc-600">
+                      Balance after approval: <strong>{formatTTD(balance - req.amountMinor)}</strong>
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setApprovalTargets([])}
+                disabled={confirmingApproval}
+                className="flex-1 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+              >
+                Go back
+              </button>
+              <button
+                type="button"
+                onClick={confirmPayoutApproval}
+                disabled={confirmingApproval}
+                className="flex-1 rounded-xl bg-[#D4450A] px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {confirmingApproval
+                  ? "Approving..."
+                  : approvalTargets.length === 1
+                    ? `Approve ${formatTTD(approvalTargets[0].amountMinor)}`
+                    : `Approve ${approvalTargets.length} payouts`}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
