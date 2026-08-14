@@ -55,8 +55,6 @@ export type VendorDashboardTabsProps = {
   dashboardErrorMessage: string | null;
   dashboardWarningMessage: string | null;
   idVerificationStatus: IdVerificationStatus;
-  /** Shown inside the store header card after action buttons when ID verification is approved. */
-  verificationApprovedBanner?: ReactNode;
   verificationChecklist?: ReactNode;
   /** Four-gate "Open for business" checklist — renders above the profile % banner. Auto-hides when all gates pass. */
   openForBusinessChecklist?: ReactNode;
@@ -73,7 +71,6 @@ export default function VendorDashboardTabs({
   dashboardErrorMessage,
   dashboardWarningMessage,
   idVerificationStatus,
-  verificationApprovedBanner,
   verificationChecklist,
   openForBusinessChecklist,
 }: VendorDashboardTabsProps) {
@@ -128,9 +125,8 @@ export default function VendorDashboardTabs({
         }}
       />
 
-      {verificationApprovedBanner || verificationChecklist ? (
+      {verificationChecklist ? (
         <div className="min-w-0 space-y-4 pb-16 pt-6 md:pb-12 md:pt-8 lg:pb-12">
-          {verificationApprovedBanner}
           {verificationChecklist}
         </div>
       ) : null}
