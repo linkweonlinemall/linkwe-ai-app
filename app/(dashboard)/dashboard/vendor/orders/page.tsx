@@ -82,7 +82,7 @@ export default async function VendorOrdersPage({ searchParams }: Props) {
       amountMinor: Math.round(booking.totalPrice * 100),
       date: booking.createdAt,
       detail: `${formatDate(booking.bookingDate)} · ${booking.startTime}`,
-      href: "/dashboard/vendor/bookings",
+      href: `/dashboard/vendor/orders/service/booking/${booking.id}`,
     })),
     ...requests.map((request) => ({
       id: `request-${request.id}`,
@@ -93,7 +93,7 @@ export default async function VendorOrdersPage({ searchParams }: Props) {
       amountMinor: Math.round((request.quotedPrice ?? 0) * 100),
       date: request.createdAt,
       detail: request.requestType === "QUOTE" ? "Quote request" : "On-demand request",
-      href: "/dashboard/vendor/requests",
+      href: `/dashboard/vendor/orders/service/request/${request.id}`,
     })),
     ...subscribers.map((subscription) => ({
       id: `subscription-${subscription.id}`,
@@ -107,7 +107,7 @@ export default async function VendorOrdersPage({ searchParams }: Props) {
       amountMinor: subscription.priceMinor,
       date: subscription.createdAt,
       detail: `Recurring · ${subscription.interval}`,
-      href: "/dashboard/vendor/subscribers",
+      href: `/dashboard/vendor/orders/service/subscription/${subscription.id}`,
     })),
   ].sort((a, b) => b.date.getTime() - a.date.getTime());
 
