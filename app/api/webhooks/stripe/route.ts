@@ -351,9 +351,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ received: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    const stack = err instanceof Error ? err.stack : undefined;
-    console.error("[webhook] Handler error:", message, stack);
-    return NextResponse.json({ error: "Handler error", message, stack }, { status: 500 });
+    const errorId = crypto.randomUUID();
+    console.error(`[webhook] Handler error (${errorId}):`, err);
+    return NextResponse.json(
+      { error: "Webhook processing failed", errorId },
+      { status: 500 },
+    );
   }
 }
