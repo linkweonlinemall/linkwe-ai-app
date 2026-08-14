@@ -95,6 +95,17 @@ export default async function OrderDetailPage({ params }: Props) {
       shippingMinor: true,
       totalMinor: true,
       buyer: { select: { fullName: true, email: true } },
+      shippingAddress: {
+        select: {
+          line1: true,
+          line2: true,
+          city: true,
+          region: true,
+          postalCode: true,
+          country: true,
+          phone: true,
+        },
+      },
       items: {
         select: {
           id: true,
@@ -713,6 +724,39 @@ export default async function OrderDetailPage({ params }: Props) {
                   </h2>
                   <p className="text-sm font-medium text-zinc-900">{order.buyer.fullName}</p>
                   <p className="mt-1 text-sm text-zinc-600">{order.buyer.email}</p>
+                  {order.shippingAddress ? (
+                    <div className="mt-4 border-t border-zinc-100 pt-4 text-sm text-zinc-600">
+                      <p className="font-medium text-zinc-900">{order.shippingAddress.line1}</p>
+                      {order.shippingAddress.line2 ? <p>{order.shippingAddress.line2}</p> : null}
+                      <p>
+                        {Array.from(
+                          new Set(
+                            [order.shippingAddress.city, order.shippingAddress.region]
+                              .filter((value): value is string => Boolean(value?.trim()))
+                              .map((value) => value.trim()),
+                          ),
+                        ).join(", ")}
+                        {order.shippingAddress.postalCode
+                          ? ` ${order.shippingAddress.postalCode}`
+                          : ""}
+                      </p>
+                      {order.shippingAddress.country === "TT" ? (
+                        <p>Trinidad &amp; Tobago</p>
+                      ) : null}
+                      {order.shippingAddress.phone ? (
+                        <a
+                          href={`tel:${order.shippingAddress.phone.replace(/\s+/g, "")}`}
+                          className="mt-3 inline-flex font-medium text-zinc-800 hover:underline"
+                        >
+                          Tel: {order.shippingAddress.phone}
+                        </a>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-xs text-zinc-500">
+                      Delivery region: {order.region.replace(/_/g, " ")}
+                    </p>
+                  )}
                 </section>
 
                 {tracking ? (
