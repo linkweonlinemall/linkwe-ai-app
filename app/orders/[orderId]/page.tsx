@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import MarkReceivedButton from "@/app/orders/components/mark-received-button";
@@ -11,7 +12,6 @@ import { getSplitProgressSteps, getSplitStepIndex } from "@/lib/orders/split-pro
 import {
   computeSplitWeightLbs,
   formatWeightLbs,
-  resolveUnitWeightLbs,
 } from "@/lib/orders/split-weight";
 import { generateOrderQRCodeDataURL, getOrderUrl } from "@/lib/orders/qr-code";
 import { prisma } from "@/lib/prisma";
@@ -158,8 +158,12 @@ export default async function OrderDetailPage({ params }: Props) {
 
   const dashboardHref = session ? getRoleDashboardPath(session.role) : null;
 
-  const qrCodeDataUrl = await generateOrderQRCodeDataURL(order.id);
-  const orderUrl = getOrderUrl(order.id);
+  const tracking = allDigital
+    ? null
+    : {
+        qrCodeDataUrl: await generateOrderQRCodeDataURL(order.id),
+        orderUrl: getOrderUrl(order.id),
+      };
 
   const statusInfo = getStatusInfo(order.status);
 
@@ -176,13 +180,13 @@ export default async function OrderDetailPage({ params }: Props) {
         dashboardHref={dashboardHref ?? undefined}
       />
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-        <a
+        <Link
           href="/orders"
           className="mb-4 inline-flex items-center gap-1 text-xs hover:underline"
           style={{ color: "var(--blue)" }}
         >
           ← Back to orders
-        </a>
+        </Link>
 
         <div className="mb-6 flex items-center justify-between">
           <div>
@@ -350,7 +354,7 @@ export default async function OrderDetailPage({ params }: Props) {
             </div>
           )}
 
-          {order.splitOrders && order.splitOrders.length > 1 ? (
+          {!allDigital && order.splitOrders && order.splitOrders.length > 1 ? (
             <div className="mt-3 flex items-center gap-2 rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-2.5">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -396,10 +400,12 @@ export default async function OrderDetailPage({ params }: Props) {
                   {order.splitOrders.map((splitOrder) => {
                     const badge = getSplitOrderStatusLabel(splitOrder.status as string);
                     const isReceivable =
+                      !allDigital &&
                       isBuyer &&
                       (splitOrder.status === "SHIPPED" || splitOrder.status === "OUT_FOR_DELIVERY");
                     const isReceived =
-                      splitOrder.status === "DELIVERED" || splitOrder.status === "COMPLETED";
+                      !allDigital &&
+                      (splitOrder.status === "DELIVERED" || splitOrder.status === "COMPLETED");
                     const splitWeight = computeSplitWeightLbs(
                       splitOrder.items,
                       order.items.map((oi) => ({
@@ -489,9 +495,11 @@ export default async function OrderDetailPage({ params }: Props) {
                         <div className="flex items-center justify-between border-t border-zinc-100 bg-zinc-50 px-4 py-2.5">
                           <div>
                             <p className="text-xs text-zinc-500">
-                              {splitOrder.store.shippingMode === "SELF"
-                                ? `Delivered by ${splitOrder.store.name}`
-                                : "LinkWe delivery"}
+                              {allDigital
+                                ? "Digital delivery"
+                                : splitOrder.store.shippingMode === "SELF"
+                                  ? `Delivered by ${splitOrder.store.name}`
+                                  : "LinkWe delivery"}
                             </p>
                             {splitWeight.totalLbs > 0 ? (
                               <p className="mt-0.5 text-xs text-zinc-400">
@@ -600,35 +608,58 @@ export default async function OrderDetailPage({ params }: Props) {
               </div>
             </section>
 
-            <section
-              className="rounded-xl bg-white p-5 sm:p-6"
-              style={{ border: "1px solid var(--card-border)" }}
-            >
-              <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                Delivery info
-              </h2>
-              <p className="text-sm font-medium text-zinc-900">{order.buyer.fullName}</p>
-              <p className="mt-1 text-sm text-zinc-600">{order.buyer.email}</p>
-            </section>
+            {allDigital ? (
+              <section
+                className="rounded-xl bg-white p-5 sm:p-6"
+                style={{ border: "1px solid var(--card-border)" }}
+              >
+                <h2 className="mb-3 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                  Digital delivery
+                </h2>
+                <p className="text-sm text-zinc-600">
+                  {paid
+                    ? "Your files are ready in the download section above."
+                    : "Your files will appear in the download section once payment is confirmed."}
+                </p>
+                <p className="mt-3 text-xs text-zinc-500">
+                  Purchase confirmation sent to {order.buyer.email}
+                </p>
+              </section>
+            ) : (
+              <>
+                <section
+                  className="rounded-xl bg-white p-5 sm:p-6"
+                  style={{ border: "1px solid var(--card-border)" }}
+                >
+                  <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                    Delivery info
+                  </h2>
+                  <p className="text-sm font-medium text-zinc-900">{order.buyer.fullName}</p>
+                  <p className="mt-1 text-sm text-zinc-600">{order.buyer.email}</p>
+                </section>
 
-            <section
-              className="rounded-xl bg-white p-5 sm:p-6"
-              style={{ border: "1px solid var(--card-border)" }}
-            >
-              <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                Track order
-              </h2>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={qrCodeDataUrl}
-                alt="Order QR code"
-                width={120}
-                height={120}
-                className="mt-3 h-[120px] w-[120px]"
-              />
-              <p className="mt-3 text-sm font-medium text-zinc-800">Scan to track this order</p>
-              <p className="mt-2 break-all text-xs text-zinc-500">{orderUrl}</p>
-            </section>
+                {tracking ? (
+                  <section
+                    className="rounded-xl bg-white p-5 sm:p-6"
+                    style={{ border: "1px solid var(--card-border)" }}
+                  >
+                    <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                      Track order
+                    </h2>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={tracking.qrCodeDataUrl}
+                      alt="Order QR code"
+                      width={120}
+                      height={120}
+                      className="mt-3 h-[120px] w-[120px]"
+                    />
+                    <p className="mt-3 text-sm font-medium text-zinc-800">Scan to track this order</p>
+                    <p className="mt-2 break-all text-xs text-zinc-500">{tracking.orderUrl}</p>
+                  </section>
+                ) : null}
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -638,9 +669,9 @@ export default async function OrderDetailPage({ params }: Props) {
         style={{ borderTop: "1px solid var(--card-border-subtle)" }}
       >
         <p className="text-xs" style={{ color: "var(--text-faint)" }}>
-          <a href="/" style={{ color: "var(--scarlet)" }}>
+          <Link href="/" style={{ color: "var(--scarlet)" }}>
             LinkWe
-          </a>{" "}
+          </Link>{" "}
           — Trinidad & Tobago&apos;s Marketplace
         </p>
       </footer>
