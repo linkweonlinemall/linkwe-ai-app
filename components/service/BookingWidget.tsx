@@ -2,7 +2,7 @@
 
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { ProductBookingSlot } from "@prisma/client";
 
@@ -11,8 +11,10 @@ import {
   createBooking,
   createBookingPaymentIntent,
 } from "@/app/actions/booking";
+import { getOrCreateConversation } from "@/app/actions/messages";
 import InlineSpinner from "@/components/ui/InlineSpinner";
 import { formatTime } from "@/lib/booking/slots";
+import { toastFormError } from "@/lib/feedback/toasts";
 import {
   getAvailableDatesForService,
   getAvailableSlots,
@@ -24,6 +26,9 @@ type Props = {
   serviceId: string;
   serviceSlug: string;
   serviceName: string;
+  storeId: string;
+  isLoggedIn: boolean;
+  isOwner: boolean;
   price: number;
   serviceDuration: number;
   requiresDeposit: boolean;
@@ -349,7 +354,11 @@ function CustomCalendar({
 
 export default function BookingWidget({
   serviceId,
+  serviceSlug,
   serviceName,
+  storeId,
+  isLoggedIn,
+  isOwner,
   price,
   serviceDuration,
   requiresDeposit,
@@ -362,6 +371,7 @@ export default function BookingWidget({
   existingSlots,
 }: Props) {
   const router = useRouter();
+  const [messagePending, startMessageTransition] = useTransition();
   const openingHours = useMemo(
     () => parseStoreOpeningHours(rawOpeningHours),
     [rawOpeningHours],
@@ -393,6 +403,27 @@ export default function BookingWidget({
   const [confirmed, setConfirmed] = useState(false);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [paidAmount, setPaidAmount] = useState<number | null>(null);
+
+  function handleContactProvider() {
+    if (!isLoggedIn) {
+      const callbackUrl = `/service/${serviceSlug}`;
+      router.push(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+      return;
+    }
+    if (isOwner) {
+      toastFormError("You cannot message your own store.");
+      return;
+    }
+
+    startMessageTransition(async () => {
+      const result = await getOrCreateConversation(storeId);
+      if (!result.ok) {
+        toastFormError(result.error);
+        return;
+      }
+      router.push(`/messages/${result.conversationId}`);
+    });
+  }
   const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
@@ -612,12 +643,14 @@ export default function BookingWidget({
               <p className="mt-1 text-xs leading-relaxed text-zinc-400">
                 This provider has not set their availability yet. Contact them directly to arrange a session.
               </p>
-              <a
-                href="mailto:?subject=Booking enquiry"
+              <button
+                type="button"
+                onClick={handleContactProvider}
+                disabled={messagePending}
                 className="mt-3 inline-block rounded-xl border border-zinc-200 px-4 py-2 text-xs font-semibold text-zinc-600 transition-colors hover:bg-zinc-50"
               >
-                Contact provider →
-              </a>
+                {messagePending ? "Opening messages…" : "Contact provider →"}
+              </button>
             </div>
           ) : (
             <CustomCalendar

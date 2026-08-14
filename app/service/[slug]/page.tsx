@@ -698,6 +698,9 @@ export default async function ServiceDetailPage({ params }: Props) {
                     serviceId={service.id}
                     serviceSlug={service.slug}
                     serviceName={service.name}
+                    storeId={service.store.id}
+                    isLoggedIn={session != null}
+                    isOwner={isOwner}
                     price={service.price}
                     serviceDuration={
                       bookingData.durationMinutes || bookingData.serviceDuration || 60
