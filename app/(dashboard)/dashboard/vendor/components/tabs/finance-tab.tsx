@@ -181,6 +181,12 @@ export default function FinanceTab({
       e.ledgerEntryType !== "PLATFORM_COMMISSION",
   );
 
+  const ledgerActivity = ledgerEntries.filter(
+    (entry) =>
+      entry.entryType === "CREDIT_ORDER_SETTLEMENT" ||
+      isVendorBalanceDebit(entry.entryType),
+  );
+
   const totalEarnedMinor = earningCredits.reduce(
     (s, e) => s + (e.netMinor ?? e.amountMinor),
     0,
@@ -631,18 +637,25 @@ export default function FinanceTab({
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              {earningCredits.map((entry) => {
+              {ledgerActivity.map((entry) => {
                 const dateLabel = formatDate(entry.createdAt);
                 const gross = entry.grossMinor ?? entry.amountMinor;
                 const commission = entry.commissionMinor ?? 0;
                 const net = entry.netMinor ?? entry.amountMinor;
                 const isShipping = entry.ledgerEntryType === "SHIPPING";
+                const isDebit = isVendorBalanceDebit(entry.entryType);
                 return (
                   <div key={entry.id} className={`px-4 py-3 ${CARD} shadow-none`}>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-[10px] text-zinc-500">{dateLabel}</span>
-                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                        {ledgerTypeLabel(entry.ledgerEntryType)}
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                          isDebit
+                            ? "bg-red-50 text-red-700"
+                            : "bg-emerald-50 text-emerald-700"
+                        }`}
+                      >
+                        {isDebit ? "Refund" : ledgerTypeLabel(entry.ledgerEntryType)}
                       </span>
                       {entry.releasedAt ? (
                         <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600">
@@ -651,7 +664,16 @@ export default function FinanceTab({
                       ) : null}
                     </div>
                     <p className="mt-1 truncate text-[11px] text-zinc-600">{entry.description ?? "—"}</p>
-                    {isShipping ? (
+                    {isDebit ? (
+                      <div className="mt-2">
+                        <p className="font-semibold tabular-nums text-red-600">
+                          -{formatTTD(entry.amountMinor)}
+                        </p>
+                        <p className="mt-0.5 text-[10px] text-zinc-400">
+                          Reversed from your available balance
+                        </p>
+                      </div>
+                    ) : isShipping ? (
                       <div className="mt-2">
                         <p className="font-semibold tabular-nums text-emerald-600">+{formatTTD(net)}</p>
                         <p className="mt-0.5 text-[10px] text-zinc-400">Your delivery fee · no commission</p>
