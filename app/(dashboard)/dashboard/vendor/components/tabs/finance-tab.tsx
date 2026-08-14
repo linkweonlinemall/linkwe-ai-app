@@ -105,6 +105,7 @@ type Props = {
   planRenewsAt: Date | string | null;
   pastDueSince: Date | string | null;
   autoRenew: boolean;
+  subscriptionMode: "test" | "live" | "unavailable" | null;
 };
 
 function formatTTD(minor: number): string {
@@ -136,6 +137,7 @@ export default function FinanceTab({
   planRenewsAt,
   pastDueSince,
   autoRenew,
+  subscriptionMode,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -493,6 +495,23 @@ export default function FinanceTab({
               <p className="mt-2 text-[11px] font-medium text-zinc-600">
                 You&apos;re on the {planLabel}.
               </p>
+              {subscriptionMode ? (
+                <p
+                  className={`mt-1 text-[10px] font-semibold ${
+                    subscriptionMode === "test"
+                      ? "text-emerald-700"
+                      : subscriptionMode === "live"
+                        ? "text-red-700"
+                        : "text-amber-700"
+                  }`}
+                >
+                  {subscriptionMode === "test"
+                    ? "Stripe test mode"
+                    : subscriptionMode === "live"
+                      ? "Stripe LIVE mode"
+                      : "Stripe connection unavailable"}
+                </p>
+              ) : null}
               {subscriptionStatus === "PAST_DUE" ? (
                 <div className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2.5">
                   <p className="text-[11px] font-medium text-red-700">
