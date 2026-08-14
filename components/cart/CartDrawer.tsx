@@ -20,6 +20,7 @@ function mapRows(rows: Awaited<ReturnType<typeof getCart>>): CartItem[] {
       price: row.product.price,
       images: row.product.images,
       stock: row.product.stock,
+      isDigital: row.product.isDigital,
       store: row.product.store,
     },
     variant: row.variant
@@ -56,6 +57,7 @@ export default function CartDrawer() {
     () => items.reduce((sum, i) => sum + (i.variant?.price ?? i.product.price) * i.quantity, 0),
     [items],
   );
+  const allDigital = items.length > 0 && items.every((item) => item.product.isDigital);
 
   const onQty = async (productId: string, nextQty: number) => {
     setBusyProductId(productId);
@@ -222,7 +224,9 @@ export default function CartDrawer() {
             <span>Subtotal</span>
             <span>TTD {subtotalVal.toFixed(2)}</span>
           </div>
-          <p className="mt-1 text-xs text-zinc-400">Shipping calculated at checkout</p>
+          <p className="mt-1 text-xs text-zinc-400">
+            {allDigital ? "Instant digital delivery — no shipping" : "Shipping calculated at checkout"}
+          </p>
 
           <Link
             href="/cart"

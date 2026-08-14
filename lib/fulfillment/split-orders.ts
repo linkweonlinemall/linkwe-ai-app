@@ -195,6 +195,7 @@ export async function createSplitOrdersFromMainOrder(mainOrderId: string): Promi
           selfRates: config?.selfRates ?? [],
           totalWeightLbs,
           allItemsDigitalOrPickup,
+          isDigitalOnly: allItemsDigitalOrPickup,
         };
       }),
     });

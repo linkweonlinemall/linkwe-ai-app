@@ -11,6 +11,7 @@ export type PerStoreShippingInput = {
     selfRates: Array<{ zone: string; rateMinor: number; active: boolean }>;
     totalWeightLbs: number;
     allItemsDigitalOrPickup: boolean;
+    isDigitalOnly: boolean;
   }>;
 };
 
@@ -20,6 +21,7 @@ export type PerStoreShippingRow = {
   mode: "SELF" | "LINKWE";
   shippingMinor: number;
   deliversToZone: boolean;
+  isDigitalOnly: boolean;
 };
 
 export type PerStoreShippingResult = {
@@ -42,6 +44,7 @@ function computeStoreShipping(
       mode,
       shippingMinor: 0,
       deliversToZone: true,
+      isDigitalOnly: store.isDigitalOnly,
     };
   }
 
@@ -55,6 +58,7 @@ function computeStoreShipping(
         mode,
         shippingMinor: Math.max(0, Math.round(rate.rateMinor)),
         deliversToZone: true,
+        isDigitalOnly: store.isDigitalOnly,
       };
     }
     return {
@@ -63,6 +67,7 @@ function computeStoreShipping(
       mode,
       shippingMinor: 0,
       deliversToZone: false,
+      isDigitalOnly: store.isDigitalOnly,
     };
   }
 
@@ -74,6 +79,7 @@ function computeStoreShipping(
     mode: "LINKWE",
     shippingMinor: getCheckoutShipping(input.region, billableWeight),
     deliversToZone: true,
+    isDigitalOnly: store.isDigitalOnly,
   };
 }
 

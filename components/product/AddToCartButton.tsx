@@ -31,6 +31,7 @@ function mapRows(rows: Awaited<ReturnType<typeof getCart>>): CartItem[] {
       price: row.product.price,
       images: row.product.images,
       stock: row.product.stock,
+      isDigital: row.product.isDigital,
       store: row.product.store,
     },
     variant: row.variant

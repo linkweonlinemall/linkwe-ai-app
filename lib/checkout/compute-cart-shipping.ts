@@ -15,6 +15,7 @@ export type CheckoutShippingBreakdown = {
     mode: "SELF" | "LINKWE";
     shippingMinor: number;
     deliversToZone: boolean;
+    isDigitalOnly: boolean;
   }>;
   totalShippingMinor: number;
   hasCoverageFailure: boolean;
@@ -122,6 +123,8 @@ export async function computeCartShippingFromItems(
     }, 0);
     const allItemsDigitalOrPickup =
       !useDelivery || storeItems.every((item) => item.product.isDigital);
+    const isDigitalOnly =
+      storeItems.length > 0 && storeItems.every((item) => item.product.isDigital);
 
     return {
       storeId,
@@ -130,6 +133,7 @@ export async function computeCartShippingFromItems(
       selfRates: config?.selfRates ?? [],
       totalWeightLbs,
       allItemsDigitalOrPickup,
+      isDigitalOnly,
     };
   });
 

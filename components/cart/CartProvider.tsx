@@ -24,6 +24,7 @@ export default function CartProvider({ children }: { children: React.ReactNode }
           price: row.product.price,
           images: row.product.images,
           stock: row.product.stock,
+          isDigital: row.product.isDigital,
           store: row.product.store,
         },
         variant: row.variant

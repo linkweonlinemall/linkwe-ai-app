@@ -339,11 +339,14 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
     const deliveringStores = perStore.filter((row) => row.deliversToZone);
 
     if (deliveringStores.length <= 1) {
-      const amountMinor = deliveringStores[0]?.shippingMinor ?? 0;
+      const store = deliveringStores[0];
+      const amountMinor = store?.shippingMinor ?? 0;
       return (
         <div className="flex justify-between py-2 text-sm" style={{ color: "var(--text-secondary)" }}>
-          <span>Delivery</span>
-          <span>TTD {(amountMinor / 100).toFixed(2)}</span>
+          <span>{store?.isDigitalOnly ? "Digital delivery" : "Delivery"}</span>
+          <span className={store?.isDigitalOnly ? "font-semibold text-emerald-600" : undefined}>
+            {store?.isDigitalOnly ? "Free" : `TTD ${(amountMinor / 100).toFixed(2)}`}
+          </span>
         </div>
       );
     }
@@ -356,8 +359,16 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
             className="flex justify-between py-1.5 text-sm"
             style={{ color: "var(--text-secondary)" }}
           >
-            <span className="min-w-0 pr-2">{row.storeName} delivery</span>
-            <span className="shrink-0">TTD {(row.shippingMinor / 100).toFixed(2)}</span>
+            <span className="min-w-0 pr-2">
+              {row.isDigitalOnly ? "Digital delivery" : `${row.storeName} delivery`}
+            </span>
+            <span
+              className={
+                row.isDigitalOnly ? "shrink-0 font-semibold text-emerald-600" : "shrink-0"
+              }
+            >
+              {row.isDigitalOnly ? "Free" : `TTD ${(row.shippingMinor / 100).toFixed(2)}`}
+            </span>
           </div>
         ))}
       </>

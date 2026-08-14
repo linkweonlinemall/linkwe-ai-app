@@ -7,6 +7,7 @@ type CartProduct = {
   price: number;
   images: string[];
   stock: number | null;
+  isDigital: boolean;
   store: { name: string; slug: string };
 };
 
