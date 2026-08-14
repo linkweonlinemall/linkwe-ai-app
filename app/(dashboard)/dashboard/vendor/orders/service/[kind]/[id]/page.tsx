@@ -91,12 +91,21 @@ export default async function VendorServiceOrderDetailPage({ params }: Props) {
     manageHref = "/dashboard/vendor/bookings";
     manageLabel = "Manage booking";
     notes = booking.vendorNotes ?? booking.customerNotes;
+    const amountPaid = booking.amountPaid ?? 0;
+    const balanceDue = Math.max(0, booking.totalPrice - amountPaid);
+    const hasBalanceDue = amountPaid > 0 && balanceDue > 0;
     rows = [
       { label: "Appointment date", value: formatDate(booking.bookingDate) },
       { label: "Time", value: `${booking.startTime}–${booking.endTime}` },
       { label: "Service type", value: formatStatus(booking.product.serviceType ?? "BOOKABLE") },
       { label: "Guests", value: String(booking.guestCount) },
-      { label: "Paid online", value: booking.amountPaid != null ? `TTD ${booking.amountPaid.toFixed(2)}` : "No payment recorded" },
+      {
+        label: hasBalanceDue ? "Deposit paid online" : "Paid online",
+        value: booking.amountPaid != null ? `TTD ${booking.amountPaid.toFixed(2)}` : "No payment recorded",
+      },
+      ...(hasBalanceDue
+        ? [{ label: "Balance due on arrival", value: `TTD ${balanceDue.toFixed(2)}` }]
+        : []),
       ...(booking.meetingLink ? [{ label: "Meeting link", value: booking.meetingLink }] : []),
     ];
   } else if (kind === "request") {
