@@ -2,14 +2,7 @@
 
 import { type ReactNode } from "react";
 
-import { useSearchParams } from "next/navigation";
-
-import type { IdVerificationStatus, ListingStatus, Prisma, StoreStatus } from "@prisma/client";
-
-import BookingsTab from "./tabs/bookings-tab";
-import ListingsTab from "./tabs/listings-tab";
-import SettingsTab from "./tabs/settings-tab";
-import StoreTab from "./tabs/store-tab";
+import type { IdVerificationStatus, Prisma, StoreStatus } from "@prisma/client";
 
 import type { VendorSplitOrder } from "./tabs/orders-tab";
 
@@ -17,15 +10,6 @@ import AvailabilityToggle from "@/components/vendor/AvailabilityToggle";
 import VendorDashboardOverview from "@/components/vendor/VendorDashboardOverview";
 
 import type { VendorDashboardAnalytics } from "@/lib/vendor/vendor-dashboard-analytics";
-
-const TABS = [
-  { id: "store", label: "Store" },
-  { id: "listings", label: "Listings" },
-  { id: "bookings", label: "Bookings" },
-  { id: "settings", label: "Settings" },
-] as const;
-
-type TabId = (typeof TABS)[number]["id"];
 
 export type VendorDashboardStore = {
   id: string;
@@ -52,15 +36,6 @@ export type VendorDashboardStore = {
   images: { id: string }[];
 };
 
-export type VendorDashboardListing = {
-  id: string;
-  title: string;
-  slug: string;
-  imageUrl: string | null;
-  status: ListingStatus;
-  createdAt: Date;
-};
-
 type CompletenessItem = { label: string; done: boolean; detail?: string };
 
 type ReviewSummary = {
@@ -71,11 +46,8 @@ type ReviewSummary = {
 
 export type VendorDashboardTabsProps = {
   store: VendorDashboardStore;
-  listings: VendorDashboardListing[];
   splitOrders: VendorSplitOrder[];
   completenessItems: CompletenessItem[];
-  completedCount: number;
-  totalCount: number;
   dashboardAnalytics: VendorDashboardAnalytics;
   reviewSummary: ReviewSummary;
   initialAvailableNow: boolean;
@@ -90,19 +62,10 @@ export type VendorDashboardTabsProps = {
   openForBusinessChecklist?: ReactNode;
 };
 
-function tabIdFromSearchParams(sp: ReturnType<typeof useSearchParams>): TabId {
-  const tab = sp.get("tab");
-  if (tab && TABS.some((t) => t.id === tab)) return tab as TabId;
-  return TABS[0].id;
-}
-
 export default function VendorDashboardTabs({
   store,
-  listings,
   splitOrders,
   completenessItems,
-  completedCount,
-  totalCount,
   dashboardAnalytics,
   reviewSummary,
   initialAvailableNow,
@@ -114,9 +77,6 @@ export default function VendorDashboardTabs({
   verificationChecklist,
   openForBusinessChecklist,
 }: VendorDashboardTabsProps) {
-  const searchParams = useSearchParams();
-  const activeTab = tabIdFromSearchParams(searchParams);
-
   const recentOrders = splitOrders.slice(0, 5);
 
   return (
@@ -168,22 +128,12 @@ export default function VendorDashboardTabs({
         }}
       />
 
-      <div className="min-w-0 pb-16 pt-6 md:pb-12 md:pt-8 lg:pb-12">
-        {activeTab === "store" && (
-          <StoreTab
-            completedCount={completedCount}
-            completenessItems={completenessItems}
-            storeId={store.id}
-            store={store}
-            totalCount={totalCount}
-            verificationApprovedBanner={verificationApprovedBanner}
-            verificationChecklist={verificationChecklist}
-          />
-        )}
-        {activeTab === "listings" && <ListingsTab listings={listings} />}
-        {activeTab === "bookings" && <BookingsTab />}
-        {activeTab === "settings" && <SettingsTab />}
-      </div>
+      {verificationApprovedBanner || verificationChecklist ? (
+        <div className="min-w-0 space-y-4 pb-16 pt-6 md:pb-12 md:pt-8 lg:pb-12">
+          {verificationApprovedBanner}
+          {verificationChecklist}
+        </div>
+      ) : null}
     </main>
   );
 }

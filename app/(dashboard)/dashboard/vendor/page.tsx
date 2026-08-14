@@ -24,6 +24,10 @@ const DASHBOARD_MESSAGES: Record<string, string> = {
 type Props = { searchParams: Promise<{ error?: string; success?: string; tab?: string; upgrade?: string }> };
 
 const LEGACY_TAB_ROUTES: Record<string, string> = {
+  store: "/dashboard/vendor/store/edit",
+  listings: "/dashboard/vendor/products",
+  bookings: "/dashboard/vendor/bookings",
+  settings: "/dashboard/vendor/settings",
   orders: "/dashboard/vendor/orders",
   finance: "/dashboard/vendor/finance",
   messages: "/dashboard/vendor/messages",
@@ -97,19 +101,6 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
   });
   if (!store) redirect("/onboarding/business/step-3");
 
-  const listings = await prisma.listing.findMany({
-    where: { storeId: store.id },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      imageUrl: true,
-      status: true,
-      createdAt: true,
-    },
-  });
-
   const splitOrders = await prisma.splitOrder.findMany({
     where: { storeId: store.id },
     orderBy: { createdAt: "desc" },
@@ -144,9 +135,6 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
     { label: "Social links", done: !!store.socialLinks },
   ];
 
-  const completedCount = completenessItems.filter((i) => i.done).length;
-  const totalCount = completenessItems.length;
-
   const dashboardAnalytics = await getVendorDashboardAnalytics(store.id);
   const reviewSummary = await getVendorReviewStatsForStore(store.id);
 
@@ -177,11 +165,8 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
     >
     <VendorDashboardTabs
       store={store}
-      listings={listings}
       splitOrders={splitOrders}
       completenessItems={completenessItems}
-      completedCount={completedCount}
-      totalCount={totalCount}
       dashboardAnalytics={dashboardAnalytics}
       reviewSummary={reviewSummary}
       initialAvailableNow={store.isAvailableNow}

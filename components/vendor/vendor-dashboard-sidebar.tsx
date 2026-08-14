@@ -10,7 +10,6 @@ import {
   IconCreditCard,
   IconExternalLink,
   IconLayoutDashboard,
-  IconLayoutList,
   IconLink,
   IconMessageCircle,
   IconPackage,
@@ -95,10 +94,59 @@ type NavLeaf = {
   badge?: number;
 };
 
+function NavSection({
+  heading,
+  items,
+  pathname,
+  searchParams,
+}: {
+  heading: string;
+  items: NavLeaf[];
+  pathname: string;
+  searchParams: ReadonlyURLSearchParams;
+}) {
+  return (
+    <div className="mt-5 first:mt-0 lg:mt-6">
+      <p className="hidden px-4 pb-2 text-[10px] font-semibold uppercase tracking-wider text-white/30 lg:block">
+        {heading}
+      </p>
+      <div className="mx-4 mb-3 hidden h-px bg-white/10 lg:hidden" aria-hidden />
+      <nav className="flex flex-col gap-0.5 px-2 lg:mt-0">
+        {items.map((item) => {
+          const { Icon } = item;
+          const active = isHrefActive(pathname, searchParams, item.href, item.exact);
+          return (
+            <Link
+              key={item.href + item.label}
+              href={item.href}
+              title={item.label}
+              className={[
+                "group relative mx-2 flex items-center gap-3 rounded-lg border-l-[3px] border-transparent py-[9px] pl-[9px] pr-3 lg:mx-0 lg:gap-3 lg:py-[9px] lg:pl-4 lg:pr-4",
+                "text-[13px] transition-colors lg:justify-start",
+                "justify-center lg:justify-start",
+                active
+                  ? "border-l-[#D4450A] bg-[rgba(212,69,10,0.2)] font-medium text-white lg:pl-[13px]"
+                  : "text-[rgba(255,255,255,0.6)] hover:bg-white/[0.05] hover:text-white",
+              ].join(" ")}
+            >
+              <Icon className="size-4 shrink-0" stroke={1.5} aria-hidden />
+              <span className="hidden min-w-0 flex-1 truncate lg:inline">{item.label}</span>
+              {item.badge != null && item.badge > 0 ? (
+                <span className="absolute -right-0.5 -top-0.5 min-w-[1.125rem] rounded-full bg-[#D4450A] px-1 text-center text-[9px] font-bold leading-[1.125rem] text-white lg:static lg:ml-auto lg:text-[10px]">
+                  {item.badge > 99 ? "99+" : item.badge}
+                </span>
+              ) : null}
+            </Link>
+          );
+        })}
+      </nav>
+    </div>
+  );
+}
+
 export default function VendorDashboardSidebar({
   storeName,
   storeSlug,
-  storeLogoUrl: _storeLogoUrl,
   storeStatus,
   idVerificationStatus,
   pendingRequestsCount,
@@ -124,8 +172,7 @@ export default function VendorDashboardSidebar({
   ];
 
   const STORE: NavLeaf[] = [
-    { href: "/dashboard/vendor?tab=store", label: "Store", Icon: IconBuildingStore },
-    { href: "/dashboard/vendor?tab=listings", label: "Listings", Icon: IconLayoutList },
+    { href: "/dashboard/vendor/store/edit", label: "Store profile", Icon: IconBuildingStore },
     { href: "/dashboard/vendor/partners", label: "Partners", Icon: IconLink },
     { href: "/dashboard/vendor/shipping", label: "Shipping", Icon: IconTruck },
     { href: "/dashboard/vendor/staff", label: "Availability", Icon: IconUsers },
@@ -142,46 +189,6 @@ export default function VendorDashboardSidebar({
     { href: VENDOR_VENDOR_MESSAGES_PATH, label: "Messages", Icon: IconMessageCircle },
     { href: VENDOR_VENDOR_REVIEWS_PATH, label: "Reviews", Icon: IconStar },
   ];
-
-  function Section({ heading, items }: { heading: string; items: NavLeaf[] }) {
-    return (
-      <div className="mt-5 first:mt-0 lg:mt-6">
-        <p className="hidden px-4 pb-2 text-[10px] font-semibold uppercase tracking-wider text-white/30 lg:block">
-          {heading}
-        </p>
-        <div className="mx-4 mb-3 hidden h-px bg-white/10 lg:hidden" aria-hidden />
-        <nav className="flex flex-col gap-0.5 px-2 lg:mt-0">
-          {items.map((item) => {
-            const { Icon } = item;
-            const active = isHrefActive(pathname, searchParams, item.href, item.exact);
-            return (
-              <Link
-                key={item.href + item.label}
-                href={item.href}
-                title={item.label}
-                className={[
-                  "group relative mx-2 flex items-center gap-3 rounded-lg border-l-[3px] border-transparent py-[9px] pl-[9px] pr-3 lg:mx-0 lg:gap-3 lg:py-[9px] lg:pl-4 lg:pr-4",
-                  "text-[13px] transition-colors lg:justify-start",
-                  "justify-center lg:justify-start",
-                  active
-                    ? "border-l-[#D4450A] bg-[rgba(212,69,10,0.2)] font-medium text-white lg:pl-[13px]"
-                    : "text-[rgba(255,255,255,0.6)] hover:bg-white/[0.05] hover:text-white",
-                ].join(" ")}
-              >
-                <Icon className="size-4 shrink-0" stroke={1.5} aria-hidden />
-                <span className="hidden min-w-0 flex-1 truncate lg:inline">{item.label}</span>
-                {item.badge != null && item.badge > 0 ? (
-                  <span className="absolute -right-0.5 -top-0.5 min-w-[1.125rem] rounded-full bg-[#D4450A] px-1 text-center text-[9px] font-bold leading-[1.125rem] text-white lg:static lg:ml-auto lg:text-[10px]">
-                    {item.badge > 99 ? "99+" : item.badge}
-                  </span>
-                ) : null}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-    );
-  }
 
   return (
     <aside
@@ -234,9 +241,9 @@ export default function VendorDashboardSidebar({
         className="vendor-sidebar-nav min-h-0 flex-1 overflow-x-hidden overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
       >
         <div className="mt-2 pb-2">
-          <Section heading="Main" items={MAIN} />
-          <Section heading="Store" items={STORE} />
-          <Section heading="Finance" items={FINANCE} />
+          <NavSection heading="Main" items={MAIN} pathname={pathname} searchParams={searchParams} />
+          <NavSection heading="Store" items={STORE} pathname={pathname} searchParams={searchParams} />
+          <NavSection heading="Finance" items={FINANCE} pathname={pathname} searchParams={searchParams} />
         </div>
       </div>
 

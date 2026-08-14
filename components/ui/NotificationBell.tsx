@@ -138,7 +138,7 @@ export default function NotificationBell({
     if (notification.linkUrl) {
       setOpen(false);
       // Avoid App Router SPA navigation: router.push has been rewriting some
-      // same-page query URLs (e.g. /dashboard/vendor?tab=reviews → /dashboard/vendor/reviews).
+      // same-page query URLs from legacy notifications can redirect to dedicated pages.
       // Full navigation uses link_url verbatim from the server.
       window.location.assign(notification.linkUrl);
     }

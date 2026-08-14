@@ -166,7 +166,7 @@ export default function OrdersTab({ splitOrders }: Props) {
           title="No orders yet"
           description="Your first sale is on its way. Make sure your store profile is complete."
           actionLabel="Complete profile"
-          actionHref="/dashboard/vendor?tab=store"
+          actionHref="/dashboard/vendor/store/edit"
         />
       </div>
     );
