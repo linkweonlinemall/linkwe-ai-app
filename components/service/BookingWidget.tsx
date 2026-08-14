@@ -115,6 +115,11 @@ function BookingPaymentForm({
     setPayError(null);
 
     try {
+      // Let the Payment Element finish processing the blur/change event caused by
+      // clicking Pay before Stripe validates it. Without this, the first click can
+      // report that no payment method is selected even when the card is complete.
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
       const { error: submitError } = await elements.submit();
       if (submitError) {
         setPayError(submitError.message ?? "Please check your card details.");
@@ -169,7 +174,10 @@ function BookingPaymentForm({
       <p className="text-xs text-zinc-600">
         Pay <span className="font-bold text-[#D4450A]">{amountLabel}</span> to complete your booking.
       </p>
-      <PaymentElement onReady={() => setElementsReady(true)} />
+      <PaymentElement
+        onReady={() => setElementsReady(true)}
+        onChange={() => setPayError(null)}
+      />
       {payError ? (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{payError}</p>
       ) : null}
