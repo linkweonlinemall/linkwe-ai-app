@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { NotificationType } from "@prisma/client";
 
+import { createNotification } from "@/app/actions/notifications";
 import { getSession } from "@/lib/auth/session";
 import { VENDOR_BALANCE_DEBIT_TYPES } from "@/lib/finance/vendor-balance";
 import { prisma } from "@/lib/prisma";
@@ -105,6 +107,7 @@ export async function getAdminPayoutRequests() {
           region: true,
           owner: {
             select: {
+              id: true,
               bankDetails: {
                 select: {
                   bankName: true,
@@ -151,6 +154,7 @@ export async function approvePayoutRequest(
         select: {
           owner: {
             select: {
+              id: true,
               bankDetails: {
                 select: { bankName: true, accountNumber: true },
               },
@@ -213,7 +217,16 @@ export async function approvePayoutRequest(
     });
   });
 
+  await createNotification({
+    userId: request.store.owner.id,
+    type: NotificationType.PAYOUT_PROCESSED,
+    title: "Payout approved",
+    body: `Your TTD ${(request.amountMinor / 100).toFixed(2)} payout was approved for ${bank.bankName} ending ${bank.accountNumber.slice(-4)}.`,
+    linkUrl: "/dashboard/vendor/finance?tab=payout-history",
+  });
+
   revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/vendor/finance");
   return { ok: true };
 }
 
