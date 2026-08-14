@@ -171,6 +171,7 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
       dashboardErrorMessage={dashboardErrorMessage}
       dashboardWarningMessage={dashboardWarningMessage}
       idVerificationStatus={user.idVerificationStatus}
+      verificationChecks={vendorReadiness.checks}
       openForBusinessChecklist={
         <OpenForBusinessChecklist
           verificationStatus={user.idVerificationStatus}

@@ -10,6 +10,7 @@ import AvailabilityToggle from "@/components/vendor/AvailabilityToggle";
 import VendorDashboardOverview from "@/components/vendor/VendorDashboardOverview";
 
 import type { VendorDashboardAnalytics } from "@/lib/vendor/vendor-dashboard-analytics";
+import type { VendorReadinessCheck } from "@/lib/vendor/readiness";
 
 export type VendorDashboardStore = {
   id: string;
@@ -55,6 +56,7 @@ export type VendorDashboardTabsProps = {
   dashboardErrorMessage: string | null;
   dashboardWarningMessage: string | null;
   idVerificationStatus: IdVerificationStatus;
+  verificationChecks: VendorReadinessCheck[];
   verificationChecklist?: ReactNode;
   /** Four-gate "Open for business" checklist — renders above the profile % banner. Auto-hides when all gates pass. */
   openForBusinessChecklist?: ReactNode;
@@ -71,6 +73,7 @@ export default function VendorDashboardTabs({
   dashboardErrorMessage,
   dashboardWarningMessage,
   idVerificationStatus,
+  verificationChecks,
   verificationChecklist,
   openForBusinessChecklist,
 }: VendorDashboardTabsProps) {
@@ -112,6 +115,7 @@ export default function VendorDashboardTabs({
         recentOrders={recentOrders}
         reviewSummary={reviewSummary}
         idVerificationStatus={idVerificationStatus}
+        verificationChecks={verificationChecks}
         openForBusinessChecklist={openForBusinessChecklist}
         store={{
           id: store.id,

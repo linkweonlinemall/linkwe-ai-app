@@ -25,6 +25,7 @@ import GoLiveButton from "@/app/(dashboard)/dashboard/vendor/components/go-live-
 
 import type { VendorSplitOrder } from "@/app/(dashboard)/dashboard/vendor/components/tabs/orders-tab";
 import type { VendorDashboardAnalytics } from "@/lib/vendor/vendor-dashboard-analytics";
+import type { VendorReadinessCheck } from "@/lib/vendor/readiness";
 import { getStoreCategoryLabel } from "@/lib/categories";
 
 function formatPctChange(pct: number): string {
@@ -112,6 +113,7 @@ export default function VendorDashboardOverview(props: {
   reviewSummary: ReviewSummary;
   completenessItems: ProfileRowSource[];
   idVerificationStatus: IdVerificationStatus;
+  verificationChecks: VendorReadinessCheck[];
   openForBusinessChecklist?: ReactNode;
   store: {
     id: string;
@@ -124,7 +126,16 @@ export default function VendorDashboardOverview(props: {
     coverPhotoUrl: string | null;
   };
 }) {
-  const { analytics, recentOrders, reviewSummary, completenessItems, idVerificationStatus, openForBusinessChecklist, store } = props;
+  const {
+    analytics,
+    recentOrders,
+    reviewSummary,
+    completenessItems,
+    idVerificationStatus,
+    verificationChecks,
+    openForBusinessChecklist,
+    store,
+  } = props;
 
   const { rows: profileRows, pct: profilePct } = profileRowsForCard(completenessItems);
   const overallPct = completenessItems.length
@@ -232,11 +243,9 @@ export default function VendorDashboardOverview(props: {
               </Link>
             </div>
             <div className="flex h-[140px] items-end justify-between gap-1 pb-8">
-              {analytics.salesLast30Days.map((d, idx) => {
+              {analytics.salesLast30Days.map((d) => {
                 const pct = Math.max(10, Math.round((d.amountTtd / maxAmt) * 100));
                 const hPx = Math.round((maxBarH * pct) / 100);
-                const isWeekend =
-                  idx % 7 === 0 || idx === analytics.salesLast30Days.length - 1;
                 return (
                   <div key={d.date} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1">
                     <div
@@ -376,9 +385,31 @@ export default function VendorDashboardOverview(props: {
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500">
                 <ShieldCheck size={16} className="text-white" />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-emerald-800">Confirmed to sell</p>
                 <p className="mt-0.5 text-xs text-emerald-600">Store verified and active</p>
+                <details className="group mt-2">
+                  <summary className="cursor-pointer list-none text-[11px] font-semibold text-emerald-800 hover:underline">
+                    <span className="group-open:hidden">View verification details</span>
+                    <span className="hidden group-open:inline">Hide verification details</span>
+                  </summary>
+                  <ul className="mt-2 space-y-1.5 border-t border-emerald-200 pt-2">
+                    {verificationChecks.map((check) => (
+                      <li key={check.id} className="flex items-center gap-2 text-[11px] text-emerald-800">
+                        <IconCircleCheck className="size-3.5 shrink-0 text-emerald-600" stroke={2} aria-hidden />
+                        {check.label}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-semibold">
+                    <Link href="/dashboard/vendor/store/edit" className="text-emerald-800 hover:underline">
+                      Store profile
+                    </Link>
+                    <Link href="/dashboard/vendor/finance?tab=bank-details" className="text-emerald-800 hover:underline">
+                      Bank details
+                    </Link>
+                  </div>
+                </details>
               </div>
             </div>
           ) : idVerificationStatus === "APPROVED" ? (
