@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { cancelAutoRenew, payMySubscriptionFromBalance, requestPayout, resumeAutoRenew, saveVendorBankDetails, startSubscriptionCheckout } from "@/app/actions/vendor";
+import { cancelAutoRenew, payMySubscriptionFromBalance, requestPayout, resumeAutoRenew, saveVendorBankDetails, startSubscriptionBillingPortal, startSubscriptionCheckout } from "@/app/actions/vendor";
 import AITopupCheckout from "@/components/vendor/ai-topup-checkout";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
@@ -292,6 +292,18 @@ export default function FinanceTab({
     setSubPayError(result.error);
   }
 
+  async function handleUpdatePaymentMethod() {
+    setSubPayError(null);
+    setSubscribing(true);
+    const result = await startSubscriptionBillingPortal();
+    if (result.ok) {
+      window.location.href = result.portalUrl;
+      return;
+    }
+    setSubscribing(false);
+    setSubPayError(result.error);
+  }
+
   async function handleCancelAutoRenew() {
     setAutoRenewLoading(true);
     const r = await cancelAutoRenew();
@@ -494,7 +506,7 @@ export default function FinanceTab({
                   <button
                     type="button"
                     disabled={subscribing}
-                    onClick={() => void handleSubscribeByCard(plan)}
+                    onClick={() => void handleUpdatePaymentMethod()}
                     className="mt-2 rounded-lg px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                     style={{ backgroundColor: "#D4450A" }}
                   >

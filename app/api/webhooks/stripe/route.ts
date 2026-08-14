@@ -308,13 +308,26 @@ export async function POST(request: NextRequest) {
         const subStoreId = invoice.parent?.subscription_details?.metadata?.subscriptionStoreId;
         if (!subStoreId) break;
 
-        await prisma.store.updateMany({
+        const store = await prisma.store.findUnique({
+          where: { id: subStoreId },
+          select: { ownerId: true },
+        });
+        const updated = await prisma.store.updateMany({
           where: { id: subStoreId, subscriptionStatus: StoreSubscriptionStatus.ACTIVE },
           data: {
             subscriptionStatus: StoreSubscriptionStatus.PAST_DUE,
             pastDueSince: new Date(),
           },
         });
+        if (store && updated.count > 0) {
+          await createNotification({
+            userId: store.ownerId,
+            type: NotificationType.GENERAL,
+            title: "Subscription payment failed",
+            body: "Update your payment method within 7 days to keep your current LinkWe plan.",
+            linkUrl: "/dashboard/vendor/finance",
+          });
+        }
         break;
       }
 

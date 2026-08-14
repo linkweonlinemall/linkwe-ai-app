@@ -219,6 +219,40 @@ export async function startSubscriptionCheckout(
   }
 }
 
+export async function startSubscriptionBillingPortal(): Promise<
+  { ok: true; portalUrl: string } | { ok: false; error: string }
+> {
+  const session = await getSession();
+  if (!session || session.role !== "VENDOR") return { ok: false, error: "Not authorized" };
+
+  const store = await prisma.store.findFirst({
+    where: { ownerId: session.userId },
+    select: { stripeCustomerId: true, stripeSubscriptionId: true },
+  });
+  if (!store?.stripeCustomerId || !store.stripeSubscriptionId) {
+    return { ok: false, error: "No active card subscription" };
+  }
+
+  try {
+    const returnUrl = `${getAppBaseUrl()}/dashboard/vendor/finance`;
+    const portalSession = await stripe.billingPortal.sessions.create({
+      customer: store.stripeCustomerId,
+      return_url: returnUrl,
+      flow_data: {
+        type: "payment_method_update",
+        after_completion: {
+          type: "redirect",
+          redirect: { return_url: returnUrl },
+        },
+      },
+    });
+    return { ok: true, portalUrl: portalSession.url };
+  } catch (err) {
+    console.error("startSubscriptionBillingPortal Stripe error:", err);
+    return { ok: false, error: "Could not open billing settings. Please try again." };
+  }
+}
+
 export async function cancelAutoRenew(): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await getSession();
   if (!session || session.role !== "VENDOR") return { ok: false, error: "Not authorized" };
