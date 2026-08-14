@@ -98,6 +98,7 @@ export default async function OrderDetailPage({ params }: Props) {
       items: {
         select: {
           id: true,
+          listingId: true,
           titleSnapshot: true,
           quantity: true,
           priceMinor: true,
@@ -127,6 +128,7 @@ export default async function OrderDetailPage({ params }: Props) {
           items: {
             select: {
               id: true,
+              listingId: true,
               titleSnapshot: true,
               quantity: true,
               unitPriceMinor: true,
@@ -148,9 +150,15 @@ export default async function OrderDetailPage({ params }: Props) {
     notFound();
   }
 
-  const allDigital = order.items.every(
-    (item) => item.product != null && item.product.isDigital,
+  const digitalItems = order.items.filter((item) => item.product?.isDigital);
+  const allDigital = digitalItems.length === order.items.length;
+  const hasDigital = digitalItems.length > 0;
+  const digitalListingIds = new Set(
+    digitalItems.flatMap((item) => (item.listingId ? [item.listingId] : [])),
   );
+  const digitalTitles = new Set(digitalItems.map((item) => item.titleSnapshot));
+  const isDigitalSplitItem = (item: { listingId: string; titleSnapshot: string }) =>
+    digitalListingIds.has(item.listingId) || digitalTitles.has(item.titleSnapshot);
   const paid =
     order.status === "PAID" ||
     order.status === "COMPLETED" ||
@@ -167,8 +175,11 @@ export default async function OrderDetailPage({ params }: Props) {
 
   const statusInfo = getStatusInfo(order.status);
 
-  const splitTotal = order.splitOrders.length;
-  const deliveredCount = order.splitOrders.filter((s) =>
+  const physicalSplitOrders = order.splitOrders.filter((splitOrder) =>
+    splitOrder.items.some((item) => !isDigitalSplitItem(item)),
+  );
+  const splitTotal = physicalSplitOrders.length;
+  const deliveredCount = physicalSplitOrders.filter((s) =>
     ["DELIVERED", "COMPLETED"].includes(s.status),
   ).length;
   const isMultiStore = splitTotal > 1;
@@ -346,15 +357,15 @@ export default async function OrderDetailPage({ params }: Props) {
                     {deliveredCount} of {splitTotal} stores received
                   </span>
                 </p>
-              ) : order.splitOrders.length === 1 ? (
+              ) : physicalSplitOrders.length === 1 ? (
                 <p className="text-sm text-zinc-600">
-                  {getSplitOrderStatusLabel(order.splitOrders[0].status).label}
+                  {getSplitOrderStatusLabel(physicalSplitOrders[0].status).label}
                 </p>
               ) : null}
             </div>
           )}
 
-          {!allDigital && order.splitOrders && order.splitOrders.length > 1 ? (
+          {!allDigital && physicalSplitOrders.length > 1 ? (
             <div className="mt-3 flex items-center gap-2 rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-2.5">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -373,7 +384,7 @@ export default async function OrderDetailPage({ params }: Props) {
               </svg>
               <p className="text-xs text-zinc-600">
                 This order has items from{" "}
-                <span className="font-semibold">{order.splitOrders.length} stores</span>. Each store
+                <span className="font-semibold">{physicalSplitOrders.length} stores</span>. Each store
                 ships its items separately.
               </p>
             </div>
@@ -383,6 +394,40 @@ export default async function OrderDetailPage({ params }: Props) {
             <p className="mt-4 text-sm text-zinc-500">{statusInfo.description}</p>
           ) : null}
         </section>
+
+        {hasDigital && !allDigital ? (
+          <section
+            className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 p-5 sm:p-6"
+          >
+            <h2 className="text-sm font-bold text-emerald-900">Digital items</h2>
+            {paid ? (
+              <div className="mt-3 flex flex-col gap-2">
+                {digitalItems.map((item) =>
+                  item.product?.digitalFileUrl ? (
+                    <a
+                      key={item.id}
+                      href={forceDownloadUrl(item.product.digitalFileUrl, item.product.name)}
+                      download
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-50"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                      </svg>
+                      Download {item.product.name}
+                    </a>
+                  ) : null,
+                )}
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-emerald-800">
+                Your download links will appear here once payment is confirmed.
+              </p>
+            )}
+          </section>
+        ) : null}
 
         <div className="grid gap-5 lg:grid-cols-3">
           {/* Items */}
@@ -398,19 +443,29 @@ export default async function OrderDetailPage({ params }: Props) {
               {order.splitOrders && order.splitOrders.length > 0 ? (
                 <div className="flex flex-col gap-6">
                   {order.splitOrders.map((splitOrder) => {
-                    const badge = getSplitOrderStatusLabel(splitOrder.status as string);
+                    const splitHasPhysicalItems = splitOrder.items.some(
+                      (item) => !isDigitalSplitItem(item),
+                    );
+                    const badge = splitHasPhysicalItems
+                      ? getSplitOrderStatusLabel(splitOrder.status as string)
+                      : {
+                          label: paid ? "Ready to download" : "Payment pending",
+                          className: paid
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            : "border-zinc-200 bg-zinc-50 text-zinc-600",
+                        };
                     const isReceivable =
-                      !allDigital &&
+                      splitHasPhysicalItems &&
                       isBuyer &&
                       (splitOrder.status === "SHIPPED" || splitOrder.status === "OUT_FOR_DELIVERY");
                     const isReceived =
-                      !allDigital &&
+                      splitHasPhysicalItems &&
                       (splitOrder.status === "DELIVERED" || splitOrder.status === "COMPLETED");
                     const splitWeight = computeSplitWeightLbs(
                       splitOrder.items,
                       order.items.map((oi) => ({
                         titleSnapshot: oi.titleSnapshot,
-                        weightLbs: oi.weightLbs,
+                        weightLbs: oi.product?.isDigital ? 0 : oi.weightLbs,
                         quantity: oi.quantity,
                       })),
                     );
@@ -443,7 +498,7 @@ export default async function OrderDetailPage({ params }: Props) {
                           </span>
                         </div>
 
-                        {!allDigital ? (
+                        {splitHasPhysicalItems ? (
                           <div className="border-b border-zinc-100 bg-white">
                             <SplitProgressMini
                               steps={getSplitProgressSteps(splitOrder.store.shippingMode)}
@@ -457,7 +512,12 @@ export default async function OrderDetailPage({ params }: Props) {
 
                         <ul className="divide-y divide-zinc-100 px-4">
                           {splitOrder.items.map((item) => {
-                            const orderItem = order.items.find((oi) => oi.titleSnapshot === item.titleSnapshot);
+                            const orderItem = order.items.find(
+                              (oi) =>
+                                (oi.listingId != null && oi.listingId === item.listingId) ||
+                                oi.titleSnapshot === item.titleSnapshot,
+                            );
+                            const isDigitalItem = isDigitalSplitItem(item);
                             const img = orderItem?.product?.images?.[0];
                             const weightLine = weightByTitle.get(item.titleSnapshot);
                             return (
@@ -478,7 +538,11 @@ export default async function OrderDetailPage({ params }: Props) {
                                   <p className="mt-1 text-xs text-zinc-600">
                                     {item.quantity} × TTD {(item.unitPriceMinor / 100).toFixed(2)}
                                   </p>
-                                  {weightLine && weightLine.unitWeightLbs != null && weightLine.unitWeightLbs > 0 ? (
+                                  {isDigitalItem ? (
+                                    <p className="mt-0.5 text-xs font-medium text-emerald-700">
+                                      Digital download
+                                    </p>
+                                  ) : weightLine && weightLine.unitWeightLbs != null && weightLine.unitWeightLbs > 0 ? (
                                     <p className="mt-0.5 text-xs text-zinc-400">
                                       {formatWeightLbs(weightLine.unitWeightLbs)} lb each
                                     </p>
@@ -495,7 +559,7 @@ export default async function OrderDetailPage({ params }: Props) {
                         <div className="flex items-center justify-between border-t border-zinc-100 bg-zinc-50 px-4 py-2.5">
                           <div>
                             <p className="text-xs text-zinc-500">
-                              {allDigital
+                              {!splitHasPhysicalItems
                                 ? "Digital delivery"
                                 : splitOrder.store.shippingMode === "SELF"
                                   ? `Delivered by ${splitOrder.store.name}`
