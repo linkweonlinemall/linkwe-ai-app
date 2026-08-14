@@ -32,7 +32,7 @@ export async function cancelBookingCore(
       stripePaymentIntentId: true,
       earningsReleased: true,
       slot: {
-        select: { id: true, currentBookings: true },
+        select: { id: true, currentBookings: true, maxBookings: true },
       },
       product: {
         select: {
@@ -160,10 +160,12 @@ export async function cancelBookingCore(
 
     // c. Free the slot capacity
     if (booking.slot) {
+      const currentBookings = Math.max(0, booking.slot.currentBookings - 1);
       await tx.productBookingSlot.update({
         where: { id: booking.slot.id },
         data: {
-          currentBookings: Math.max(0, booking.slot.currentBookings - 1),
+          currentBookings,
+          isAvailable: currentBookings < booking.slot.maxBookings,
         },
       });
     }
