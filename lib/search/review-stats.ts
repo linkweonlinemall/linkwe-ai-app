@@ -37,7 +37,7 @@ export async function reviewStatsForStores(
       select: { rating: true, listing: { select: { storeId: true } } },
     }),
     prisma.review.findMany({
-      where: { storeId: { in: storeIds } },
+      where: { storeId: { in: storeIds }, productId: null },
       select: { rating: true, storeId: true },
     }),
   ]);

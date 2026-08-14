@@ -211,7 +211,10 @@ export default async function Home() {
   if (featuredStoresSection.length > 0) {
     const reviewGroups = await prisma.review.groupBy({
       by: ["storeId"],
-      where: { storeId: { in: featuredStoresSection.map((s) => s.id) } },
+      where: {
+        storeId: { in: featuredStoresSection.map((s) => s.id) },
+        productId: null,
+      },
       _avg: { rating: true },
       _count: { id: true },
     });

@@ -263,7 +263,7 @@ export async function getProductReviews(productId: string) {
 // Get reviews for a store
 export async function getStoreReviewsNew(storeId: string) {
   const reviews = await prisma.review.findMany({
-    where: { storeId },
+    where: { storeId, productId: null },
     orderBy: { createdAt: "desc" },
     take: 50,
     select: {

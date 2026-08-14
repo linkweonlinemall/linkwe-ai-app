@@ -187,6 +187,7 @@ async function reviewStatsForStores(
     prisma.review.findMany({
       where: {
         storeId: { in: storeIds },
+        productId: null,
       },
       select: {
         rating: true,
