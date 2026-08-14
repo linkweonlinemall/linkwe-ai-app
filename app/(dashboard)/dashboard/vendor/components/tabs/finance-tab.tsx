@@ -309,9 +309,7 @@ export default function FinanceTab({
   }
 
   function handleDowngradeToStarter() {
-    const periodEnd = planRenewsAt
-      ? formatDate(planRenewsAt)
-      : "the end of your billing period";
+    const periodEnd = "the end of your current Stripe billing period";
     const confirmed = window.confirm(
       `You will keep your ${planLabel} benefits until ${periodEnd}, then move to the free Starter plan. No refund for the current period.\n\nYou can cancel this downgrade before ${periodEnd} to keep your ${planLabel}.\n\nDowngrade to Starter at period end?`,
     );
@@ -511,10 +509,7 @@ export default function FinanceTab({
                   {autoRenew ? (
                     <>
                       <p className="text-[11px] text-zinc-500">
-                        💳 Billed automatically to your card
-                        {planRenewsAt
-                          ? ` · renews ${formatDate(planRenewsAt)}`
-                          : " each month"}
+                        💳 Billed automatically to your card · renews monthly
                       </p>
                       <button
                         type="button"
