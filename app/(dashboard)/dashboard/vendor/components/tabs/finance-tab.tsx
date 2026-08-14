@@ -540,30 +540,9 @@ export default function FinanceTab({
                       >
                         {autoRenewLoading ? "Updating…" : `Keep my ${planLabel}`}
                       </button>
-                      {subPaidThisPeriod ? (
-                        <p className="mt-2 text-[11px] text-zinc-500">
-                          ✓ Subscription paid for this period
-                        </p>
-                      ) : (
-                        <div className="mt-2">
-                          <button
-                            type="button"
-                            disabled={payingSubscription || subscribing || autoRenewLoading}
-                            onClick={() => void handlePaySubscription()}
-                            className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50"
-                          >
-                            {payingSubscription
-                              ? "Paying…"
-                              : `Pay TTD ${(priceMinor / 100).toLocaleString("en-TT", { maximumFractionDigits: 0 })} from balance`}
-                          </button>
-                          {subPayMessage ? (
-                            <p className="mt-2 text-[11px] text-emerald-700">{subPayMessage}</p>
-                          ) : null}
-                          {subPayError ? (
-                            <p className="mt-2 text-[11px] text-red-600">{subPayError}</p>
-                          ) : null}
-                        </div>
-                      )}
+                      <p className="mt-2 text-[11px] text-zinc-500">
+                        ✓ No further payment is due before your scheduled downgrade
+                      </p>
                     </>
                   )}
                 </div>

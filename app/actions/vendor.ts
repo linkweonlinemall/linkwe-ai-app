@@ -132,12 +132,11 @@ export async function payMySubscriptionFromBalance(): Promise<
       subscriptionPlan: true,
       planRenewsAt: true,
       stripeSubscriptionId: true,
-      autoRenew: true,
     },
   });
   if (!store) return { ok: false, error: "No store found" };
 
-  if (store.stripeSubscriptionId && store.autoRenew) {
+  if (store.stripeSubscriptionId) {
     return { ok: false, error: "card_subscription_active" };
   }
 
