@@ -61,6 +61,21 @@ function ledgerTypeLabel(ledgerEntryType: string | null): string {
   }
 }
 
+function debitDisplay(entryType: string): { label: string; detail: string } {
+  switch (entryType) {
+    case "DEBIT_PLATFORM_FEE":
+      return { label: "Commission", detail: "Platform fee deducted from your balance" };
+    case "DEBIT_PAYOUT":
+      return { label: "Payout", detail: "Paid out from your available balance" };
+    case "DEBIT_REFUND":
+      return { label: "Refund", detail: "Reversed from your available balance" };
+    case "DEBIT_SUBSCRIPTION":
+      return { label: "Subscription", detail: "Subscription charge deducted from your balance" };
+    default:
+      return { label: "Deduction", detail: "Deducted from your available balance" };
+  }
+}
+
 type PayoutRequest = {
   id: string;
   amountMinor: number;
@@ -644,6 +659,7 @@ export default function FinanceTab({
                 const net = entry.netMinor ?? entry.amountMinor;
                 const isShipping = entry.ledgerEntryType === "SHIPPING";
                 const isDebit = isVendorBalanceDebit(entry.entryType);
+                const debit = debitDisplay(entry.entryType);
                 return (
                   <div key={entry.id} className={`px-4 py-3 ${CARD} shadow-none`}>
                     <div className="flex flex-wrap items-center gap-2">
@@ -655,7 +671,7 @@ export default function FinanceTab({
                             : "bg-emerald-50 text-emerald-700"
                         }`}
                       >
-                        {isDebit ? "Refund" : ledgerTypeLabel(entry.ledgerEntryType)}
+                        {isDebit ? debit.label : ledgerTypeLabel(entry.ledgerEntryType)}
                       </span>
                       {entry.releasedAt ? (
                         <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600">
@@ -670,7 +686,7 @@ export default function FinanceTab({
                           -{formatTTD(entry.amountMinor)}
                         </p>
                         <p className="mt-0.5 text-[10px] text-zinc-400">
-                          Reversed from your available balance
+                          {debit.detail}
                         </p>
                       </div>
                     ) : isShipping ? (
