@@ -231,16 +231,22 @@ export async function cancelAutoRenew(): Promise<{ ok: true } | { ok: false; err
   if (!store) return { ok: false, error: "No store found" };
   if (!store.stripeSubscriptionId) return { ok: false, error: "No active card subscription" };
 
+  let periodEnd: Date | null = null;
   try {
-    await stripe.subscriptions.update(store.stripeSubscriptionId, {
+    const subscription = await stripe.subscriptions.update(store.stripeSubscriptionId, {
       cancel_at_period_end: true,
     });
+    const periodEndUnix = subscription.items.data[0]?.current_period_end;
+    periodEnd = periodEndUnix ? new Date(periodEndUnix * 1000) : null;
   } catch (e) {
     console.error("[autoRenew] cancel failed", e);
     return { ok: false, error: "Could not update subscription" };
   }
 
-  await prisma.store.update({ where: { id: store.id }, data: { autoRenew: false } });
+  await prisma.store.update({
+    where: { id: store.id },
+    data: { autoRenew: false, ...(periodEnd ? { planRenewsAt: periodEnd } : {}) },
+  });
   revalidatePath("/dashboard/vendor/finance");
   return { ok: true };
 }
@@ -256,16 +262,22 @@ export async function resumeAutoRenew(): Promise<{ ok: true } | { ok: false; err
   if (!store) return { ok: false, error: "No store found" };
   if (!store.stripeSubscriptionId) return { ok: false, error: "No active card subscription" };
 
+  let periodEnd: Date | null = null;
   try {
-    await stripe.subscriptions.update(store.stripeSubscriptionId, {
+    const subscription = await stripe.subscriptions.update(store.stripeSubscriptionId, {
       cancel_at_period_end: false,
     });
+    const periodEndUnix = subscription.items.data[0]?.current_period_end;
+    periodEnd = periodEndUnix ? new Date(periodEndUnix * 1000) : null;
   } catch (e) {
     console.error("[autoRenew] resume failed", e);
     return { ok: false, error: "Could not update subscription" };
   }
 
-  await prisma.store.update({ where: { id: store.id }, data: { autoRenew: true } });
+  await prisma.store.update({
+    where: { id: store.id },
+    data: { autoRenew: true, ...(periodEnd ? { planRenewsAt: periodEnd } : {}) },
+  });
   revalidatePath("/dashboard/vendor/finance");
   return { ok: true };
 }

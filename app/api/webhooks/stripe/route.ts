@@ -66,6 +66,33 @@ async function handleSubscriptionInvoicePaid(invoice: Stripe.Invoice): Promise<v
   });
 }
 
+async function handleVendorSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {
+  const subStoreId = subscription.metadata?.subscriptionStoreId;
+  if (!subStoreId) return;
+
+  const periodEndUnix = subscription.items.data[0]?.current_period_end;
+  const status =
+    subscription.status === "active" || subscription.status === "trialing"
+      ? StoreSubscriptionStatus.ACTIVE
+      : subscription.status === "past_due" || subscription.status === "unpaid"
+        ? StoreSubscriptionStatus.PAST_DUE
+        : null;
+
+  await prisma.store.updateMany({
+    where: { id: subStoreId, stripeSubscriptionId: subscription.id },
+    data: {
+      autoRenew: !subscription.cancel_at_period_end,
+      ...(periodEndUnix ? { planRenewsAt: new Date(periodEndUnix * 1000) } : {}),
+      ...(status ? { subscriptionStatus: status } : {}),
+      ...(status === StoreSubscriptionStatus.PAST_DUE
+        ? { pastDueSince: new Date() }
+        : status === StoreSubscriptionStatus.ACTIVE
+          ? { pastDueSince: null }
+          : {}),
+    },
+  });
+}
+
 // ── Ticket order fulfilment ────────────────────────────────────────────────────
 // Idempotent: updateMany only matches PENDING_PAYMENT; a second Stripe retry
 // gets count=0 and exits immediately without re-incrementing sold counts or
@@ -294,6 +321,7 @@ export async function POST(request: NextRequest) {
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;
         await handleCustomerServiceSubscriptionUpdated(subscription);
+        await handleVendorSubscriptionUpdated(subscription);
         break;
       }
 
