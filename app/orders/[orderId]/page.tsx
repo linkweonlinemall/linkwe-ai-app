@@ -538,9 +538,22 @@ export default async function OrderDetailPage({ params }: Props) {
                                   <p className="mt-1 text-xs text-zinc-600">
                                     {item.quantity} × TTD {(item.unitPriceMinor / 100).toFixed(2)}
                                   </p>
-                                  {isDigitalItem ? (
+                                  {isDigitalItem && paid && orderItem?.product?.digitalFileUrl ? (
+                                    <a
+                                      href={forceDownloadUrl(
+                                        orderItem.product.digitalFileUrl,
+                                        orderItem.product.name,
+                                      )}
+                                      download
+                                      rel="noopener noreferrer"
+                                      className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 underline decoration-emerald-300 underline-offset-2 hover:text-emerald-900"
+                                    >
+                                      Download file
+                                      <span aria-hidden>↓</span>
+                                    </a>
+                                  ) : isDigitalItem ? (
                                     <p className="mt-0.5 text-xs font-medium text-emerald-700">
-                                      Digital download
+                                      Available after payment
                                     </p>
                                   ) : weightLine && weightLine.unitWeightLbs != null && weightLine.unitWeightLbs > 0 ? (
                                     <p className="mt-0.5 text-xs text-zinc-400">
