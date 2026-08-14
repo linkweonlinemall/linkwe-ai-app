@@ -10,6 +10,7 @@ import {
   handleCustomerServiceSubscriptionDeleted,
   handleCustomerServiceSubscriptionInvoiceFailed,
   handleCustomerServiceSubscriptionInvoicePaid,
+  handleCustomerServiceSubscriptionUpdated,
 } from "@/lib/webhooks/customer-service-subscription";
 import { createNotification } from "@/app/actions/notifications";
 import { BASE_URL } from "@/lib/email/resend";
@@ -287,6 +288,12 @@ export async function POST(request: NextRequest) {
             pastDueSince: new Date(),
           },
         });
+        break;
+      }
+
+      case "customer.subscription.updated": {
+        const subscription = event.data.object as Stripe.Subscription;
+        await handleCustomerServiceSubscriptionUpdated(subscription);
         break;
       }
 

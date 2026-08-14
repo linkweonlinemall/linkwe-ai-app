@@ -311,9 +311,11 @@ export async function cancelMyServiceSubscription(
   if (row.status !== "ACTIVE") return { ok: false, error: "not_active" };
   if (row.cancelAtPeriodEnd) return { ok: true };
 
+  let updatedSubscription;
   try {
-    await stripe.subscriptions.update(row.stripeSubscriptionId, {
+    updatedSubscription = await stripe.subscriptions.update(row.stripeSubscriptionId, {
       cancel_at_period_end: true,
+      expand: ["items"],
     });
   } catch (e) {
     console.error("[cancelMyServiceSubscription] stripe failed", e);
@@ -322,11 +324,17 @@ export async function cancelMyServiceSubscription(
 
   await prisma.customerServiceSubscription.update({
     where: { id: row.id },
-    data: { cancelAtPeriodEnd: true },
+    data: {
+      cancelAtPeriodEnd: updatedSubscription.cancel_at_period_end,
+      ...(updatedSubscription.items.data[0]?.current_period_end
+        ? { currentPeriodEnd: new Date(updatedSubscription.items.data[0].current_period_end * 1000) }
+        : {}),
+    },
   });
 
   revalidatePath(`/service/${row.product.slug}`);
   revalidatePath("/dashboard/customer");
+  revalidatePath("/dashboard/customer/subscriptions");
   return { ok: true };
 }
 
@@ -355,9 +363,11 @@ export async function resumeMyServiceSubscription(
   if (row.status !== "ACTIVE") return { ok: false, error: "not_active" };
   if (!row.cancelAtPeriodEnd) return { ok: true };
 
+  let updatedSubscription;
   try {
-    await stripe.subscriptions.update(row.stripeSubscriptionId, {
+    updatedSubscription = await stripe.subscriptions.update(row.stripeSubscriptionId, {
       cancel_at_period_end: false,
+      expand: ["items"],
     });
   } catch (e) {
     console.error("[resumeMyServiceSubscription] stripe failed", e);
@@ -366,10 +376,16 @@ export async function resumeMyServiceSubscription(
 
   await prisma.customerServiceSubscription.update({
     where: { id: row.id },
-    data: { cancelAtPeriodEnd: false },
+    data: {
+      cancelAtPeriodEnd: updatedSubscription.cancel_at_period_end,
+      ...(updatedSubscription.items.data[0]?.current_period_end
+        ? { currentPeriodEnd: new Date(updatedSubscription.items.data[0].current_period_end * 1000) }
+        : {}),
+    },
   });
 
   revalidatePath(`/service/${row.product.slug}`);
   revalidatePath("/dashboard/customer");
+  revalidatePath("/dashboard/customer/subscriptions");
   return { ok: true };
 }

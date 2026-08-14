@@ -256,6 +256,49 @@ export async function handleCustomerServiceSubscriptionInvoiceFailed(
   }
 }
 
+export async function handleCustomerServiceSubscriptionUpdated(
+  subscription: Stripe.Subscription,
+): Promise<void> {
+  try {
+    if (subscription.metadata?.type !== CUSTOMER_SERVICE_SUBSCRIPTION_TYPE) return;
+
+    const currentPeriodEndUnix = subscription.items.data[0]?.current_period_end;
+    const status =
+      subscription.status === "active" || subscription.status === "trialing"
+        ? CustomerSubscriptionStatus.ACTIVE
+        : subscription.status === "canceled"
+          ? CustomerSubscriptionStatus.CANCELED
+          : subscription.status === "past_due" ||
+              subscription.status === "unpaid" ||
+              subscription.status === "incomplete" ||
+              subscription.status === "incomplete_expired"
+            ? CustomerSubscriptionStatus.PAST_DUE
+            : null;
+
+    const result = await prisma.customerServiceSubscription.updateMany({
+      where: { stripeSubscriptionId: subscription.id },
+      data: {
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        ...(currentPeriodEndUnix
+          ? { currentPeriodEnd: new Date(currentPeriodEndUnix * 1000) }
+          : {}),
+        ...(status ? { status } : {}),
+        ...(status === CustomerSubscriptionStatus.CANCELED
+          ? { canceledAt: new Date((subscription.canceled_at ?? Math.floor(Date.now() / 1000)) * 1000) }
+          : status === CustomerSubscriptionStatus.ACTIVE
+            ? { canceledAt: null }
+            : {}),
+      },
+    });
+
+    if (result.count === 0) {
+      console.warn("[webhook/customer-sub] updated: no row for subscription", subscription.id);
+    }
+  } catch (e) {
+    console.error("[webhook/customer-sub] updated handler error", e);
+  }
+}
+
 export async function handleCustomerServiceSubscriptionDeleted(
   subscription: Stripe.Subscription,
 ): Promise<void> {
