@@ -446,7 +446,7 @@ export default function FinanceTab({
           </span>
         </div>
         <div className="mt-3 rounded-lg border border-zinc-100 bg-zinc-50 p-2.5">
-          {subCheckoutStatus === "success" ? (
+          {subCheckoutStatus === "success" && subscriptionStatus === "ACTIVE" ? (
             <p className="mb-2 text-[11px] text-emerald-700">
               Subscription started — your plan is now active
             </p>
