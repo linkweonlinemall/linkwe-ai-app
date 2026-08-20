@@ -108,7 +108,7 @@ type Props = {
   topupRemaining: number;
 };
 
-export default function AITopupCheckout(_props: Props) {
+export default function AITopupCheckout({ topupRemaining }: Props) {
   const router = useRouter();
   const [phase, setPhase] = useState<"select" | "payment" | "success">("select");
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -117,9 +117,16 @@ export default function AITopupCheckout(_props: Props) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (phase === "success") {
-      router.refresh();
-    }
+    if (phase !== "success") return
+
+    // Stripe can confirm in the browser just before the webhook credits the
+    // store. Refresh a few times so the new balance appears without requiring
+    // the vendor to reload the page manually.
+    router.refresh()
+    const refreshTimers = [1_500, 4_000, 8_000].map((delay) =>
+      window.setTimeout(() => router.refresh(), delay),
+    )
+    return () => refreshTimers.forEach((timer) => window.clearTimeout(timer))
   }, [phase, router]);
 
   async function handleSelectBundle(key: AITopupBundleKey) {
@@ -154,7 +161,10 @@ export default function AITopupCheckout(_props: Props) {
         <div className="flex items-start gap-2">
           <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" aria-hidden />
           <p className="text-[11px] font-medium text-emerald-800">
-            Payment received — your top-up credits will appear shortly.
+            Payment received
+            {topupRemaining > 0
+              ? ` — ${topupRemaining} top-up use${topupRemaining !== 1 ? "s" : ""} available.`
+              : " — your top-up credits will appear shortly."}
           </p>
         </div>
       </div>
