@@ -1,6 +1,13 @@
-import { BookingStatus, StoreSubscriptionStatus, VendorSubscriptionPlan } from "@prisma/client";
+import {
+  BookingStatus,
+  NotificationType,
+  StoreSubscriptionStatus,
+  VendorSubscriptionPlan,
+} from "@prisma/client";
 import { NextResponse } from "next/server";
+import Stripe from "stripe";
 
+import { createNotification } from "@/app/actions/notifications";
 import { releaseBookingEarnings } from "@/lib/finance/complete-booking";
 import { releaseSplitOrderEarnings } from "@/lib/finance/complete-order";
 import { releaseTicketOrderEarnings } from "@/lib/finance/release-ticket-earnings";
@@ -69,7 +76,7 @@ export async function GET(request: Request) {
       stripeSubscriptionId: { not: null },
       pastDueSince: { lte: pastDueCutoff },
     },
-    select: { id: true, stripeSubscriptionId: true },
+    select: { id: true, ownerId: true, stripeSubscriptionId: true },
   });
   let downgraded = 0;
   for (const store of overdueStores) {
@@ -77,9 +84,13 @@ export async function GET(request: Request) {
       if (store.stripeSubscriptionId) {
         // Cancel at Stripe so it stops retrying the card. This also fires customer.subscription.deleted,
         // but that webhook's stripeSubscriptionId-match guard will no-op after we null it below.
-        await stripe.subscriptions.cancel(store.stripeSubscriptionId).catch((e) => {
-          console.error("[cron] stripe cancel failed for store", store.id, e);
-        });
+        try {
+          await stripe.subscriptions.cancel(store.stripeSubscriptionId);
+        } catch (e) {
+          const alreadyAbsent =
+            e instanceof Stripe.errors.StripeInvalidRequestError && e.code === "resource_missing";
+          if (!alreadyAbsent) throw e;
+        }
       }
       await prisma.store.updateMany({
         where: { id: store.id, subscriptionStatus: StoreSubscriptionStatus.PAST_DUE },
@@ -91,6 +102,14 @@ export async function GET(request: Request) {
           pastDueSince: null,
           autoRenew: true,
         },
+      });
+
+      await createNotification({
+        userId: store.ownerId,
+        type: NotificationType.GENERAL,
+        title: "Subscription moved to Starter",
+        body: "Your payment remained unresolved after 7 days, so your store is now on the Starter plan. You can upgrade again anytime.",
+        linkUrl: "/dashboard/vendor/finance",
       });
       downgraded++;
     } catch (e) {
