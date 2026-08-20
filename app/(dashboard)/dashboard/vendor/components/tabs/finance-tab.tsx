@@ -11,7 +11,10 @@ import Select from "@/components/ui/Select";
 import { getCommissionRate } from "@/lib/finance/commission";
 import { PLAN_PRICE_MINOR } from "@/lib/finance/plan-limits";
 import { getStorePlan } from "@/lib/finance/store-plan";
-import { isVendorBalanceDebit } from "@/lib/finance/vendor-balance";
+import {
+  isVendorBalanceDebit,
+  isVendorLedgerDebit,
+} from "@/lib/finance/vendor-balance";
 import { maskBankAccountStars } from "@/lib/format/banking";
 import { formatDate } from "@/lib/format/format-display-date-utc";
 
@@ -201,7 +204,7 @@ export default function FinanceTab({
   const ledgerActivity = ledgerEntries.filter(
     (entry) =>
       entry.entryType === "CREDIT_ORDER_SETTLEMENT" ||
-      isVendorBalanceDebit(entry.entryType),
+      isVendorLedgerDebit(entry.entryType),
   );
 
   const totalEarnedMinor = earningCredits.reduce(
@@ -663,7 +666,7 @@ export default function FinanceTab({
                 const commission = entry.commissionMinor ?? 0;
                 const net = entry.netMinor ?? entry.amountMinor;
                 const isShipping = entry.ledgerEntryType === "SHIPPING";
-                const isDebit = isVendorBalanceDebit(entry.entryType);
+                const isDebit = isVendorLedgerDebit(entry.entryType);
                 const debit = debitDisplay(entry.entryType);
                 return (
                   <div key={entry.id} className={`px-4 py-3 ${CARD} shadow-none`}>
