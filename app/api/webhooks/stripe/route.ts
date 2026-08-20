@@ -343,6 +343,21 @@ export async function POST(request: NextRequest) {
         break;
       }
 
+      case "invoice.voided": {
+        const invoice = event.data.object as Stripe.Invoice;
+        const subRef = invoice.parent?.subscription_details?.subscription;
+        const subscriptionId = typeof subRef === "string" ? subRef : (subRef?.id ?? null);
+        if (!subscriptionId) break;
+
+        try {
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          await handleVendorSubscriptionUpdated(subscription);
+        } catch (e) {
+          console.error("[webhook] could not reconcile voided subscription invoice", e);
+        }
+        break;
+      }
+
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;
         await handleCustomerServiceSubscriptionUpdated(subscription);
