@@ -66,6 +66,34 @@ async function handleSubscriptionInvoicePaid(invoice: Stripe.Invoice): Promise<v
   });
 }
 
+async function markVendorSubscriptionPastDue(subStoreId: string): Promise<void> {
+  const store = await prisma.store.findUnique({
+    where: { id: subStoreId },
+    select: { ownerId: true },
+  });
+  if (!store) return;
+
+  // Stripe can send customer.subscription.updated and invoice.payment_failed in
+  // either order. Only the first event should start the grace period and notify.
+  const updated = await prisma.store.updateMany({
+    where: { id: subStoreId, pastDueSince: null },
+    data: {
+      subscriptionStatus: StoreSubscriptionStatus.PAST_DUE,
+      pastDueSince: new Date(),
+    },
+  });
+
+  if (updated.count > 0) {
+    await createNotification({
+      userId: store.ownerId,
+      type: NotificationType.GENERAL,
+      title: "Subscription payment failed",
+      body: "Update your payment method within 7 days to keep your current LinkWe plan.",
+      linkUrl: "/dashboard/vendor/finance",
+    });
+  }
+}
+
 async function handleVendorSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {
   const subStoreId = subscription.metadata?.subscriptionStoreId;
   if (!subStoreId) return;
@@ -83,14 +111,18 @@ async function handleVendorSubscriptionUpdated(subscription: Stripe.Subscription
     data: {
       autoRenew: !subscription.cancel_at_period_end,
       ...(periodEndUnix ? { planRenewsAt: new Date(periodEndUnix * 1000) } : {}),
-      ...(status ? { subscriptionStatus: status } : {}),
-      ...(status === StoreSubscriptionStatus.PAST_DUE
-        ? { pastDueSince: new Date() }
-        : status === StoreSubscriptionStatus.ACTIVE
+      ...(status && status !== StoreSubscriptionStatus.PAST_DUE
+        ? { subscriptionStatus: status }
+        : {}),
+      ...(status === StoreSubscriptionStatus.ACTIVE
           ? { pastDueSince: null }
           : {}),
     },
   });
+
+  if (status === StoreSubscriptionStatus.PAST_DUE) {
+    await markVendorSubscriptionPastDue(subStoreId);
+  }
 }
 
 // ── Ticket order fulfilment ────────────────────────────────────────────────────
@@ -307,27 +339,7 @@ export async function POST(request: NextRequest) {
 
         const subStoreId = invoice.parent?.subscription_details?.metadata?.subscriptionStoreId;
         if (!subStoreId) break;
-
-        const store = await prisma.store.findUnique({
-          where: { id: subStoreId },
-          select: { ownerId: true },
-        });
-        const updated = await prisma.store.updateMany({
-          where: { id: subStoreId, subscriptionStatus: StoreSubscriptionStatus.ACTIVE },
-          data: {
-            subscriptionStatus: StoreSubscriptionStatus.PAST_DUE,
-            pastDueSince: new Date(),
-          },
-        });
-        if (store && updated.count > 0) {
-          await createNotification({
-            userId: store.ownerId,
-            type: NotificationType.GENERAL,
-            title: "Subscription payment failed",
-            body: "Update your payment method within 7 days to keep your current LinkWe plan.",
-            linkUrl: "/dashboard/vendor/finance",
-          });
-        }
+        await markVendorSubscriptionPastDue(subStoreId);
         break;
       }
 
