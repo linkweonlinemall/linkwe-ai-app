@@ -403,7 +403,7 @@ const UNPUBLISH_PRODUCT_TOOL: Anthropic.Tool = {
 const DELETE_PRODUCT_TOOL: Anthropic.Tool = {
   name: "delete_product",
   description:
-    "Permanently delete a product. Only use this when the vendor explicitly confirms they want to delete — always confirm before deleting. This cannot be undone.",
+    'Permanently delete a product. The server permits this only when the vendor\'s latest message is exactly "DELETE PRODUCT: <exact product name>". First identify the product, explain that deletion cannot be undone, and ask the vendor to send that exact phrase. Never call this tool before receiving it.',
   input_schema: {
     type: "object",
     properties: {
@@ -604,6 +604,62 @@ type IncomingMessage = {
 }
 
 const MAX_TOOL_ROUNDS = 12
+const MAX_INCOMING_MESSAGES = 50
+const MAX_TEXT_CHARS_PER_MESSAGE = 20_000
+const MAX_REQUEST_BYTES = 25_000_000
+
+function normalizeIncomingContent(
+  content: string | unknown[],
+): Anthropic.MessageParam["content"] | null {
+  if (typeof content === "string") {
+    return content.length <= MAX_TEXT_CHARS_PER_MESSAGE ? content : null
+  }
+  if (!Array.isArray(content) || content.length === 0) return null
+
+  const normalized: Array<Anthropic.TextBlockParam | Anthropic.ImageBlockParam> = []
+  for (const block of content) {
+    if (!block || typeof block !== "object") return null
+    const candidate = block as Record<string, unknown>
+    if (candidate.type === "text" && typeof candidate.text === "string") {
+      if (candidate.text.length > MAX_TEXT_CHARS_PER_MESSAGE) return null
+      normalized.push({ type: "text", text: candidate.text })
+      continue
+    }
+
+    const source = candidate.source as Record<string, unknown> | undefined
+    const mediaType = source?.media_type
+    if (
+      candidate.type === "image" &&
+      source?.type === "base64" &&
+      typeof source.data === "string" &&
+      source.data.length <= 10_000_000 &&
+      (mediaType === "image/jpeg" ||
+        mediaType === "image/png" ||
+        mediaType === "image/gif" ||
+        mediaType === "image/webp")
+    ) {
+      normalized.push({
+        type: "image",
+        source: { type: "base64", media_type: mediaType, data: source.data },
+      })
+      continue
+    }
+
+    // Tool and system-shaped blocks are created only inside this server route.
+    return null
+  }
+
+  return normalized
+}
+
+function incomingContentText(content: Anthropic.MessageParam["content"]): string {
+  if (typeof content === "string") return content
+  return content
+    .filter((block): block is Anthropic.TextBlockParam => block.type === "text")
+    .map((block) => block.text)
+    .join("\n")
+    .trim()
+}
 
 export async function POST(req: NextRequest) {
   const session = await getSession()
@@ -641,26 +697,55 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  const contentLength = Number(req.headers.get("content-length") ?? 0)
+  if (contentLength > MAX_REQUEST_BYTES) {
+    return new Response("Request too large", { status: 413 })
+  }
+
   const body = (await req.json()) as {
     messages?: IncomingMessage[]
     focusProductId?: string | null
     focusEventId?: string | null
     uploadedImageUrls?: string[]
   }
-  const messages: IncomingMessage[] = body.messages ?? []
-
-  let aiRemainingToSend: number | undefined
-  const last = messages.at(-1)
-  if (last?.role === "user") {
-    const usage = await consumeAIUse(store)
-    if (!usage.ok) {
-      return new Response(JSON.stringify({ error: usage.reason }), {
-        status: 429,
-        headers: { "Content-Type": "application/json" },
-      })
-    }
-    aiRemainingToSend = usage.remaining
+  const rawMessages: IncomingMessage[] = body.messages ?? []
+  if (
+    rawMessages.length === 0 ||
+    rawMessages.length > MAX_INCOMING_MESSAGES ||
+    rawMessages.some(
+      (message) => message.role !== "user" && message.role !== "assistant",
+    )
+  ) {
+    return new Response("Invalid conversation", { status: 400 })
   }
+
+  const normalizedMessages = rawMessages.map((message) => ({
+    role: message.role as "user" | "assistant",
+    content: normalizeIncomingContent(message.content),
+  }))
+  if (normalizedMessages.some((message) => message.content == null)) {
+    return new Response("Invalid conversation content", { status: 400 })
+  }
+  const messages = normalizedMessages as Array<{
+    role: "user" | "assistant"
+    content: Anthropic.MessageParam["content"]
+  }>
+
+  const last = messages.at(-1)
+  if (last?.role !== "user") {
+    return new Response("Conversation must end with a user message", {
+      status: 400,
+    })
+  }
+  const usage = await consumeAIUse(store)
+  if (!usage.ok) {
+    return new Response(JSON.stringify({ error: usage.reason }), {
+      status: 429,
+      headers: { "Content-Type": "application/json" },
+    })
+  }
+  const aiRemainingToSend = usage.remaining
+  const lastUserText = incomingContentText(last.content!)
 
   const focusProductIdFromBody =
     typeof body.focusProductId === "string"
@@ -1317,6 +1402,18 @@ export async function POST(req: NextRequest) {
           if (!product) {
             return {
               content: JSON.stringify({ ok: false, error: "Product not found" }),
+            }
+          }
+          const requiredConfirmation = `DELETE PRODUCT: ${product.name}`
+          if (
+            lastUserText.trim().toLocaleLowerCase() !==
+            requiredConfirmation.toLocaleLowerCase()
+          ) {
+            return {
+              content: JSON.stringify({
+                ok: false,
+                error: `Deletion not confirmed. Ask the vendor to send exactly: ${requiredConfirmation}`,
+              }),
             }
           }
           await prisma.product.delete({ where: { id: productId } })
