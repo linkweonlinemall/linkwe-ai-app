@@ -293,20 +293,36 @@ export async function deleteEvent(
       id: true,
       slug: true,
       ticketTypes: { select: { quantitySold: true } },
+      tickets: { select: { id: true }, take: 1 },
+      ticketOrders: { select: { id: true }, take: 1 },
     },
   });
 
   if (!event) return { error: "Event not found." };
 
-  const hasSoldTickets = event.ticketTypes.some((t) => t.quantitySold > 0);
+  const hasTicketHistory =
+    event.ticketTypes.some((t) => t.quantitySold > 0) ||
+    event.tickets.length > 0 ||
+    event.ticketOrders.length > 0;
 
-  if (hasSoldTickets) {
-    await prisma.event.update({
-      where: { id: eventId },
-      data: { status: "CANCELLED", isPublished: false },
-    });
-  } else {
-    await prisma.event.delete({ where: { id: eventId } });
+  try {
+    if (hasTicketHistory) {
+      await prisma.event.update({
+        where: { id: eventId },
+        data: { status: "CANCELLED", isPublished: false },
+      });
+    } else {
+      await prisma.$transaction([
+        prisma.eventPromoCode.deleteMany({ where: { eventId } }),
+        prisma.eventWaitlist.deleteMany({ where: { eventId } }),
+        prisma.eventTicketType.deleteMany({ where: { eventId } }),
+        prisma.event.delete({ where: { id: eventId } }),
+      ]);
+    }
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : "Failed to delete event.",
+    };
   }
 
   revalidatePath(EVENTS_PATH);

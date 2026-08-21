@@ -1727,6 +1727,8 @@ export async function POST(req: NextRequest) {
             select: {
               title: true,
               ticketTypes: { select: { quantitySold: true } },
+              tickets: { select: { id: true }, take: 1 },
+              ticketOrders: { select: { id: true }, take: 1 },
             },
           })
           if (!event) {
@@ -1743,13 +1745,16 @@ export async function POST(req: NextRequest) {
               }),
             }
           }
-          const hasSoldTickets = event.ticketTypes.some((ticket) => ticket.quantitySold > 0)
+          const hasTicketHistory =
+            event.ticketTypes.some((ticket) => ticket.quantitySold > 0) ||
+            event.tickets.length > 0 ||
+            event.ticketOrders.length > 0
           const result = await deleteEventAction(eventId)
           if ("error" in result) return { content: JSON.stringify({ error: result.error }) }
           return {
             content: JSON.stringify({
               success: true,
-              outcome: hasSoldTickets ? "cancelled" : "deleted",
+              outcome: hasTicketHistory ? "cancelled" : "deleted",
             }),
           }
         }
