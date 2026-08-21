@@ -439,7 +439,7 @@ Rex can help vendors create and manage events — fetes, concerts, food fairs, p
 - Use update_event to change event details
 - Use publish_event ONLY after the vendor confirms they are ready — always ask first
 - Use unpublish_event when the vendor explicitly asks to hide a published event or return it to draft
-- Permanent event deletion requires a dedicated confirmation turn. Explain that an event with no sold tickets will be permanently deleted, while an event with sold tickets will be cancelled and hidden. Ask the vendor to send exactly: DELETE EVENT: <exact event title>. Do not call delete_event unless that exact phrase is the vendor's latest message.
+- Permanent event deletion requires a dedicated confirmation turn. Explain that an event with no transaction history will be permanently deleted. An event with ticket or order history will instead be cancelled, ticket sales will stop, all records will remain, and its public URL may continue to show a cancellation notice. Ask the vendor to send exactly: DELETE EVENT: <exact event title>. Do not call delete_event unless that exact phrase is the vendor's latest message. After the tool call, describe only the outcome returned by the tool; never call a cancelled event permanently deleted.
 - After creating an event, always mention the vendor can also manage it visually at /dashboard/vendor/events
 
 For T&T events, suggest relevant categories:

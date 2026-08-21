@@ -605,7 +605,7 @@ const UNPUBLISH_EVENT_TOOL: Anthropic.Tool = {
 const DELETE_EVENT_TOOL: Anthropic.Tool = {
   name: "delete_event",
   description:
-    'Permanently delete an event with no sold tickets. Events with sold tickets are cancelled and hidden instead. The server permits this only when the vendor\'s latest message is exactly "DELETE EVENT: <exact event title>". First identify the event, explain the outcome cannot be undone for an unsold event, and ask for that exact phrase.',
+    'Permanently delete an event with no transaction history. Events with ticket or order history are cancelled instead: ticket sales stop, records remain, and the public URL may show a cancellation notice. The server permits this only when the vendor\'s latest message is exactly "DELETE EVENT: <exact event title>". First identify the event, explain the applicable outcome, and ask for that exact phrase.',
   input_schema: {
     type: "object",
     properties: {
@@ -1809,6 +1809,9 @@ export async function POST(req: NextRequest) {
             content: JSON.stringify({
               success: true,
               outcome: hasTicketHistory ? "cancelled" : "deleted",
+              message: hasTicketHistory
+                ? "Event cancelled. Ticket sales are disabled and all order, ticket, refund, and check-in history remains. The public event URL may show a cancellation notice. The event was not permanently deleted."
+                : "Event permanently deleted because it had no ticket or order history.",
             }),
           }
         }
