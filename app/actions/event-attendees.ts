@@ -88,6 +88,11 @@ const PAID_ADMITTABLE_TICKET_WHERE = (eventId: string): Prisma.TicketWhereInput 
   ticketOrder: { status: "PAID" },
 });
 
+const PAID_TICKET_WHERE = (eventId: string): Prisma.TicketWhereInput => ({
+  eventId,
+  ticketOrder: { status: "PAID" },
+});
+
 function countsFromGroupBy(
   admittableRows: { status: TicketStatus; _count: { _all: number } }[],
   terminalRows: { status: TicketStatus; _count: { _all: number } }[],
@@ -171,6 +176,7 @@ export async function getEventTicketCounts(
       where: {
         eventId: auth.eventId,
         status: { in: ["CANCELLED", "REFUNDED"] },
+        ticketOrder: { status: "PAID" },
       },
       _count: { _all: true },
     }),
@@ -279,7 +285,9 @@ export async function searchEventTickets(
   const page = Math.max(1, Math.floor(options.page ?? 1));
   const skip = (page - 1) * PAGE_SIZE;
 
-  const andClauses: Prisma.TicketWhereInput[] = [{ eventId: auth.eventId }];
+  const andClauses: Prisma.TicketWhereInput[] = [
+    PAID_TICKET_WHERE(auth.eventId),
+  ];
 
   const statusClause = statusWhere(status);
   if (statusClause) andClauses.push(statusClause);
