@@ -719,10 +719,10 @@ Null-safe: older orders may lack `shippingAddress`; UI falls back to `mainOrder.
 
 ### Production / launch risks (from project context)
 
-- **Neon `DATABASE_URL` rotation** flagged as security action item
-- **Migration drift:** some migrations applied manually in Neon; `_prisma_migrations` may be out of sync
+- Neon database credentials were rotated and Vercel URLs updated on 2026-08-14 (metadata reverified 2026-08-20)
+- Production migration ledger audited 2026-08-20: 75 distinct names match the repository and none are unfinished; only non-blocking drift is on the unused legacy `Service` table
 - Stripe test→live transition noted as deferred
-- Webhook error responses may leak stack traces (debugging)
+- Stripe webhook error-response leakage was resolved in `0da5970`; public responses are generic and detailed exceptions remain server-side.
 - `quantitySold` increment uses fire-and-forget `.catch` — oversell risk under load
 
 ### Partial features

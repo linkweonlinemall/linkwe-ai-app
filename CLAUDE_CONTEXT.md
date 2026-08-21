@@ -39,9 +39,9 @@ Summary of notable additions and refactors. Re-scan the repo after large merges.
 - **Formatting toolbar removed** — vestigial B/I/bullet/numbered/clear toolbar removed from full-page Rex input along with all dead helpers (`stripMarkdown`, `insertAtCursor`, `wrapSelection`, `selectionRef`, `updateSelection`, `inputFocused`).
 
 #### Open risks / TODO before public launch ⚠️
-- **SECURITY — MUST ACTION:** Neon production `DATABASE_URL` was exposed and must be **ROTATED** (Neon → reset `neondb_owner` password → update `DATABASE_URL` in Vercel → redeploy). Mark done once rotated.
-- **MIGRATION DRIFT:** migrations `20260518180000_add_completion_and_earnings` and `20260531212600_add_ticket_order` were applied to production via manual SQL in Neon editor, NOT via `prisma migrate deploy`. Prisma's `_prisma_migrations` records may be out of sync. Reconcile before launch (`prisma migrate resolve`) so a future migrate doesn't attempt a destructive reset. **NEVER run `prisma migrate dev/reset` against production.**
-- Webhook catch block returns full error message + stack (added for debugging) — trim before production hardening.
+- **RESOLVED 2026-08-14:** Neon `neondb_owner` credentials were rotated and both Vercel `DATABASE_URL` and `DIRECT_URL` were updated the same day; metadata reverified 2026-08-20 without revealing secrets.
+- **AUDITED 2026-08-20:** production has 75 distinct migration names matching the repository, with no unfinished migrations. The previously flagged completion/earnings and ticket-order migrations are recorded as applied. One non-blocking legacy drift remains: seven availability columns from a zero-step resolved migration are absent on the unused `Service` table; live services use `Product` and its availability columns are present. **Never run `prisma migrate dev/reset` against production.**
+- **RESOLVED 2026-08-13:** Stripe webhook failures return generic public errors; detailed exceptions remain only in server logs with a correlation ID (`0da5970`). Live invalid-signature response reverified 2026-08-20.
 - Zara's `quantitySold` increment uses `.catch(console.error)` (logs and continues) — potential oversell path under high volume; harden before heavy ticket sales.
 
 ---
