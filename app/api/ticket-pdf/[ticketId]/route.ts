@@ -35,6 +35,7 @@ export async function GET(
     where: {
       id: ticketId,
       ...(session.role !== "ADMIN" ? { userId: session.userId } : {}),
+      ticketOrder: { is: { status: "PAID" } },
     },
     select: {
       id: true,

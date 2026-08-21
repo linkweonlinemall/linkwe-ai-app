@@ -80,6 +80,7 @@ export async function getCustomerTicketById(
     where: {
       id: trimmedId,
       userId: session.userId,
+      ticketOrder: { is: { status: "PAID" } },
     },
     select: {
       id: true,
@@ -205,6 +206,7 @@ export async function transferTicket(
     where: {
       id: trimmedId,
       userId: session.userId,
+      ticketOrder: { is: { status: "PAID" } },
     },
     select: {
       id: true,

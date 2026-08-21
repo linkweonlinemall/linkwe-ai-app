@@ -38,7 +38,10 @@ export default async function MyTicketsPage() {
   const [userRecord, tickets] = await Promise.all([
     prisma.user.findUnique({ where: { id: session.userId } }),
     prisma.ticket.findMany({
-      where: { userId: session.userId },
+      where: {
+        userId: session.userId,
+        ticketOrder: { is: { status: "PAID" } },
+      },
       include: {
         event: {
           select: {

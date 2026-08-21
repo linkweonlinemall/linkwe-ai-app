@@ -27,6 +27,9 @@ const ticketSelect = {
   ticketType: {
     select: { name: true },
   },
+  ticketOrder: {
+    select: { status: true },
+  },
 } as const;
 
 export type TicketCheckInLookup =
@@ -317,7 +320,7 @@ export async function getTicketForCheckIn(qrToken: string): Promise<TicketCheckI
     select: ticketSelect,
   });
 
-  if (!ticket) return { found: false };
+  if (!ticket || ticket.ticketOrder?.status !== "PAID") return { found: false };
 
   const authorized = await isAuthorizedForTicket(session, ticket.event.storeId);
 
