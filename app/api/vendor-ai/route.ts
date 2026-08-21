@@ -35,6 +35,7 @@ import {
 } from "@/app/actions/events"
 import { getSession } from "@/lib/auth/session"
 import { VENDOR_SYSTEM_PROMPT } from "@/lib/chat/vendorSystemPrompt"
+import { SERVICE_CATEGORIES } from "@/lib/categories"
 import { prisma } from "@/lib/prisma"
 
 const client = new Anthropic()
@@ -268,7 +269,11 @@ const CREATE_SERVICE_TOOL: Anthropic.Tool = {
       name: { type: "string" },
       description: { type: "string" },
       shortDescription: { type: "string" },
-      category: { type: "string" },
+      category: {
+        type: "string",
+        enum: SERVICE_CATEGORIES.map(({ value }) => value),
+        description: "Canonical LinkWe service category value",
+      },
       serviceType: {
         type: "string",
         enum: ["BOOKABLE", "QUOTE", "SUBSCRIPTION", "ON_DEMAND", "VIRTUAL"],
@@ -963,6 +968,19 @@ export async function POST(req: NextRequest) {
             }
           }
 
+          const category = raw.category ? String(raw.category).trim() : null
+          const validServiceCategories = new Set<string>(
+            SERVICE_CATEGORIES.map(({ value }) => value),
+          )
+          if (category && !validServiceCategories.has(category)) {
+            return {
+              content: JSON.stringify({
+                ok: false,
+                error: `Invalid service category. Use one of: ${[...validServiceCategories].join(", ")}`,
+              }),
+            }
+          }
+
           // Generate slug
           let slug = name
             .toLowerCase()
@@ -986,12 +1004,16 @@ export async function POST(req: NextRequest) {
                 slug,
                 description: raw.description ? String(raw.description) : null,
                 shortDescription: raw.shortDescription ? String(raw.shortDescription) : null,
-                category: raw.category ? String(raw.category) : null,
+                category,
                 price,
                 tags,
                 isService: true,
-                serviceType: raw.serviceType ? (raw.serviceType as any) : "BOOKABLE",
-                serviceLocation: raw.serviceLocation ? (raw.serviceLocation as any) : null,
+                serviceType: raw.serviceType
+                  ? (raw.serviceType as Prisma.ProductCreateInput["serviceType"])
+                  : "BOOKABLE",
+                serviceLocation: raw.serviceLocation
+                  ? (raw.serviceLocation as Prisma.ProductCreateInput["serviceLocation"])
+                  : null,
                 serviceDuration: raw.serviceDuration ? Number(raw.serviceDuration) : null,
                 requiresDeposit: raw.requiresDeposit === true,
                 depositAmount: raw.depositAmount ? Number(raw.depositAmount) : null,
