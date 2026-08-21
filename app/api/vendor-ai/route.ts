@@ -43,6 +43,9 @@ import {
   TT_REGION_VALUES,
 } from "@/lib/regions/tt-regions"
 import { prisma } from "@/lib/prisma"
+import {
+  getPaidTicketSoldCountsForEvent,
+} from "@/lib/tickets/sold-counts"
 
 const client = new Anthropic()
 
@@ -1616,7 +1619,10 @@ export async function POST(req: NextRequest) {
               quantity: t.quantity,
               quantitySold: t.quantitySold,
             })),
-            totalTicketsSold: e._count.tickets,
+            totalTicketsSold: e.ticketTypes.reduce(
+              (sum, ticketType) => sum + ticketType.quantitySold,
+              0,
+            ),
             totalRevenue: e.ticketTypes.reduce(
               (s, t) => s + Number(t.price) * t.quantitySold,
               0
@@ -1631,13 +1637,48 @@ export async function POST(req: NextRequest) {
             where: { id: eventId, storeId: store.id },
             include: {
               ticketTypes: true,
-              _count: { select: { tickets: true } },
             },
           })
           if (!event) {
             return { content: JSON.stringify({ error: "Event not found." }) }
           }
-          return { content: JSON.stringify(event), focusEventId: eventId }
+          const [activePaid, historicalPaidTickets, refundedTickets, pendingTickets] =
+            await Promise.all([
+              getPaidTicketSoldCountsForEvent(event.id),
+              prisma.ticket.count({
+                where: { eventId: event.id, ticketOrder: { status: "PAID" } },
+              }),
+              prisma.ticket.count({
+                where: {
+                  eventId: event.id,
+                  status: "REFUNDED",
+                  ticketOrder: { status: "PAID" },
+                },
+              }),
+              prisma.ticket.count({
+                where: {
+                  eventId: event.id,
+                  ticketOrder: { status: "PENDING_PAYMENT" },
+                },
+              }),
+            ])
+          return {
+            content: JSON.stringify({
+              ...event,
+              ticketTypes: event.ticketTypes.map((ticketType) => ({
+                ...ticketType,
+                quantitySold: activePaid.byTicketTypeId[ticketType.id] ?? 0,
+              })),
+              ticketMetrics: {
+                activePaidTickets: activePaid.total,
+                historicalPaidTickets,
+                refundedTickets,
+                pendingPaymentTickets: pendingTickets,
+                hasTransactionHistory: historicalPaidTickets > 0,
+              },
+            }),
+            focusEventId: eventId,
+          }
         }
 
         if (toolBlock.name === "create_event") {
