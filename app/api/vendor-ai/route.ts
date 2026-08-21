@@ -32,7 +32,6 @@ import {
   createTicketType as createTicketTypeAction,
   publishEvent as publishEventAction,
   unpublishEvent as unpublishEventAction,
-  deleteEvent as deleteEventAction,
   getVendorEvents,
 } from "@/app/actions/events"
 import { getSession } from "@/lib/auth/session"
@@ -1726,6 +1725,7 @@ export async function POST(req: NextRequest) {
             where: { id: eventId, storeId: store.id },
             select: {
               title: true,
+              slug: true,
               ticketTypes: { select: { quantitySold: true } },
               tickets: { select: { id: true }, take: 1 },
               ticketOrders: { select: { id: true }, take: 1 },
@@ -1749,8 +1749,21 @@ export async function POST(req: NextRequest) {
             event.ticketTypes.some((ticket) => ticket.quantitySold > 0) ||
             event.tickets.length > 0 ||
             event.ticketOrders.length > 0
-          const result = await deleteEventAction(eventId)
-          if ("error" in result) return { content: JSON.stringify({ error: result.error }) }
+          if (hasTicketHistory) {
+            await prisma.event.update({
+              where: { id: eventId },
+              data: { status: "CANCELLED", isPublished: false },
+            })
+          } else {
+            await prisma.$transaction([
+              prisma.eventPromoCode.deleteMany({ where: { eventId } }),
+              prisma.eventWaitlist.deleteMany({ where: { eventId } }),
+              prisma.eventTicketType.deleteMany({ where: { eventId } }),
+              prisma.event.delete({ where: { id: eventId } }),
+            ])
+          }
+          revalidatePath("/dashboard/vendor/events")
+          revalidatePath(`/events/${event.slug}`)
           return {
             content: JSON.stringify({
               success: true,
