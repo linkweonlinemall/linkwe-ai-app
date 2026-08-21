@@ -32,6 +32,7 @@ import {
   createTicketType as createTicketTypeAction,
   publishEvent as publishEventAction,
   unpublishEvent as unpublishEventAction,
+  deleteEvent as deleteEventAction,
   getVendorEvents,
 } from "@/app/actions/events"
 import { getSession } from "@/lib/auth/session"
@@ -599,6 +600,19 @@ const UNPUBLISH_EVENT_TOOL: Anthropic.Tool = {
   },
 }
 
+const DELETE_EVENT_TOOL: Anthropic.Tool = {
+  name: "delete_event",
+  description:
+    'Permanently delete an event with no sold tickets. Events with sold tickets are cancelled and hidden instead. The server permits this only when the vendor\'s latest message is exactly "DELETE EVENT: <exact event title>". First identify the event, explain the outcome cannot be undone for an unsold event, and ask for that exact phrase.',
+  input_schema: {
+    type: "object",
+    properties: {
+      eventId: { type: "string", description: "The event ID to delete or cancel" },
+    },
+    required: ["eventId"],
+  },
+}
+
 const VENDOR_TOOLS: Anthropic.Tool[] = [
   CREATE_PRODUCT_TOOL,
   CREATE_SERVICE_TOOL,
@@ -626,6 +640,7 @@ const VENDOR_TOOLS: Anthropic.Tool[] = [
   CREATE_TICKET_TYPE_TOOL,
   PUBLISH_EVENT_TOOL,
   UNPUBLISH_EVENT_TOOL,
+  DELETE_EVENT_TOOL,
   UPLOAD_EVENT_COVER_TOOL,
   UPLOAD_EVENT_GALLERY_TOOL,
 ]
@@ -1703,6 +1718,40 @@ export async function POST(req: NextRequest) {
           const result = await unpublishEventAction(eventId)
           if ("error" in result) return { content: JSON.stringify({ error: result.error }) }
           return { content: JSON.stringify({ success: true }) }
+        }
+
+        if (toolBlock.name === "delete_event") {
+          const { eventId } = toolBlock.input as { eventId: string }
+          const event = await prisma.event.findFirst({
+            where: { id: eventId, storeId: store.id },
+            select: {
+              title: true,
+              ticketTypes: { select: { quantitySold: true } },
+            },
+          })
+          if (!event) {
+            return { content: JSON.stringify({ error: "Event not found." }) }
+          }
+          const requiredConfirmation = `DELETE EVENT: ${event.title}`
+          if (
+            lastUserText.trim().toLocaleLowerCase() !==
+            requiredConfirmation.toLocaleLowerCase()
+          ) {
+            return {
+              content: JSON.stringify({
+                error: `Deletion not confirmed. Ask the vendor to send exactly: ${requiredConfirmation}`,
+              }),
+            }
+          }
+          const hasSoldTickets = event.ticketTypes.some((ticket) => ticket.quantitySold > 0)
+          const result = await deleteEventAction(eventId)
+          if ("error" in result) return { content: JSON.stringify({ error: result.error }) }
+          return {
+            content: JSON.stringify({
+              success: true,
+              outcome: hasSoldTickets ? "cancelled" : "deleted",
+            }),
+          }
         }
 
         if (toolBlock.name === "upload_event_cover_image") {
