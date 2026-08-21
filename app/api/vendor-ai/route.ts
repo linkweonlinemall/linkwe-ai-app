@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server"
+import { revalidatePath } from "next/cache"
 import Anthropic from "@anthropic-ai/sdk"
 import type { Prisma } from "@prisma/client"
 import {
@@ -1333,7 +1334,7 @@ export async function POST(req: NextRequest) {
           }
           const product = await prisma.product.findFirst({
             where: { id: productId, storeId: store.id },
-            select: { id: true },
+            select: { id: true, slug: true, store: { select: { slug: true } } },
           })
           if (!product) {
             return {
@@ -1344,6 +1345,10 @@ export async function POST(req: NextRequest) {
             where: { id: productId },
             data: { isPublished: true },
           })
+          revalidatePath(`/products/${product.slug}`)
+          revalidatePath(`/store/${product.store.slug}`)
+          revalidatePath("/shop")
+          revalidatePath("/dashboard/vendor/products")
           return {
             content: JSON.stringify({
               ok: true,
@@ -1365,7 +1370,7 @@ export async function POST(req: NextRequest) {
           }
           const product = await prisma.product.findFirst({
             where: { id: productId, storeId: store.id },
-            select: { id: true },
+            select: { id: true, slug: true, store: { select: { slug: true } } },
           })
           if (!product) {
             return {
@@ -1376,6 +1381,10 @@ export async function POST(req: NextRequest) {
             where: { id: productId },
             data: { isPublished: false },
           })
+          revalidatePath(`/products/${product.slug}`)
+          revalidatePath(`/store/${product.store.slug}`)
+          revalidatePath("/shop")
+          revalidatePath("/dashboard/vendor/products")
           return {
             content: JSON.stringify({
               ok: true,
@@ -1397,7 +1406,12 @@ export async function POST(req: NextRequest) {
           }
           const product = await prisma.product.findFirst({
             where: { id: productId, storeId: store.id },
-            select: { id: true, name: true },
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              store: { select: { slug: true } },
+            },
           })
           if (!product) {
             return {
@@ -1417,6 +1431,10 @@ export async function POST(req: NextRequest) {
             }
           }
           await prisma.product.delete({ where: { id: productId } })
+          revalidatePath(`/products/${product.slug}`)
+          revalidatePath(`/store/${product.store.slug}`)
+          revalidatePath("/shop")
+          revalidatePath("/dashboard/vendor/products")
           return {
             content: JSON.stringify({
               ok: true,
