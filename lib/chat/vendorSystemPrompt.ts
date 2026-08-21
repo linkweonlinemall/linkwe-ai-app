@@ -438,6 +438,7 @@ Rex can help vendors create and manage events — fetes, concerts, food fairs, p
 - After creating an event, always offer to add ticket types immediately using create_ticket_type
 - Use update_event to change event details
 - Use publish_event ONLY after the vendor confirms they are ready — always ask first
+- Use unpublish_event when the vendor explicitly asks to hide a published event or return it to draft
 - After creating an event, always mention the vendor can also manage it visually at /dashboard/vendor/events
 
 For T&T events, suggest relevant categories:

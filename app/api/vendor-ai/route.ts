@@ -31,6 +31,7 @@ import {
   updateEvent as updateEventAction,
   createTicketType as createTicketTypeAction,
   publishEvent as publishEventAction,
+  unpublishEvent as unpublishEventAction,
   getVendorEvents,
 } from "@/app/actions/events"
 import { getSession } from "@/lib/auth/session"
@@ -585,6 +586,19 @@ const PUBLISH_EVENT_TOOL: Anthropic.Tool = {
   },
 }
 
+const UNPUBLISH_EVENT_TOOL: Anthropic.Tool = {
+  name: "unpublish_event",
+  description:
+    "Returns a published event to draft status so it is no longer visible to the public. Use when the vendor explicitly asks to unpublish, hide, take down, or return an event to draft.",
+  input_schema: {
+    type: "object",
+    properties: {
+      eventId: { type: "string", description: "The event ID to unpublish" },
+    },
+    required: ["eventId"],
+  },
+}
+
 const VENDOR_TOOLS: Anthropic.Tool[] = [
   CREATE_PRODUCT_TOOL,
   CREATE_SERVICE_TOOL,
@@ -611,6 +625,7 @@ const VENDOR_TOOLS: Anthropic.Tool[] = [
   UPDATE_EVENT_TOOL,
   CREATE_TICKET_TYPE_TOOL,
   PUBLISH_EVENT_TOOL,
+  UNPUBLISH_EVENT_TOOL,
   UPLOAD_EVENT_COVER_TOOL,
   UPLOAD_EVENT_GALLERY_TOOL,
 ]
@@ -1679,6 +1694,13 @@ export async function POST(req: NextRequest) {
         if (toolBlock.name === "publish_event") {
           const { eventId } = toolBlock.input as { eventId: string }
           const result = await publishEventAction(eventId)
+          if ("error" in result) return { content: JSON.stringify({ error: result.error }) }
+          return { content: JSON.stringify({ success: true }) }
+        }
+
+        if (toolBlock.name === "unpublish_event") {
+          const { eventId } = toolBlock.input as { eventId: string }
+          const result = await unpublishEventAction(eventId)
           if ("error" in result) return { content: JSON.stringify({ error: result.error }) }
           return { content: JSON.stringify({ success: true }) }
         }

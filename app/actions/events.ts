@@ -47,7 +47,7 @@ async function getVendorStore(userId: string) {
 async function assertEventOwnership(eventId: string, userId: string) {
   return prisma.event.findFirst({
     where: { id: eventId, store: { ownerId: userId } },
-    select: { id: true, storeId: true },
+    select: { id: true, storeId: true, slug: true },
   });
 }
 
@@ -249,6 +249,7 @@ export async function publishEvent(
     where: { id: eventId, store: { ownerId: session.userId } },
     select: {
       id: true,
+      slug: true,
       title: true,
       startDate: true,
       coverImage: true,
@@ -274,6 +275,7 @@ export async function publishEvent(
 
   revalidatePath(EVENTS_PATH);
   revalidatePath(`${EVENTS_PATH}/${eventId}/tickets`);
+  revalidatePath(`/events/${event.slug}`);
   return { success: true };
 }
 
@@ -289,6 +291,7 @@ export async function deleteEvent(
     where: { id: eventId, store: { ownerId: session.userId } },
     select: {
       id: true,
+      slug: true,
       ticketTypes: { select: { quantitySold: true } },
     },
   });
@@ -307,6 +310,7 @@ export async function deleteEvent(
   }
 
   revalidatePath(EVENTS_PATH);
+  revalidatePath(`/events/${event.slug}`);
   return { success: true };
 }
 
@@ -557,6 +561,7 @@ export async function unpublishEvent(
   });
 
   revalidatePath(EVENTS_PATH);
+  revalidatePath(`/events/${event.slug}`);
   return { success: true };
 }
 
