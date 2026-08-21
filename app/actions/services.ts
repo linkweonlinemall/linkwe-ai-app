@@ -1,7 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { BookingPaymentMode, QuotePriceType } from "@prisma/client";
+import {
+  BookingPaymentMode,
+  QuotePriceType,
+  ServiceLocation,
+  ServiceType,
+} from "@prisma/client";
 
 import { mapSubscriptionIntervalToStripe } from "@/lib/finance/subscription-interval";
 import { prisma } from "@/lib/prisma";
@@ -9,7 +14,6 @@ import { getSession } from "@/lib/auth/session";
 import { sellableStoreWhere } from "@/lib/store/sellable-store";
 import {
   findVendorServicesForAvailability,
-  vendorServiceListSelect,
 } from "@/lib/vendor/vendor-service-query";
 
 function normalizeSubscriptionInterval(
@@ -205,10 +209,15 @@ export async function createService(formData: FormData) {
       category,
       price,
       isService: true,
-      serviceType: serviceType as any,
+      serviceType: serviceType as ServiceType,
       serviceLocation:
-        serviceLocationRaw.trim().length > 0 ? (serviceLocationRaw.trim() as any) : null,
+        serviceLocationRaw.trim().length > 0
+          ? (serviceLocationRaw.trim() as ServiceLocation)
+          : null,
       serviceDuration: serviceDuration && !Number.isNaN(serviceDuration) ? serviceDuration : null,
+      ...(serviceDuration && !Number.isNaN(serviceDuration)
+        ? { durationMinutes: serviceDuration }
+        : {}),
       requiresDeposit,
       depositAmount:
         depositAmount !== null && !Number.isNaN(depositAmount) ? depositAmount : null,
@@ -389,11 +398,16 @@ export async function updateService(id: string, formData: FormData) {
       description,
       category,
       price,
-      serviceType: serviceType as any,
+      serviceType: serviceType as ServiceType,
       serviceLocation:
-        serviceLocationRaw.trim().length > 0 ? (serviceLocationRaw.trim() as any) : null,
+        serviceLocationRaw.trim().length > 0
+          ? (serviceLocationRaw.trim() as ServiceLocation)
+          : null,
       serviceDuration:
         serviceDuration && !Number.isNaN(serviceDuration) ? serviceDuration : null,
+      ...(serviceDuration && !Number.isNaN(serviceDuration)
+        ? { durationMinutes: serviceDuration }
+        : {}),
       requiresDeposit,
       depositAmount:
         depositAmount !== null && !Number.isNaN(depositAmount) ? depositAmount : null,
@@ -577,7 +591,7 @@ export async function getPublicServices(
       isArchived: false,
       store: sellableStoreWhere(),
       ...(category ? { category } : {}),
-      ...(serviceType ? { serviceType: serviceType as any } : {}),
+      ...(serviceType ? { serviceType: serviceType as ServiceType } : {}),
       ...(q
         ? {
             OR: [

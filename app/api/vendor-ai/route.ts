@@ -980,6 +980,9 @@ export async function POST(req: NextRequest) {
               }),
             }
           }
+          const serviceDuration = raw.serviceDuration
+            ? Number(raw.serviceDuration)
+            : null
 
           // Generate slug
           let slug = name
@@ -1014,7 +1017,10 @@ export async function POST(req: NextRequest) {
                 serviceLocation: raw.serviceLocation
                   ? (raw.serviceLocation as Prisma.ProductCreateInput["serviceLocation"])
                   : null,
-                serviceDuration: raw.serviceDuration ? Number(raw.serviceDuration) : null,
+                serviceDuration,
+                ...(serviceDuration ? { durationMinutes: serviceDuration } : {}),
+                isBookable:
+                  raw.serviceType === "BOOKABLE" || raw.serviceType === "VIRTUAL",
                 requiresDeposit: raw.requiresDeposit === true,
                 depositAmount: raw.depositAmount ? Number(raw.depositAmount) : null,
                 isPublished: raw.isPublished === true,
