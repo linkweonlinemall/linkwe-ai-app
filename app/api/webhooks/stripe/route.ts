@@ -126,51 +126,62 @@ async function handleVendorSubscriptionUpdated(subscription: Stripe.Subscription
 }
 
 // ── Ticket order fulfilment ────────────────────────────────────────────────────
-// Idempotent: updateMany only matches PENDING_PAYMENT; a second Stripe retry
-// gets count=0 and exits immediately without re-incrementing sold counts or
-// re-sending emails.
+// Idempotent and atomic: the PENDING_PAYMENT claim, payout timestamp, and all
+// quantitySold increments commit together. If any step fails, the transaction
+// rolls back so Stripe can safely retry the entire fulfilment.
 async function handleTicketOrderPaid(
   ticketOrderId: string,
   paymentIntentId: string,
 ): Promise<void> {
-  const updated = await prisma.ticketOrder.updateMany({
-    where: { id: ticketOrderId, status: "PENDING_PAYMENT" },
-    data: { status: "PAID", stripePaymentIntentId: paymentIntentId },
-  });
+  const order = await prisma.$transaction(async (tx) => {
+    const claimed = await tx.ticketOrder.updateMany({
+      where: { id: ticketOrderId, status: "PENDING_PAYMENT" },
+      data: { status: "PAID", stripePaymentIntentId: paymentIntentId },
+    });
 
-  if (updated.count === 0) return; // Already processed — nothing to do
+    if (claimed.count === 0) return null; // Already processed — nothing to do
 
-  const order = await prisma.ticketOrder.findUnique({
-    where: { id: ticketOrderId },
-    select: {
-      reference: true,
-      total: true,
-      userId: true,
-      event: { select: { title: true, startDate: true, endDate: true } },
-      user: { select: { email: true, fullName: true } },
-      tickets: { select: { ticketTypeId: true } },
-    },
+    const claimedOrder = await tx.ticketOrder.findUnique({
+      where: { id: ticketOrderId },
+      select: {
+        reference: true,
+        total: true,
+        userId: true,
+        event: { select: { title: true, startDate: true, endDate: true } },
+        user: { select: { email: true, fullName: true } },
+        tickets: { select: { ticketTypeId: true } },
+      },
+    });
+
+    if (!claimedOrder) {
+      throw new Error(`[webhook/ticket] claimed order not found: ${ticketOrderId}`);
+    }
+
+    await tx.ticketOrder.update({
+      where: { id: ticketOrderId },
+      data: {
+        payoutEligibleAt: getTicketPayoutEligibleAt(
+          claimedOrder.event.endDate,
+          claimedOrder.event.startDate,
+        ),
+      },
+    });
+
+    const countByType = new Map<string, number>();
+    for (const ticket of claimedOrder.tickets) {
+      countByType.set(ticket.ticketTypeId, (countByType.get(ticket.ticketTypeId) ?? 0) + 1);
+    }
+    for (const [ticketTypeId, count] of countByType) {
+      await tx.eventTicketType.update({
+        where: { id: ticketTypeId },
+        data: { quantitySold: { increment: count } },
+      });
+    }
+
+    return claimedOrder;
   });
 
   if (!order) return;
-
-  await prisma.ticketOrder.update({
-    where: { id: ticketOrderId },
-    data: {
-      payoutEligibleAt: getTicketPayoutEligibleAt(order.event.endDate, order.event.startDate),
-    },
-  });
-
-  // Increment quantitySold per ticket type — count from the tickets array
-  const countByType = new Map<string, number>();
-  for (const ticket of order.tickets) {
-    countByType.set(ticket.ticketTypeId, (countByType.get(ticket.ticketTypeId) ?? 0) + 1);
-  }
-  for (const [ticketTypeId, count] of countByType) {
-    await prisma.eventTicketType
-      .update({ where: { id: ticketTypeId }, data: { quantitySold: { increment: count } } })
-      .catch((err) => console.error("[webhook/ticket] quantitySold increment failed:", err));
-  }
 
   const ticketCount = order.tickets.length;
 

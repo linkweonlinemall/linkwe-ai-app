@@ -723,7 +723,7 @@ Null-safe: older orders may lack `shippingAddress`; UI falls back to `mainOrder.
 - Production migration ledger audited 2026-08-20: 75 distinct names match the repository and none are unfinished; only non-blocking drift is on the unused legacy `Service` table
 - Stripe test→live transition noted as deferred
 - Stripe webhook error-response leakage was resolved in `0da5970`; public responses are generic and detailed exceptions remain server-side.
-- `quantitySold` increment uses fire-and-forget `.catch` — oversell risk under load
+- Ticket `quantitySold` fulfilment was made atomic with the paid-order claim on 2026-08-20; failures roll back for safe Stripe retry
 
 ### Partial features
 

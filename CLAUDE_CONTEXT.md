@@ -42,7 +42,7 @@ Summary of notable additions and refactors. Re-scan the repo after large merges.
 - **RESOLVED 2026-08-14:** Neon `neondb_owner` credentials were rotated and both Vercel `DATABASE_URL` and `DIRECT_URL` were updated the same day; metadata reverified 2026-08-20 without revealing secrets.
 - **AUDITED 2026-08-20:** production has 75 distinct migration names matching the repository, with no unfinished migrations. The previously flagged completion/earnings and ticket-order migrations are recorded as applied. One non-blocking legacy drift remains: seven availability columns from a zero-step resolved migration are absent on the unused `Service` table; live services use `Product` and its availability columns are present. **Never run `prisma migrate dev/reset` against production.**
 - **RESOLVED 2026-08-13:** Stripe webhook failures return generic public errors; detailed exceptions remain only in server logs with a correlation ID (`0da5970`). Live invalid-signature response reverified 2026-08-20.
-- Zara's `quantitySold` increment uses `.catch(console.error)` (logs and continues) — potential oversell path under high volume; harden before heavy ticket sales.
+- **RESOLVED 2026-08-20:** paid ticket-order claiming, payout eligibility, and every `quantitySold` increment now commit atomically; failures roll back for safe Stripe retry instead of being swallowed.
 
 ---
 
