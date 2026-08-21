@@ -36,6 +36,11 @@ import {
 import { getSession } from "@/lib/auth/session"
 import { VENDOR_SYSTEM_PROMPT } from "@/lib/chat/vendorSystemPrompt"
 import { SERVICE_CATEGORIES } from "@/lib/categories"
+import {
+  canonicalRegionValue,
+  TT_REGIONS,
+  TT_REGION_VALUES,
+} from "@/lib/regions/tt-regions"
 import { prisma } from "@/lib/prisma"
 
 const client = new Anthropic()
@@ -470,7 +475,11 @@ const CREATE_EVENT_TOOL: Anthropic.Tool = {
       startTime: { type: "string", description: "Start time as HH:MM e.g. 20:00 (required)" },
       venueName: { type: "string" },
       address: { type: "string" },
-      region: { type: "string", description: "T&T region e.g. port_of_spain, san_fernando" },
+      region: {
+        type: "string",
+        enum: TT_REGIONS.map(({ value }) => value),
+        description: "Canonical T&T region value, e.g. port of spain or san fernando",
+      },
       description: { type: "string" },
       isOnline: { type: "boolean" },
       capacity: { type: "number" },
@@ -499,7 +508,10 @@ const UPDATE_EVENT_TOOL: Anthropic.Tool = {
       description: { type: "string" },
       venueName: { type: "string" },
       address: { type: "string" },
-      region: { type: "string" },
+      region: {
+        type: "string",
+        enum: TT_REGIONS.map(({ value }) => value),
+      },
       isOnline: { type: "boolean" },
       capacity: { type: "number" },
       dressCode: { type: "string" },
@@ -613,6 +625,12 @@ const MAX_TOOL_ROUNDS = 12
 const MAX_INCOMING_MESSAGES = 50
 const MAX_TEXT_CHARS_PER_MESSAGE = 20_000
 const MAX_REQUEST_BYTES = 25_000_000
+
+function normalizeVendorEventRegion(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null
+  const canonical = canonicalRegionValue(value.replaceAll("_", " "))
+  return TT_REGION_VALUES.has(canonical) ? canonical : null
+}
 
 function forcedProductActionTool(
   userText: string,
@@ -1595,6 +1613,15 @@ export async function POST(req: NextRequest) {
 
         if (toolBlock.name === "create_event") {
           const input = toolBlock.input as Record<string, unknown>
+          if (input.region != null) {
+            const region = normalizeVendorEventRegion(input.region)
+            if (!region) {
+              return {
+                content: JSON.stringify({ error: "Invalid Trinidad & Tobago region." }),
+              }
+            }
+            input.region = region
+          }
           const fd = new FormData()
           for (const [k, v] of Object.entries(input)) {
             if (v !== undefined && v !== null) fd.set(k, String(v))
@@ -1614,6 +1641,15 @@ export async function POST(req: NextRequest) {
         if (toolBlock.name === "update_event") {
           const input = toolBlock.input as Record<string, unknown>
           const { eventId, ...fields } = input as { eventId: string } & Record<string, unknown>
+          if (fields.region != null) {
+            const region = normalizeVendorEventRegion(fields.region)
+            if (!region) {
+              return {
+                content: JSON.stringify({ error: "Invalid Trinidad & Tobago region." }),
+              }
+            }
+            fields.region = region
+          }
           const fd = new FormData()
           for (const [k, v] of Object.entries(fields)) {
             if (v !== undefined && v !== null) fd.set(k, String(v))
