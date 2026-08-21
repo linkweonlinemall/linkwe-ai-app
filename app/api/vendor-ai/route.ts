@@ -609,6 +609,23 @@ const MAX_INCOMING_MESSAGES = 50
 const MAX_TEXT_CHARS_PER_MESSAGE = 20_000
 const MAX_REQUEST_BYTES = 25_000_000
 
+function forcedProductActionTool(
+  userText: string,
+): "publish_product" | "unpublish_product" | null {
+  // When the vendor gives an explicit product ID and an immediate publish-state
+  // command, require the matching tool. This prevents a text-only success claim
+  // from being returned without performing the requested database mutation.
+  const hasProductId = /\bproduct\s+id\s+[a-z0-9_-]+\b/i.test(userText)
+  if (!hasProductId) return null
+  if (/\bunpublish\b|\btake\s+(?:it|this product)\s+offline\b/i.test(userText)) {
+    return "unpublish_product"
+  }
+  if (/\bpublish\b|\bmake\s+(?:it|this product)\s+live\b/i.test(userText)) {
+    return "publish_product"
+  }
+  return null
+}
+
 function normalizeIncomingContent(
   content: string | unknown[],
 ): Anthropic.MessageParam["content"] | null {
@@ -1815,6 +1832,7 @@ If SYSTEM notes further down report an issue with attaching to a product gallery
 
         let currentMessages: Anthropic.MessageParam[] = cleanMessages
         let toolRound = 0
+        const requiredFirstTool = forcedProductActionTool(lastUserText)
         let promptTokensTotal = 0
         let completionTokensTotal = 0
         let cacheCreationTokens = 0
@@ -1830,7 +1848,10 @@ If SYSTEM notes further down report an issue with attaching to a product gallery
             max_tokens: 4096,
             system: systemBlocks,
             tools: toolsWithCache,
-            tool_choice: { type: "auto" },
+            tool_choice:
+              toolRound === 1 && requiredFirstTool
+                ? { type: "tool", name: requiredFirstTool }
+                : { type: "auto" },
             messages: currentMessages,
           })
 
