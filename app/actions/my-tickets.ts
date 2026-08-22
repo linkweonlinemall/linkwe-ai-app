@@ -211,13 +211,14 @@ export async function transferTicket(
     select: {
       id: true,
       status: true,
+      transferredAt: true,
       ticketNumber: true,
       pricePaidMinor: true,
       ticketOrder: {
         select: { reference: true },
       },
       event: {
-        select: { title: true },
+        select: { title: true, status: true, startDate: true },
       },
     },
   });
@@ -231,10 +232,32 @@ export async function transferTicket(
     };
   }
 
+  if (ticket.transferredAt) {
+    return { ok: false, reason: "This ticket has already been transferred." };
+  }
+
+  if (ticket.event.status === "CANCELLED") {
+    return { ok: false, reason: "Tickets for a cancelled event can't be transferred." };
+  }
+
+  if (ticket.event.startDate <= new Date()) {
+    return { ok: false, reason: "Tickets can't be transferred after the event starts." };
+  }
+
   const newQrToken = randomUUID();
 
-  await prisma.ticket.update({
-    where: { id: ticket.id },
+  const updated = await prisma.ticket.updateMany({
+    where: {
+      id: ticket.id,
+      userId: session.userId,
+      status: "VALID",
+      transferredAt: null,
+      ticketOrder: { status: "PAID" },
+      event: {
+        status: { not: "CANCELLED" },
+        startDate: { gt: new Date() },
+      },
+    },
     data: {
       holderName: trimmedName,
       holderEmail: trimmedEmail,
@@ -243,6 +266,13 @@ export async function transferTicket(
       transferredToName: trimmedName,
     },
   });
+
+  if (updated.count !== 1) {
+    return {
+      ok: false,
+      reason: "This ticket changed before the transfer completed. Refresh and try again.",
+    };
+  }
 
   let emailNote: string | undefined;
   try {
