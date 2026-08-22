@@ -39,6 +39,8 @@ export async function validatePromoCode(
     return { ok: false, reason: INVALID_PROMO_MESSAGE };
   }
 
+  const now = new Date();
+
   const row = await prisma.eventPromoCode.findUnique({
     where: { eventId_code: { eventId: trimmedId, code: normalized } },
     select: {
@@ -49,10 +51,29 @@ export async function validatePromoCode(
       expiresAt: true,
       maxUses: true,
       usedCount: true,
+      _count: {
+        select: {
+          ticketOrders: {
+            where: {
+              status: "PENDING_PAYMENT",
+              promoReservationExpiresAt: { gt: now },
+            },
+          },
+        },
+      },
     },
   });
 
-  if (!row || !isPromoCodeRedeemable(row)) {
+  if (
+    !row ||
+    !isPromoCodeRedeemable(
+      {
+        ...row,
+        usedCount: row.usedCount + row._count.ticketOrders,
+      },
+      now,
+    )
+  ) {
     return { ok: false, reason: INVALID_PROMO_MESSAGE };
   }
 

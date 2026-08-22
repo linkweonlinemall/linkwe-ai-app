@@ -29,11 +29,49 @@ type PromoRedeemRow = {
   usedCount: number;
 };
 
-function isPromoCodeRedeemable(row: PromoRedeemRow, now: Date): boolean {
+const PROMO_RESERVATION_MINUTES = 30;
+
+function isPromoCodeRedeemable(
+  row: PromoRedeemRow,
+  now: Date,
+  reservedCount = 0,
+): boolean {
   if (!row.active) return false;
   if (row.expiresAt != null && row.expiresAt <= now) return false;
-  if (row.maxUses != null && row.usedCount >= row.maxUses) return false;
+  if (row.maxUses != null && row.usedCount + reservedCount >= row.maxUses) return false;
   return true;
+}
+
+async function cancelExpiredPromoReservations(eventId: string, now: Date): Promise<void> {
+  const expired = await prisma.ticketOrder.findMany({
+    where: {
+      eventId,
+      status: "PENDING_PAYMENT",
+      promoCodeId: { not: null },
+      promoReservationExpiresAt: { lte: now },
+    },
+    select: { id: true, stripePaymentIntentId: true },
+  });
+
+  for (const order of expired) {
+    if (order.stripePaymentIntentId) {
+      try {
+        const intent = await stripe.paymentIntents.retrieve(order.stripePaymentIntentId);
+        if (intent.status === "succeeded") continue;
+        if (intent.status !== "canceled") {
+          await stripe.paymentIntents.cancel(order.stripePaymentIntentId);
+        }
+      } catch (error) {
+        console.error("[ticket-checkout] expired promo reservation cleanup", error);
+        continue;
+      }
+    }
+
+    await prisma.ticketOrder.updateMany({
+      where: { id: order.id, status: "PENDING_PAYMENT" },
+      data: { status: "CANCELLED", promoReservationExpiresAt: null },
+    });
+  }
 }
 
 function computePromoDiscountMinor(
@@ -236,6 +274,10 @@ export async function createTicketPaymentIntent(
   const reference = `TKT-${String(orderCount + 1).padStart(4, "0")}`;
   const normalizedPromoCode = promoCode?.trim().toUpperCase() || null;
 
+  if (normalizedPromoCode) {
+    await cancelExpiredPromoReservations(eventId, now);
+  }
+
   const txOptions = {
     isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
   } as const;
@@ -272,7 +314,13 @@ export async function createTicketPaymentIntent(
           },
         });
 
-        if (!promo || !isPromoCodeRedeemable(promo, now)) {
+        const reservedCount = promo
+          ? await tx.ticketOrder.count({
+              where: { promoCodeId: promo.id, status: "PENDING_PAYMENT" },
+            })
+          : 0;
+
+        if (!promo || !isPromoCodeRedeemable(promo, now, reservedCount)) {
           throw new PromoInvalidError();
         }
 
@@ -311,12 +359,18 @@ export async function createTicketPaymentIntent(
       );
 
       const freeOrder = orderTotalMinor === 0;
+      const promoReservationExpiresAt =
+        promoId && !freeOrder
+          ? new Date(now.getTime() + PROMO_RESERVATION_MINUTES * 60 * 1000)
+          : null;
 
       const created = await tx.ticketOrder.create({
         data: {
           reference,
           userId: session.userId,
           eventId,
+          promoCodeId: promoId,
+          promoReservationExpiresAt,
           status: freeOrder ? "PAID" : "PENDING_PAYMENT",
           subtotal: subtotalMinor,
           total: orderTotalMinor,
@@ -333,7 +387,7 @@ export async function createTicketPaymentIntent(
         }
       }
 
-      if (promoId) {
+      if (promoId && freeOrder) {
         await tx.eventPromoCode.update({
           where: { id: promoId },
           data: { usedCount: { increment: 1 } },

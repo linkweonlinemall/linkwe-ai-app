@@ -136,7 +136,11 @@ async function handleTicketOrderPaid(
   const order = await prisma.$transaction(async (tx) => {
     const claimed = await tx.ticketOrder.updateMany({
       where: { id: ticketOrderId, status: "PENDING_PAYMENT" },
-      data: { status: "PAID", stripePaymentIntentId: paymentIntentId },
+      data: {
+        status: "PAID",
+        stripePaymentIntentId: paymentIntentId,
+        promoReservationExpiresAt: null,
+      },
     });
 
     if (claimed.count === 0) return null; // Already processed — nothing to do
@@ -147,6 +151,7 @@ async function handleTicketOrderPaid(
         reference: true,
         total: true,
         userId: true,
+        promoCodeId: true,
         event: { select: { title: true, startDate: true, endDate: true } },
         user: { select: { email: true, fullName: true } },
         tickets: { select: { ticketTypeId: true } },
@@ -155,6 +160,13 @@ async function handleTicketOrderPaid(
 
     if (!claimedOrder) {
       throw new Error(`[webhook/ticket] claimed order not found: ${ticketOrderId}`);
+    }
+
+    if (claimedOrder.promoCodeId) {
+      await tx.eventPromoCode.update({
+        where: { id: claimedOrder.promoCodeId },
+        data: { usedCount: { increment: 1 } },
+      });
     }
 
     await tx.ticketOrder.update({
