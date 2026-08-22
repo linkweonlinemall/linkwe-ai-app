@@ -54,8 +54,16 @@ export default async function TicketTypesPage({ params }: Props) {
 
   if (!event) redirect("/dashboard/vendor/events");
 
-  const [paidSold, promoCodesResult] = await Promise.all([
+  const [paidSold, paidRevenue, promoCodesResult] = await Promise.all([
     getPaidTicketSoldCountsForEvent(event.id),
+    prisma.ticket.aggregate({
+      where: {
+        eventId: event.id,
+        status: { notIn: ["REFUNDED", "CANCELLED"] },
+        ticketOrder: { status: "PAID" },
+      },
+      _sum: { pricePaidMinor: true },
+    }),
     listPromoCodes(event.id),
   ]);
 
@@ -121,6 +129,7 @@ export default async function TicketTypesPage({ params }: Props) {
         <TicketTypesClient
           eventId={id}
           eventStatus={event.status}
+          initialRevenueMinor={paidRevenue._sum.pricePaidMinor ?? 0}
           initialTicketTypes={event.ticketTypes.map((tt) => ({
             ...tt,
             quantitySold: paidSold.byTicketTypeId[tt.id] ?? 0,

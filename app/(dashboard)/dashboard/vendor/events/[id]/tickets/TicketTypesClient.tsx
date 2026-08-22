@@ -256,10 +256,12 @@ function TicketForm({
 export function TicketTypesClient({
   eventId,
   eventStatus,
+  initialRevenueMinor,
   initialTicketTypes,
 }: {
   eventId: string;
   eventStatus: string;
+  initialRevenueMinor: number;
   initialTicketTypes: SerializedTicketType[];
 }) {
   const [isPending, startTransition] = useTransition();
@@ -327,7 +329,7 @@ export function TicketTypesClient({
 
   const totalQty = ticketTypes.reduce((s, t) => s + t.quantity, 0);
   const totalSold = ticketTypes.reduce((s, t) => s + t.quantitySold, 0);
-  const totalRevenue = ticketTypes.reduce((s, t) => s + t.price * t.quantitySold, 0);
+  const totalRevenue = initialRevenueMinor / 100;
 
   return (
     <>
