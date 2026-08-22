@@ -182,7 +182,7 @@ Single shared `vendorReadiness(vendor)` function drives the sidebar badge (`N/8`
 
 #### Finance, cron, deploy
 - **`lib/finance/commission.ts`** — Plan rates (`STARTER` / `GROWTH` / `PRO`) for product vs service; `calculateEarnings`, minor-unit helpers.
-- **`GET /api/cron/auto-complete`** — Auto-complete bookings (`autoCompleteAt`) and `DELIVERED` split orders; `x-cron-secret: CRON_SECRET`.
+- **`GET /api/cron/auto-complete`** — Auto-complete bookings (`autoCompleteAt`) and `DELIVERED` split orders; accepts Vercel's `Authorization: Bearer CRON_SECRET` and `x-cron-secret: CRON_SECRET` for controlled manual runs.
 - **`vercel.json`** — Cron schedule `0 2 * * *` (daily 02:00 UTC).
 
 #### Shop grid (mobile)
@@ -217,7 +217,7 @@ Single shared `vendorReadiness(vendor)` function drives the sidebar badge (`N/8`
 ### Finance & completion
 - **`lib/finance/commission.ts`** — `getCommissionRate`, `calculateEarnings`, `ttdToMinor` / `minorToTtd` by plan (`STARTER` / `GROWTH` / `PRO`) and item type (product vs service).
 - **`lib/finance/complete-booking.ts`**, **`complete-order.ts`**, **`release-earnings.ts`**, **`booking-payment.ts`** — Earnings release after completion; bookings use commission on release.
-- **`GET /api/cron/auto-complete`** — `app/api/cron/auto-complete/route.ts`: releases earnings for bookings and `DELIVERED` split orders past `autoCompleteAt`; `x-cron-secret: CRON_SECRET`; scheduled in **`vercel.json`** at `0 2 * * *` (daily).
+- **`GET /api/cron/auto-complete`** — `app/api/cron/auto-complete/route.ts`: releases earnings for bookings and `DELIVERED` split orders past `autoCompleteAt`; Vercel sends `Authorization: Bearer CRON_SECRET`, with `x-cron-secret` retained for controlled manual runs; scheduled in **`vercel.json`** at `0 2 * * *` (daily).
 
 ### Booking payments & completion
 - **`app/actions/booking.ts`** — Stripe PaymentIntents for full/deposit booking pay; `confirmBookingPayment`; integrates `lib/finance/booking-payment.ts` on success (webhook + client retry).

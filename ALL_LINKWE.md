@@ -480,7 +480,7 @@ Single source: `PLAN_LIMITS`, `PLAN_PRICE_MINOR`. Plan resolution: `lib/finance/
 
 **Webhook `invoice.paid`:** → ACTIVE, clears `pastDueSince`, updates `planRenewsAt`.
 
-**Cron** (`app/api/cron/auto-complete/route.ts`, `GRACE_DAYS = 7`):
+**Cron** (`app/api/cron/auto-complete/route.ts`, `GRACE_DAYS = 7`): Vercel invokes it with `Authorization: Bearer $CRON_SECRET`; `x-cron-secret` is also accepted for controlled manual runs.
 - Finds `PAST_DUE` + `stripeSubscriptionId` + `pastDueSince <= now - 7 days`
 - `stripe.subscriptions.cancel(id)` then DB reset to STARTER/NONE, clear Stripe fields, `autoRenew: true`
 

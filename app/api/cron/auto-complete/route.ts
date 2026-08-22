@@ -15,12 +15,19 @@ import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe/stripe";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const GRACE_DAYS = 7;
 
 export async function GET(request: Request) {
-  const secret = request.headers.get("x-cron-secret");
-  if (!secret || secret !== process.env.CRON_SECRET) {
+  const cronSecret = process.env.CRON_SECRET;
+  const authorization = request.headers.get("authorization");
+  const manualSecret = request.headers.get("x-cron-secret");
+  const isAuthorized =
+    Boolean(cronSecret) &&
+    (authorization === `Bearer ${cronSecret}` || manualSecret === cronSecret);
+
+  if (!isAuthorized) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

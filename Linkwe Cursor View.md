@@ -1054,7 +1054,7 @@ Null-safe: older orders may lack `shippingAddress`; UI falls back to `mainOrder.
 
 | Route | Schedule (Vercel cron) | Auth |
 |-------|------------------------|------|
-| `GET /api/cron/auto-complete` | `0 2 * * *` (daily 02:00 UTC) | Header `x-cron-secret` must equal `process.env.CRON_SECRET`; else 401 |
+| `GET /api/cron/auto-complete` | `0 2 * * *` (daily 02:00 UTC) | Vercel `Authorization: Bearer CRON_SECRET` or controlled manual `x-cron-secret` must match; else 401 |
 
 **Implementation:** `app/api/cron/auto-complete/route.ts` (`export const runtime = "nodejs"`)
 
