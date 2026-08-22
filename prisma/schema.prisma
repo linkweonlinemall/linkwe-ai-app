@@ -690,6 +690,7 @@ model SplitOrder {
   dockBay                  DockBay?             @relation("BayAssignment")
 
   @@index([mainOrderId])
+  @@unique([mainOrderId, storeId])
   @@index([status])
   @@index([storeId, status])
   @@index([shippingBundleId])

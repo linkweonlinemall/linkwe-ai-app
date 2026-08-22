@@ -217,6 +217,28 @@ export async function createSplitOrdersFromMainOrder(mainOrderId: string): Promi
       select: { referenceNumber: true },
     });
 
+    for (const item of mainOrder.items) {
+      if (!item.productId) continue;
+
+      const product = await tx.product.findUnique({
+        where: { id: item.productId },
+        select: { stock: true },
+      });
+      if (product?.stock === null || product?.stock === undefined) continue;
+
+      const decremented = await tx.product.updateMany({
+        where: {
+          id: item.productId,
+          stock: { gte: item.quantity },
+        },
+        data: { stock: { decrement: item.quantity } },
+      });
+
+      if (decremented.count === 0) {
+        throw new Error(`Split order: insufficient stock for product ${item.productId}`);
+      }
+    }
+
     for (const [storeId, items] of itemsByStore.entries()) {
       const subtotalMinor = items.reduce((sum, item) => sum + item.priceMinor * item.quantity, 0);
 
