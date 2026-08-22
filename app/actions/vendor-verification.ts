@@ -2,25 +2,37 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { AccountType } from "@prisma/client";
 
 import { getSession } from "@/lib/auth/session";
 import { saveKycDocumentUpload } from "@/lib/onboarding/save-kyc-upload";
 import { prisma } from "@/lib/prisma";
+import { getVendorReadiness } from "@/lib/vendor/readiness";
 
 export async function uploadIdDocument(formData: FormData) {
   const session = await getSession();
   if (!session || session.role !== "VENDOR") redirect("/login");
 
   const file = formData.get("idDocument") as File | null;
+  const selfie = formData.get("selfieWithId") as File | null;
   if (!file || file.size === 0) return { ok: false as const, error: "No file provided" };
+  if (!selfie || selfie.size === 0) {
+    return { ok: false as const, error: "Upload a clear selfie holding the same ID" };
+  }
+  if (!selfie.type.startsWith("image/")) {
+    return { ok: false as const, error: "The selfie must be an image" };
+  }
 
   const saved = await saveKycDocumentUpload(file);
   if (!saved.ok) return { ok: false as const, error: saved.error };
+  const savedSelfie = await saveKycDocumentUpload(selfie);
+  if (!savedSelfie.ok) return { ok: false as const, error: savedSelfie.error };
 
   await prisma.user.update({
     where: { id: session.userId },
     data: {
       idDocumentUrl: saved.publicPath,
+      selfieWithIdUrl: savedSelfie.publicPath,
       idVerificationStatus: "PENDING",
     },
   });
@@ -46,6 +58,8 @@ export async function savePayoutDetails(formData: FormData) {
   const accountName = String(formData.get("accountName") ?? "").trim();
   const accountNumberSubmitted = String(formData.get("accountNumber") ?? "").trim();
   const accountType = String(formData.get("accountType") ?? "").trim();
+  const normalizedAccountType: AccountType | null =
+    accountType === "SAVINGS" || accountType === "CHEQUING" ? accountType : null;
 
   const existingBank = await prisma.vendorBankDetails.findUnique({
     where: { userId: session.userId },
@@ -67,21 +81,21 @@ export async function savePayoutDetails(formData: FormData) {
       bankName,
       accountName,
       accountNumber,
-      accountType: (accountType as any) || null,
+      accountType: normalizedAccountType,
     },
     update: {
       bankName,
       accountName,
       accountNumber,
-      accountType: (accountType as any) || null,
+      accountType: normalizedAccountType,
     },
   });
 
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
-    select: { idDocumentUrl: true },
+    select: { idDocumentUrl: true, selfieWithIdUrl: true },
   });
-  if (user?.idDocumentUrl) {
+  if (user?.idDocumentUrl && user.selfieWithIdUrl) {
     await prisma.store.updateMany({
       where: { ownerId: session.userId },
       data: { status: "PENDING_APPROVAL" },
@@ -95,6 +109,36 @@ export async function savePayoutDetails(formData: FormData) {
 export async function adminVerifyId(userId: string, approve: boolean) {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/login");
+
+  if (approve) {
+    const vendor = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        idDocumentUrl: true,
+        selfieWithIdUrl: true,
+        phone: true,
+        bankDetails: { select: { bankName: true, accountName: true, accountNumber: true } },
+        storesOwned: {
+          select: { logoUrl: true, description: true },
+          take: 1,
+        },
+      },
+    });
+    if (!vendor) return { ok: false as const, error: "Vendor not found." };
+    const readiness = getVendorReadiness({
+      idDocumentUrl: vendor.idDocumentUrl,
+      selfieWithIdUrl: vendor.selfieWithIdUrl,
+      phone: vendor.phone,
+      bankDetails: vendor.bankDetails,
+      store: vendor.storesOwned[0] ?? null,
+    });
+    if (!readiness.ready) {
+      return {
+        ok: false as const,
+        error: `Approval blocked. Missing: ${readiness.checks.filter((check) => !check.ok).map((check) => check.label).join(", ")}.`,
+      };
+    }
+  }
 
   await prisma.user.update({
     where: { id: userId },

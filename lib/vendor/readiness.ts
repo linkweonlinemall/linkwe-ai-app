@@ -1,13 +1,14 @@
 /** Minimal vendor + store shape for approval-readiness checks on already-loaded rows. */
 export type VendorReadinessInput = {
   idDocumentUrl: string | null;
+  selfieWithIdUrl: string | null;
   phone: string | null;
   bankDetails: { bankName: string; accountName: string; accountNumber: string } | null;
   store: { logoUrl: string | null; description: string | null } | null;
 };
 
 export type VendorReadinessCheck = {
-  id: "id_document" | "logo" | "description" | "bank" | "phone";
+  id: "id_document" | "selfie_with_id" | "logo" | "description" | "bank" | "phone";
   label: string;
   ok: boolean;
 };
@@ -22,17 +23,18 @@ function hasBankDetails(bankDetails: VendorReadinessInput["bankDetails"]): boole
 }
 
 /**
- * A vendor is ready for admin ID approval when all five profile/KYC items are present.
+ * A vendor is ready for manual admin approval when all six profile/KYC items are present.
  * Does not consider idVerificationStatus, store ACTIVE status, gallery, or products.
  */
 export function getVendorReadiness(input: VendorReadinessInput): {
   checks: VendorReadinessCheck[];
   pass: number;
-  total: 5;
+  total: 6;
   ready: boolean;
 } {
   const checks: VendorReadinessCheck[] = [
     { id: "id_document", label: "ID document", ok: Boolean(input.idDocumentUrl) },
+    { id: "selfie_with_id", label: "Selfie holding ID", ok: Boolean(input.selfieWithIdUrl) },
     { id: "logo", label: "Store logo", ok: Boolean(input.store?.logoUrl) },
     {
       id: "description",
@@ -48,7 +50,7 @@ export function getVendorReadiness(input: VendorReadinessInput): {
   return {
     checks,
     pass,
-    total: 5,
-    ready: pass === 5,
+    total: 6,
+    ready: pass === 6,
   };
 }

@@ -729,6 +729,7 @@ Some migrations were hand-applied to Neon before `_prisma_migrations` sync (`CLA
 - `20260622120000_add_subscription_ledger_types` — DEBIT_SUBSCRIPTION, SUBSCRIPTION enum
 - `20260623120000_add_store_past_due_since` — `past_due_since` column
 - `20260624120000_add_store_auto_renew` — `auto_renew` boolean default true
+- `20260822200000_add_vendor_selfie_with_id` — adds the selfie-holding-ID evidence required for manual vendor KYC review
 
 ---
 

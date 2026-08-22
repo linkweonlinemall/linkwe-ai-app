@@ -122,13 +122,24 @@ export async function saveBusinessOnboardingStep2(
     return { error: "Upload a photo or PDF of your ID." };
   }
 
+  const selfie = formData.get("selfieWithId");
+  if (!(selfie instanceof File) || selfie.size === 0) {
+    return { error: "Upload a clear selfie holding the same ID." };
+  }
+  if (!selfie.type.startsWith("image/")) {
+    return { error: "The selfie must be a JPEG, PNG, or WebP image." };
+  }
+
   const saved = await saveKycDocumentUpload(file);
   if (!saved.ok) return { error: saved.error };
+  const savedSelfie = await saveKycDocumentUpload(selfie);
+  if (!savedSelfie.ok) return { error: savedSelfie.error };
 
   await prisma.user.update({
     where: { id: user!.id },
     data: {
       idDocumentUrl: saved.publicPath,
+      selfieWithIdUrl: savedSelfie.publicPath,
       idVerificationStatus: "PENDING",
     },
   });

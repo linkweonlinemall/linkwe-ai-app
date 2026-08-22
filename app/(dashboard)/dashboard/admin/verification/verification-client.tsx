@@ -14,6 +14,7 @@ export type VerificationVendor = {
   email: string;
   phone: string | null;
   idDocumentUrl: string | null;
+  selfieWithIdUrl: string | null;
   idVerificationStatus: IdVerificationStatus;
   createdAt: Date;
   bankDetails: {
@@ -111,6 +112,7 @@ function readinessForVendor(vendor: VerificationVendor) {
   const store = vendor.storesOwned[0] ?? null;
   return getVendorReadiness({
     idDocumentUrl: vendor.idDocumentUrl,
+    selfieWithIdUrl: vendor.selfieWithIdUrl,
     phone: vendor.phone,
     bankDetails: vendor.bankDetails
       ? {
@@ -133,6 +135,7 @@ function findVendorById(
 
 const READINESS_CHIP_SHORT: Record<VendorReadinessCheck["id"], string> = {
   id_document: "ID",
+  selfie_with_id: "Selfie",
   logo: "Logo",
   description: "Description",
   bank: "Bank",
@@ -267,16 +270,20 @@ export default function VerificationClient({ pending, reviewed }: Props) {
             .map((c) => c.label);
           return `• ${v.fullName} — missing: ${missing.join(", ")}`;
         });
-        const confirmed = window.confirm(
-          `${notReady.length} of ${selected.length} selected vendor${selected.length !== 1 ? "s are" : " is"} not ready:\n\n${lines.join("\n")}\n\nApprove all anyway?`,
+        window.alert(
+          `${notReady.length} selected vendor${notReady.length !== 1 ? "s are" : " is"} missing required evidence:\n\n${lines.join("\n")}\n\nApproval is blocked until all evidence is complete.`,
         );
-        if (!confirmed) return;
+        return;
       }
     }
 
     setLoading(true);
     for (const id of selected) {
-      await adminVerifyId(id, approve);
+      const result = await adminVerifyId(id, approve);
+      if (!result.ok) {
+        window.alert(result.error);
+        break;
+      }
     }
     setSelected([]);
     setLoading(false);
@@ -290,17 +297,19 @@ export default function VerificationClient({ pending, reviewed }: Props) {
         const readiness = readinessForVendor(vendor);
         if (!readiness.ready) {
           const missing = readiness.checks.filter((c) => !c.ok).map((c) => c.label);
-          const confirmed = window.confirm(
-            `This vendor is missing: ${missing.join(", ")}. Approve anyway?`,
-          );
-          if (!confirmed) return;
+          window.alert(`Approval is blocked. Missing: ${missing.join(", ")}.`);
+          return;
         }
       }
     }
 
     setLoading(true);
-    await adminVerifyId(id, approve);
+    const result = await adminVerifyId(id, approve);
     setLoading(false);
+    if (!result.ok) {
+      window.alert(result.error);
+      return;
+    }
     router.refresh();
   }
 
@@ -538,7 +547,7 @@ export default function VerificationClient({ pending, reviewed }: Props) {
         <div>
           <h2 className="text-xl font-bold text-zinc-900">ID Verification</h2>
           <p className="mt-0.5 text-sm text-zinc-500">
-            {pending.length} pending · {readyCount} ready to approve
+            {pending.length} pending · {readyCount} evidence-complete for manual review
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -595,7 +604,7 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                     filter === "eligible" ? `${tw.bgScarlet} text-white` : "text-zinc-500 hover:bg-zinc-100"
                   }`}
                 >
-                  Ready ({readyCount})
+                  Evidence complete ({readyCount})
                 </button>
                 <button
                   type="button"
@@ -720,6 +729,11 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                   </div>
 
                   <ReadinessStrip readiness={selectedReadiness} />
+                  {selectedReadiness.ready ? (
+                    <p className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-medium text-sky-800">
+                      Documents complete — manual authenticity and face-match review required before approval.
+                    </p>
+                  ) : null}
                 </div>
 
                 {/* Dossier body */}
@@ -729,7 +743,7 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                     <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
                       Verification evidence
                     </p>
-                    <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+                    <div className="grid gap-5 lg:grid-cols-3">
                       <div>
                         <p className="mb-2 text-[10px] font-medium text-zinc-500">ID document</p>
                       {selectedVendor.idDocumentUrl ? (
@@ -783,6 +797,31 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                           <p className="text-sm text-zinc-400">No document submitted yet</p>
                         </div>
                       )}
+                      </div>
+                      <div>
+                        <p className="mb-2 text-[10px] font-medium text-zinc-500">Selfie holding ID</p>
+                        {selectedVendor.selfieWithIdUrl ? (
+                          <div
+                            className="group relative cursor-zoom-in overflow-hidden rounded-xl border border-zinc-200"
+                            onClick={() => setZoomUrl(selectedVendor.selfieWithIdUrl)}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element -- admin reviews vendor KYC uploads */}
+                            <img
+                              alt="Selfie holding ID"
+                              src={selectedVendor.selfieWithIdUrl}
+                              className="max-h-[380px] w-full object-contain transition-opacity group-hover:opacity-95"
+                            />
+                            <div className="pointer-events-none absolute bottom-3 right-3 opacity-0 transition-opacity group-hover:opacity-100">
+                              <span className="rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-medium text-white backdrop-blur-sm">
+                                🔍 Click to zoom
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-8 text-center">
+                            <p className="text-sm text-zinc-400">No selfie submitted yet</p>
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-4">
                         <div className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-4">

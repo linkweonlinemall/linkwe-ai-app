@@ -436,9 +436,9 @@ TICKET_PURCHASED, MESSAGE_RECEIVED
 - **Signup kinds:** CUSTOMER, BUSINESS (→ VENDOR role), COURIER (`lib/auth/signup-kinds.ts`)
 - **Password:** bcrypt, min 8 chars; rate-limited registration
 - **Session:** JWT cookie, 7 days
-- **Business onboarding:** 3 steps — store basics, KYC upload (Cloudinary), store publish (`onboarding/business/step-*`)
+- **Business onboarding:** 3 steps — business details, KYC evidence upload, store setup (`onboarding/business/step-*`)
 - **Vendor layout guard:** incomplete onboarding → redirect to step N
-- **ID verification:** `IdVerificationStatus` on User; admin `/verification` approve/reject
+- **ID verification:** vendors must submit a government-issued ID plus a selfie holding the same ID. Admin `/verification` shows both and labels complete submissions as requiring manual authenticity/face-match review. Server-side approval is blocked until ID, selfie, logo, description, bank details, and phone are present.
 
 ### Vendor
 

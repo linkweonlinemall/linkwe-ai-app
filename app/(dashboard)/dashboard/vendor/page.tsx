@@ -52,6 +52,7 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
     select: {
       id: true,
       idDocumentUrl: true,
+      selfieWithIdUrl: true,
       idVerificationStatus: true,
       emailVerified: true,
       phone: true,
@@ -137,6 +138,7 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
 
   const vendorReadiness = getVendorReadiness({
     idDocumentUrl: user.idDocumentUrl,
+    selfieWithIdUrl: user.selfieWithIdUrl,
     phone: user.phone,
     bankDetails: user.bankDetails
       ? {
@@ -189,6 +191,7 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
             storeStatus={store.status}
             storeId={store.id}
             idDocumentUrl={user.idDocumentUrl}
+            selfieWithIdUrl={user.selfieWithIdUrl}
             bankName={user.bankDetails?.bankName ?? null}
             accountName={user.bankDetails?.accountName ?? null}
             accountNumber={user.bankDetails?.accountNumber ?? null}

@@ -28,6 +28,7 @@ const TT_BANKS = [
 /** Where to fix each readiness item when not complete (null = handled in this panel). */
 const READINESS_FIX_HREF: Record<VendorReadinessCheck["id"], string | null> = {
   id_document: null,
+  selfie_with_id: null,
   logo: "/dashboard/vendor/store/edit",
   description: "/dashboard/vendor/store/edit",
   bank: null,
@@ -39,6 +40,7 @@ type Props = {
   storeStatus?: StoreStatus;
   storeId?: string;
   idDocumentUrl: string | null;
+  selfieWithIdUrl: string | null;
   bankName: string | null;
   accountName: string | null;
   accountNumber: string | null;
@@ -46,7 +48,7 @@ type Props = {
   readiness: {
     checks: VendorReadinessCheck[];
     pass: number;
-    total: 5;
+    total: 6;
     ready: boolean;
   };
   /** When true, omit outer card chrome for nesting inside Store profile. */
@@ -58,6 +60,7 @@ export default function VendorVerificationChecklist({
   storeStatus,
   storeId,
   idDocumentUrl,
+  selfieWithIdUrl,
   bankName,
   accountName,
   accountNumber,
@@ -171,7 +174,7 @@ export default function VendorVerificationChecklist({
         </div>
         {!readiness.ready ? (
           <p className="mb-3 text-xs text-amber-700">
-            Complete all five items below so an admin can approve your account.
+            Complete all six items below so an admin can perform the manual authenticity review.
           </p>
         ) : null}
         <ul className="flex flex-col gap-2">
@@ -212,7 +215,7 @@ export default function VendorVerificationChecklist({
                       {check.id === "phone" ? "Update in settings →" : "Edit store profile →"}
                     </Link>
                   ) : null}
-                  {!check.ok && check.id === "id_document" ? (
+                  {!check.ok && (check.id === "id_document" || check.id === "selfie_with_id") ? (
                     <p className="mt-0.5 text-[11px] text-amber-700">Upload below</p>
                   ) : null}
                   {!check.ok && check.id === "bank" ? (
@@ -268,7 +271,7 @@ export default function VendorVerificationChecklist({
               </span>
             </div>
             <p className="mt-0.5 text-xs text-zinc-500">
-              Upload a valid government-issued ID (passport, driver&apos;s licence, or national ID)
+              Upload a valid government-issued ID plus a clear selfie holding the same document
             </p>
 
             {idRejected ? (
@@ -284,29 +287,45 @@ export default function VendorVerificationChecklist({
             ) : null}
 
             {(idUnsubmitted || idRejected) && !uploadSuccess ? (
-              <form onSubmit={handleIdUpload} className="mt-3">
-                <div className="flex items-center gap-2">
+              <form onSubmit={handleIdUpload} className="mt-3 space-y-3">
+                <div className="grid gap-2">
+                  <label className="text-xs font-medium text-zinc-600" htmlFor="idDocument">
+                    Government-issued ID
+                  </label>
                   <input
+                    id="idDocument"
                     type="file"
                     name="idDocument"
                     accept="image/*,.pdf"
                     className="text-xs text-zinc-600 file:mr-2 file:rounded-lg file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-zinc-700"
                     required
                   />
-                  <button
-                    type="submit"
-                    disabled={uploadLoading}
-                    className="shrink-0 rounded-lg bg-[#D4450A] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
-                  >
-                    {uploadLoading ? "Uploading..." : "Upload"}
-                  </button>
+                  <label className="text-xs font-medium text-zinc-600" htmlFor="selfieWithId">
+                    Selfie holding the same ID
+                  </label>
+                  <input
+                    id="selfieWithId"
+                    type="file"
+                    name="selfieWithId"
+                    accept="image/jpeg,image/png,image/webp"
+                    aria-label="Selfie holding your ID"
+                    className="text-xs text-zinc-600 file:mr-2 file:rounded-lg file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-zinc-700"
+                    required
+                  />
                 </div>
+                <button
+                  type="submit"
+                  disabled={uploadLoading}
+                  className="rounded-lg bg-[#D4450A] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+                >
+                  {uploadLoading ? "Uploading..." : "Submit both for review"}
+                </button>
                 {uploadError ? <p className="mt-1 text-xs text-red-600">{uploadError}</p> : null}
               </form>
             ) : null}
 
-            {idDocumentUrl && idPending ? (
-              <p className="mt-2 text-xs text-zinc-400">Document submitted — awaiting admin review</p>
+            {idDocumentUrl && selfieWithIdUrl && idPending ? (
+              <p className="mt-2 text-xs text-zinc-400">ID and selfie submitted — awaiting manual authenticity review</p>
             ) : null}
           </div>
         </div>
@@ -396,7 +415,6 @@ export default function VendorVerificationChecklist({
                 <option value="">Account type (optional)</option>
                 <option value="SAVINGS">Savings</option>
                 <option value="CHEQUING">Chequing</option>
-                <option value="CURRENT">Current</option>
               </select>
               {payoutError ? <p className="text-xs text-red-600">{payoutError}</p> : null}
               <button

@@ -65,6 +65,17 @@ export function BusinessStep2Form() {
         name="document"
         type="file"
       />
+      <Input
+        required
+        accept="image/jpeg,image/png,image/webp"
+        className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5"
+        label="Selfie holding your ID"
+        name="selfieWithId"
+        type="file"
+      />
+      <p className="-mt-2 text-xs text-zinc-500">
+        Hold the same ID beside your face. Make sure your face and the document are clear and unobstructed.
+      </p>
 
       {state.error ? (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">

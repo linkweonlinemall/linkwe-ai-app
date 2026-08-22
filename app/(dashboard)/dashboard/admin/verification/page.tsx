@@ -22,6 +22,7 @@ export default async function AdminVerificationPage() {
       email: true,
       phone: true,
       idDocumentUrl: true,
+      selfieWithIdUrl: true,
       idVerificationStatus: true,
       idVerifiedAt: true,
       createdAt: true,

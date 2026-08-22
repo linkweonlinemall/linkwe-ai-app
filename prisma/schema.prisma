@@ -23,6 +23,7 @@ model User {
   /// Trinidad region key (dropdown), same normalization family as shipping.
   region                 String?
   idDocumentUrl          String?                @map("id_document_url")
+  selfieWithIdUrl        String?                @map("selfie_with_id_url")
   idVerificationStatus IdVerificationStatus @default(UNSUBMITTED) @map("id_verification_status")
   /// Courier orientation: 0 = not started, 1 = step 1 done, 2 = both steps done (Phase A).
   courierOnboardingStep Int                  @default(0) @map("courier_onboarding_step")
