@@ -34,6 +34,7 @@ import {
   type DaySchedule,
   type WeekSchedule,
 } from "@/lib/store/opening-hours-utils";
+import { normalizeWhatsAppUrl } from "@/lib/store/social-links";
 
 import type { PartnerContentItem } from "@/lib/cross-store/types";
 
@@ -320,7 +321,11 @@ export default function StoreAboutTab({
       ? { key: "linkedin", platform: "LinkedIn", url: ensureHttps(socialLinks.linkedin.trim()) }
       : null,
     socialLinks.whatsapp?.trim()
-      ? { key: "whatsapp", platform: "WhatsApp", url: ensureHttps(socialLinks.whatsapp.trim()) }
+      ? {
+          key: "whatsapp",
+          platform: "WhatsApp",
+          url: normalizeWhatsAppUrl(socialLinks.whatsapp),
+        }
       : null,
     socialLinks.website?.trim()
       ? { key: "website", platform: "Website", url: ensureHttps(socialLinks.website.trim()) }
