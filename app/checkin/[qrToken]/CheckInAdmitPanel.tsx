@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { checkInTicket } from "@/app/actions/ticket-checkin";
+import { TRINIDAD_TIMEZONE } from "@/lib/timezone/trinidad";
 
 type Props = {
   qrToken: string;
@@ -87,6 +88,7 @@ export function CheckInAdmitPanel({ qrToken, expectedEventId }: Props) {
 
 function formatCheckedInAt(date: Date | string): string {
   return new Date(date).toLocaleString("en-TT", {
+    timeZone: TRINIDAD_TIMEZONE,
     weekday: "short",
     day: "numeric",
     month: "short",

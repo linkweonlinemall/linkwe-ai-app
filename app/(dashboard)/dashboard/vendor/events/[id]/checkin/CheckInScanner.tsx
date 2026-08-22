@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState, useTransition } from "react";
 import type { TicketStatus } from "@prisma/client";
+import { TRINIDAD_TIMEZONE } from "@/lib/timezone/trinidad";
 
 import {
   checkInTicket,
@@ -59,6 +60,7 @@ function parseCheckInToken(decoded: string): string | null {
 function formatCheckedInAt(date: Date | string | null | undefined): string {
   if (!date) return "unknown time";
   return new Date(date).toLocaleString("en-TT", {
+    timeZone: TRINIDAD_TIMEZONE,
     weekday: "short",
     day: "numeric",
     month: "short",

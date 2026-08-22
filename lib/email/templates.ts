@@ -280,6 +280,31 @@ export function ticketConfirmationEmail(data: {
   };
 }
 
+export function ticketTransferEmail(data: {
+  recipientName: string;
+  eventTitle: string;
+  orderRef: string;
+  totalTTD: number;
+  ticketUrl: string;
+}) {
+  const content = `
+    ${heading("A ticket was transferred to you")}
+    ${para(`Hi ${data.recipientName}, you are now the holder of a ticket for ${data.eventTitle}.`)}
+    ${infoBox([
+      { label: "Event", value: data.eventTitle },
+      { label: "Order", value: `#${data.orderRef}` },
+      { label: "Tickets", value: "1 ticket" },
+      { label: "Total", value: data.totalTTD === 0 ? "Free" : `TTD ${data.totalTTD.toFixed(2)}` },
+    ])}
+    ${para("Use the secure link below to open your ticket and entry QR code. You do not need a LinkWe account to use it.")}
+    ${btn("View your ticket", data.ticketUrl)}
+  `;
+  return {
+    subject: `Ticket for you — ${data.eventTitle}`,
+    html: wrap(content, `A ticket for ${data.eventTitle} was transferred to you`),
+  };
+}
+
 export function verifyEmailAddressEmail(data: {
   fullName: string;
   verifyUrl: string;

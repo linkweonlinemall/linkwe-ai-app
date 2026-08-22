@@ -6,6 +6,7 @@ import {
   formatEventTime,
 } from "@/lib/events/format-datetime";
 import { generateTicketQRCodeDataURL } from "@/lib/tickets/qr-code";
+import { TRINIDAD_TIMEZONE } from "@/lib/timezone/trinidad";
 import { CheckInAdmitPanel } from "./CheckInAdmitPanel";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +16,7 @@ type Props = { params: Promise<{ qrToken: string }> };
 function formatCheckedInAt(date: Date | null): string {
   if (!date) return "unknown time";
   return new Date(date).toLocaleString("en-TT", {
+    timeZone: TRINIDAD_TIMEZONE,
     weekday: "short",
     day: "numeric",
     month: "short",

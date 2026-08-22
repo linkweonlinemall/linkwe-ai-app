@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 
 import { getSession } from "@/lib/auth/session";
 import { sendEmail } from "@/lib/email/send";
-import { ticketConfirmationEmail } from "@/lib/email/templates";
+import { ticketTransferEmail } from "@/lib/email/templates";
 import { prisma } from "@/lib/prisma";
 import { getTicketCheckInUrl } from "@/lib/tickets/qr-code";
 
@@ -277,25 +277,17 @@ export async function transferTicket(
   let emailNote: string | undefined;
   try {
     const checkInUrl = getTicketCheckInUrl(newQrToken);
-    const { subject, html: baseHtml } = ticketConfirmationEmail({
-      customerName: trimmedName,
+    const { subject, html } = ticketTransferEmail({
+      recipientName: trimmedName,
       eventTitle: ticket.event.title,
       orderRef: ticket.ticketOrder?.reference ?? ticket.ticketNumber,
-      ticketCount: 1,
       totalTTD: ticket.pricePaidMinor / 100,
-      myTicketsUrl: checkInUrl,
+      ticketUrl: checkInUrl,
     });
-
-    const html = baseHtml
-      .replace(
-        "your ticket purchase was successful.",
-        "a ticket has been transferred to you.",
-      )
-      .replace("View my tickets", "View your ticket");
 
     await sendEmail({
       to: trimmedEmail,
-      subject: subject.replace("confirmed", "for you"),
+      subject,
       html,
     });
   } catch (err) {

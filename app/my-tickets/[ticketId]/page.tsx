@@ -21,6 +21,7 @@ import {
 } from "@/lib/events/format-datetime";
 import { generateTicketQRCodeDataURL } from "@/lib/tickets/qr-code";
 import { ticketPaidMinor } from "@/lib/tickets/ticket-paid-minor";
+import { TRINIDAD_TIMEZONE } from "@/lib/timezone/trinidad";
 import { prisma } from "@/lib/prisma";
 
 type Props = { params: Promise<{ ticketId: string }> };
@@ -37,6 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 function formatCheckedInAt(date: Date): string {
   return new Date(date).toLocaleString("en-TT", {
+    timeZone: TRINIDAD_TIMEZONE,
     weekday: "short",
     day: "numeric",
     month: "short",
