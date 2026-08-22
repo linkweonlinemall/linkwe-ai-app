@@ -62,6 +62,8 @@ export function PromoCodesPanel({ eventId, initialCodes }: Props) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const formData = new FormData(e.currentTarget as HTMLFormElement);
+    const submittedExpiry = String(formData.get("expiresAt") ?? "").trim();
     setFormError(null);
     setFormSuccess(null);
 
@@ -92,7 +94,7 @@ export function PromoCodesPanel({ eventId, initialCodes }: Props) {
         discountType,
         discountValue,
         maxUses,
-        expiresAt: expiresInput.trim() || null,
+        expiresAt: submittedExpiry || null,
       });
 
       if (!result.ok) {
@@ -219,6 +221,7 @@ export function PromoCodesPanel({ eventId, initialCodes }: Props) {
             </label>
             <input
               id="promo-expires"
+              name="expiresAt"
               type="date"
               value={expiresInput}
               onChange={(e) => setExpiresInput(e.target.value)}
