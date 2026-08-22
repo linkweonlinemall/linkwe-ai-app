@@ -114,7 +114,32 @@ export async function createTicketPaymentIntent(
 
   if (!eventId) return { ok: false, error: "Event ID is required." };
   if (!items || items.length === 0) return { ok: false, error: "No tickets selected." };
-  if (items.some((i) => i.quantity <= 0)) return { ok: false, error: "Invalid ticket quantity." };
+  if (
+    items.some(
+      (item) =>
+        !item.ticketTypeId?.trim() ||
+        !Number.isSafeInteger(item.quantity) ||
+        item.quantity <= 0,
+    )
+  ) {
+    return { ok: false, error: "Invalid ticket quantity." };
+  }
+
+  // Never trust client line structure. Duplicate ticket-type rows could otherwise
+  // bypass max-per-order checks and make each row pass the same availability test.
+  const quantityByTicketType = new Map<string, number>();
+  for (const item of items) {
+    const ticketTypeId = item.ticketTypeId.trim();
+    const combined = (quantityByTicketType.get(ticketTypeId) ?? 0) + item.quantity;
+    if (!Number.isSafeInteger(combined)) {
+      return { ok: false, error: "Invalid ticket quantity." };
+    }
+    quantityByTicketType.set(ticketTypeId, combined);
+  }
+  const normalizedItems = Array.from(quantityByTicketType, ([ticketTypeId, quantity]) => ({
+    ticketTypeId,
+    quantity,
+  }));
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
@@ -155,7 +180,7 @@ export async function createTicketPaymentIntent(
   };
   const validatedItems: ValidatedItem[] = [];
 
-  for (const item of items) {
+  for (const item of normalizedItems) {
     const tt = await prisma.eventTicketType.findUnique({
       where: { id: item.ticketTypeId },
       select: {

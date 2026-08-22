@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { dayRangeTrinidad } from "@/lib/timezone/trinidad";
 
 const EVENTS_PATH = "/dashboard/vendor/events";
 
@@ -112,6 +113,9 @@ async function assertCanManageEvent(
 function parseExpiresAt(value: string | null | undefined): Date | null {
   const trimmed = value?.trim();
   if (!trimmed) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return dayRangeTrinidad(trimmed).end;
+  }
   const parsed = new Date(trimmed);
   if (Number.isNaN(parsed.getTime())) return null;
   return parsed;

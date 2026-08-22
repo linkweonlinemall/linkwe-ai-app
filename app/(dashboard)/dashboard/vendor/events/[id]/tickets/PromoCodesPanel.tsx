@@ -8,6 +8,7 @@ import {
   togglePromoCode,
   type PromoCodeRow,
 } from "@/app/actions/promo-codes";
+import { TRINIDAD_TIMEZONE } from "@/lib/timezone/trinidad";
 
 type Props = {
   eventId: string;
@@ -34,6 +35,7 @@ function formatUses(code: PromoCodeRow): string {
 function formatExpiry(iso: string | null): string {
   if (!iso) return "No expiry";
   return new Date(iso).toLocaleDateString("en-TT", {
+    timeZone: TRINIDAD_TIMEZONE,
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -125,7 +127,7 @@ export function PromoCodesPanel({ eventId, initialCodes }: Props) {
     <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm text-[#1C1C1A]">
       <h2 className="text-lg font-bold">Promo codes</h2>
       <p className="mt-1 text-sm leading-relaxed text-zinc-600">
-        Create discount codes for this event. Buyers will redeem them at checkout in a later step.
+        Create discount codes for this event. Buyers can redeem them during ticket checkout.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-4 space-y-3 rounded-xl border border-zinc-100 bg-zinc-50/80 p-4">
