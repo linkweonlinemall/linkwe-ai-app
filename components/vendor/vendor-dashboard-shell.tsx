@@ -21,6 +21,7 @@ export type VendorDashboardShellProps = {
   pendingRequestsCount: number;
   activeOrdersCount: number;
   aiEnabled: boolean;
+  renderedAt: string;
 };
 
 export default function VendorDashboardShell({
@@ -35,6 +36,7 @@ export default function VendorDashboardShell({
   pendingRequestsCount,
   activeOrdersCount,
   aiEnabled,
+  renderedAt,
 }: VendorDashboardShellProps) {
   const pathname = usePathname() ?? "";
   const isAIAssistant = pathname.includes("/ai-assistant");
@@ -67,6 +69,7 @@ export default function VendorDashboardShell({
           firstName={userFirstName}
           unreadCount={unreadCount}
           aiEnabled={aiEnabled}
+          renderedAt={renderedAt}
         />
 
         <div className="vendor-main-scroll min-h-0 flex-1 overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0 bg-[#F7F5F2]">

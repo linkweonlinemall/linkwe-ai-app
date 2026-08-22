@@ -6,24 +6,37 @@ import { IconHome } from "@tabler/icons-react";
 import MessageNavBadge from "@/components/messages/MessageNavBadge";
 import NotificationBell from "@/components/ui/NotificationBell";
 
+const VENDOR_TIME_ZONE = "America/Port_of_Spain";
+
 function formatVendorDate(now: Date) {
   return now.toLocaleDateString("en-TT", {
     weekday: "long",
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: VENDOR_TIME_ZONE,
   });
 }
 
+function vendorHour(now: Date) {
+  return Number(
+    new Intl.DateTimeFormat("en-TT", {
+      hour: "numeric",
+      hourCycle: "h23",
+      timeZone: VENDOR_TIME_ZONE,
+    }).format(now),
+  );
+}
+
 function greetingLine(firstName: string, now: Date) {
-  const h = now.getHours();
+  const h = vendorHour(now);
   const label = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
   return `${label}, ${firstName}`;
 }
 
 /** Mobile spec: "Morning, John" (no leading "Good"). */
 function shortGreeting(firstName: string, now: Date) {
-  const h = now.getHours();
+  const h = vendorHour(now);
   const word = h < 12 ? "Morning" : h < 17 ? "Afternoon" : "Evening";
   return `${word}, ${firstName}`;
 }
@@ -32,14 +45,16 @@ export type VendorDashboardTopbarProps = {
   firstName: string;
   unreadCount: number;
   aiEnabled: boolean;
+  renderedAt: string;
 };
 
 export default function VendorDashboardTopbar({
   firstName,
   unreadCount,
   aiEnabled,
+  renderedAt,
 }: VendorDashboardTopbarProps) {
-  const now = new Date();
+  const now = new Date(renderedAt);
 
   return (
     <header

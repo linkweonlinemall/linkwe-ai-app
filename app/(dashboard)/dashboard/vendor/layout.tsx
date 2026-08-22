@@ -64,6 +64,7 @@ export default async function VendorDashboardLayout({
       pendingRequestsCount={counts.pendingRequestsCount}
       activeOrdersCount={counts.activeOrdersCount}
       aiEnabled={aiEnabled}
+      renderedAt={new Date().toISOString()}
     >
       {children}
     </VendorDashboardShell>
