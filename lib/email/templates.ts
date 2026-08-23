@@ -9,15 +9,15 @@ function wrap(content: string, preheader = ""): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LinkWe</title>
 </head>
-<body style="margin:0;padding:0;background:#F5F5F5;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+<body style="margin:0;padding:0;background:#f6f4f1;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
   ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;">${preheader}</div>` : ""}
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F5F5;padding:32px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f6f4f1;padding:32px 12px;">
     <tr>
       <td align="center">
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
           <!-- Header -->
           <tr>
-            <td style="background:#1C1C1A;border-radius:16px 16px 0 0;padding:24px 32px;text-align:center;">
+            <td style="background:#1C1C1A;border-radius:18px 18px 0 0;padding:26px 32px;text-align:center;">
               <span style="font-size:22px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">
                 Link<span style="color:#D4450A;">We</span>
               </span>
@@ -25,7 +25,7 @@ function wrap(content: string, preheader = ""): string {
           </tr>
           <!-- Body -->
           <tr>
-            <td style="background:#ffffff;padding:32px;border-left:1px solid #e4e4e7;border-right:1px solid #e4e4e7;">
+            <td style="background:#ffffff;padding:36px 32px;border-left:1px solid #e4e4e7;border-right:1px solid #e4e4e7;">
               ${content}
             </td>
           </tr>
@@ -48,7 +48,7 @@ function wrap(content: string, preheader = ""): string {
 }
 
 function btn(label: string, url: string): string {
-  return `<a href="${url}" style="display:inline-block;margin-top:20px;background:linear-gradient(135deg,#D4450A,#E8820C);color:#ffffff;font-size:14px;font-weight:700;padding:12px 28px;border-radius:12px;text-decoration:none;">${label}</a>`;
+  return `<table cellpadding="0" cellspacing="0" role="presentation" style="margin-top:24px;"><tr><td style="border-radius:12px;background:#D4450A;"><a href="${url}" style="display:inline-block;background:#D4450A;color:#ffffff;font-size:14px;font-weight:800;padding:13px 24px;border-radius:12px;text-decoration:none;">${label} &rarr;</a></td></tr></table>`;
 }
 
 function heading(text: string): string {
@@ -64,12 +64,12 @@ function infoBox(rows: { label: string; value: string }[]): string {
     .map(
       (r) =>
         `<tr>
-          <td style="padding:8px 12px;font-size:12px;color:#71717a;font-weight:600;white-space:nowrap;">${r.label}</td>
-          <td style="padding:8px 12px;font-size:13px;color:#18181b;font-weight:700;">${r.value}</td>
+          <td style="padding:10px 14px;font-size:12px;color:#71717a;font-weight:600;white-space:nowrap;border-bottom:1px solid #ecebea;">${r.label}</td>
+          <td align="right" style="padding:10px 14px;font-size:13px;color:#18181b;font-weight:700;border-bottom:1px solid #ecebea;">${r.value}</td>
         </tr>`,
     )
     .join("");
-  return `<table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;background:#f9f9f9;border-radius:12px;border:1px solid #e4e4e7;overflow:hidden;">
+  return `<table width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;background:#faf9f7;border-radius:12px;border:1px solid #e4e4e7;overflow:hidden;">
     ${rowsHtml}
   </table>`;
 }
@@ -80,23 +80,24 @@ export function newOrderVendorEmail(data: {
   vendorName: string;
   orderRef: string;
   itemCount: number;
-  totalTTD: number;
+  subtotalTTD: number;
   dashboardUrl: string;
 }) {
   const content = `
-    ${heading("You have a new order!")}
+    <p style="margin:0 0 8px;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#D4450A;font-weight:800;">New sale</p>
+    ${heading("You have a new order")}
     ${para(`Hi ${data.vendorName}, a customer just placed an order in your store.`)}
     ${infoBox([
       { label: "Order", value: `#${data.orderRef}` },
       { label: "Items", value: `${data.itemCount} item${data.itemCount !== 1 ? "s" : ""}` },
-      { label: "Total", value: `TTD ${data.totalTTD.toFixed(2)}` },
+      { label: "Your merchandise", value: `TTD ${data.subtotalTTD.toFixed(2)}` },
     ])}
     ${para("Log in to your dashboard to view the order details and prepare it for pickup or delivery.")}
     ${btn("View order", data.dashboardUrl)}
   `;
   return {
     subject: `New order #${data.orderRef} — LinkWe`,
-    html: wrap(content, `You have a new order #${data.orderRef} worth TTD ${data.totalTTD.toFixed(2)}`),
+    html: wrap(content, `New order #${data.orderRef} — merchandise subtotal TTD ${data.subtotalTTD.toFixed(2)}`),
   };
 }
 
@@ -121,6 +122,60 @@ export function orderConfirmedCustomerEmail(data: {
   return {
     subject: `Order confirmed — #${data.orderRef}`,
     html: wrap(content, `Your order #${data.orderRef} has been confirmed`),
+  };
+}
+
+export function orderOutForDeliveryCustomerEmail(data: {
+  customerName: string;
+  orderRef: string;
+  storeName: string;
+  orderUrl: string;
+}) {
+  const content = `
+    <p style="margin:0 0 8px;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#D4450A;font-weight:800;">Delivery update</p>
+    ${heading("Your order is on the way")}
+    ${para(`Hi ${data.customerName}, your items from ${data.storeName} are now out for LinkWe delivery.`)}
+    ${infoBox([
+      { label: "Order", value: `#${data.orderRef}` },
+      { label: "Store", value: data.storeName },
+      { label: "Status", value: "Out for delivery" },
+    ])}
+    ${para("Keep your phone nearby in case the delivery team needs to contact you. You can follow the latest status from your order page.")}
+    ${btn("Track delivery", data.orderUrl)}
+  `;
+  return {
+    subject: `Out for delivery — #${data.orderRef}`,
+    html: wrap(content, `Your LinkWe order #${data.orderRef} is out for delivery`),
+  };
+}
+
+export function earningsReleasedVendorEmail(data: {
+  vendorName: string;
+  orderRef: string;
+  grossTTD: number;
+  commissionTTD: number;
+  shippingTTD: number;
+  netTTD: number;
+  financeUrl: string;
+}) {
+  const content = `
+    <p style="margin:0 0 8px;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#15803d;font-weight:800;">Payment update</p>
+    ${heading("Earnings added to your balance")}
+    ${para(`Hi ${data.vendorName}, order #${data.orderRef} is complete and your earnings have been released.`)}
+    ${infoBox([
+      { label: "Merchandise", value: `TTD ${data.grossTTD.toFixed(2)}` },
+      { label: "LinkWe commission", value: `− TTD ${data.commissionTTD.toFixed(2)}` },
+      ...(data.shippingTTD > 0
+        ? [{ label: "Self-delivery fee", value: `+ TTD ${data.shippingTTD.toFixed(2)}` }]
+        : []),
+      { label: "Added to balance", value: `TTD ${data.netTTD.toFixed(2)}` },
+    ])}
+    ${para("You can review this transaction and your current available balance in Finance.")}
+    ${btn("View finance", data.financeUrl)}
+  `;
+  return {
+    subject: `Earnings released — order #${data.orderRef}`,
+    html: wrap(content, `TTD ${data.netTTD.toFixed(2)} was added to your LinkWe balance`),
   };
 }
 

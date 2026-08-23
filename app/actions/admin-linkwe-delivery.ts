@@ -7,6 +7,9 @@ import { redirect } from "next/navigation";
 import { createNotification } from "@/app/actions/notifications";
 import { getSession } from "@/lib/auth/session";
 import { escapeCsvCell } from "@/lib/csv/escape-cell";
+import { BASE_URL } from "@/lib/email/resend";
+import { sendEmail } from "@/lib/email/send";
+import { orderOutForDeliveryCustomerEmail } from "@/lib/email/templates";
 import { recalculateMainOrderStatus } from "@/lib/fulfillment/order-status";
 import {
   formatTtdMinor,
@@ -88,7 +91,13 @@ export async function markOutForLinkWeDelivery(
       mainOrderId: true,
       status: true,
       store: { select: { name: true } },
-      mainOrder: { select: { buyerId: true, referenceNumber: true } },
+      mainOrder: {
+        select: {
+          buyerId: true,
+          referenceNumber: true,
+          buyer: { select: { email: true, fullName: true } },
+        },
+      },
     },
   });
 
@@ -111,6 +120,17 @@ export async function markOutForLinkWeDelivery(
     title: "Your order is out for delivery",
     body: `Your items from ${splitOrder.store.name} are on the way with LinkWe delivery.`,
     linkUrl: `/orders/${splitOrder.mainOrderId}`,
+  });
+
+  const deliveryTemplate = orderOutForDeliveryCustomerEmail({
+    customerName: splitOrder.mainOrder.buyer.fullName ?? "Customer",
+    orderRef: splitOrder.mainOrder.referenceNumber ?? splitOrder.mainOrderId,
+    storeName: splitOrder.store.name,
+    orderUrl: `${BASE_URL}/orders/${splitOrder.mainOrderId}`,
+  });
+  await sendEmail({
+    to: splitOrder.mainOrder.buyer.email,
+    ...deliveryTemplate,
   });
 
   revalidatePath("/dashboard/admin");

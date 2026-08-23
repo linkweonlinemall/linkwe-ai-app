@@ -236,6 +236,8 @@ export async function confirmOrderPaid(orderId: string): Promise<void> {
       items: {
         select: {
           titleSnapshot: true,
+          priceMinor: true,
+          quantity: true,
           store: {
             select: {
               ownerId: true,
@@ -258,7 +260,7 @@ export async function confirmOrderPaid(orderId: string): Promise<void> {
   });
 
   if (orderForEmail && orderForEmail.referenceNumber) {
-    const itemCount = orderForEmail.items.length;
+    const itemCount = orderForEmail.items.reduce((sum, item) => sum + item.quantity, 0);
     const totalTTD = orderForEmail.totalMinor / 100;
     const ref = orderForEmail.referenceNumber;
 
@@ -274,19 +276,35 @@ export async function confirmOrderPaid(orderId: string): Promise<void> {
       ...customerTemplate,
     });
 
-    const vendorEmails = new Map<string, { email: string; name: string }>();
+    const vendors = new Map<
+      string,
+      { ownerId: string; email: string; name: string; itemCount: number; subtotalMinor: number }
+    >();
     for (const item of orderForEmail.items) {
       const vendor = item.product?.store?.owner ?? item.store.owner;
-      if (vendor && !vendorEmails.has(vendor.email)) {
-        vendorEmails.set(vendor.email, { email: vendor.email, name: vendor.fullName ?? "Vendor" });
+      const ownerId = item.product?.store?.ownerId ?? item.store.ownerId;
+      if (!vendor || !ownerId) continue;
+
+      const existing = vendors.get(ownerId);
+      if (existing) {
+        existing.itemCount += item.quantity;
+        existing.subtotalMinor += item.priceMinor * item.quantity;
+      } else {
+        vendors.set(ownerId, {
+          ownerId,
+          email: vendor.email,
+          name: vendor.fullName ?? "Vendor",
+          itemCount: item.quantity,
+          subtotalMinor: item.priceMinor * item.quantity,
+        });
       }
     }
-    for (const vendor of vendorEmails.values()) {
+    for (const vendor of vendors.values()) {
       const vendorTemplate = newOrderVendorEmail({
         vendorName: vendor.name,
         orderRef: ref,
-        itemCount,
-        totalTTD,
+        itemCount: vendor.itemCount,
+        subtotalTTD: vendor.subtotalMinor / 100,
         dashboardUrl: `${BASE_URL}${VENDOR_DASHBOARD_ORDERS_TAB_HREF}`,
       });
       await sendEmail({ to: vendor.email, ...vendorTemplate });
@@ -300,19 +318,14 @@ export async function confirmOrderPaid(orderId: string): Promise<void> {
       linkUrl: `/orders/${orderId}`,
     });
 
-    const notifiedOwnerIds = new Set<string>();
-    for (const item of orderForEmail.items) {
-      const ownerId = item.product?.store?.ownerId ?? item.store.ownerId;
-      if (ownerId && !notifiedOwnerIds.has(ownerId)) {
-        notifiedOwnerIds.add(ownerId);
-        await createNotification({
-          userId: ownerId,
-          type: NotificationType.ORDER_PLACED,
-          title: `New order #${orderForEmail.referenceNumber}`,
-          body: `${orderForEmail.items.length} item${orderForEmail.items.length !== 1 ? "s" : ""} · TTD ${(orderForEmail.totalMinor / 100).toFixed(2)}`,
-          linkUrl: VENDOR_DASHBOARD_ORDERS_TAB_HREF,
-        });
-      }
+    for (const vendor of vendors.values()) {
+      await createNotification({
+        userId: vendor.ownerId,
+        type: NotificationType.ORDER_PLACED,
+        title: `New order #${orderForEmail.referenceNumber}`,
+        body: `${vendor.itemCount} item${vendor.itemCount !== 1 ? "s" : ""} · TTD ${(vendor.subtotalMinor / 100).toFixed(2)}`,
+        linkUrl: VENDOR_DASHBOARD_ORDERS_TAB_HREF,
+      });
     }
   }
 
