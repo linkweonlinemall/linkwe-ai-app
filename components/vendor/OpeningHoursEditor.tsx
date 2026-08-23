@@ -164,15 +164,15 @@ export default function OpeningHoursEditor({ initialHours }: Props) {
             </div>
 
             {!d.closed && !d.allDay ? (
-              <div className="ml-28 flex flex-col gap-2 sm:ml-32">
+              <div className="ml-0 flex min-w-0 flex-col gap-2 sm:ml-32">
                 {(d.slots ?? []).map((slot, i) => (
-                  <div key={i} className="flex items-center gap-2">
+                  <div key={i} className="flex min-w-0 items-center gap-2">
                     <input
                       type="time"
                       value={slot.from}
                       onChange={(e) => updateSlot(day, i, "from", e.target.value)}
                       name={`hours_${day}_from_${i}`}
-                      className="w-36 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm focus:border-[#D4450A] focus:outline-none"
+                      className="min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm focus:border-[#D4450A] focus:outline-none sm:w-36 sm:flex-none"
                     />
                     <span className="text-xs font-medium text-zinc-400">to</span>
                     <input
@@ -180,13 +180,13 @@ export default function OpeningHoursEditor({ initialHours }: Props) {
                       value={slot.to}
                       onChange={(e) => updateSlot(day, i, "to", e.target.value)}
                       name={`hours_${day}_to_${i}`}
-                      className="w-36 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm focus:border-[#D4450A] focus:outline-none"
+                      className="min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm focus:border-[#D4450A] focus:outline-none sm:w-36 sm:flex-none"
                     />
                     {i === 0 && (d.slots ?? []).length < 3 ? (
                       <button
                         type="button"
                         onClick={() => addSlot(day)}
-                        className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 text-lg leading-none text-zinc-500 transition-colors hover:bg-[#D4450A] hover:text-white"
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-lg leading-none text-zinc-500 transition-colors hover:bg-[#D4450A] hover:text-white"
                         title="Add time slot"
                       >
                         +
@@ -196,7 +196,7 @@ export default function OpeningHoursEditor({ initialHours }: Props) {
                       <button
                         type="button"
                         onClick={() => removeSlot(day, i)}
-                        className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 text-sm leading-none text-zinc-400 transition-colors hover:bg-red-100 hover:text-red-500"
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-sm leading-none text-zinc-400 transition-colors hover:bg-red-100 hover:text-red-500"
                         title="Remove slot"
                       >
                         ×

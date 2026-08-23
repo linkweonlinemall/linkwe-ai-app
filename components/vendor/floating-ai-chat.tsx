@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { useState, useEffect, useRef, useCallback } from "react"
 import ReactMarkdown from "react-markdown"
 import {
@@ -104,6 +105,7 @@ const LISTING_TYPE_OPTIONS = [
 ]
 
 export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<ChatMsg[]>([])
   const [input, setInput] = useState("")
@@ -409,10 +411,12 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
         setTimeout(() => inputRef.current?.focus(), 50)
       }
     },
-    [input, loading, messages, chatId, attachedPreviews, focusedProductId]
+    [input, loading, messages, chatId, attachedPreviews, focusedProductId, focusedEventId]
   )
 
   if (!aiEnabled) {
+    if (pathname === "/dashboard/vendor/finance") return null
+
     return (
       <Link
         href="/dashboard/vendor/finance"
