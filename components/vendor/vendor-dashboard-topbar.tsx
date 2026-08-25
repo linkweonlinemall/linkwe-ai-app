@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { IconHome } from "@tabler/icons-react";
+import { IconHome, IconPlus } from "@tabler/icons-react";
 
 import MessageNavBadge from "@/components/messages/MessageNavBadge";
 import NotificationBell from "@/components/ui/NotificationBell";
@@ -58,8 +58,8 @@ export default function VendorDashboardTopbar({
 
   return (
     <header
-      className="sticky top-0 z-50 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-[var(--color-border-tertiary)] bg-white"
-      style={{ borderBottomWidth: "0.5px", height: "56px", paddingInline: "24px", paddingBlock: "0" }}
+      className="sticky top-0 z-50 flex h-14 min-w-0 shrink-0 items-center justify-between gap-2 border-b border-[var(--color-border-tertiary)] bg-white px-3 sm:gap-3 sm:px-6"
+      style={{ borderBottomWidth: "0.5px", height: "56px" }}
     >
       <div className="hidden min-w-0 sm:block">
         <p className="truncate text-[15px] font-medium text-[#1C1C1A]">{greetingLine(firstName || "there", now)}</p>
@@ -88,9 +88,11 @@ export default function VendorDashboardTopbar({
         </div>
         <Link
           href="/dashboard/vendor/products/new"
-          className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-[rgba(212,69,10,0.35)] px-3 py-2 text-sm font-medium text-[#D4450A] hover:bg-[#FFF5F0] sm:px-4"
+          className="inline-flex size-8 items-center justify-center whitespace-nowrap rounded-lg border border-[rgba(212,69,10,0.35)] text-sm font-medium text-[#D4450A] hover:bg-[#FFF5F0] sm:h-auto sm:w-auto sm:px-4 sm:py-2"
+          aria-label="Add product"
         >
-          Add product
+          <IconPlus className="size-[18px] sm:hidden" stroke={2} aria-hidden />
+          <span className="hidden sm:inline">Add product</span>
         </Link>
         {aiEnabled ? (
           <Link

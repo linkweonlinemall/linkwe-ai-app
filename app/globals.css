@@ -185,6 +185,37 @@ body {
   animation: lw-fade-in 200ms ease-out both;
 }
 
+@keyframes lw-loader-breathe {
+  0%, 100% { transform: scale(0.94); opacity: 0.82; }
+  50% { transform: scale(1.04); opacity: 1; }
+}
+
+@keyframes lw-loader-ring {
+  to { transform: rotate(360deg); }
+}
+
+.lw-loader-mark {
+  animation: lw-loader-breathe 1.15s ease-in-out infinite;
+}
+
+.lw-loader-orbit::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  border-top-color: #d4450a;
+  border-right-color: rgba(232, 130, 12, 0.38);
+  animation: lw-loader-ring 0.9s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lw-loader-mark,
+  .lw-loader-orbit::after {
+    animation: none;
+  }
+}
+
 @keyframes lw-cart-bump {
   0%,
   100% {
@@ -230,4 +261,3 @@ body {
 .lw-icon-scarlet-hint:hover {
   color: var(--scarlet);
 }
-

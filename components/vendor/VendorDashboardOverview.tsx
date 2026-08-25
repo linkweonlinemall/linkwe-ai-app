@@ -180,7 +180,7 @@ export default function VendorDashboardOverview(props: {
       ) : null}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-3">
+      <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-4 md:gap-3">
         <div className={`rounded-[12px] bg-white dash-card-pad p-4 ${CARD_BORDER}`}>
           <div className="flex items-start justify-between gap-2">
             <div>

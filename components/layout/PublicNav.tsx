@@ -108,7 +108,7 @@ export default function PublicNav({
   const isGetAppPage = pathname === "/get-app";
   const showSignIn = !user && !isGetAppPage;
   const isStorePage = pathname.startsWith("/store/");
-  const [storeNavScrolled, setStoreNavScrolled] = useState(false);
+  const [navScrolled, setNavScrolled] = useState(false);
 
   const currentPathEncoded = encodeURIComponent(pathname?.trim() ? pathname : "/");
   const loginHref = `/login?callbackUrl=${currentPathEncoded}`;
@@ -120,6 +120,13 @@ export default function PublicNav({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    const update = () => setNavScrolled(window.scrollY > 20);
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, [pathname]);
 
   useEffect(() => {
     if (cartBumpNonce === 0) return;
@@ -167,14 +174,15 @@ export default function PublicNav({
   const roleLabel = user ? accountRoleLabel(dashboardHref, user.href) : "Customer";
 
   function LogoMark({ desktop }: { desktop: boolean }) {
+    const surface = navScrolled ? "light" : "dark";
     return (
       <img
         src={
           logoVariant === "ai"
-            ? "/linkwe-logo-mark-on-dark.png"
+            ? `/linkwe-logo-mark-on-${surface}.png`
             : desktop
-              ? "/linkwe-logo-on-dark.png"
-              : "/linkwe-logo-mobile-on-dark.png"
+              ? `/linkwe-logo-on-${surface}.png`
+              : `/linkwe-logo-mobile-on-${surface}.png`
         }
         alt="LinkWe"
         className={desktop ? "block h-11 w-auto shrink-0" : "block h-10 w-auto shrink-0"}
@@ -184,10 +192,10 @@ export default function PublicNav({
 
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
-  const storeNavAtTop = isStorePage && !storeNavScrolled;
-  const navHasGlassBg = !storeNavAtTop;
+  const storeNavAtTop = isStorePage && !navScrolled;
+  const navIsLight = navScrolled;
 
-  const headerPosition = storeNavAtTop
+  const headerPosition = isStorePage
     ? "fixed inset-x-0 top-0 z-50"
     : transparent
       ? "sticky top-0 z-40"
@@ -196,9 +204,11 @@ export default function PublicNav({
   const glassHeader = [
     headerPosition,
     "w-full overflow-visible transition-[background-color,backdrop-filter,border-color] duration-200",
-    navHasGlassBg
-      ? "border-b-[0.5px] border-white/10 bg-[rgba(28,28,26,0.95)] backdrop-blur-[12px] md:backdrop-blur-[16px]"
-      : "border-b-0 bg-transparent backdrop-blur-none",
+    navIsLight
+      ? "public-nav-light border-b-[0.5px] border-zinc-200/80 bg-white/95 text-[#1C1C1A] shadow-sm backdrop-blur-[12px] md:backdrop-blur-[16px]"
+      : storeNavAtTop
+        ? "border-b-0 bg-transparent backdrop-blur-none"
+        : "border-b-[0.5px] border-white/10 bg-[rgba(28,28,26,0.95)] backdrop-blur-[12px] md:backdrop-blur-[16px]",
   ].join(" ");
 
   const desktopNavLinkClass = `flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors`;
@@ -374,7 +384,7 @@ export default function PublicNav({
               <button
                 type="button"
                 onClick={() => setMobileSearchOpen(true)}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-white/[0.1] text-white"
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${navIsLight ? "bg-zinc-100 text-[#1C1C1A]" : "bg-white/[0.1] text-white"}`}
                 aria-label="Search"
               >
                 <IconSearch className="size-[20px]" stroke={1.75} aria-hidden />
@@ -384,13 +394,13 @@ export default function PublicNav({
                   <MessageNavBadge
                     href={messagesHref}
                     enabled
-                    className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-white/[0.1] text-white"
+                    className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${navIsLight ? "bg-zinc-100 text-[#1C1C1A]" : "bg-white/[0.1] text-white"}`}
                     iconClassName="size-[20px] shrink-0"
                   />
                   <button
                     type="button"
                     onClick={toggleDrawerCart}
-                    className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-white/[0.1] text-white"
+                    className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${navIsLight ? "bg-zinc-100 text-[#1C1C1A]" : "bg-white/[0.1] text-white"}`}
                     aria-label="Cart"
                   >
                     <IconShoppingCart
@@ -408,7 +418,7 @@ export default function PublicNav({
                     type="button"
                     aria-label="Open account menu"
                     onClick={() => drawerOpen.toggle()}
-                    className="relative flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full border-2 border-white/20 text-xs font-black text-white"
+                    className={`relative flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full border-2 text-xs font-black text-white ${navIsLight ? "border-[#D4450A]/20" : "border-white/20"}`}
                     style={{ backgroundColor: SCARLET }}
                   >
                     {initialsDisplay(user.name)}
@@ -443,7 +453,7 @@ export default function PublicNav({
             <Link
               href="/shop"
               className={`${desktopNavLinkClass} ${
-                desktopBrowseActive("/shop") ? "bg-white/[0.12] text-white" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white"
+                navIsLight ? (desktopBrowseActive("/shop") ? "bg-zinc-100 text-[#1C1C1A]" : "text-zinc-600 hover:bg-zinc-100 hover:text-[#1C1C1A]") : (desktopBrowseActive("/shop") ? "bg-white/[0.12] text-white" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white")
               }`}
             >
               <IconShoppingBag className="size-4 shrink-0" stroke={1.75} aria-hidden /> Shop
@@ -452,8 +462,8 @@ export default function PublicNav({
               href="/services"
               className={`${desktopNavLinkClass} ${
                 pathname.startsWith("/services") || pathname.startsWith("/service")
-                  ? "bg-white/[0.12] text-white"
-                  : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white"
+                  ? (navIsLight ? "bg-zinc-100 text-[#1C1C1A]" : "bg-white/[0.12] text-white")
+                  : (navIsLight ? "text-zinc-600 hover:bg-zinc-100 hover:text-[#1C1C1A]" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white")
               }`}
             >
               <IconTools className="size-4 shrink-0" stroke={1.75} aria-hidden /> Services
@@ -461,7 +471,7 @@ export default function PublicNav({
             <Link
               href="/stores"
               className={`${desktopNavLinkClass} ${
-                desktopBrowseActive("/stores") ? "bg-white/[0.12] text-white" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white"
+                navIsLight ? (desktopBrowseActive("/stores") ? "bg-zinc-100 text-[#1C1C1A]" : "text-zinc-600 hover:bg-zinc-100 hover:text-[#1C1C1A]") : (desktopBrowseActive("/stores") ? "bg-white/[0.12] text-white" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white")
               }`}
             >
               <IconBuildingStore className="size-4 shrink-0" stroke={1.75} aria-hidden /> Stores
@@ -469,7 +479,7 @@ export default function PublicNav({
             <Link
               href="/events"
               className={`${desktopNavLinkClass} ${
-                pathname.startsWith("/events") ? "bg-white/[0.12] text-white" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white"
+                navIsLight ? (pathname.startsWith("/events") ? "bg-zinc-100 text-[#1C1C1A]" : "text-zinc-600 hover:bg-zinc-100 hover:text-[#1C1C1A]") : (pathname.startsWith("/events") ? "bg-white/[0.12] text-white" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white")
               }`}
             >
               <IconCalendarEvent className="size-4 shrink-0" stroke={1.75} aria-hidden /> Events
@@ -477,7 +487,7 @@ export default function PublicNav({
             <Link
               href="/pricing"
               className={`${desktopNavLinkClass} ${
-                pathname.startsWith("/pricing") ? "bg-white/[0.12] text-white" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white"
+                navIsLight ? (pathname.startsWith("/pricing") ? "bg-zinc-100 text-[#1C1C1A]" : "text-zinc-600 hover:bg-zinc-100 hover:text-[#1C1C1A]") : (pathname.startsWith("/pricing") ? "bg-white/[0.12] text-white" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white")
               }`}
             >
               <IconTag className="size-4 shrink-0" stroke={1.75} aria-hidden /> Pricing
@@ -485,13 +495,13 @@ export default function PublicNav({
             <Link
               href="/chat"
               className={`${desktopNavLinkClass} ${
-                pathname.startsWith("/chat") ? "bg-white/[0.12] text-white" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white"
+                navIsLight ? (pathname.startsWith("/chat") ? "bg-zinc-100 text-[#1C1C1A]" : "text-zinc-600 hover:bg-zinc-100 hover:text-[#1C1C1A]") : (pathname.startsWith("/chat") ? "bg-white/[0.12] text-white" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white")
               }`}
             >
               <IconMessageCircle className="size-4 shrink-0" stroke={1.75} aria-hidden /> AI
             </Link>
             {mounted && !isInstalled ? (
-              <Link href="/get-app" className="ml-1 shrink-0 text-[11px] font-semibold text-white/[0.55] hover:text-white">
+              <Link href="/get-app" className={`ml-1 shrink-0 text-[11px] font-semibold ${navIsLight ? "text-zinc-500 hover:text-zinc-900" : "text-white/[0.55] hover:text-white"}`}>
                 Get app
               </Link>
             ) : null}

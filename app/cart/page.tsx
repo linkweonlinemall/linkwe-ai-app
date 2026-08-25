@@ -150,13 +150,13 @@ export default async function CartPage() {
   const deliveryEstimate = estimatedDeliveryRangeLabel(user?.region ?? null);
 
   return (
-    <div className={`min-h-screen pb-16 ${tw.fontSans} antialiased sm:pb-0 ${tw.bgPage}`}>
+    <div className={`min-h-screen pb-mobile-public ${tw.fontSans} antialiased lg:pb-0 ${tw.bgPage}`}>
       <PublicNav
         user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null}
         dashboardHref={continueHref ?? undefined}
       />
 
-      <div className={`mx-auto max-w-5xl px-4 py-8 sm:px-6`}>
+      <div className={`mx-auto w-full max-w-6xl px-3 py-6 sm:px-6 sm:py-8`}>
         <div className="mb-8">
           <h1 className={`${typography.h3} ${tw.textPrimary}`}>
             Your Cart
@@ -190,9 +190,9 @@ export default async function CartPage() {
                   return (
                     <div
                       key={item.id}
-                      className="flex min-w-0 gap-5 border-b border-zinc-100 pb-5 last:border-0 last:pb-0"
+                      className="grid min-w-0 grid-cols-[72px_minmax(0,1fr)] gap-3 border-b border-zinc-100 pb-5 last:border-0 last:pb-0 sm:flex sm:gap-5"
                     >
-                      <div className={`flex h-[88px] w-[88px] shrink-0 overflow-hidden ${radius.card} bg-zinc-100 ${shadow.card}`}>
+                      <div className={`flex size-[72px] shrink-0 overflow-hidden sm:size-[88px] ${radius.card} bg-zinc-100 ${shadow.card}`}>
                         {img ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={img} alt="" className="h-full w-full object-cover" />
@@ -220,7 +220,7 @@ export default async function CartPage() {
                           TTD {(item.variant?.price ?? item.product.price).toFixed(2)}
                         </p>
                       </div>
-                      <div className="flex shrink-0 flex-col items-end justify-between self-stretch">
+                      <div className="col-span-2 flex min-w-0 flex-row-reverse items-center justify-between gap-3 sm:col-auto sm:flex-col sm:items-end sm:self-stretch">
                         <CartRemoveButton productId={item.productId} productName={item.product.name} />
                         <div className={`flex min-h-[44px] items-center gap-2 ${radius.card} border border-zinc-200 bg-zinc-50 px-2`}>
                           <form action={updateCartQuantity.bind(null, item.productId, item.quantity - 1)}>

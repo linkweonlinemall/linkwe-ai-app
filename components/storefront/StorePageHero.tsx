@@ -40,8 +40,8 @@ export default function StorePageHero({
     reviewCount > 0 ? `★ ${averageRating.toFixed(1)} (${reviewCount})` : null;
 
   return (
-    <section className="relative w-full overflow-hidden">
-      <div className="relative aspect-[4/3] w-full md:aspect-auto md:h-[375px]">
+    <section className="relative z-20 w-full overflow-visible">
+      <div className="relative aspect-[4/3] w-full overflow-visible md:aspect-auto md:h-[375px]">
         {store.coverPhotoUrl ? (
           <Image
             src={store.coverPhotoUrl}

@@ -112,7 +112,7 @@ export default async function VendorOrdersPage({ searchParams }: Props) {
   ].sort((a, b) => b.date.getTime() - a.date.getTime());
 
   return (
-    <div className="px-6 py-8">
+    <div className="min-w-0 overflow-x-hidden px-4 py-5 sm:px-6 sm:py-8">
       <Link href="/dashboard/vendor" className="mb-4 inline-block text-sm text-zinc-500 hover:text-zinc-800">
         ← Back to dashboard
       </Link>
@@ -123,10 +123,10 @@ export default async function VendorOrdersPage({ searchParams }: Props) {
         </p>
       </div>
 
-      <nav className="mb-6 flex w-fit gap-1 rounded-xl border border-zinc-200 bg-white p-1" aria-label="Order type">
+      <nav className="mb-6 grid w-full max-w-md grid-cols-2 gap-1 rounded-xl border border-zinc-200 bg-white p-1 sm:w-fit" aria-label="Order type">
         <Link
           href="/dashboard/vendor/orders"
-          className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+          className={`min-w-0 rounded-lg px-2 py-2 text-center text-xs font-semibold transition-colors sm:px-4 sm:text-sm ${
             view === "products" ? "bg-[#1C1C1A] text-white" : "text-zinc-600 hover:bg-zinc-50"
           }`}
         >
@@ -134,7 +134,7 @@ export default async function VendorOrdersPage({ searchParams }: Props) {
         </Link>
         <Link
           href="/dashboard/vendor/orders?view=services"
-          className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+          className={`min-w-0 rounded-lg px-2 py-2 text-center text-xs font-semibold transition-colors sm:px-4 sm:text-sm ${
             view === "services" ? "bg-[#1C1C1A] text-white" : "text-zinc-600 hover:bg-zinc-50"
           }`}
         >

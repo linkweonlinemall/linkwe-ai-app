@@ -11,7 +11,7 @@ export default async function VendorMessagesPage() {
   assertDashboardRole(session, "VENDOR");
 
   return (
-    <div className="px-6 py-8">
+    <div className="min-w-0 overflow-x-hidden px-4 py-5 sm:px-6 sm:py-8">
       <Link
         href="/dashboard/vendor"
         className="mb-4 inline-block text-sm text-zinc-500 hover:text-zinc-800"
@@ -29,7 +29,9 @@ export default async function VendorMessagesPage() {
         </div>
       </div>
 
-      <MessagesTab />
+      <div className="max-w-3xl">
+        <MessagesTab />
+      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import type { IdVerificationStatus, StoreStatus } from "@prisma/client";
 
@@ -41,6 +41,10 @@ export default function VendorDashboardShell({
   const pathname = usePathname() ?? "";
   const isAIAssistant = pathname.includes("/ai-assistant");
 
+  useEffect(() => {
+    document.querySelector<HTMLElement>(".vendor-main-scroll")?.scrollTo({ top: 0, left: 0 });
+  }, [pathname]);
+
   if (isAIAssistant) {
     return (
       <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#F7F5F2]">
@@ -51,7 +55,7 @@ export default function VendorDashboardShell({
   }
 
   return (
-    <div className="flex h-full min-h-0 bg-[#F7F5F2]">
+    <div className="flex h-full min-h-0 min-w-0 overflow-x-hidden bg-[#F7F5F2]">
       <Suspense fallback={null}>
         <VendorDashboardSidebar
           storeName={storeName}
@@ -72,7 +76,7 @@ export default function VendorDashboardShell({
           renderedAt={renderedAt}
         />
 
-        <div className="vendor-main-scroll min-h-0 flex-1 overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0 bg-[#F7F5F2]">
+        <div className="vendor-main-scroll min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-[#F7F5F2] pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0">
           {children}
         </div>
 

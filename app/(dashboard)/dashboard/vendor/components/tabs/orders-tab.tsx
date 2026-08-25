@@ -37,7 +37,7 @@ type Props = {
 };
 
 const CARD_CLASS =
-  "rounded-xl border border-[rgba(28,28,26,0.08)] bg-white p-4 shadow-sm";
+  "min-w-0 overflow-hidden rounded-xl border border-[rgba(28,28,26,0.08)] bg-white p-3 shadow-sm sm:p-4";
 
 const VIEW_ORDER_LINK_CLASS = "text-sm font-medium text-[#1C1C1A] hover:underline";
 
@@ -205,15 +205,15 @@ export default function OrdersTab({ splitOrders }: Props) {
 
     return (
       <div key={order.id} className={CARD_CLASS}>
-        <div className="flex items-start gap-4">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-3 sm:flex sm:items-start sm:gap-4">
           {/* Column 1 — ref + date */}
-          <div className="w-40 shrink-0">
+          <div className="min-w-0 sm:w-40 sm:shrink-0">
             <p className="font-mono text-sm font-semibold text-[#1C1C1A]">{ref}</p>
             <p className="mt-0.5 text-xs text-[var(--text-muted)]">{formatDate(order.createdAt)}</p>
           </div>
 
           {/* Column 2 — product */}
-          <div className="flex min-w-0 flex-1 items-start gap-2">
+          <div className="col-span-2 row-start-2 flex min-w-0 flex-1 items-start gap-2 sm:col-auto sm:row-auto">
             <OrderItemThumbnail imageUrl={thumbnailUrl} alt={primary} />
             <p
               className="min-w-0 truncate font-medium text-[#1C1C1A]"
@@ -229,7 +229,7 @@ export default function OrdersTab({ splitOrders }: Props) {
           </div>
 
           {/* Column 3 — location, amount, status, view (non-action) */}
-          <div className="flex w-48 shrink-0 flex-col items-end gap-1.5 text-right">
+          <div className="col-start-2 row-start-1 flex min-w-0 flex-col items-end gap-1.5 text-right sm:w-48 sm:shrink-0">
             <p className="flex items-center justify-end gap-1 text-sm capitalize text-[var(--text-muted)]">
               <MapPin size={12} className="shrink-0" strokeWidth={2} aria-hidden />
               <span className="min-w-0 truncate">{region}</span>
@@ -252,9 +252,9 @@ export default function OrdersTab({ splitOrders }: Props) {
         </div>
 
         {needsAction ? (
-          <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-[#FFF8F0] px-4 py-2">
-            <p className="min-w-0 text-sm text-[var(--text-muted)]">Action required — start preparing this order</p>
-            <div className="flex shrink-0 items-center gap-3">
+          <div className="mt-3 flex min-w-0 flex-col gap-3 rounded-lg bg-[#FFF8F0] px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4 sm:py-2">
+            <p className="min-w-0 break-words text-sm leading-relaxed text-[var(--text-muted)]">Action required — start preparing this order</p>
+            <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2 sm:shrink-0">
               <Link
                 href={orderHref}
                 className="text-sm font-medium text-[var(--scarlet)] hover:underline"

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Minus, Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, Minus, Plus } from "lucide-react";
 import { useState } from "react";
 
 import AddToCartButton from "@/components/product/AddToCartButton";
@@ -99,7 +99,7 @@ export default function ProductBuyBox({
   }
 
   return (
-    <div className="flex w-full flex-col font-sans">
+    <div id="product-options" className="flex w-full scroll-mt-24 flex-col font-sans">
       {/* 1 Price — duplicated in mobile sticky bar when enabled */}
       <div className={`mb-3 ${mobileStickyBar ? "max-md:hidden" : ""}`}>
         <p className="text-[36px] font-semibold leading-none tracking-tight text-[#D4450A]">
@@ -209,6 +209,16 @@ export default function ProductBuyBox({
             </div>
           </div>
         </div>
+      ) : null}
+
+      {mobileStickyBar && hasVariants && variants.length > 0 && !allSelected ? (
+        <a
+          href="#product-options"
+          className="fixed bottom-[calc(132px+env(safe-area-inset-bottom,0px))] right-4 z-50 inline-flex min-h-11 items-center gap-2 rounded-full bg-[#1C1C1A] px-4 text-xs font-semibold text-white shadow-lg md:hidden"
+        >
+          Choose options
+          <ChevronDown className="size-4" strokeWidth={2} aria-hidden />
+        </a>
       ) : null}
 
       {isDigital && digitalMeta ? (

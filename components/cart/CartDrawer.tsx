@@ -86,7 +86,7 @@ export default function CartDrawer() {
       ) : null}
 
       <aside
-        className={`fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out ${
+        className={`fixed right-0 top-0 z-[130] flex h-[100dvh] w-full max-w-md flex-col bg-white pb-[env(safe-area-inset-bottom,0px)] shadow-2xl transition-transform duration-300 ease-in-out ${
           isOpen ? "translate-x-0 pointer-events-auto" : "translate-x-full pointer-events-none"
         }`}
       >
@@ -219,7 +219,7 @@ export default function CartDrawer() {
           )}
         </div>
 
-        <footer className="border-t border-zinc-200 p-4">
+        <footer className="shrink-0 border-t border-zinc-200 bg-white p-4">
           <div className="flex justify-between text-sm font-medium text-zinc-900">
             <span>Subtotal</span>
             <span>TTD {subtotalVal.toFixed(2)}</span>

@@ -26,7 +26,7 @@ export default function AvailabilityToggle({ initialAvailable, appearance = "def
 
   if (appearance === "banner") {
     return (
-      <div className="avail-row flex flex-col gap-3 rounded-[12px] border-[0.5px] border-[rgba(28,28,26,0.12)] bg-white p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+      <div className="avail-row flex min-w-0 items-center justify-between gap-3 rounded-[12px] border-[0.5px] border-[rgba(28,28,26,0.12)] bg-white p-3 sm:p-4">
         <div className="flex min-w-0 items-start gap-3">
           <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#FAEEDA] text-[#BA7517]">
             <IconBolt className="size-[18px]" stroke={1.75} aria-hidden />
@@ -42,14 +42,14 @@ export default function AvailabilityToggle({ initialAvailable, appearance = "def
           type="button"
           onClick={handleToggle}
           disabled={loading}
-          className={`relative mx-auto h-8 w-[52px] shrink-0 self-end rounded-full transition-colors disabled:opacity-50 sm:mx-0 sm:self-center ${
+          className={`relative h-8 w-[52px] shrink-0 overflow-hidden rounded-full transition-colors disabled:opacity-50 ${
             isAvailable ? "bg-emerald-500" : "bg-zinc-200"
           }`}
           aria-pressed={isAvailable}
         >
           <span
-            className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow transition-transform ${
-              isAvailable ? "translate-x-[26px]" : "translate-x-1"
+            className={`absolute left-1 top-1 h-6 w-6 rounded-full bg-white shadow transition-transform ${
+              isAvailable ? "translate-x-5" : "translate-x-0"
             }`}
           />
         </button>

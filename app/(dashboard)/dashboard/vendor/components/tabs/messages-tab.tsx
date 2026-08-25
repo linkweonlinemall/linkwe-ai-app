@@ -58,7 +58,7 @@ export default async function MessagesTab() {
         <li key={row.id}>
           <Link
             href={`/dashboard/vendor/messages/${row.id}`}
-            className={`flex min-h-[64px] items-center gap-3 rounded-[12px] bg-white p-3 transition-colors hover:bg-[#FAFAF9] ${CARD_BORDER}`}
+            className={`flex min-h-[72px] min-w-0 items-center gap-3 overflow-hidden rounded-[12px] bg-white p-3 transition-colors hover:bg-[#FAFAF9] sm:p-4 ${CARD_BORDER}`}
           >
             <div
               className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-[#FEF0EB] text-[13px] font-semibold text-[#D4450A] ${CARD_BORDER}`}
@@ -66,7 +66,7 @@ export default async function MessagesTab() {
               {row.customerName.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="flex items-baseline justify-between gap-2">
+              <div className="flex min-w-0 items-baseline justify-between gap-2">
                 <p className="truncate text-[14px] font-medium text-[#1C1C1A]">
                   {row.customerName}
                 </p>

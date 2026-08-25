@@ -91,7 +91,7 @@ export default function StoreHeroActions({
   }
 
   return (
-    <div className="flex w-full shrink-0 flex-row items-center gap-2 md:w-auto md:flex-wrap md:justify-end md:pb-0.5">
+    <div className="relative z-[70] flex w-full shrink-0 flex-row items-center gap-2 md:w-auto md:flex-wrap md:justify-end md:pb-0.5">
       {canEditStore ? (
         <Link
           href="/dashboard/vendor/store/edit"
@@ -129,7 +129,7 @@ export default function StoreHeroActions({
         </button>
         {showShare ? (
           <div
-            className="absolute right-0 top-10 z-50 w-52 rounded-xl border border-zinc-200 bg-white p-3 shadow-xl"
+            className="absolute bottom-11 right-0 z-[90] w-52 rounded-xl border border-zinc-200 bg-white p-3 shadow-xl md:bottom-auto md:top-10"
             onClick={(e) => e.stopPropagation()}
           >
             <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
