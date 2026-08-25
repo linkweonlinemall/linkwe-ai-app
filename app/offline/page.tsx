@@ -15,7 +15,7 @@ export default function OfflinePage() {
     >
       <div className="mb-8">
         <img
-          src="/linkwe-pwa-192-v2.png"
+          src="/linkwe-pwa-192-v3.png"
           alt="LinkWe"
           className="mx-auto h-24 w-24 rounded-2xl"
         />

@@ -29,6 +29,11 @@ export const metadata: Metadata = {
   creator: "LinkWe Online Directory",
   metadataBase: new URL("https://www.linkweonlinemall.com"),
   manifest: "/manifest.json",
+  icons: {
+    icon: [{ url: "/favicon-48x48.png", sizes: "48x48", type: "image/png" }],
+    shortcut: "/favicon-48x48.png",
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
   themeColor: "#D4450A",
   appleWebApp: {
     capable: true,

@@ -1,12 +1,12 @@
-const CACHE_NAME = "linkwe-v4";
+const CACHE_NAME = "linkwe-v5";
 const OFFLINE_URL = "/offline";
 
 const STATIC_ASSETS = [
   "/",
   "/offline",
   "/manifest.json",
-  "/linkwe-pwa-192-v2.png",
-  "/linkwe-pwa-512-v2.png",
+  "/linkwe-pwa-192-v3.png",
+  "/linkwe-pwa-512-v3.png",
 ];
 
 // Install — cache static assets
@@ -127,8 +127,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title || "LinkWe", {
       body: data.body || "",
-      icon: "/linkwe-pwa-192-v2.png",
-      badge: "/linkwe-pwa-72-v2.png",
+      icon: "/linkwe-pwa-192-v3.png",
+      badge: "/linkwe-pwa-72-v3.png",
       data: { url: data.url || "/" },
     })
   );

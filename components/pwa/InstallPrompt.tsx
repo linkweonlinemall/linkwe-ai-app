@@ -55,7 +55,7 @@ export default function InstallPrompt() {
         style={{ background: "#1C1C1A", border: "1px solid rgba(255,255,255,0.1)" }}
       >
         <div className="flex items-start gap-3 p-4">
-          <img src="/linkwe-pwa-96-v2.png" alt="LinkWe" className="h-12 w-12 shrink-0 rounded-xl" />
+          <img src="/linkwe-pwa-96-v3.png" alt="LinkWe" className="h-12 w-12 shrink-0 rounded-xl" />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-bold text-white">Install LinkWe Online Mall</p>
             <p className="mt-0.5 text-xs text-zinc-400">
