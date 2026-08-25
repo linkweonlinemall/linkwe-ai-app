@@ -792,7 +792,7 @@ export default async function Home() {
               <div className="relative">
                 <div className={`absolute inset-0 rounded-xl blur-3xl opacity-30`} style={{ background: css.scarletRadialLight }} />
                 <img
-                  src="/icon-192x192.png"
+                  src="/linkwe-pwa-192-v2.png"
                   alt="LinkWe app"
                   className={`relative h-40 w-40 rounded-xl shadow-2xl ring-4 ring-white/10`}
                 />

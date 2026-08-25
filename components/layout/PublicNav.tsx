@@ -177,7 +177,7 @@ export default function PublicNav({
               : "/linkwe-logo-mobile-on-dark.png"
         }
         alt="LinkWe"
-        className={desktop ? "block h-8 w-auto shrink-0" : "block h-7 w-auto shrink-0"}
+        className={desktop ? "block h-11 w-auto shrink-0" : "block h-10 w-auto shrink-0"}
       />
     );
   }

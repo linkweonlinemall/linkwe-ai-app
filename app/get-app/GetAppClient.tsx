@@ -129,7 +129,7 @@ export default function GetAppClient({ user = null, dashboardHref }: GetAppClien
         <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 sm:py-20">
           <div className="flex flex-col items-center gap-6 text-center sm:flex-row sm:text-left">
             <img
-              src="/icon-192x192.png"
+              src="/linkwe-pwa-192-v2.png"
               alt="LinkWe"
               className="h-28 w-28 shrink-0 rounded-3xl shadow-2xl"
             />
