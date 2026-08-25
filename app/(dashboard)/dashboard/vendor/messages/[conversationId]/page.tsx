@@ -63,7 +63,7 @@ export default async function VendorMessageThreadPage({ params }: Props) {
   }));
 
   return (
-    <div className="-mx-6 -mb-8 flex min-h-[calc(100dvh-8rem)] flex-col md:-mx-8">
+    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
       <MessageThread
         conversationId={conversationId}
         headerTitle={customerName}
@@ -71,7 +71,7 @@ export default async function VendorMessageThreadPage({ params }: Props) {
         currentUserId={session.userId}
         initialMessages={initialMessages}
         emptyHint="No messages in this conversation yet."
-        shellClassName="min-h-0 flex-1 flex-col bg-[#F5F5F5]"
+        shellClassName="min-h-0 min-w-0 flex-1 flex-col bg-[#F5F5F5]"
       />
     </div>
   );

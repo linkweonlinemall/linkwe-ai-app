@@ -195,8 +195,18 @@ export default function ProductBuyBox({
 
       {mobileStickyBar ? (
         <div className="fixed bottom-[calc(60px+env(safe-area-inset-bottom,0px))] left-0 right-0 z-50 border-t border-zinc-200 bg-white px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] md:hidden">
-          <div className="mx-auto flex w-full items-center gap-4 px-8">
-            <p className="shrink-0 text-base font-medium text-[#D4450A]">TTD {price.toFixed(2)}</p>
+          <div className="mx-auto flex w-full max-w-lg items-center gap-2">
+            {hasVariants && variants.length > 0 && !allSelected ? (
+              <a
+                href="#product-options"
+                className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[#1C1C1A] px-3 text-xs font-semibold text-[#1C1C1A]"
+              >
+                Choose options
+                <ChevronDown className="size-4" strokeWidth={2} aria-hidden />
+              </a>
+            ) : (
+              <p className="shrink-0 text-sm font-semibold text-[#D4450A]">TTD {price.toFixed(2)}</p>
+            )}
             <div className="min-w-0 flex-1">
               <AddToCartButton
                 productId={productId}
@@ -209,16 +219,6 @@ export default function ProductBuyBox({
             </div>
           </div>
         </div>
-      ) : null}
-
-      {mobileStickyBar && hasVariants && variants.length > 0 && !allSelected ? (
-        <a
-          href="#product-options"
-          className="fixed bottom-[calc(132px+env(safe-area-inset-bottom,0px))] right-4 z-50 inline-flex min-h-11 items-center gap-2 rounded-full bg-[#1C1C1A] px-4 text-xs font-semibold text-white shadow-lg md:hidden"
-        >
-          Choose options
-          <ChevronDown className="size-4" strokeWidth={2} aria-hidden />
-        </a>
       ) : null}
 
       {isDigital && digitalMeta ? (

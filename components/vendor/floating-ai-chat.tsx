@@ -414,6 +414,8 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
     [input, loading, messages, chatId, attachedPreviews, focusedProductId, focusedEventId]
   )
 
+  if (pathname.startsWith("/dashboard/vendor/messages")) return null
+
   if (!aiEnabled) {
     if (pathname === "/dashboard/vendor/finance") return null
 

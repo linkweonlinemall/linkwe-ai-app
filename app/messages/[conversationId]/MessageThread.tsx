@@ -130,7 +130,7 @@ export function MessageThread({
   }
 
   return (
-    <div className={`flex ${shellClassName}`}>
+    <div className={`flex min-w-0 max-w-full overflow-hidden ${shellClassName}`}>
       <header
         className={`sticky top-0 z-10 flex items-center gap-2 border-b border-[rgba(28,28,26,0.08)] bg-white px-3 py-2.5 sm:px-4 sm:py-3`}
       >
@@ -194,7 +194,7 @@ export function MessageThread({
 
       <form
         onSubmit={handleSend}
-        className={`sticky bottom-0 border-t border-[rgba(28,28,26,0.08)] bg-white px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-3`}
+        className={`sticky bottom-0 z-20 border-t border-[rgba(28,28,26,0.08)] bg-white px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-3`}
       >
         <div className="mx-auto flex max-w-lg items-end gap-2">
           <textarea
@@ -202,7 +202,7 @@ export function MessageThread({
             onChange={(e) => setDraft(e.target.value)}
             rows={1}
             placeholder="Write a message…"
-            className={`min-h-[40px] max-h-28 flex-1 resize-none rounded-[10px] bg-white px-3 py-2 text-[13px] text-[#1C1C1A] outline-none focus:border-[#D4450A] focus:ring-1 focus:ring-[#D4450A]/30 ${CARD_BORDER}`}
+            className={`min-h-[40px] max-h-28 min-w-0 flex-1 resize-none rounded-[10px] bg-white px-3 py-2 text-[13px] text-[#1C1C1A] outline-none focus:border-[#D4450A] focus:ring-1 focus:ring-[#D4450A]/30 ${CARD_BORDER}`}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();

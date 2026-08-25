@@ -1,6 +1,6 @@
 export default function RouteLoadingLogo({ label = "Loading" }: { label?: string }) {
   return (
-    <div className="flex min-h-[38vh] flex-col items-center justify-center px-6 text-center" role="status" aria-live="polite">
+    <div className="flex min-h-[100dvh] flex-col items-center justify-center px-6 text-center" role="status" aria-live="polite">
       <div className="lw-loader-orbit relative flex size-24 items-center justify-center rounded-full bg-white shadow-[0_16px_45px_rgba(28,28,26,0.12)]">
         {/* Generated from the current LinkWe app icon for a consistent branded transition. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}

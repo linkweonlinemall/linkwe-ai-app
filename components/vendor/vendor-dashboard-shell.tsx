@@ -55,7 +55,7 @@ export default function VendorDashboardShell({
   }
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 overflow-x-hidden bg-[#F7F5F2]">
+    <div className="flex h-full min-h-0 min-w-0 bg-[#F7F5F2]">
       <Suspense fallback={null}>
         <VendorDashboardSidebar
           storeName={storeName}
@@ -76,7 +76,7 @@ export default function VendorDashboardShell({
           renderedAt={renderedAt}
         />
 
-        <div className="vendor-main-scroll min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-[#F7F5F2] pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0">
+        <div className="vendor-main-scroll min-h-0 min-w-0 flex-1 overflow-y-auto bg-[#F7F5F2] pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0">
           {children}
         </div>
 

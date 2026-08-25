@@ -182,7 +182,16 @@ body {
 }
 
 .lw-route-loading {
-  animation: lw-fade-in 200ms ease-out both;
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: #f5f5f5;
+}
+
+.lw-route-loading > * {
+  animation: lw-fade-in 420ms ease-out both;
 }
 
 @keyframes lw-loader-breathe {
@@ -195,7 +204,7 @@ body {
 }
 
 .lw-loader-mark {
-  animation: lw-loader-breathe 1.15s ease-in-out infinite;
+  animation: lw-fade-in 420ms ease-out both, lw-loader-breathe 1.15s 420ms ease-in-out infinite;
 }
 
 .lw-loader-orbit::after {

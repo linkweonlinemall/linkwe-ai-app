@@ -157,7 +157,7 @@ export default function VendorDashboardOverview(props: {
   const maxReviewCount = Math.max(...[1, 2, 3, 4, 5].map((s) => reviewSummary.breakdown[s] ?? 0), 1);
 
   return (
-    <div className="space-y-5 font-sans max-md:[&_.dash-card-pad]:p-3">
+    <div className="min-w-0 max-w-full space-y-5 font-sans max-md:[&_.dash-card-pad]:p-3">
       {openForBusinessChecklist}
       {overallPct < 100 ? (
         <div className={`mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-[#B5D4F4] bg-[#EBF5FB] px-4 py-3 max-md:flex-col max-md:items-start`}>
@@ -228,11 +228,11 @@ export default function VendorDashboardOverview(props: {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-[1fr_240px] xl:grid-cols-[1fr_280px]">
+      <div className="grid min-w-0 max-w-full grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_240px] xl:grid-cols-[minmax(0,1fr)_280px]">
         {/* Left column */}
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           {/* Sales bars */}
-          <div className={`rounded-[12px] bg-white p-4 ${CARD_BORDER} dash-card-pad`}>
+          <div className={`min-w-0 overflow-hidden rounded-[12px] bg-white p-4 ${CARD_BORDER} dash-card-pad`}>
             <div className="mb-3 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 text-[14px] font-semibold text-[#1C1C1A]">
                 <IconChartBar className="size-[18px] text-[#7c7b77]" stroke={1.5} aria-hidden />
@@ -272,7 +272,7 @@ export default function VendorDashboardOverview(props: {
           </div>
 
           {/* Recent orders */}
-          <div className={`rounded-[12px] bg-white ${CARD_BORDER} overflow-hidden`}>
+          <div className={`min-w-0 rounded-[12px] bg-white ${CARD_BORDER} overflow-hidden`}>
             <div className="flex items-center justify-between border-b border-[rgba(28,28,26,0.08)] px-4 py-3 dash-card-pad">
               <div className="flex items-center gap-2 text-[14px] font-semibold text-[#1C1C1A]">
                 <IconShoppingBag className="size-[18px] text-[#7c7b77]" stroke={1.5} aria-hidden />
@@ -327,7 +327,7 @@ export default function VendorDashboardOverview(props: {
         </div>
 
         {/* Right column */}
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           {/* Store profile */}
           <div className={`overflow-hidden rounded-[12px] bg-white ${CARD_BORDER}`}>
             <div

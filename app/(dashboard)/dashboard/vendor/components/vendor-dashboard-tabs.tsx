@@ -80,7 +80,7 @@ export default function VendorDashboardTabs({
   const recentOrders = splitOrders.slice(0, 5);
 
   return (
-    <main className="w-full min-w-0 max-w-full flex-1 overflow-x-hidden bg-[#F7F5F2] px-4 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] pt-4 font-sans antialiased sm:px-5 md:px-6 md:pb-12 md:pt-5">
+    <main className="w-full min-w-0 max-w-full flex-1 bg-[#F7F5F2] px-4 pb-[calc(7rem+env(safe-area-inset-bottom,0px))] pt-4 font-sans antialiased sm:px-5 md:px-6 md:pb-12 md:pt-5">
       <div className="mb-4 max-md:[&_.avail-row]:gap-2">
         <AvailabilityToggle appearance="banner" initialAvailable={initialAvailableNow} />
       </div>
