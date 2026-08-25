@@ -13,6 +13,7 @@ import { createWiPayHostedPayment } from "@/lib/wipay/payments";
 import { BASE_URL } from "@/lib/email/resend";
 import { isStoreSellable } from "@/lib/store/sellable-store";
 import { isValidRegion } from "@/lib/regions/tt-regions";
+import { failWiPayAttempt } from "@/lib/payments/fail-wipay-attempt";
 
 export type CheckoutItem = {
   productId: string;
@@ -195,6 +196,12 @@ export async function createPaymentIntent(
     });
   } catch (e) {
     console.error(e);
+    const message = e instanceof Error ? e.message : "Payment setup failed";
+    const attempt = await prisma.paymentAttempt.findUnique({
+      where: { merchantOrderId },
+      select: { id: true },
+    });
+    if (attempt) await failWiPayAttempt(attempt.id, "ERROR", message);
     return { ok: false, error: "Payment setup failed. Please try again." };
   }
 

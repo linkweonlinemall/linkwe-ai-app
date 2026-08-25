@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { uploadVendorChatImages } from "@/app/actions/ai-vendor-image";
-import { createService } from "@/app/actions/services";
+import {
+  canCurrentVendorUsePayOnArrival,
+  createService,
+} from "@/app/actions/services";
 import { compressAndUploadImages } from "@/lib/images/upload-images-client";
 import RichTextEditor from "@/components/ui/RichTextEditor";
 import { SERVICE_CATEGORIES } from "@/lib/categories";
@@ -34,6 +37,7 @@ export default function NewServicePage() {
   const [serviceLocation, setServiceLocation] = useState("");
   const [requiresDeposit, setRequiresDeposit] = useState(false);
   const [paymentMode, setPaymentMode] = useState("CUSTOMER_CHOOSES");
+  const [canPayOnArrival, setCanPayOnArrival] = useState(false);
   const [quotePriceType, setQuotePriceType] = useState<string>("");
   const [subscriptionCanPause, setSubscriptionCanPause] = useState(false);
   const [subscriptionInterval, setSubscriptionInterval] = useState("");
@@ -42,6 +46,13 @@ export default function NewServicePage() {
   const [uploadingImages, setUploadingImages] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ total: number; done: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    void canCurrentVendorUsePayOnArrival().then((allowed) => {
+      setCanPayOnArrival(allowed);
+      if (!allowed) setPaymentMode("ONLINE_ONLY");
+    });
+  }, []);
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -360,6 +371,11 @@ export default function NewServicePage() {
         {serviceType === "BOOKABLE" ? (
           <div className="rounded-2xl border border-zinc-200 bg-white p-5">
             <p className="mb-3 text-sm font-bold text-zinc-900">Payment preference</p>
+            {!canPayOnArrival ? (
+              <p className="mb-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+                Starter services are paid online through LinkWe. Upgrade to Growth or Pro to offer pay on arrival.
+              </p>
+            ) : null}
             <div className="flex flex-col gap-2">
               {[
                 {
@@ -380,7 +396,9 @@ export default function NewServicePage() {
                   description: "Customer pays when they arrive — no online payment",
                   icon: "💵",
                 },
-              ].map((opt) => (
+              ]
+                .filter((opt) => canPayOnArrival || opt.value === "ONLINE_ONLY")
+                .map((opt) => (
                 <button
                   key={opt.value}
                   type="button"

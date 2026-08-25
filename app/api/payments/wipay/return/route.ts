@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyWiPayResponseHash } from "@/lib/wipay/payments";
 import { fulfillWiPayAttempt } from "@/lib/payments/fulfill-wipay-attempt";
+import { failWiPayAttempt } from "@/lib/payments/fail-wipay-attempt";
 
 export const runtime = "nodejs";
 
@@ -20,18 +21,21 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/checkout?payment=invalid", request.url));
   }
 
-  if (status !== "success" || !verifyWiPayResponseHash({
+  const hasValidHash = verifyWiPayResponseHash({
     transactionId,
     originalAmountMinor: attempt.amountMinor,
     receivedHash: hash,
-  })) {
-    await prisma.paymentAttempt.updateMany({
-      where: { id: attempt.id, status: "PENDING" },
-      data: {
-        status: status === "error" ? "ERROR" : "FAILED",
-        failureMessage: url.searchParams.get("message")?.slice(0, 500) || "Payment was not approved",
-      },
-    });
+  });
+  if (!hasValidHash) {
+    return NextResponse.redirect(new URL("/checkout?payment=invalid", request.url));
+  }
+
+  if (status !== "success") {
+    await failWiPayAttempt(
+      attempt.id,
+      status === "error" ? "ERROR" : "FAILED",
+      url.searchParams.get("message") || "Payment was not approved",
+    );
     return NextResponse.redirect(new URL("/checkout?payment=failed", request.url));
   }
 

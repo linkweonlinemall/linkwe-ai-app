@@ -15,6 +15,7 @@ import { sellableStoreWhere } from "@/lib/store/sellable-store";
 import {
   findVendorServicesForAvailability,
 } from "@/lib/vendor/vendor-service-query";
+import { canVendorUsePayOnArrival } from "@/lib/services/payment-policy";
 
 function normalizeSubscriptionInterval(
   serviceType: string,
@@ -80,6 +81,19 @@ export async function getVendorServices() {
   });
 }
 
+export async function canCurrentVendorUsePayOnArrival(): Promise<boolean> {
+  const session = await getSession();
+  if (!session) return false;
+  const store = await prisma.store.findFirst({
+    where: { ownerId: session.userId },
+    select: { subscriptionPlan: true, subscriptionStatus: true },
+  });
+  return canVendorUsePayOnArrival(
+    store?.subscriptionPlan,
+    store?.subscriptionStatus,
+  );
+}
+
 export async function createService(formData: FormData) {
   const session = await getSession();
   if (!session) return { error: "Not authenticated" };
@@ -127,7 +141,8 @@ export async function createService(formData: FormData) {
     "CUSTOMER_CHOOSES",
   ] as const;
   const bookingPaymentMode =
-    serviceType === "VIRTUAL"
+    serviceType === "VIRTUAL" ||
+    !canVendorUsePayOnArrival(store.subscriptionPlan, store.subscriptionStatus)
       ? BookingPaymentMode.ONLINE_ONLY
       : allowedPaymentModes.includes(
             bookingPaymentModeRaw as (typeof allowedPaymentModes)[number],
@@ -322,7 +337,8 @@ export async function updateService(id: string, formData: FormData) {
     "CUSTOMER_CHOOSES",
   ] as const;
   const bookingPaymentMode =
-    serviceType === "VIRTUAL"
+    serviceType === "VIRTUAL" ||
+    !canVendorUsePayOnArrival(store.subscriptionPlan, store.subscriptionStatus)
       ? BookingPaymentMode.ONLINE_ONLY
       : allowedPaymentModes.includes(
             bookingPaymentModeRaw as (typeof allowedPaymentModes)[number],

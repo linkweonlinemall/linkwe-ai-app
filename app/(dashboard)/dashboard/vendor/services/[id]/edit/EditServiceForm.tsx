@@ -85,9 +85,11 @@ type ServiceData = {
 export default function EditServiceForm({
   service,
   initialRelatedItems = [],
+  canPayOnArrival,
 }: {
   service: ServiceData;
   initialRelatedItems?: ContentLinkItem[];
+  canPayOnArrival: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -96,7 +98,7 @@ export default function EditServiceForm({
   const [serviceLocation, setServiceLocation] = useState(service.serviceLocation ?? "");
   const [requiresDeposit, setRequiresDeposit] = useState(service.requiresDeposit);
   const [paymentMode, setPaymentMode] = useState(
-    service.bookingPaymentMode ?? "CUSTOMER_CHOOSES",
+    canPayOnArrival ? service.bookingPaymentMode ?? "CUSTOMER_CHOOSES" : "ONLINE_ONLY",
   );
   const [quotePriceType, setQuotePriceType] = useState<string>(
     service.quotePriceType ?? "",
@@ -416,8 +418,15 @@ export default function EditServiceForm({
       {serviceType === "BOOKABLE" ? (
         <div className="rounded-2xl border border-zinc-200 bg-white p-5">
           <p className="mb-3 text-sm font-bold text-zinc-900">Payment preference</p>
+          {!canPayOnArrival ? (
+            <p className="mb-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+              Starter services are paid online through LinkWe. Upgrade to Growth or Pro to offer pay on arrival.
+            </p>
+          ) : null}
           <div className="flex flex-col gap-2">
-            {PAYMENT_MODES.map((opt) => (
+            {PAYMENT_MODES.filter(
+              (opt) => canPayOnArrival || opt.value === "ONLINE_ONLY",
+            ).map((opt) => (
               <button
                 key={opt.value}
                 type="button"

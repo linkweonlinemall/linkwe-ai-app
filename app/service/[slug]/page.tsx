@@ -24,6 +24,7 @@ import { getServiceCategoryLabel } from "@/lib/categories";
 import { formatSubscriptionIntervalDisplay } from "@/lib/finance/subscription-interval";
 import { prisma } from "@/lib/prisma";
 import { isStoreSellable } from "@/lib/store/sellable-store";
+import { canVendorUsePayOnArrival } from "@/lib/services/payment-policy";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -148,6 +149,8 @@ export default async function ServiceDetailPage({ params }: Props) {
           isAvailableNow: true,
           ownerId: true,
           status: true,
+          subscriptionPlan: true,
+          subscriptionStatus: true,
           owner: { select: { idVerificationStatus: true } },
         },
       },
@@ -707,7 +710,14 @@ export default async function ServiceDetailPage({ params }: Props) {
                     requiresDeposit={bookingData.requiresDeposit ?? false}
                     depositAmount={bookingData.depositAmount ?? null}
                     requiresApproval={bookingData.requiresApproval ?? false}
-                    bookingPaymentMode={bookingData.bookingPaymentMode ?? "CUSTOMER_CHOOSES"}
+                    bookingPaymentMode={
+                      canVendorUsePayOnArrival(
+                        service.store.subscriptionPlan,
+                        service.store.subscriptionStatus,
+                      )
+                        ? bookingData.bookingPaymentMode ?? "CUSTOMER_CHOOSES"
+                        : "ONLINE_ONLY"
+                    }
                     advanceBookingDays={bookingData.advanceBookingDays ?? 30}
                     availability={{
                       durationMinutes:

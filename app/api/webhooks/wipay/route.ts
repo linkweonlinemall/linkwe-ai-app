@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getWiPayConfig } from "@/lib/wipay/config";
 import { fulfillWiPayAttempt } from "@/lib/payments/fulfill-wipay-attempt";
+import { failWiPayAttempt } from "@/lib/payments/fail-wipay-attempt";
 
 export const runtime = "nodejs";
 
@@ -60,6 +61,22 @@ export async function POST(request: Request) {
         });
       }
     }
+    if (
+      transactionId &&
+      (event.event === "payment.failed" || event.event === "payment.error")
+    ) {
+      const attempt = await prisma.paymentAttempt.findFirst({
+        where: { providerTransactionId: transactionId },
+        select: { id: true },
+      });
+      if (attempt) {
+        await failWiPayAttempt(
+          attempt.id,
+          event.event === "payment.error" ? "ERROR" : "FAILED",
+          event.event === "payment.error" ? "WiPay payment error" : "WiPay payment failed",
+        );
+      }
+    }
     await prisma.$transaction(async (tx) => {
       await tx.paymentWebhookEvent.create({
         data: { id: event.id, eventType: event.event, payload: event as object },
@@ -72,8 +89,6 @@ export async function POST(request: Request) {
         : event.event === "payment.chargeback_processed" ? "CHARGEBACK_PROCESSED"
         : event.event === "payment.chargeback_released" ? "CHARGEBACK_RELEASED"
         : event.event === "payment.fraud_confirmed" ? "FRAUD_CONFIRMED"
-        : event.event === "payment.failed" ? "FAILED"
-        : event.event === "payment.error" ? "ERROR"
         : null;
       if (status) {
         await tx.paymentAttempt.updateMany({

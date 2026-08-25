@@ -9,6 +9,7 @@ import {
   vendorServiceDetailSelect,
   vendorServiceEditFormDefaults,
 } from "@/lib/vendor/vendor-service-query";
+import { canVendorUsePayOnArrival } from "@/lib/services/payment-policy";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -19,7 +20,7 @@ export default async function EditServicePage({ params }: Props) {
 
   const store = await prisma.store.findFirst({
     where: { ownerId: session.userId },
-    select: { id: true },
+    select: { id: true, subscriptionPlan: true, subscriptionStatus: true },
   });
   if (!store) redirect("/dashboard/vendor/services");
 
@@ -46,7 +47,14 @@ export default async function EditServicePage({ params }: Props) {
         <span className="text-sm font-semibold text-zinc-900">Edit service</span>
       </div>
       <h1 className="mb-6 text-2xl font-bold text-zinc-900">Edit Service</h1>
-      <EditServiceForm service={service} initialRelatedItems={initialRelatedItems} />
+      <EditServiceForm
+        service={service}
+        initialRelatedItems={initialRelatedItems}
+        canPayOnArrival={canVendorUsePayOnArrival(
+          store.subscriptionPlan,
+          store.subscriptionStatus,
+        )}
+      />
     </div>
   );
 }

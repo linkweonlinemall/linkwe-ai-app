@@ -26,6 +26,7 @@ import {
   dayRangeTrinidad,
   isSlotInPastTrinidad,
 } from "@/lib/timezone/trinidad";
+import { canVendorUsePayOnArrival } from "@/lib/services/payment-policy";
 
 // Get service booking data for customer
 export async function getServiceBookingData(serviceSlug: string) {
@@ -167,6 +168,8 @@ export async function createBooking(input: {
         select: {
           id: true,
           openingHours: true,
+          subscriptionPlan: true,
+          subscriptionStatus: true,
           status: true,
           owner: { select: { idVerificationStatus: true } },
         },
@@ -193,9 +196,20 @@ export async function createBooking(input: {
 
   if (!service.isAvailable) return { error: "slot_unavailable" };
 
-  if (service.serviceType === "VIRTUAL") {
+  if (
+    service.serviceType === "VIRTUAL" ||
+    !canVendorUsePayOnArrival(
+      service.store.subscriptionPlan,
+      service.store.subscriptionStatus,
+    )
+  ) {
     if (input.paymentMethod !== "online") {
-      return { error: "Virtual services must be paid online." };
+      return {
+        error:
+          service.serviceType === "VIRTUAL"
+            ? "Virtual services must be paid online."
+            : "Starter-plan services must be paid online through LinkWe.",
+      };
     }
   } else {
     if (
