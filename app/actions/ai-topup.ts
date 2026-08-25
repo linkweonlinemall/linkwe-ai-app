@@ -3,10 +3,11 @@
 import { getSession } from "@/lib/auth/session";
 import { getAITopupBundle } from "@/lib/finance/ai-topup-bundles";
 import { prisma } from "@/lib/prisma";
-import { stripe } from "@/lib/stripe/stripe";
+import { BASE_URL } from "@/lib/email/resend";
+import { createWiPayHostedPayment } from "@/lib/wipay/payments";
 
 export type StartAITopupCheckoutResult =
-  | { ok: true; clientSecret: string; purchaseId: string }
+  | { ok: true; checkoutUrl: string; purchaseId: string }
   | { ok: false; error: string };
 
 export async function startAITopupCheckout(
@@ -30,41 +31,38 @@ export async function startAITopupCheckout(
     return { ok: false, error: "Invalid bundle." };
   }
 
-  let paymentIntent;
-  try {
-    paymentIntent = await stripe.paymentIntents.create({
-      amount: bundle.priceMinor,
-      currency: "ttd",
-      metadata: {
-        aiTopupStoreId: store.id,
-        aiTopupBundleKey: bundle.key,
-        usesPurchased: String(bundle.uses),
-        userId: session.userId,
-      },
-    });
-  } catch (e) {
-    console.error("[ai-topup] stripe", e);
-    return { ok: false, error: "Payment setup failed. Please try again." };
-  }
-
-  const clientSecret = paymentIntent.client_secret;
-  if (!clientSecret) {
-    return { ok: false, error: "Payment setup failed. Please try again." };
-  }
-
   try {
     const purchase = await prisma.aITopupPurchase.create({
       data: {
         storeId: store.id,
         usesPurchased: bundle.uses,
         pricePaidMinor: bundle.priceMinor,
-        stripePaymentIntentId: paymentIntent.id,
         status: "PENDING",
       },
       select: { id: true },
     });
 
-    return { ok: true, clientSecret, purchaseId: purchase.id };
+    const merchantOrderId = `topup-${purchase.id}`;
+    await prisma.paymentAttempt.create({
+      data: {
+        purpose: "AI_TOPUP",
+        merchantOrderId,
+        amountMinor: bundle.priceMinor,
+        userId: session.userId,
+        targetId: purchase.id,
+      },
+    });
+    const payment = await createWiPayHostedPayment({
+      merchantOrderId,
+      amountMinor: bundle.priceMinor,
+      responseUrl: `${BASE_URL}/api/payments/wipay/return`,
+      data: { purpose: "AI_TOPUP", targetId: purchase.id },
+    });
+    await prisma.paymentAttempt.update({
+      where: { merchantOrderId },
+      data: { providerTransactionId: payment.transactionId },
+    });
+    return { ok: true, checkoutUrl: payment.url, purchaseId: purchase.id };
   } catch (e) {
     console.error("[ai-topup] create purchase", e);
     return { ok: false, error: "Could not start checkout. Please try again." };

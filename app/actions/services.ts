@@ -8,7 +8,7 @@ import {
   ServiceType,
 } from "@prisma/client";
 
-import { mapSubscriptionIntervalToStripe } from "@/lib/finance/subscription-interval";
+import { mapSubscriptionInterval } from "@/lib/finance/subscription-interval";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth/session";
 import { sellableStoreWhere } from "@/lib/store/sellable-store";
@@ -24,7 +24,7 @@ function normalizeSubscriptionInterval(
     return { interval: rawInterval };
   }
   const normalized = rawInterval?.trim().toLowerCase() ?? "";
-  if (!mapSubscriptionIntervalToStripe(normalized)) {
+  if (!mapSubscriptionInterval(normalized)) {
     return { error: "A billing interval is required for subscription services." };
   }
   return { interval: normalized };

@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import {
   cancelMyServiceSubscription,
+  renewMyServiceSubscription,
   resumeMyServiceSubscription,
 } from "@/app/actions/service-subscription";
 import { formatSubscriptionPeriodEnd as formatPeriodEnd } from "@/lib/finance/subscription-format";
@@ -13,19 +14,20 @@ type Props = {
   subscriptionId: string;
   cancelAtPeriodEnd: boolean;
   currentPeriodEnd: Date | string | null;
+  canRenew?: boolean;
   layout?: "card" | "compact";
 };
 
 function manageErrorMessage(error: string): string {
   switch (error) {
-    case "stripe_failed":
-      return "Couldn't update — try again.";
     case "not_logged_in":
       return "Sign in to manage your subscription.";
     case "not_found":
     case "not_active":
     case "no_subscription":
       return "This subscription can't be updated right now.";
+    case "too_early":
+      return "Renewal opens seven days before your access ends.";
     default:
       return "Couldn't update — try again.";
   }
@@ -35,6 +37,7 @@ export default function SubscriptionManageActions({
   subscriptionId,
   cancelAtPeriodEnd,
   currentPeriodEnd,
+  canRenew = false,
   layout = "card",
 }: Props) {
   const router = useRouter();
@@ -72,6 +75,18 @@ export default function SubscriptionManageActions({
     setError(manageErrorMessage(result.error));
   }
 
+  async function handleRenew() {
+    setError(null);
+    setLoading(true);
+    const result = await renewMyServiceSubscription(subscriptionId);
+    setLoading(false);
+    if (result.ok) {
+      window.location.assign(result.checkoutUrl);
+      return;
+    }
+    setError(manageErrorMessage(result.error));
+  }
+
   if (cancelAtPeriodEnd) {
     return (
       <div className={layout === "card" ? "flex flex-col items-end gap-2" : "flex flex-col gap-2"}>
@@ -94,6 +109,16 @@ export default function SubscriptionManageActions({
 
   return (
     <div className={layout === "card" ? "flex flex-col items-end gap-2" : "flex flex-col gap-2"}>
+      {canRenew ? (
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() => void handleRenew()}
+          className="rounded-xl bg-[#D4450A] px-4 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+        >
+          {loading ? "Redirecting…" : "Renew now"}
+        </button>
+      ) : null}
       <button
         type="button"
         disabled={loading}

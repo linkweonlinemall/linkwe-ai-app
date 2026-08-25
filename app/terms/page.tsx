@@ -172,8 +172,8 @@ export default async function TermsOfServicePage() {
           <section className="rounded-2xl border border-zinc-200 bg-white p-6">
             <h2 className="mb-3 text-lg font-bold text-zinc-900">8. Payments</h2>
             <p className="text-sm leading-7 text-zinc-600">
-              All payments on LinkWe are processed securely through Stripe. By making a payment,
-              you agree to Stripe's terms of service. LinkWe does not store card details.
+              Online payments on LinkWe are processed securely through WiPay. By making a payment,
+              you agree to WiPay&apos;s terms of service. LinkWe does not store card details.
               Prices on LinkWe are displayed in Trinidad and Tobago Dollars (TTD) unless otherwise stated.
               International card payments may be subject to currency conversion by your card issuer.
             </p>

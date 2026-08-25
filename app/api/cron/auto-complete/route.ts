@@ -5,14 +5,12 @@ import {
   VendorSubscriptionPlan,
 } from "@prisma/client";
 import { NextResponse } from "next/server";
-import Stripe from "stripe";
 
 import { createNotification } from "@/app/actions/notifications";
 import { releaseBookingEarnings } from "@/lib/finance/complete-booking";
 import { releaseSplitOrderEarnings } from "@/lib/finance/complete-order";
 import { releaseTicketOrderEarnings } from "@/lib/finance/release-ticket-earnings";
 import { prisma } from "@/lib/prisma";
-import { stripe } from "@/lib/stripe/stripe";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -77,34 +75,67 @@ export async function GET(request: Request) {
 
   const graceMs = GRACE_DAYS * 24 * 60 * 60 * 1000;
   const pastDueCutoff = new Date(now.getTime() - graceMs);
+
+  const newlyDueStores = await prisma.store.findMany({
+    where: {
+      subscriptionStatus: StoreSubscriptionStatus.ACTIVE,
+      subscriptionPlan: { not: VendorSubscriptionPlan.STARTER },
+      planRenewsAt: { lte: now },
+    },
+    select: { id: true, ownerId: true },
+  });
+  for (const store of newlyDueStores) {
+    await prisma.store.updateMany({
+      where: { id: store.id, subscriptionStatus: StoreSubscriptionStatus.ACTIVE },
+      data: { subscriptionStatus: StoreSubscriptionStatus.PAST_DUE, pastDueSince: now },
+    });
+    await createNotification({
+      userId: store.ownerId,
+      type: NotificationType.GENERAL,
+      title: "Your LinkWe plan is ready to renew",
+      body: "Approve your next monthly payment through WiPay within 7 days to keep your current plan.",
+      linkUrl: "/dashboard/vendor/finance",
+    });
+  }
+
+  const serviceRenewalsDue = await prisma.customerServiceSubscription.updateMany({
+    where: { status: "ACTIVE", currentPeriodEnd: { lte: now }, cancelAtPeriodEnd: false },
+    data: { status: "PAST_DUE" },
+  });
+  const scheduledServiceEndings = await prisma.customerServiceSubscription.updateMany({
+    where: {
+      status: { in: ["ACTIVE", "PAST_DUE"] },
+      cancelAtPeriodEnd: true,
+      currentPeriodEnd: { lte: now },
+    },
+    data: { status: "CANCELED", canceledAt: now, nextChargeAt: null },
+  });
+  const endedServiceSubscriptions = await prisma.customerServiceSubscription.updateMany({
+    where: {
+      status: { in: ["ACTIVE", "PAST_DUE"] },
+      cancelAtPeriodEnd: false,
+      currentPeriodEnd: { lte: pastDueCutoff },
+    },
+    data: { status: "CANCELED", canceledAt: now, nextChargeAt: null },
+  });
   const overdueStores = await prisma.store.findMany({
     where: {
       subscriptionStatus: StoreSubscriptionStatus.PAST_DUE,
-      stripeSubscriptionId: { not: null },
+      wipayTrustedCardId: { not: null },
       pastDueSince: { lte: pastDueCutoff },
     },
-    select: { id: true, ownerId: true, stripeSubscriptionId: true },
+    select: { id: true, ownerId: true },
   });
   let downgraded = 0;
   for (const store of overdueStores) {
     try {
-      if (store.stripeSubscriptionId) {
-        // Cancel at Stripe so it stops retrying the card. This also fires customer.subscription.deleted,
-        // but that webhook's stripeSubscriptionId-match guard will no-op after we null it below.
-        try {
-          await stripe.subscriptions.cancel(store.stripeSubscriptionId);
-        } catch (e) {
-          const alreadyAbsent =
-            e instanceof Stripe.errors.StripeInvalidRequestError && e.code === "resource_missing";
-          if (!alreadyAbsent) throw e;
-        }
-      }
       await prisma.store.updateMany({
         where: { id: store.id, subscriptionStatus: StoreSubscriptionStatus.PAST_DUE },
         data: {
           subscriptionPlan: VendorSubscriptionPlan.STARTER,
           subscriptionStatus: StoreSubscriptionStatus.NONE,
           stripeSubscriptionId: null,
+          wipayTrustedCardId: null,
           planRenewsAt: null,
           pastDueSince: null,
           autoRenew: true,
@@ -129,5 +160,8 @@ export async function GET(request: Request) {
     ordersCompleted: expiredOrders.length,
     ticketOrdersReleased: eligibleTicketOrders.length,
     pastDueDowngraded: downgraded,
+    vendorRenewalsDue: newlyDueStores.length,
+    serviceRenewalsDue: serviceRenewalsDue.count,
+    serviceSubscriptionsEnded: endedServiceSubscriptions.count + scheduledServiceEndings.count,
   });
 }

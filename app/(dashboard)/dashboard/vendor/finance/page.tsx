@@ -7,7 +7,6 @@ import { assertDashboardRole } from "@/lib/auth/assert-role";
 import { getAIUsageState } from "@/lib/finance/ai-usage";
 import { getCurrentPeriodKey } from "@/lib/finance/ai-usage-period";
 import { prisma } from "@/lib/prisma";
-import { stripe } from "@/lib/stripe/stripe";
 
 export default async function VendorFinancePage() {
   const session = await getSession();
@@ -37,8 +36,7 @@ export default async function VendorFinancePage() {
       subscriptionStatus: true,
       planRenewsAt: true,
       pastDueSince: true,
-      stripeSubscriptionId: true,
-      autoRenew: true,
+      wipayTrustedCardId: true,
       aiTopupCreditsRemaining: true,
       ledgerEntries: {
         select: {
@@ -77,15 +75,7 @@ export default async function VendorFinancePage() {
     select: { id: true },
   }));
 
-  let subscriptionMode: "test" | "live" | "unavailable" | null = null;
-  if (store.stripeSubscriptionId) {
-    try {
-      const stripeSubscription = await stripe.subscriptions.retrieve(store.stripeSubscriptionId);
-      subscriptionMode = stripeSubscription.livemode ? "live" : "test";
-    } catch {
-      subscriptionMode = "unavailable";
-    }
-  }
+  const subscriptionMode: "live" | null = store.wipayTrustedCardId ? "live" : null;
 
   return (
     <div className="px-6 py-8">
@@ -117,10 +107,9 @@ export default async function VendorFinancePage() {
         aiRemaining={aiUsage.remaining}
         topupRemaining={aiUsage.topupRemaining}
         subPaidThisPeriod={subPaidThisPeriod}
-        isCardBilled={!!store.stripeSubscriptionId}
+        isCardBilled={!!store.wipayTrustedCardId}
         planRenewsAt={store.planRenewsAt}
         pastDueSince={store.pastDueSince}
-        autoRenew={store.autoRenew}
         subscriptionMode={subscriptionMode}
       />
     </div>

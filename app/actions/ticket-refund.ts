@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { calculateTicketEarningsMinor } from "@/lib/finance/commission";
 import { prisma } from "@/lib/prisma";
-import { stripe } from "@/lib/stripe/stripe";
+import { requestWiPayRefund } from "@/lib/wipay/wapi";
 import { ticketPaidMinor } from "@/lib/tickets/ticket-paid-minor";
 
 export async function refundTicket(
@@ -32,8 +32,17 @@ export async function refundTicket(
         select: {
           id: true,
           status: true,
-          stripePaymentIntentId: true,
+          total: true,
           earningsReleased: true,
+          tickets: {
+            select: {
+              id: true,
+              status: true,
+              ticketTypeId: true,
+              pricePaidMinor: true,
+              ticketType: { select: { price: true } },
+            },
+          },
         },
       },
       event: { select: { storeId: true } },
@@ -61,10 +70,6 @@ export async function refundTicket(
     return { error: "Order must be paid before refunding" };
   }
 
-  if (!order.stripePaymentIntentId) {
-    return { error: "Free tickets cannot be refunded through Stripe" };
-  }
-
   const ticketPriceMinor = ticketPaidMinor(ticket);
   if (
     !Number.isFinite(amountMinor) ||
@@ -77,78 +82,89 @@ export async function refundTicket(
     };
   }
 
-  let stripeRefund;
+  if (amountMinor !== order.total) {
+    return {
+      error: `WiPay refunds the complete payment transaction. Enter ${order.total} to refund this entire ticket order.`,
+    };
+  }
+
+  const payment = await prisma.paymentAttempt.findFirst({
+    where: {
+      purpose: "TICKET_ORDER",
+      targetId: order.id,
+      status: { in: ["SUCCEEDED", "REFUND_REQUESTED", "REFUNDED"] },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  if (!payment?.providerTransactionId) {
+    return { error: "The WiPay payment for this ticket order could not be located." };
+  }
+
   try {
-    stripeRefund = await stripe.refunds.create({
-      payment_intent: order.stripePaymentIntentId,
-      amount: amountMinor,
-    });
+    if (payment.status === "SUCCEEDED") {
+      await requestWiPayRefund(payment.providerTransactionId);
+      await prisma.paymentAttempt.update({
+        where: { id: payment.id },
+        data: { status: "REFUND_REQUESTED" },
+      });
+    }
   } catch (e) {
-    console.error("[ticket-refund] stripe", e);
-    const message = e instanceof Error ? e.message : "Stripe refund failed";
+    console.error("[ticket-refund] wipay", e);
+    const message = e instanceof Error ? e.message : "WiPay refund failed";
     return { error: message };
   }
 
   const orderId = ticket.orderId;
-  const idempotencyKey = `ticket:${orderId}:REFUND:${ticket.id}`;
-  const { grossMinor, commissionMinor, netMinor } = calculateTicketEarningsMinor(ticketPriceMinor);
   const now = new Date();
 
   await prisma.$transaction(async (tx) => {
-    const fresh = await tx.ticket.findUnique({
-      where: { id: ticket.id },
-      select: { status: true },
-    });
-    if (!fresh || fresh.status === "REFUNDED") return;
-
-    await tx.ticket.update({
-      where: { id: ticket.id },
-      data: {
-        status: "REFUNDED",
-        refundedAt: now,
-        refundAmountMinor: amountMinor,
-        stripeRefundId: stripeRefund.id,
-      },
-    });
-
-    const tt = await tx.eventTicketType.findUnique({
-      where: { id: ticket.ticketTypeId },
-      select: { quantitySold: true },
-    });
-    if (tt && tt.quantitySold > 0) {
-      await tx.eventTicketType.update({
-        where: { id: ticket.ticketTypeId },
-        data: { quantitySold: { decrement: 1 } },
+    for (const orderTicket of order.tickets) {
+      if (orderTicket.status === "REFUNDED" || orderTicket.status === "CANCELLED") continue;
+      const paidMinor = ticketPaidMinor(orderTicket);
+      await tx.ticket.update({
+        where: { id: orderTicket.id },
+        data: {
+          status: "REFUNDED",
+          refundedAt: now,
+          refundAmountMinor: paidMinor,
+          stripeRefundId: null,
+        },
       });
-    }
-
-    if (order.earningsReleased) {
-      const existing = await tx.vendorLedgerEntry.findFirst({
-        where: { idempotencyKey },
+      const tt = await tx.eventTicketType.findUnique({
+        where: { id: orderTicket.ticketTypeId },
+        select: { quantitySold: true },
       });
-      if (!existing) {
-        await tx.vendorLedgerEntry.create({
-          data: {
-            storeId: ticket.event.storeId,
-            currency: "TTD",
-            entryType: "DEBIT_REFUND",
-            ledgerEntryType: "ADJUSTMENT",
-            amountMinor: netMinor,
-            grossMinor,
-            commissionMinor,
-            netMinor,
-            idempotencyKey,
-            description: `Ticket refund clawback`,
-            metadata: {
-              ticketOrderId: orderId,
-              ticketId: ticket.id,
-              refundAmountMinor: amountMinor,
-            },
-            releasedAt: now,
-          },
+      if (tt && tt.quantitySold > 0) {
+        await tx.eventTicketType.update({
+          where: { id: orderTicket.ticketTypeId },
+          data: { quantitySold: { decrement: 1 } },
         });
       }
+      if (order.earningsReleased) {
+        const key = `ticket:${orderId}:REFUND:${orderTicket.id}`;
+        const existing = await tx.vendorLedgerEntry.findFirst({ where: { idempotencyKey: key } });
+        if (!existing) {
+          const { grossMinor, commissionMinor, netMinor } = calculateTicketEarningsMinor(paidMinor);
+          await tx.vendorLedgerEntry.create({
+            data: {
+              storeId: ticket.event.storeId,
+              currency: "TTD",
+              entryType: "DEBIT_REFUND",
+              ledgerEntryType: "ADJUSTMENT",
+              amountMinor: netMinor,
+              grossMinor,
+              commissionMinor,
+              netMinor,
+              idempotencyKey: key,
+              description: "Ticket order refund clawback",
+              metadata: { ticketOrderId: orderId, ticketId: orderTicket.id, refundAmountMinor: paidMinor },
+              releasedAt: now,
+            },
+          });
+        }
+      }
     }
+    await tx.ticketOrder.update({ where: { id: orderId }, data: { status: "REFUNDED" } });
   });
 
   revalidatePath("/dashboard/admin");

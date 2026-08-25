@@ -4,16 +4,15 @@ import { revalidatePath } from "next/cache";
 import {
   BookingStatus,
   CancelledBy,
-  NotificationType,
   type Prisma,
 } from "@prisma/client";
 
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { stripe } from "@/lib/stripe/stripe";
+import { createWiPayHostedPayment } from "@/lib/wipay/payments";
+import { BASE_URL } from "@/lib/email/resend";
 import { sendBookingConfirmationEmails } from "@/app/actions/booking-emails";
 import { cancelBookingCore } from "@/lib/finance/cancel-booking";
-import { handleBookingPaymentIntentSucceeded } from "@/lib/finance/booking-payment";
 import {
   generateSlotsForDate,
   getAvailableDates,
@@ -27,29 +26,6 @@ import {
   dayRangeTrinidad,
   isSlotInPastTrinidad,
 } from "@/lib/timezone/trinidad";
-
-function utcAnchorFromYmd(dateStr: string): Date {
-  const [y, m, d] = dateStr.split("-").map((v) => parseInt(v, 10));
-  return new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0));
-}
-
-/** Called after Stripe payment succeeds (webhook or client confirmation). */
-export async function finalizeBookingAfterPayment(bookingId: string) {
-  const pi = await prisma.productBooking.findUnique({
-    where: { id: bookingId },
-    select: { id: true },
-  });
-  if (!pi) return;
-
-  const intents = await stripe.paymentIntents.search({
-    query: `metadata['bookingId']:'${bookingId}'`,
-    limit: 1,
-  });
-  const paymentIntent = intents.data[0];
-  if (paymentIntent) {
-    await handleBookingPaymentIntentSucceeded(paymentIntent);
-  }
-}
 
 // Get service booking data for customer
 export async function getServiceBookingData(serviceSlug: string) {
@@ -361,7 +337,7 @@ export async function createBookingPaymentIntent(
   bookingId: string,
   paymentType: "full" | "deposit",
 ): Promise<
-  | { ok: true; clientSecret: string; paymentIntentId: string }
+  | { ok: true; checkoutUrl: string }
   | { error: string }
 > {
   const session = await getSession();
@@ -406,84 +382,37 @@ export async function createBookingPaymentIntent(
   const amountMinor = Math.round(amountTtd * 100);
   if (amountMinor < 1) return { error: "Invalid payment amount" };
 
-  let paymentIntent;
+  const merchantOrderId = `booking-${bookingId}-${paymentType}`;
   try {
-    paymentIntent = await stripe.paymentIntents.create({
-      amount: amountMinor,
-      currency: "ttd",
-      metadata: {
-        bookingId,
+    await prisma.paymentAttempt.upsert({
+      where: { merchantOrderId },
+      create: {
+        purpose: "PRODUCT_BOOKING",
+        merchantOrderId,
+        amountMinor,
         userId: session.userId,
-        paymentType: paymentType === "deposit" ? "deposit" : "full_payment",
+        targetId: bookingId,
+        providerData: { paymentType },
       },
+      update: { amountMinor, status: "PENDING", failureMessage: null },
     });
+    const payment = await createWiPayHostedPayment({
+      merchantOrderId,
+      amountMinor,
+      responseUrl: `${BASE_URL}/api/payments/wipay/return`,
+      data: { purpose: "PRODUCT_BOOKING", targetId: bookingId, paymentType },
+    });
+    await prisma.paymentAttempt.update({
+      where: { merchantOrderId },
+      data: { providerTransactionId: payment.transactionId },
+    });
+    return { ok: true, checkoutUrl: payment.url };
   } catch (e) {
     console.error("[createBookingPaymentIntent]", e);
     return { error: "Payment setup failed. Please try again." };
   }
-
-  const clientSecret = paymentIntent.client_secret;
-  if (!clientSecret) {
-    return { error: "Payment setup failed." };
-  }
-
-  return {
-    ok: true,
-    clientSecret,
-    paymentIntentId: paymentIntent.id,
-  };
 }
 
-async function retrieveSucceededPaymentIntent(paymentIntentId: string) {
-  const retryable = new Set(["processing", "requires_confirmation", "requires_action"]);
-  for (let attempt = 0; attempt < 8; attempt++) {
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-    if (paymentIntent.status === "succeeded") return paymentIntent;
-    if (!retryable.has(paymentIntent.status)) return null;
-    if (attempt < 7) {
-      await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
-    }
-  }
-  const last = await stripe.paymentIntents.retrieve(paymentIntentId);
-  return last.status === "succeeded" ? last : null;
-}
-
-export async function confirmBookingPaid(
-  bookingId: string,
-  paymentIntentId: string,
-): Promise<{ ok: true; status: BookingStatus } | { error: string }> {
-  const session = await getSession();
-  if (!session) return { error: "not_logged_in" };
-
-  let paymentIntent;
-  try {
-    paymentIntent = await retrieveSucceededPaymentIntent(paymentIntentId);
-  } catch (e) {
-    console.error("[confirmBookingPaid]", e);
-    return { error: "Could not verify payment" };
-  }
-
-  if (!paymentIntent) {
-    return { error: "Payment has not completed yet" };
-  }
-  if (paymentIntent.metadata?.bookingId !== bookingId) {
-    return { error: "Payment does not match this booking" };
-  }
-  if (paymentIntent.metadata?.userId !== session.userId) {
-    return { error: "Not authorized" };
-  }
-
-  await handleBookingPaymentIntentSucceeded(paymentIntent);
-
-  const booking = await prisma.productBooking.findUnique({
-    where: { id: bookingId },
-    select: { status: true },
-  });
-
-  if (!booking) return { error: "Booking not found" };
-
-  return { ok: true, status: booking.status };
-}
 
 // Get customer's bookings
 export async function getCustomerBookings() {

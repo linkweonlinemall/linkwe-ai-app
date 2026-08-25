@@ -10,7 +10,7 @@ import RelatedItemsPanel from "@/components/vendor/RelatedItemsPanel";
 import RichTextEditor from "@/components/ui/RichTextEditor";
 import type { ContentLinkItem } from "@/lib/content-links/types";
 import { SERVICE_CATEGORIES } from "@/lib/categories";
-import { mapSubscriptionIntervalToStripe } from "@/lib/finance/subscription-interval";
+import { mapSubscriptionInterval } from "@/lib/finance/subscription-interval";
 
 const SERVICE_TYPES = [
   { value: "BOOKABLE", label: "Bookable", description: "Customer picks a date and time", icon: "📅" },
@@ -137,7 +137,7 @@ export default function EditServiceForm({
     setError(null);
     if (
       serviceType === "SUBSCRIPTION" &&
-      !mapSubscriptionIntervalToStripe(subscriptionInterval)
+      !mapSubscriptionInterval(subscriptionInterval)
     ) {
       setError("Choose a billing interval.");
       setLoading(false);

@@ -30,7 +30,7 @@ export function calculateEarnings(
   return { gross: amountTTD, commission, net };
 }
 
-/** Convert TTD dollars to minor units (cents) for ledger / Stripe. */
+/** Convert TTD dollars to minor units (cents) for the ledger and payment provider. */
 export function ttdToMinor(amountTTD: number): number {
   return Math.round(amountTTD * 100);
 }

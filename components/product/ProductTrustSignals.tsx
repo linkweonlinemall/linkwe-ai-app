@@ -31,7 +31,7 @@ export default function ProductTrustSignals({
       </li>
       <li className="flex items-start gap-2">
         <Lock className="mt-0.5 size-4 shrink-0 text-zinc-500" strokeWidth={2} aria-hidden />
-        <span>Secure checkout via Stripe</span>
+        <span>Secure checkout via WiPay</span>
       </li>
     </ul>
   );

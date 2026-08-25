@@ -1,16 +1,10 @@
 "use client";
 
-import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { ProductBookingSlot } from "@prisma/client";
 
-import {
-  confirmBookingPaid,
-  createBooking,
-  createBookingPaymentIntent,
-} from "@/app/actions/booking";
+import { createBooking, createBookingPaymentIntent } from "@/app/actions/booking";
 import { getOrCreateConversation } from "@/app/actions/messages";
 import InlineSpinner from "@/components/ui/InlineSpinner";
 import { formatTime } from "@/lib/booking/slots";
@@ -68,7 +62,7 @@ function hasDepositAmount(depositAmount: number | null): boolean {
   return depositAmount != null && depositAmount > 0;
 }
 
-/** Amount to charge via Stripe now, or null if no payment at booking time. */
+/** Amount to charge online now, or null if no payment is due at booking time. */
 function chargeAmountNow(
   paymentMethod: "online" | "arrival",
   fullPrice: number,
@@ -79,126 +73,6 @@ function chargeAmountNow(
     return depositAmount!;
   }
   return null;
-}
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
-
-function BookingPaymentForm({
-  bookingId,
-  paymentIntentId,
-  amountLabel,
-  onBack,
-}: {
-  bookingId: string;
-  paymentIntentId: string;
-  amountLabel: string;
-  onBack: () => void;
-}) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const router = useRouter();
-  const [paying, setPaying] = useState(false);
-  const [payError, setPayError] = useState<string | null>(null);
-  const [elementsReady, setElementsReady] = useState(false);
-
-  async function handlePay() {
-    if (!stripe || !elements) {
-      setPayError("Payment form is still loading. Please wait a moment.");
-      return;
-    }
-    if (!elementsReady) {
-      setPayError("Payment form is still loading. Please wait a moment.");
-      return;
-    }
-
-    setPaying(true);
-    setPayError(null);
-
-    try {
-      // Let the Payment Element finish processing the blur/change event caused by
-      // clicking Pay before Stripe validates it. Without this, the first click can
-      // report that no payment method is selected even when the card is complete.
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-
-      const { error: submitError } = await elements.submit();
-      if (submitError) {
-        setPayError(submitError.message ?? "Please check your card details.");
-        return;
-      }
-
-      const returnUrl = `${window.location.origin}/booking-confirmation?bookingId=${encodeURIComponent(bookingId)}`;
-
-      const { error, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        confirmParams: { return_url: returnUrl },
-        redirect: "if_required",
-      });
-
-      if (error) {
-        setPayError(error.message ?? "Payment failed");
-        return;
-      }
-
-      // 3DS redirect in progress — page will unload; confirmation runs on return URL
-      if (paymentIntent?.status === "requires_action") {
-        return;
-      }
-
-      const result = await confirmBookingPaid(bookingId, paymentIntentId);
-      if ("error" in result) {
-        setPayError(
-          result.error === "Payment has not completed yet"
-            ? "Payment is processing. Please wait a moment and try again."
-            : result.error,
-        );
-        return;
-      }
-
-      router.push(`/booking-confirmation?bookingId=${encodeURIComponent(bookingId)}`);
-    } catch {
-      setPayError("Something went wrong. Please try again.");
-    } finally {
-      setPaying(false);
-    }
-  }
-
-  return (
-    <div className="flex flex-col gap-3">
-      <button
-        type="button"
-        onClick={onBack}
-        className="text-left text-xs font-medium text-zinc-500 hover:text-zinc-900"
-      >
-        ← Back to booking details
-      </button>
-      <p className="text-xs text-zinc-600">
-        Pay <span className="font-bold text-[#D4450A]">{amountLabel}</span> to complete your booking.
-      </p>
-      <PaymentElement
-        onReady={() => setElementsReady(true)}
-        onChange={() => setPayError(null)}
-      />
-      {payError ? (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{payError}</p>
-      ) : null}
-      <button
-        type="button"
-        onClick={() => void handlePay()}
-        disabled={paying || !stripe || !elementsReady}
-        className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-        style={{ backgroundColor: "#D4450A" }}
-      >
-        {paying ? (
-          <>
-            <InlineSpinner className="h-5 w-5 shrink-0 text-white" />
-            Processing…
-          </>
-        ) : (
-          `Pay ${amountLabel}`
-        )}
-      </button>
-    </div>
-  );
 }
 
 function confirmButtonLabel(
@@ -393,7 +267,7 @@ export default function BookingWidget({
     [availability, serviceDuration],
   );
 
-  const [step, setStep] = useState<"date" | "time" | "confirm" | "payment">("date");
+  const [step, setStep] = useState<"date" | "time" | "confirm">("date");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -432,9 +306,6 @@ export default function BookingWidget({
       router.push(`/messages/${result.conversationId}`);
     });
   }
-  const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [bookingStatus, setBookingStatus] = useState<string | null>(null);
   const [confirmedDate, setConfirmedDate] = useState<string | null>(null);
   const [confirmedSlot, setConfirmedSlot] = useState<TimeSlot | null>(null);
@@ -540,13 +411,7 @@ export default function BookingWidget({
         setBooking(false);
         return;
       }
-      setPendingBookingId(result.bookingId);
-      setClientSecret(piResult.clientSecret);
-      setPaymentIntentId(piResult.paymentIntentId);
-      setPaidAmount(result.chargeAmount);
-      setBookingStatus(result.status ?? null);
-      setStep("payment");
-      setBooking(false);
+      window.location.assign(piResult.checkoutUrl);
       return;
     }
 
@@ -605,7 +470,7 @@ export default function BookingWidget({
     );
   }
 
-  const steps = ["date", "time", "confirm", "payment"] as const;
+  const steps = ["date", "time", "confirm"] as const;
 
   return (
     <div className="flex flex-col gap-4">
@@ -626,15 +491,9 @@ export default function BookingWidget({
             <span
               className={`text-[10px] font-medium capitalize ${step === s ? "text-zinc-900" : "text-zinc-400"}`}
             >
-              {s === "confirm"
-                ? "Confirm"
-                : s === "payment"
-                  ? "Pay"
-                  : s === "date"
-                    ? "Date"
-                    : "Time"}
+              {s === "confirm" ? "Confirm" : s === "date" ? "Date" : "Time"}
             </span>
-            {i < 3 ? <div className="mx-1 h-px w-4 bg-zinc-200" /> : null}
+            {i < steps.length - 1 ? <div className="mx-1 h-px w-4 bg-zinc-200" /> : null}
           </div>
         ))}
       </div>
@@ -734,22 +593,6 @@ export default function BookingWidget({
               ))}
             </div>
           )}
-        </div>
-      ) : null}
-
-      {step === "payment" && clientSecret && pendingBookingId && paymentIntentId && paidAmount != null ? (
-        <div>
-          <p className="mb-3 text-xs font-bold uppercase tracking-widest text-zinc-400">
-            Complete payment
-          </p>
-          <Elements stripe={stripePromise} options={{ clientSecret }}>
-            <BookingPaymentForm
-              bookingId={pendingBookingId}
-              paymentIntentId={paymentIntentId}
-              amountLabel={`TTD ${paidAmount.toFixed(2)}`}
-              onBack={() => setStep("confirm")}
-            />
-          </Elements>
         </div>
       ) : null}
 

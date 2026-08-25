@@ -37,7 +37,7 @@ export default async function CustomerSubscriptionsPage() {
   if (!result.ok) redirect("/login");
 
   const { subscriptions } = result;
-  const active = subscriptions.filter((s) => s.status === "ACTIVE");
+  const active = subscriptions.filter((s) => s.status === "ACTIVE" || s.status === "PAST_DUE");
   const past = subscriptions.filter((s) => s.status === "CANCELED");
 
   return (
@@ -138,7 +138,11 @@ export default async function CustomerSubscriptionsPage() {
                                     : "bg-emerald-100 text-emerald-700"
                                 }`}
                               >
-                                {sub.cancelAtPeriodEnd ? "Ending soon" : "Active"}
+                                {sub.status === "PAST_DUE"
+                                  ? "Renewal due"
+                                  : sub.cancelAtPeriodEnd
+                                    ? "Ending soon"
+                                    : "Active"}
                               </span>
                             </div>
                             <p className="mt-2 inline-flex items-center gap-1 text-xs text-zinc-500">
@@ -148,7 +152,7 @@ export default async function CustomerSubscriptionsPage() {
                             <p className="mt-1 text-xs text-zinc-500">
                               {sub.cancelAtPeriodEnd
                                 ? `Ends on ${periodEndLabel}`
-                                : "Renews automatically"}
+                                : `Paid through ${periodEndLabel} · renew manually`}
                             </p>
                           </div>
                         </div>
@@ -163,6 +167,7 @@ export default async function CustomerSubscriptionsPage() {
                             subscriptionId={sub.id}
                             cancelAtPeriodEnd={sub.cancelAtPeriodEnd}
                             currentPeriodEnd={sub.currentPeriodEnd}
+                            canRenew={sub.canRenew}
                             layout="card"
                           />
                         </div>

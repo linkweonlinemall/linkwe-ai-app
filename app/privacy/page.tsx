@@ -95,7 +95,7 @@ export default async function PrivacyPolicyPage() {
               <div className="flex flex-col gap-3 text-sm leading-7 text-zinc-600">
                 <p>We do not sell your personal information. We share information only in these circumstances:</p>
                 <p><strong className="text-zinc-900">Vendors and couriers:</strong> When you place an order, your name, delivery address, and contact details are shared with the relevant vendor and assigned courier to fulfil your order.</p>
-                <p><strong className="text-zinc-900">Payment processors:</strong> We use Stripe to process payments. Your card details are handled directly by Stripe and are never stored on LinkWe servers.</p>
+                <p><strong className="text-zinc-900">Payment processors:</strong> We use WiPay to process online payments. Your card details are handled directly by WiPay and are never stored on LinkWe servers.</p>
                 <p><strong className="text-zinc-900">Service providers:</strong> We use trusted third-party services including Cloudinary for image storage and Mapbox for mapping features. These providers process data only as needed to provide their services.</p>
                 <p><strong className="text-zinc-900">Legal requirements:</strong> We may disclose your information if required by law or to protect the rights and safety of our users and platform.</p>
               </div>

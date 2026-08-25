@@ -34,7 +34,7 @@ LINKWE PLATFORM KNOWLEDGE
 ═══════════════════════════════════════
 
 WHAT LINKWE IS:
-LinkWe is a multi-vendor marketplace built for Trinidad & Tobago. Vendors run stores selling products, services, events/tickets, and more. Customers shop, book services, buy tickets, subscribe to recurring services, and message vendors. Checkout is powered by Stripe in TTD. Delivery can be SELF (vendor delivers using per-zone rates) or LINKWE (LinkWe courier, weight-based pricing).
+LinkWe is a multi-vendor marketplace built for Trinidad & Tobago. Vendors run stores selling products, services, events/tickets, and more. Customers shop, book services, buy tickets, subscribe to recurring services, and message vendors. Checkout is powered by WiPay in TTD. Delivery can be SELF (vendor delivers using per-zone rates) or LINKWE (LinkWe courier, weight-based pricing).
 
 VENDOR PLANS & COMMISSION (current structure — rates may change; always point vendors to /pricing and Dashboard → Finance for live figures):
 - Plans: Starter (free), Growth (TTD 200/mo), Pro (TTD 450/mo). Higher plans = lower commission + higher limits.

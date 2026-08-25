@@ -160,7 +160,7 @@ export default function TicketOrdersTab() {
         <div>
           <h1 className="text-xl font-bold text-zinc-900">Ticket orders</h1>
           <p className="mt-1 text-sm text-zinc-500">
-            Paid event ticket orders — refund individual tickets via Stripe.
+            Paid event ticket orders — issue full-order refunds through WiPay.
           </p>
         </div>
         <input

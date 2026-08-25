@@ -6,7 +6,7 @@ import { NotificationType, Prisma } from "@prisma/client";
 
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { stripe } from "@/lib/stripe/stripe";
+import { createWiPayHostedPayment } from "@/lib/wipay/payments";
 import { BASE_URL } from "@/lib/email/resend";
 import { sendEmail } from "@/lib/email/send";
 import { ticketConfirmationEmail } from "@/lib/email/templates";
@@ -18,7 +18,7 @@ import {
 import { isStoreSellable } from "@/lib/store/sellable-store";
 
 export type CreateTicketPaymentIntentResult =
-  | { ok: true; clientSecret: string; ticketOrderId: string; free: false }
+  | { ok: true; checkoutUrl: string; ticketOrderId: string; free: false }
   | { ok: true; clientSecret: null; ticketOrderId: string; free: true }
   | { ok: false; error: string; reason?: string; detail?: string };
 
@@ -50,23 +50,10 @@ async function cancelExpiredPromoReservations(eventId: string, now: Date): Promi
       promoCodeId: { not: null },
       promoReservationExpiresAt: { lte: now },
     },
-    select: { id: true, stripePaymentIntentId: true },
+    select: { id: true },
   });
 
   for (const order of expired) {
-    if (order.stripePaymentIntentId) {
-      try {
-        const intent = await stripe.paymentIntents.retrieve(order.stripePaymentIntentId);
-        if (intent.status === "succeeded") continue;
-        if (intent.status !== "canceled") {
-          await stripe.paymentIntents.cancel(order.stripePaymentIntentId);
-        }
-      } catch (error) {
-        console.error("[ticket-checkout] expired promo reservation cleanup", error);
-        continue;
-      }
-    }
-
     await prisma.ticketOrder.updateMany({
       where: { id: order.id, status: "PENDING_PAYMENT" },
       data: { status: "CANCELLED", promoReservationExpiresAt: null },
@@ -437,33 +424,32 @@ export async function createTicketPaymentIntent(
     return { ok: true, clientSecret: null, ticketOrderId: order.id, free: true };
   }
 
-  let paymentIntent;
+  const merchantOrderId = `ticket-${order.id}`;
   try {
-    paymentIntent = await stripe.paymentIntents.create({
-      amount: orderTotalMinor,
-      currency: "ttd",
-      metadata: {
-        ticketOrderId: order.id,
+    await prisma.paymentAttempt.create({
+      data: {
+        purpose: "TICKET_ORDER",
+        merchantOrderId,
+        amountMinor: orderTotalMinor,
         userId: session.userId,
-        eventId,
+        targetId: order.id,
       },
     });
+    const payment = await createWiPayHostedPayment({
+      merchantOrderId,
+      amountMinor: orderTotalMinor,
+      responseUrl: `${BASE_URL}/api/payments/wipay/return`,
+      data: { purpose: "TICKET_ORDER", targetId: order.id },
+    });
+    await prisma.paymentAttempt.update({
+      where: { merchantOrderId },
+      data: { providerTransactionId: payment.transactionId },
+    });
+    return { ok: true, checkoutUrl: payment.url, ticketOrderId: order.id, free: false };
   } catch (e) {
-    console.error("[ticket-checkout] stripe", e);
+    console.error("[ticket-checkout] wipay", e);
     await prisma.ticketOrder.delete({ where: { id: order.id } }).catch(() => {});
     return { ok: false, error: "Payment setup failed. Please try again." };
   }
 
-  const clientSecret = paymentIntent.client_secret;
-  if (!clientSecret) {
-    await prisma.ticketOrder.delete({ where: { id: order.id } }).catch(() => {});
-    return { ok: false, error: "Payment setup failed. Please try again." };
-  }
-
-  await prisma.ticketOrder.update({
-    where: { id: order.id },
-    data: { stripePaymentIntentId: paymentIntent.id },
-  });
-
-  return { ok: true, clientSecret, ticketOrderId: order.id, free: false };
 }

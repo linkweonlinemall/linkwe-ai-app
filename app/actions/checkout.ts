@@ -1,7 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import {
   computeCartShipping,
   computeCartShippingFromItems,
@@ -11,14 +9,8 @@ import {
 } from "@/lib/checkout/compute-cart-shipping";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { createSplitOrdersFromMainOrder } from "@/lib/fulfillment/split-orders";
-import { stripe } from "@/lib/stripe/stripe";
-import { sendEmail } from "@/lib/email/send";
-import { newOrderVendorEmail, orderConfirmedCustomerEmail } from "@/lib/email/templates";
+import { createWiPayHostedPayment } from "@/lib/wipay/payments";
 import { BASE_URL } from "@/lib/email/resend";
-import { VENDOR_DASHBOARD_ORDERS_TAB_HREF } from "@/lib/routes/vendor-dashboard";
-import { createNotification } from "@/app/actions/notifications";
-import { NotificationType } from "@prisma/client";
 import { isStoreSellable } from "@/lib/store/sellable-store";
 import { isValidRegion } from "@/lib/regions/tt-regions";
 
@@ -32,7 +24,7 @@ export type CheckoutItem = {
 };
 
 export type CreatePaymentIntentResult =
-  | { ok: true; clientSecret: string; orderId: string }
+  | { ok: true; checkoutUrl: string; orderId: string }
   | { ok: false; error: string };
 
 export type CheckoutShippingBreakdownResult =
@@ -105,10 +97,8 @@ export async function createPaymentIntent(
     return { ok: false, error: formatCoverageBlockError(shipping.blockedStores) };
   }
 
-  const { subtotalMinor, totalShippingMinor: shippingMinor, zone, pricingLines, storeIds } =
-    shipping;
+  const { subtotalMinor, totalShippingMinor: shippingMinor, zone, pricingLines } = shipping;
   const totalMinor = subtotalMinor + shippingMinor;
-  const primaryStoreId = storeIds[0];
 
   const recentPending = await prisma.mainOrder.findFirst({
     where: {
@@ -183,152 +173,35 @@ export async function createPaymentIntent(
     return { ok: false, error: "Could not create order. Please try again." };
   }
 
-  let paymentIntent;
+  const merchantOrderId = `product-${order.id}`;
+  await prisma.paymentAttempt.create({
+    data: {
+      purpose: "PRODUCT_ORDER",
+      merchantOrderId,
+      amountMinor: totalMinor,
+      userId: session.userId,
+      targetId: order.id,
+      mainOrderId: order.id,
+    },
+  });
+
+  let payment;
   try {
-    paymentIntent = await stripe.paymentIntents.create({
-      amount: totalMinor,
-      currency: "ttd",
-      metadata: {
-        orderId: order.id,
-        userId: session.userId,
-        storeId: primaryStoreId,
-      },
+    payment = await createWiPayHostedPayment({
+      merchantOrderId,
+      amountMinor: totalMinor,
+      responseUrl: `${BASE_URL}/api/payments/wipay/return`,
+      data: { purpose: "PRODUCT_ORDER", targetId: order.id },
     });
   } catch (e) {
     console.error(e);
     return { ok: false, error: "Payment setup failed. Please try again." };
   }
 
-  const clientSecret = paymentIntent.client_secret;
-  if (!clientSecret) {
-    return { ok: false, error: "Payment setup failed." };
-  }
-
-  await prisma.mainOrder.update({
-    where: { id: order.id },
-    data: { status: "PENDING_PAYMENT" },
+  await prisma.paymentAttempt.update({
+    where: { merchantOrderId },
+    data: { providerTransactionId: payment.transactionId },
   });
 
-  return { ok: true, clientSecret, orderId: order.id };
-}
-
-export async function confirmOrderPaid(orderId: string): Promise<void> {
-  const session = await getSession();
-  if (!session) return;
-
-  await prisma.mainOrder.update({
-    where: { id: orderId, buyerId: session.userId },
-    data: { status: "PAID" },
-  });
-
-  await createSplitOrdersFromMainOrder(orderId);
-
-  await prisma.productCartItem.deleteMany({
-    where: { userId: session.userId },
-  });
-
-  const orderForEmail = await prisma.mainOrder.findUnique({
-    where: { id: orderId },
-    select: {
-      referenceNumber: true,
-      totalMinor: true,
-      buyer: { select: { email: true, fullName: true } },
-      items: {
-        select: {
-          titleSnapshot: true,
-          priceMinor: true,
-          quantity: true,
-          store: {
-            select: {
-              ownerId: true,
-              owner: { select: { email: true, fullName: true } },
-            },
-          },
-          product: {
-            select: {
-              store: {
-                select: {
-                  ownerId: true,
-                  owner: { select: { email: true, fullName: true } },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  });
-
-  if (orderForEmail && orderForEmail.referenceNumber) {
-    const itemCount = orderForEmail.items.reduce((sum, item) => sum + item.quantity, 0);
-    const totalTTD = orderForEmail.totalMinor / 100;
-    const ref = orderForEmail.referenceNumber;
-
-    const customerTemplate = orderConfirmedCustomerEmail({
-      customerName: orderForEmail.buyer.fullName ?? "Customer",
-      orderRef: ref,
-      itemCount,
-      totalTTD,
-      orderUrl: `${BASE_URL}/orders/${orderId}`,
-    });
-    await sendEmail({
-      to: orderForEmail.buyer.email,
-      ...customerTemplate,
-    });
-
-    const vendors = new Map<
-      string,
-      { ownerId: string; email: string; name: string; itemCount: number; subtotalMinor: number }
-    >();
-    for (const item of orderForEmail.items) {
-      const vendor = item.product?.store?.owner ?? item.store.owner;
-      const ownerId = item.product?.store?.ownerId ?? item.store.ownerId;
-      if (!vendor || !ownerId) continue;
-
-      const existing = vendors.get(ownerId);
-      if (existing) {
-        existing.itemCount += item.quantity;
-        existing.subtotalMinor += item.priceMinor * item.quantity;
-      } else {
-        vendors.set(ownerId, {
-          ownerId,
-          email: vendor.email,
-          name: vendor.fullName ?? "Vendor",
-          itemCount: item.quantity,
-          subtotalMinor: item.priceMinor * item.quantity,
-        });
-      }
-    }
-    for (const vendor of vendors.values()) {
-      const vendorTemplate = newOrderVendorEmail({
-        vendorName: vendor.name,
-        orderRef: ref,
-        itemCount: vendor.itemCount,
-        subtotalTTD: vendor.subtotalMinor / 100,
-        dashboardUrl: `${BASE_URL}${VENDOR_DASHBOARD_ORDERS_TAB_HREF}`,
-      });
-      await sendEmail({ to: vendor.email, ...vendorTemplate });
-    }
-
-    await createNotification({
-      userId: session.userId,
-      type: NotificationType.ORDER_PLACED,
-      title: "Order placed successfully",
-      body: `Order #${orderForEmail.referenceNumber} has been confirmed.`,
-      linkUrl: `/orders/${orderId}`,
-    });
-
-    for (const vendor of vendors.values()) {
-      await createNotification({
-        userId: vendor.ownerId,
-        type: NotificationType.ORDER_PLACED,
-        title: `New order #${orderForEmail.referenceNumber}`,
-        body: `${vendor.itemCount} item${vendor.itemCount !== 1 ? "s" : ""} · TTD ${(vendor.subtotalMinor / 100).toFixed(2)}`,
-        linkUrl: VENDOR_DASHBOARD_ORDERS_TAB_HREF,
-      });
-    }
-  }
-
-  revalidatePath("/cart");
-  revalidatePath("/checkout");
+  return { ok: true, checkoutUrl: payment.url, orderId: order.id };
 }

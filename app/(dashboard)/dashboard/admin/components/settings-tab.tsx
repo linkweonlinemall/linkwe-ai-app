@@ -84,7 +84,7 @@ export default function SettingsTab() {
           ))}
         </div>
         <p className="mt-4 text-xs text-zinc-400">
-          Subscription billing will be configured in Phase E using Stripe recurring payments.
+          Subscription billing is handled through WiPay recurring card payments.
         </p>
       </div>
 

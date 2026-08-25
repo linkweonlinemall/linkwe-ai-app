@@ -49,8 +49,6 @@ function errorMessage(error: string): string {
 
 function manageErrorMessage(error: string): string {
   switch (error) {
-    case "stripe_failed":
-      return "Couldn't update — try again.";
     case "not_logged_in":
       return "Sign in to manage your subscription.";
     case "not_found":
@@ -150,7 +148,7 @@ export default function SubscribeButton({
         ) : (
           <>
             <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center text-sm font-medium text-emerald-800">
-              You&apos;re subscribed to this service.
+              You have access through {periodEndLabel}. Renew from My subscriptions near the end date.
             </p>
             <button
               type="button"

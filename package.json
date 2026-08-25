@@ -22,8 +22,6 @@
     "@prisma/client": "^5.22.0",
     "@react-google-maps/api": "^2.20.8",
     "@react-pdf/renderer": "^4.5.1",
-    "@stripe/react-stripe-js": "^6.2.0",
-    "@stripe/stripe-js": "^9.2.0",
     "@tabler/icons-react": "^3.44.0",
     "@tiptap/extension-character-count": "^3.23.4",
     "@tiptap/extension-placeholder": "^3.23.4",
@@ -55,7 +53,6 @@
     "recharts": "^3.8.1",
     "resend": "^6.12.3",
     "sonner": "^2.0.7",
-    "stripe": "^22.0.2",
     "zustand": "^5.0.12"
   },
   "devDependencies": {

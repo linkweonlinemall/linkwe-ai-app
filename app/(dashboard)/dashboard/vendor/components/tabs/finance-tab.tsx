@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { cancelAutoRenew, payMySubscriptionFromBalance, requestPayout, resumeAutoRenew, saveVendorBankDetails, startSubscriptionBillingPortal, startSubscriptionCheckout } from "@/app/actions/vendor";
+import { payMySubscriptionFromBalance, requestPayout, saveVendorBankDetails, startSubscriptionBillingPortal, startSubscriptionCheckout } from "@/app/actions/vendor";
 import AITopupCheckout from "@/components/vendor/ai-topup-checkout";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
@@ -107,8 +107,7 @@ type Props = {
   isCardBilled: boolean;
   planRenewsAt: Date | string | null;
   pastDueSince: Date | string | null;
-  autoRenew: boolean;
-  subscriptionMode: "test" | "live" | "unavailable" | null;
+  subscriptionMode: "live" | null;
 };
 
 function formatTTD(minor: number): string {
@@ -139,7 +138,6 @@ export default function FinanceTab({
   isCardBilled,
   planRenewsAt,
   pastDueSince,
-  autoRenew,
   subscriptionMode,
 }: Props) {
   const router = useRouter();
@@ -166,7 +164,6 @@ export default function FinanceTab({
   const [subscribing, setSubscribing] = useState(false);
   const [subPayMessage, setSubPayMessage] = useState<string | null>(null);
   const [subPayError, setSubPayError] = useState<string | null>(null);
-  const [autoRenewLoading, setAutoRenewLoading] = useState(false);
   const subCheckoutStatus = searchParams.get("sub");
   const [activeSection, setActiveSection] = useState<FinanceSection>(
     () => sectionFromTabParam(searchParams.get("tab")) ?? "earnings",
@@ -279,7 +276,7 @@ export default function FinanceTab({
         "Your balance is too low to cover the subscription. (Card payment coming soon.)",
       );
     } else if (result.error === "card_subscription_active") {
-      setSubPayError("You're billed automatically by card — no balance payment needed.");
+      setSubPayError("Your WiPay renewal is handled separately — no balance payment is needed.");
     } else {
       setSubPayError(result.error);
     }
@@ -307,31 +304,6 @@ export default function FinanceTab({
     }
     setSubscribing(false);
     setSubPayError(result.error);
-  }
-
-  async function handleCancelAutoRenew() {
-    setAutoRenewLoading(true);
-    const r = await cancelAutoRenew();
-    setAutoRenewLoading(false);
-    if (r.ok) router.refresh();
-    else setSubPayError(r.error);
-  }
-
-  async function handleResumeAutoRenew() {
-    setAutoRenewLoading(true);
-    const r = await resumeAutoRenew();
-    setAutoRenewLoading(false);
-    if (r.ok) router.refresh();
-    else setSubPayError(r.error);
-  }
-
-  function handleDowngradeToStarter() {
-    const periodEnd = "the end of your current Stripe billing period";
-    const confirmed = window.confirm(
-      `You will keep your ${planLabel} benefits until ${periodEnd}, then move to the free Starter plan. No refund for the current period.\n\nYou can cancel this downgrade before ${periodEnd} to keep your ${planLabel}.\n\nDowngrade to Starter at period end?`,
-    );
-    if (!confirmed) return;
-    void handleCancelAutoRenew();
   }
 
   const CARD = "rounded-[12px] border-[0.5px] border-[rgba(28,28,26,0.12)] bg-white";
@@ -500,19 +472,9 @@ export default function FinanceTab({
               </p>
               {subscriptionMode ? (
                 <p
-                  className={`mt-1 text-[10px] font-semibold ${
-                    subscriptionMode === "test"
-                      ? "text-emerald-700"
-                      : subscriptionMode === "live"
-                        ? "text-red-700"
-                        : "text-amber-700"
-                  }`}
+                  className="mt-1 text-[10px] font-semibold text-emerald-700"
                 >
-                  {subscriptionMode === "test"
-                    ? "Stripe test mode"
-                    : subscriptionMode === "live"
-                      ? "Stripe LIVE mode"
-                      : "Stripe connection unavailable"}
+                  WiPay card connected
                 </p>
               ) : null}
               {subscriptionStatus === "PAST_DUE" ? (
@@ -539,46 +501,31 @@ export default function FinanceTab({
                   ) : null}
                 </div>
               ) : isCardBilled ? (
-                <div className="mt-2">
-                  {autoRenew ? (
-                    <>
-                      <p className="text-[11px] text-zinc-500">
-                        💳 Billed automatically to your card · renews monthly
-                      </p>
-                      <button
-                        type="button"
-                        disabled={autoRenewLoading}
-                        onClick={handleDowngradeToStarter}
-                        className="mt-2 text-[11px] font-medium text-zinc-500 underline-offset-2 hover:text-zinc-700 hover:underline disabled:opacity-50"
-                      >
-                        {autoRenewLoading ? "Updating…" : "Downgrade to Starter"}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-[11px] font-medium text-amber-800">
-                        Scheduled to downgrade to Starter
-                        {planRenewsAt
-                          ? ` on ${formatDate(planRenewsAt)}`
-                          : " at period end"}
-                      </p>
-                      <p className="mt-1 text-[11px] text-amber-700">
-                        You keep your {planLabel} benefits until then. No refund for the current
-                        period.
-                      </p>
-                      <button
-                        type="button"
-                        disabled={autoRenewLoading}
-                        onClick={() => void handleResumeAutoRenew()}
-                        className="mt-2 text-[11px] font-medium text-zinc-500 underline-offset-2 hover:text-zinc-700 hover:underline disabled:opacity-50"
-                      >
-                        {autoRenewLoading ? "Updating…" : `Keep my ${planLabel}`}
-                      </button>
-                      <p className="mt-2 text-[11px] text-zinc-500">
-                        ✓ No further payment is due before your scheduled downgrade
-                      </p>
-                    </>
-                  )}
+                <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5">
+                  <p className="text-[11px] font-medium text-amber-900">
+                    Paid through {planRenewsAt ? formatDate(planRenewsAt) : "the current period"}
+                  </p>
+                  <p className="mt-1 text-[11px] text-amber-800">
+                    WiPay requires you to approve each monthly renewal. Your card is not charged automatically.
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={subscribing}
+                      onClick={() => void handleSubscribeByCard(plan)}
+                      className="rounded-lg bg-[#D4450A] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                    >
+                      {subscribing ? "Redirecting…" : `Renew ${planLabel} with WiPay`}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={subscribing}
+                      onClick={() => void handleUpdatePaymentMethod()}
+                      className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 disabled:opacity-50"
+                    >
+                      Update payment card
+                    </button>
+                  </div>
                 </div>
               ) : subPaidThisPeriod ? (
                 <p className="mt-2 text-[11px] text-zinc-500">

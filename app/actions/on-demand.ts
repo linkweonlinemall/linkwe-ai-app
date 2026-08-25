@@ -12,7 +12,7 @@ import { cancelOnDemandCore } from "@/lib/finance/cancel-ondemand";
 import { createVendorEarningsLedgerPair } from "@/lib/finance/release-earnings";
 import { resolveVendorPlan } from "@/lib/finance/vendor-plan";
 import { prisma } from "@/lib/prisma";
-import { stripe } from "@/lib/stripe/stripe";
+import { createWiPayHostedPayment } from "@/lib/wipay/payments";
 import { uploadFile } from "@/lib/uploads/upload";
 import { sendEmail } from "@/lib/email/send";
 import {
@@ -428,8 +428,19 @@ export async function completeOnDemandRequest(requestId: string): Promise<{ ok: 
     return { error: "Already completed" };
   }
 
+  const wipayPayment = await prisma.paymentAttempt.findFirst({
+    where: {
+      purpose: "ON_DEMAND_SERVICE",
+      targetId: request.id,
+      status: "SUCCEEDED",
+    },
+    select: { id: true },
+  });
+
   const wasPaidOnline =
-    request.amountPaid != null && request.amountPaid > 0 && !!request.stripePaymentIntentId;
+    request.amountPaid != null &&
+    request.amountPaid > 0 &&
+    (!!request.stripePaymentIntentId || !!wipayPayment);
 
   if (!wasPaidOnline) {
     await prisma.onDemandRequest.update({
@@ -564,39 +575,38 @@ export async function confirmOnDemandRequest(
 
   if (paymentMethod === "online") {
     try {
-      const baseUrl = BASE_URL;
       const price =
         request.quotedPrice && request.quotedPrice > 0 ? request.quotedPrice : 1;
-      const itemLabel = request.requestType === "QUOTE" ? "Quote" : "On-demand service";
-
-      const checkoutSession = await stripe.checkout.sessions.create({
-        mode: "payment",
-        payment_method_types: ["card"],
-        line_items: [
-          {
-            price_data: {
-              currency: "ttd",
-              product_data: {
-                name: request.service.name,
-                description: `${itemLabel} — TTD ${price.toFixed(2)}`,
-              },
-              unit_amount: Math.round(price * 100),
-            },
-            quantity: 1,
-          },
-        ],
-        success_url: `${baseUrl}/my-requests?confirmed=${requestId}`,
-        cancel_url: `${baseUrl}/my-requests`,
-        metadata: { requestId, userId: session.userId },
+      const amountMinor = Math.round(price * 100);
+      const merchantOrderId = `service-${request.id}`;
+      await prisma.paymentAttempt.upsert({
+        where: { merchantOrderId },
+        create: {
+          purpose: "ON_DEMAND_SERVICE",
+          merchantOrderId,
+          amountMinor,
+          userId: session.userId,
+          targetId: request.id,
+        },
+        update: { amountMinor, status: "PENDING", failureMessage: null },
+      });
+      const payment = await createWiPayHostedPayment({
+        merchantOrderId,
+        amountMinor,
+        responseUrl: `${BASE_URL}/api/payments/wipay/return`,
+        data: { purpose: "ON_DEMAND_SERVICE", targetId: request.id },
+      });
+      await prisma.paymentAttempt.update({
+        where: { merchantOrderId },
+        data: { providerTransactionId: payment.transactionId },
       });
 
       revalidatePath("/my-requests");
       revalidatePath("/dashboard/vendor/requests");
 
-      if (!checkoutSession.url) return { error: "Could not create checkout session" };
-      return { ok: true, checkoutUrl: checkoutSession.url };
+      return { ok: true, checkoutUrl: payment.url };
     } catch (err) {
-      console.error("Stripe error:", err);
+      console.error("WiPay error:", err);
       return { error: "Payment failed. Please try again." };
     }
   }

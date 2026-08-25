@@ -219,7 +219,6 @@ export default async function ServiceDetailPage({ params }: Props) {
             id: true,
             cancelAtPeriodEnd: true,
             currentPeriodEnd: true,
-            stripeSubscriptionId: true,
           },
         })
       : null;

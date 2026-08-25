@@ -79,7 +79,7 @@ const HOW_IT_WORKS_STEPS: { step: string; Icon: LucideIcon; title: string; desc:
     step: "03",
     Icon: BadgeCheck,
     title: "Buy with confidence",
-    desc: "Secure Stripe checkout. Delivery island-wide. Digital downloads instant. Services bookable in seconds.",
+    desc: "Secure WiPay checkout. Delivery island-wide. Digital downloads instant. Services bookable in seconds.",
     lightClass: tw.bgPage,
   },
 ];
@@ -716,7 +716,7 @@ export default async function Home() {
                 {[
                   "Products & digital downloads",
                   "Bookable services",
-                  "Stripe payments",
+                  "Secure WiPay payments",
                   "Delivery management",
                   "AI-powered tools",
                 ].map((feature) => (

@@ -3,14 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  Elements,
-  PaymentElement,
-  useElements,
-  useStripe,
-} from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
-import {
-  ArrowLeft,
   CalendarDays,
   CheckCircle2,
   Minus,
@@ -25,8 +17,6 @@ import {
   formatEventSaleDate,
   formatEventTimeCard,
 } from "@/lib/events/format-datetime";
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type TicketType = {
@@ -142,91 +132,6 @@ function TicketTypeInclusions({
   );
 }
 
-// ── Stripe payment sub-form ────────────────────────────────────────────────────
-function TicketPaymentForm({
-  totalTTD,
-  ticketCount,
-  onSuccess,
-  onBack,
-}: {
-  totalTTD: number;
-  ticketCount: number;
-  onSuccess: () => void;
-  onBack: () => void;
-}) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [paying, setPaying] = useState(false);
-  const [payError, setPayError] = useState<string | null>(null);
-
-  async function handlePay() {
-    if (!stripe || !elements) return;
-    setPaying(true);
-    setPayError(null);
-
-    const { error } = await stripe.confirmPayment({
-      elements,
-      redirect: "if_required",
-    });
-
-    if (error) {
-      setPayError(error.message ?? "Payment failed. Please try again.");
-      setPaying(false);
-      return;
-    }
-
-    onSuccess();
-  }
-
-  return (
-    <div className="space-y-4">
-      {/* Back link */}
-      <button
-        type="button"
-        onClick={onBack}
-        className="flex items-center gap-1.5 text-sm text-zinc-500 transition-colors hover:text-zinc-800"
-      >
-        <ArrowLeft className="size-3.5" />
-        Back to selection
-      </button>
-
-      {/* Order summary strip */}
-      <div className="rounded-xl bg-[#F5F5F5] px-4 py-3">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-zinc-500">
-            {ticketCount} ticket{ticketCount !== 1 ? "s" : ""}
-          </span>
-          <span className="text-sm font-bold text-[#1C1C1A]">
-            {totalTTD === 0 ? "Free" : `TTD ${totalTTD.toFixed(2)}`}
-          </span>
-        </div>
-      </div>
-
-      {/* Stripe card form */}
-      <PaymentElement />
-
-      {/* Payment error */}
-      {payError && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-          {payError}
-        </div>
-      )}
-
-      {/* Pay button */}
-      <button
-        type="button"
-        onClick={() => void handlePay()}
-        disabled={paying || !stripe || !elements}
-        className="w-full rounded-2xl bg-[#D4450A] py-4 text-base font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {paying
-          ? "Processing…"
-          : `Pay TTD ${totalTTD.toFixed(2)}`}
-      </button>
-    </div>
-  );
-}
-
 // ── Card header (reused across phases) ────────────────────────────────────────
 function CardHeader({
   startDate,
@@ -267,8 +172,7 @@ export function TicketPurchaseCard({
   );
 
   // Flow state
-  const [phase, setPhase] = useState<"select" | "payment" | "success">("select");
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [phase, setPhase] = useState<"select" | "success">("select");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [promoInput, setPromoInput] = useState("");
@@ -383,9 +287,7 @@ export function TicketPurchaseCard({
       return;
     }
 
-    setClientSecret(result.clientSecret);
-    setPhase("payment");
-    setLoading(false);
+    window.location.assign(result.checkoutUrl);
   }
 
   // ── Phase: success ───────────────────────────────────────────────────────────
@@ -409,28 +311,6 @@ export function TicketPurchaseCard({
           >
             View my tickets →
           </Link>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Phase: payment (Stripe Elements) ────────────────────────────────────────
-  if (phase === "payment" && clientSecret) {
-    return (
-      <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-lg">
-        <CardHeader startDate={startDate} subtitle="Complete your purchase" />
-        <div className="px-6 py-5">
-          <Elements stripe={stripePromise} options={{ clientSecret }}>
-            <TicketPaymentForm
-              totalTTD={finalTotal}
-              ticketCount={totalTickets}
-              onSuccess={() => setPhase("success")}
-              onBack={() => {
-                setPhase("select");
-                setClientSecret(null);
-              }}
-            />
-          </Elements>
         </div>
       </div>
     );

@@ -603,7 +603,7 @@ export function InvoiceDocument({ order, qrCodeDataUrl, logoDataUrl, waveDataUrl
               <Text style={styles.paymentInfoLabel}>Payment Information:</Text>
               <View style={styles.paymentInfoRow}>
                 <Text style={styles.paymentInfoKey}>Method:</Text>
-                <Text style={styles.paymentInfoValue}>Card via Stripe</Text>
+                <Text style={styles.paymentInfoValue}>Online payment via WiPay</Text>
               </View>
               <View style={styles.paymentInfoRow}>
                 <Text style={styles.paymentInfoKey}>Reference:</Text>

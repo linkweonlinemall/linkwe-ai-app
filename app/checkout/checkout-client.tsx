@@ -1,13 +1,9 @@
 "use client";
 
-import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
 import { Check, ChevronUp } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import {
-  confirmOrderPaid,
   createPaymentIntent,
   getCheckoutShippingBreakdown,
   type CheckoutShippingBreakdownResult,
@@ -17,10 +13,7 @@ import Button from "@/components/ui/Button";
 import InlineSpinner from "@/components/ui/InlineSpinner";
 import Select from "@/components/ui/Select";
 import { TRINIDAD_ONBOARDING_REGION_OPTIONS } from "@/lib/onboarding/tt-region-options";
-import { useCartStore } from "@/lib/cart/cart-store";
 import { radius, spacing, tw } from "@/lib/design-system";
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 export type CheckoutClientItem = {
   id: string;
@@ -57,72 +50,12 @@ function getRegionOptionLabel(slug: string): string {
   return match?.label ?? slug.replace(/_/g, " ");
 }
 
-function PaymentForm({ orderId, onBack }: { orderId: string; onBack: () => void }) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const router = useRouter();
-  const setItems = useCartStore((s) => s.setItems);
-  const [paying, setPaying] = useState(false);
-  const [payError, setPayError] = useState<string | null>(null);
-
-  async function handlePay() {
-    if (!stripe || !elements) return;
-    setPaying(true);
-    setPayError(null);
-
-    const { error } = await stripe.confirmPayment({
-      elements,
-      redirect: "if_required",
-    });
-
-    if (error) {
-      setPayError(error.message ?? "Payment failed");
-      setPaying(false);
-      return;
-    }
-
-    await confirmOrderPaid(orderId);
-    setItems([]);
-    router.push(`/order-confirmation/${orderId}`);
-  }
-
-  return (
-    <div className="space-y-4 lg:pb-0 max-lg:pb-24">
-      <Button
-        className="!px-0 !py-2 min-h-[44px] text-sm text-zinc-500 hover:bg-transparent hover:text-zinc-900"
-        type="button"
-        variant="ghost"
-        onClick={onBack}
-      >
-        ← Back to delivery details
-      </Button>
-      <PaymentElement />
-      {payError ? <p className={`text-base ${tw.textDangerToken}`}>{payError}</p> : null}
-      <button
-        type="button"
-        onClick={() => void handlePay()}
-        disabled={paying || !stripe}
-        className={`${mobilePrimaryBtn} mt-4 gap-2 lg:static lg:z-auto lg:translate-y-0 max-lg:fixed max-lg:inset-x-3 max-lg:w-auto max-lg:bottom-[calc(var(--mobile-tab-offset)+3.25rem)] max-lg:z-[96]`}
-      >
-        {paying ? (
-          <>
-            <InlineSpinner className="h-5 w-5 shrink-0 text-white" />
-            Processing…
-          </>
-        ) : (
-          "Pay now"
-        )}
-      </button>
-    </div>
-  );
-}
-
 export default function CheckoutClient({ items, subtotal }: CheckoutClientProps) {
   const allDigital = useMemo(() => items.every((item) => item.product.isDigital), [items]);
   const anyDelivery = useMemo(() => items.some((i) => i.product.allowDelivery), [items]);
   const anyPickup = useMemo(() => items.some((i) => i.product.allowPickup), [items]);
 
-  const [step, setStep] = useState<"details" | "payment">("details");
+  const step = "details" as const;
   const [deliveryRegion, setDeliveryRegion] = useState("");
   const [deliveryPhone, setDeliveryPhone] = useState("");
   const [fulfillmentChoice, setFulfillmentChoice] = useState<"delivery" | "pickup" | null>(() => null);
@@ -134,8 +67,6 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
     if (fulfillmentChoice === "pickup") return false;
     return true;
   }, [anyDelivery, anyPickup, fulfillmentChoice]);
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [orderId, setOrderId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   /** Pin-derived region suggestion — never applied without explicit customer confirmation. */
@@ -276,9 +207,7 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
       deliveryPhone.trim() || null,
     );
     if (result.ok) {
-      setClientSecret(result.clientSecret);
-      setOrderId(result.orderId);
-      setStep("payment");
+      window.location.assign(result.checkoutUrl);
       setMobileSummaryOpen(false);
     } else {
       setError(result.error);
@@ -632,19 +561,6 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
           </div>
         ) : null}
 
-        {step === "payment" && clientSecret && orderId ? (
-          <div
-            className={`${radius.card} bg-white ${spacing.cardPadding}`}
-            style={{ border: "1px solid var(--card-border)" }}
-          >
-            <h2 className="mb-4 text-base font-semibold" style={{ color: "var(--text-primary)" }}>
-              Payment
-            </h2>
-            <Elements stripe={stripePromise} options={{ clientSecret }}>
-              <PaymentForm orderId={orderId} onBack={() => setStep("details")} />
-            </Elements>
-          </div>
-        ) : null}
       </div>
 
       <div className="hidden w-full min-w-0 lg:order-none lg:col-span-1 lg:block">

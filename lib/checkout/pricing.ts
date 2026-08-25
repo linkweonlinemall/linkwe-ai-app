@@ -1,6 +1,6 @@
 /**
  * Checkout pricing — cart subtotal + shipping (final, with markup) + order total in **minor units**.
- * Tax and Stripe are out of scope here; keep amounts consistent with listing `priceMinor` convention.
+ * Tax and payment-provider fees are out of scope here; keep amounts consistent with the listing `priceMinor` convention.
  */
 
 import { getFinalShippingRateForRegion } from "@/lib/shipping/tt-markup";

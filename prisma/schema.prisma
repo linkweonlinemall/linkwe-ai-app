@@ -9,69 +9,71 @@ datasource db {
 }
 
 model User {
-  id                     String                 @id @default(cuid())
-  email                  String                 @unique
-  phone                  String?                @unique
-  passwordHash           String?                @map("password_hash")
-  resetToken             String?                @map("reset_token")
-  resetTokenExpiry       DateTime?              @map("reset_token_expiry")
-  emailVerified          DateTime?              @map("email_verified")
-  emailVerifyToken       String?                @map("email_verify_token")
-  emailVerifyTokenExpiry DateTime?              @map("email_verify_token_expiry")
-  fullName               String                 @map("full_name")
-  role                   UserRole               @default(CUSTOMER)
+  id                     String               @id @default(cuid())
+  email                  String               @unique
+  phone                  String?              @unique
+  passwordHash           String?              @map("password_hash")
+  resetToken             String?              @map("reset_token")
+  resetTokenExpiry       DateTime?            @map("reset_token_expiry")
+  emailVerified          DateTime?            @map("email_verified")
+  emailVerifyToken       String?              @map("email_verify_token")
+  emailVerifyTokenExpiry DateTime?            @map("email_verify_token_expiry")
+  fullName               String               @map("full_name")
+  role                   UserRole             @default(CUSTOMER)
   /// Trinidad region key (dropdown), same normalization family as shipping.
   region                 String?
-  idDocumentUrl          String?                @map("id_document_url")
-  selfieWithIdUrl        String?                @map("selfie_with_id_url")
-  idVerificationStatus IdVerificationStatus @default(UNSUBMITTED) @map("id_verification_status")
+  idDocumentUrl          String?              @map("id_document_url")
+  selfieWithIdUrl        String?              @map("selfie_with_id_url")
+  idVerificationStatus   IdVerificationStatus @default(UNSUBMITTED) @map("id_verification_status")
   /// Courier orientation: 0 = not started, 1 = step 1 done, 2 = both steps done (Phase A).
-  courierOnboardingStep Int                  @default(0) @map("courier_onboarding_step")
+  courierOnboardingStep  Int                  @default(0) @map("courier_onboarding_step")
   vehicleType            String?
-  courierBio            String?
-  isActive               Boolean                @default(true) @map("is_active")
-  suspended              Boolean                @default(false)
-  createdAt              DateTime               @default(now()) @map("created_at")
-  updatedAt              DateTime               @updatedAt @map("updated_at")
+  courierBio             String?
+  isActive               Boolean              @default(true) @map("is_active")
+  suspended              Boolean              @default(false)
+  createdAt              DateTime             @default(now()) @map("created_at")
+  updatedAt              DateTime             @updatedAt @map("updated_at")
 
   // Vendor verification (id document URL/status above)
-  idVerifiedAt           DateTime?              @map("id_verified_at")
-  idVerifiedById         String?                @map("id_verified_by_id")
+  idVerifiedAt   DateTime? @map("id_verified_at")
+  idVerifiedById String?   @map("id_verified_by_id")
 
   // Vendor payout details
-  bankName               String?                @map("bank_name")
-  accountName            String?                @map("account_name")
-  accountNumber          String?                @map("account_number")
+  bankName      String? @map("bank_name")
+  accountName   String? @map("account_name")
+  accountNumber String? @map("account_number")
 
-  addresses           Address[]
-  aiChatSessions      AIChatSession[]
-  carts               Cart[]
-  mainOrders          MainOrder[]         @relation("BuyerOrders")
-  payouts             PayoutRequest[]     @relation("PayoutBeneficiary")
-  reviews             Review[]
-  shipments           Shipment[]          @relation("CourierShipments")
-  storesOwned         Store[]             @relation("StoreOwner")
-  listingsOwned       Listing[]           @relation("ListingOwner")
-  vendorLedgerEntries VendorLedgerEntry[] @relation("LedgerActor")
-  bankDetails           VendorBankDetails?
-  courierBankDetails    CourierBankDetails?    @relation("CourierBankDetails")
-  courierLedger         CourierLedgerEntry[]   @relation("CourierLedger")
-  courierPayoutRequests CourierPayoutRequest[] @relation("CourierPayouts")
-  courierLocation       CourierLocation?       @relation("CourierLocation")
-  productCartItems      ProductCartItem[]
-  vendorChats           VendorChat[]
-  wishlist              Wishlist?
-  savedStores           SavedStore[]
-  customerRequests      OnDemandRequest[]     @relation("CustomerRequests")
-  notifications         Notification[]
-  tickets               Ticket[]
-  eventTicketCartItems  EventTicketCartItem[]
-  ticketOrders          TicketOrder[]
-  conversationsAsCustomer Conversation[] @relation("CustomerConversations")
-  sentMessages            Message[]        @relation("SentMessages")
+  addresses                    Address[]
+  aiChatSessions               AIChatSession[]
+  carts                        Cart[]
+  mainOrders                   MainOrder[]                   @relation("BuyerOrders")
+  payouts                      PayoutRequest[]               @relation("PayoutBeneficiary")
+  reviews                      Review[]
+  shipments                    Shipment[]                    @relation("CourierShipments")
+  storesOwned                  Store[]                       @relation("StoreOwner")
+  listingsOwned                Listing[]                     @relation("ListingOwner")
+  vendorLedgerEntries          VendorLedgerEntry[]           @relation("LedgerActor")
+  bankDetails                  VendorBankDetails?
+  courierBankDetails           CourierBankDetails?           @relation("CourierBankDetails")
+  courierLedger                CourierLedgerEntry[]          @relation("CourierLedger")
+  courierPayoutRequests        CourierPayoutRequest[]        @relation("CourierPayouts")
+  courierLocation              CourierLocation?              @relation("CourierLocation")
+  productCartItems             ProductCartItem[]
+  vendorChats                  VendorChat[]
+  wishlist                     Wishlist?
+  savedStores                  SavedStore[]
+  customerRequests             OnDemandRequest[]             @relation("CustomerRequests")
+  notifications                Notification[]
+  tickets                      Ticket[]
+  eventTicketCartItems         EventTicketCartItem[]
+  ticketOrders                 TicketOrder[]
+  conversationsAsCustomer      Conversation[]                @relation("CustomerConversations")
+  sentMessages                 Message[]                     @relation("SentMessages")
   /// Stripe Customer for customer→vendor service subscriptions (distinct from vendor Store billing).
-  stripeCustomerId        String?                      @map("stripe_customer_id")
+  stripeCustomerId             String?                       @map("stripe_customer_id")
   customerServiceSubscriptions CustomerServiceSubscription[]
+  wipayTrustedCards            WiPayTrustedCard[]
+  wipayCardEnrollments         WiPayCardEnrollment[]
 
   @@index([email])
   @@index([createdAt])
@@ -79,15 +81,15 @@ model User {
 }
 
 model VendorBankDetails {
-  id            String        @id @default(cuid())
-  userId        String        @unique
+  id            String       @id @default(cuid())
+  userId        String       @unique
   bankName      String
   accountName   String
   accountNumber String
-  accountType   AccountType?  @map("account_type")
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountType   AccountType? @map("account_type")
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model CourierBankDetails {
@@ -125,11 +127,11 @@ model CourierPayoutRequest {
   amountMinor Int          @map("amount_minor")
   currency    String       @default("TTD")
   status      PayoutStatus @map("status")
-  requestedAt DateTime   @default(now()) @map("requested_at")
-  approvedAt  DateTime?  @map("approved_at")
-  approvedBy  String?    @map("approved_by")
+  requestedAt DateTime     @default(now()) @map("requested_at")
+  approvedAt  DateTime?    @map("approved_at")
+  approvedBy  String?      @map("approved_by")
   notes       String?
-  courier     User       @relation("CourierPayouts", fields: [courierId], references: [id])
+  courier     User         @relation("CourierPayouts", fields: [courierId], references: [id])
 
   @@index([status])
   @@map("courier_payout_requests")
@@ -151,68 +153,69 @@ model CourierLocation {
 }
 
 model Store {
-  id               String      @id @default(cuid())
-  ownerId          String      @unique @map("owner_id")
-  name             String
-  slug             String      @unique
-  categoryId       String      @map("category_id")
-  region           String
-  tagline          String?
-  logoUrl          String?     @map("logo_url")
-  description      String?
-  coverPhotoUrl    String?
-  openingHours     Json?
-  tags             String[]    @default([])
-  amenities        String[]    @default([])
-  policies         String?
-  status           StoreStatus @default(DRAFT)
-  onboardingStep   Int       @default(0) @map("onboarding_step")
-  latitude         Float?
-  longitude        Float?
-  address          String?
-  socialLinks      Json?       @map("social_links")
-  staffMode        StaffMode   @default(SOLO)
-  shippingMode     StoreShippingMode @default(LINKWE) @map("shipping_mode")
+  id                           String                        @id @default(cuid())
+  ownerId                      String                        @unique @map("owner_id")
+  name                         String
+  slug                         String                        @unique
+  categoryId                   String                        @map("category_id")
+  region                       String
+  tagline                      String?
+  logoUrl                      String?                       @map("logo_url")
+  description                  String?
+  coverPhotoUrl                String?
+  openingHours                 Json?
+  tags                         String[]                      @default([])
+  amenities                    String[]                      @default([])
+  policies                     String?
+  status                       StoreStatus                   @default(DRAFT)
+  onboardingStep               Int                           @default(0) @map("onboarding_step")
+  latitude                     Float?
+  longitude                    Float?
+  address                      String?
+  socialLinks                  Json?                         @map("social_links")
+  staffMode                    StaffMode                     @default(SOLO)
+  shippingMode                 StoreShippingMode             @default(LINKWE) @map("shipping_mode")
   /// Vendor subscription tier — drives platform commission rates.
-  subscriptionPlan VendorSubscriptionPlan @default(STARTER) @map("subscription_plan")
-  subscriptionStatus   StoreSubscriptionStatus @default(NONE) @map("subscription_status")
-  planRenewsAt         DateTime?               @map("plan_renews_at")
-  pastDueSince         DateTime?               @map("past_due_since")
-  stripeCustomerId     String?                 @map("stripe_customer_id")
-  stripeSubscriptionId String?                 @map("stripe_subscription_id")
-  autoRenew            Boolean                 @default(true) @map("auto_renew")
-  aiTopupCreditsRemaining Int                  @default(0) @map("ai_topup_credits_remaining")
-  isAvailableNow   Boolean     @default(false)
-  staffMembers     StaffMember[]
-  createdAt        DateTime    @default(now()) @map("created_at")
-  updatedAt        DateTime    @updatedAt @map("updated_at")
-  listings         Listing[]
-  products         Product[]
-  realEstateListings RealEstate[]
-  vehicles         Vehicle[]
-  events           Event[]
-  places           Place[]
-  foodOutlets      FoodOutlet[]
-  accommodations   Accommodation[]
-  services         Service[]
-  requestingStoreRelations StoreContentRelationship[] @relation("RequestingStore")
-  targetStoreRelations     StoreContentRelationship[] @relation("TargetStore")
-  orderItems       OrderItem[]
-  payoutRequests   PayoutRequest[]
-  splitOrders      SplitOrder[]
-  owner            User                @relation("StoreOwner", fields: [ownerId], references: [id])
-  ledgerEntries    VendorLedgerEntry[]
-  payoutThreshold  VendorThreshold?
-  aiUsage          AIUsage[]
-  aiTopupPurchases AITopupPurchase[]
-  warehouses       Warehouse[]
-  images           StoreImage[]
-  savedBy          SavedStore[]
-  onDemandRequests OnDemandRequest[]
-  storeReviews     Review[]   @relation("StoreReviews")
-  conversations    Conversation[]
-  contentLinks     ContentLink[]
-  shippingRates    VendorShippingRate[]
+  subscriptionPlan             VendorSubscriptionPlan        @default(STARTER) @map("subscription_plan")
+  subscriptionStatus           StoreSubscriptionStatus       @default(NONE) @map("subscription_status")
+  planRenewsAt                 DateTime?                     @map("plan_renews_at")
+  pastDueSince                 DateTime?                     @map("past_due_since")
+  stripeCustomerId             String?                       @map("stripe_customer_id")
+  stripeSubscriptionId         String?                       @map("stripe_subscription_id")
+  wipayTrustedCardId           String?                       @map("wipay_trusted_card_id")
+  autoRenew                    Boolean                       @default(true) @map("auto_renew")
+  aiTopupCreditsRemaining      Int                           @default(0) @map("ai_topup_credits_remaining")
+  isAvailableNow               Boolean                       @default(false)
+  staffMembers                 StaffMember[]
+  createdAt                    DateTime                      @default(now()) @map("created_at")
+  updatedAt                    DateTime                      @updatedAt @map("updated_at")
+  listings                     Listing[]
+  products                     Product[]
+  realEstateListings           RealEstate[]
+  vehicles                     Vehicle[]
+  events                       Event[]
+  places                       Place[]
+  foodOutlets                  FoodOutlet[]
+  accommodations               Accommodation[]
+  services                     Service[]
+  requestingStoreRelations     StoreContentRelationship[]    @relation("RequestingStore")
+  targetStoreRelations         StoreContentRelationship[]    @relation("TargetStore")
+  orderItems                   OrderItem[]
+  payoutRequests               PayoutRequest[]
+  splitOrders                  SplitOrder[]
+  owner                        User                          @relation("StoreOwner", fields: [ownerId], references: [id])
+  ledgerEntries                VendorLedgerEntry[]
+  payoutThreshold              VendorThreshold?
+  aiUsage                      AIUsage[]
+  aiTopupPurchases             AITopupPurchase[]
+  warehouses                   Warehouse[]
+  images                       StoreImage[]
+  savedBy                      SavedStore[]
+  onDemandRequests             OnDemandRequest[]
+  storeReviews                 Review[]                      @relation("StoreReviews")
+  conversations                Conversation[]
+  contentLinks                 ContentLink[]
+  shippingRates                VendorShippingRate[]
   customerServiceSubscriptions CustomerServiceSubscription[]
 
   @@index([slug])
@@ -359,14 +362,14 @@ model Listing {
 
 /// PRODUCT listings only; subtype drives whether variants / digital / bookable / ticket behavior applies.
 model ListingProduct {
-  id        String                   @id @default(cuid())
-  listingId String                   @unique @map("listing_id")
-  subtype   ProductSubtype           @default(SIMPLE)
+  id        String                  @id @default(cuid())
+  listingId String                  @unique @map("listing_id")
+  subtype   ProductSubtype          @default(SIMPLE)
   sku       String?
-  createdAt DateTime                 @default(now()) @map("created_at")
-  updatedAt DateTime                 @updatedAt @map("updated_at")
+  createdAt DateTime                @default(now()) @map("created_at")
+  updatedAt DateTime                @updatedAt @map("updated_at")
   variants  ListingProductVariant[]
-  listing   Listing                  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listing   Listing                 @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
   @@index([sku])
   @@map("products")
@@ -522,14 +525,14 @@ model Warehouse {
 }
 
 model WarehouseInventory {
-  id               String         @id @default(cuid())
-  warehouseId      String         @map("warehouse_id")
-  productVariantId String         @map("product_variant_id")
-  quantityOnHand   Int            @default(0) @map("quantity_on_hand")
-  quantityReserved Int            @default(0) @map("quantity_reserved")
-  updatedAt        DateTime       @updatedAt @map("updated_at")
+  id               String                @id @default(cuid())
+  warehouseId      String                @map("warehouse_id")
+  productVariantId String                @map("product_variant_id")
+  quantityOnHand   Int                   @default(0) @map("quantity_on_hand")
+  quantityReserved Int                   @default(0) @map("quantity_reserved")
+  updatedAt        DateTime              @updatedAt @map("updated_at")
   productVariant   ListingProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
-  warehouse        Warehouse      @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  warehouse        Warehouse             @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
 
   @@unique([warehouseId, productVariantId])
   @@index([productVariantId])
@@ -551,14 +554,14 @@ model Cart {
 }
 
 model CartItem {
-  id               String          @id @default(cuid())
-  cartId           String          @map("cart_id")
-  listingId        String          @map("listing_id")
-  productVariantId String?         @map("product_variant_id")
+  id               String                 @id @default(cuid())
+  cartId           String                 @map("cart_id")
+  listingId        String                 @map("listing_id")
+  productVariantId String?                @map("product_variant_id")
   quantity         Int
-  createdAt        DateTime        @default(now()) @map("created_at")
-  cart             Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  listing          Listing         @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  createdAt        DateTime               @default(now()) @map("created_at")
+  cart             Cart                   @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  listing          Listing                @relation(fields: [listingId], references: [id], onDelete: Cascade)
   productVariant   ListingProductVariant? @relation(fields: [productVariantId], references: [id])
 
   @@index([cartId])
@@ -568,36 +571,145 @@ model CartItem {
 
 /// Buyer checkout order — **checkout v1** persists `OrderItem` rows; split / warehouse / courier phases use other relations.
 model MainOrder {
-  id             String          @id @default(cuid())
-  buyerId        String          @map("buyer_id")
-  status         MainOrderStatus @default(PENDING_PAYMENT)
+  id                String          @id @default(cuid())
+  buyerId           String          @map("buyer_id")
+  status            MainOrderStatus @default(PENDING_PAYMENT)
   /// Raw region string used with `trinidad-zoning` / checkout pricing (e.g. address region).
-  region         String
+  region            String
   /// Resolved `ShippingZone` at checkout time (e.g. METRO, TOBAGO_METRO).
-  shippingZone   String          @map("shipping_zone")
-  subtotalMinor  Int             @map("subtotal_minor")
-  shippingMinor  Int             @map("shipping_minor")
-  totalMinor     Int             @map("total_minor")
-  referenceNumber String?        @unique @map("reference_number")
-  receivedAt     DateTime?       @map("received_at")
+  shippingZone      String          @map("shipping_zone")
+  subtotalMinor     Int             @map("subtotal_minor")
+  shippingMinor     Int             @map("shipping_minor")
+  totalMinor        Int             @map("total_minor")
+  referenceNumber   String?         @unique @map("reference_number")
+  receivedAt        DateTime?       @map("received_at")
   /// Optional link to saved shipping address (future checkout / ops).
-  shippingAddressId String?      @map("shipping_address_id")
-  createdAt      DateTime        @default(now()) @map("created_at")
-  updatedAt      DateTime        @updatedAt @map("updated_at")
+  shippingAddressId String?         @map("shipping_address_id")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
 
-  buyer            User                @relation("BuyerOrders", fields: [buyerId], references: [id])
-  shippingAddress  Address?            @relation(fields: [shippingAddressId], references: [id])
-  items            OrderItem[]
-  splitOrders      SplitOrder[]
-  shippingBundles  ShippingBundle[]
-  documents        OrderDocument[]
-  reviews          Review[]
-  ledgerEntries    VendorLedgerEntry[]
+  buyer           User                @relation("BuyerOrders", fields: [buyerId], references: [id])
+  shippingAddress Address?            @relation(fields: [shippingAddressId], references: [id])
+  items           OrderItem[]
+  splitOrders     SplitOrder[]
+  shippingBundles ShippingBundle[]
+  documents       OrderDocument[]
+  reviews         Review[]
+  ledgerEntries   VendorLedgerEntry[]
+  paymentAttempts PaymentAttempt[]
 
   @@index([buyerId, status])
   @@index([status, createdAt])
   @@index([createdAt])
   @@map("main_orders")
+}
+
+enum PaymentProvider {
+  WIPAY
+}
+
+enum PaymentPurpose {
+  PRODUCT_ORDER
+  PRODUCT_BOOKING
+  ON_DEMAND_SERVICE
+  TICKET_ORDER
+  AI_TOPUP
+  VENDOR_SUBSCRIPTION
+  SERVICE_SUBSCRIPTION
+}
+
+enum PaymentAttemptStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  ERROR
+  REFUND_REQUESTED
+  REFUNDED
+  CHARGEBACK_PENDING
+  CHARGEBACK_PROCESSED
+  CHARGEBACK_RELEASED
+  FRAUD_CONFIRMED
+}
+
+enum WiPayTrustedCardStatus {
+  PENDING_VERIFICATION
+  VERIFIED
+  DELETED
+}
+
+model WiPayTrustedCard {
+  id                      String                 @id @default(cuid())
+  userId                  String                 @map("user_id")
+  providerUuid            String                 @unique @map("provider_uuid")
+  enrollmentTransactionId String?                @unique @map("enrollment_transaction_id")
+  status                  WiPayTrustedCardStatus @default(PENDING_VERIFICATION)
+  cardLastFour            String?                @map("card_last_four")
+  createdAt               DateTime               @default(now()) @map("created_at")
+  verifiedAt              DateTime?              @map("verified_at")
+  deletedAt               DateTime?              @map("deleted_at")
+  updatedAt               DateTime               @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@map("wipay_trusted_cards")
+}
+
+model WiPayCardEnrollment {
+  id                    String         @id @default(cuid())
+  userId                String         @map("user_id")
+  providerTransactionId String?        @unique @map("provider_transaction_id")
+  purpose               PaymentPurpose
+  targetId              String         @map("target_id")
+  amountMinor           Int            @map("amount_minor")
+  metadata              Json?
+  completedAt           DateTime?      @map("completed_at")
+  createdAt             DateTime       @default(now()) @map("created_at")
+  updatedAt             DateTime       @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("wipay_card_enrollments")
+}
+
+/// Provider-neutral payment record. Provider callbacks are correlated through
+/// merchantOrderId; providerTransactionId is stored as soon as WiPay creates it.
+model PaymentAttempt {
+  id                    String               @id @default(cuid())
+  provider              PaymentProvider      @default(WIPAY)
+  purpose               PaymentPurpose
+  status                PaymentAttemptStatus @default(PENDING)
+  merchantOrderId       String               @unique @map("merchant_order_id")
+  providerTransactionId String?              @unique @map("provider_transaction_id")
+  amountMinor           Int                  @map("amount_minor")
+  currency              String               @default("TTD")
+  userId                String               @map("user_id")
+  targetId              String               @map("target_id")
+  mainOrderId           String?              @map("main_order_id")
+  trustedCardId         String?              @map("trusted_card_id")
+  failureMessage        String?              @map("failure_message")
+  providerData          Json?                @map("provider_data")
+  paidAt                DateTime?            @map("paid_at")
+  createdAt             DateTime             @default(now()) @map("created_at")
+  updatedAt             DateTime             @updatedAt @map("updated_at")
+
+  mainOrder MainOrder? @relation(fields: [mainOrderId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([purpose, targetId])
+  @@index([status, createdAt])
+  @@map("payment_attempts")
+}
+
+model PaymentWebhookEvent {
+  id         String   @id
+  eventType  String   @map("event_type")
+  payload    Json
+  receivedAt DateTime @default(now()) @map("received_at")
+
+  @@index([eventType, receivedAt])
+  @@map("payment_webhook_events")
 }
 
 model OrderItem {
@@ -689,8 +801,8 @@ model SplitOrder {
   bayNumber                Int?                 @map("bay_number")
   dockBay                  DockBay?             @relation("BayAssignment")
 
-  @@index([mainOrderId])
   @@unique([mainOrderId, storeId])
+  @@index([mainOrderId])
   @@index([status])
   @@index([storeId, status])
   @@index([shippingBundleId])
@@ -712,20 +824,20 @@ model DockBay {
 
 /// Line items on a **SplitOrder** (warehouse / fulfillment). Distinct from checkout `OrderItem` on `MainOrder`.
 model SplitOrderItem {
-  id               String              @id @default(cuid())
-  splitOrderId     String              @map("split_order_id")
-  listingId        String              @map("listing_id")
-  productVariantId String?             @map("product_variant_id")
+  id               String                 @id @default(cuid())
+  splitOrderId     String                 @map("split_order_id")
+  listingId        String                 @map("listing_id")
+  productVariantId String?                @map("product_variant_id")
   quantity         Int
-  unitPriceMinor   Int                 @map("unit_price_minor")
-  lineTotalMinor   Int                 @map("line_total_minor")
-  currency         String              @db.Char(3)
-  titleSnapshot    String              @map("title_snapshot")
-  metadataSnapshot Json?               @map("metadata_snapshot")
-  createdAt        DateTime            @default(now()) @map("created_at")
-  listing          Listing             @relation(fields: [listingId], references: [id])
-  productVariant   ListingProductVariant?     @relation(fields: [productVariantId], references: [id])
-  splitOrder       SplitOrder          @relation(fields: [splitOrderId], references: [id], onDelete: Cascade)
+  unitPriceMinor   Int                    @map("unit_price_minor")
+  lineTotalMinor   Int                    @map("line_total_minor")
+  currency         String                 @db.Char(3)
+  titleSnapshot    String                 @map("title_snapshot")
+  metadataSnapshot Json?                  @map("metadata_snapshot")
+  createdAt        DateTime               @default(now()) @map("created_at")
+  listing          Listing                @relation(fields: [listingId], references: [id])
+  productVariant   ListingProductVariant? @relation(fields: [productVariantId], references: [id])
+  splitOrder       SplitOrder             @relation(fields: [splitOrderId], references: [id], onDelete: Cascade)
   warehouseLine    WarehouseOrderLine?
 
   @@index([splitOrderId])
@@ -756,32 +868,32 @@ model WarehouseOrderLine {
 
 /// Courier / outbound shipment (bundle or single split).
 model Shipment {
-  id                       String          @id @default(cuid())
-  splitOrderId             String?         @map("split_order_id")
-  shippingBundleId         String?         @unique @map("shipping_bundle_id")
-  inboundForSplitOrderId   String?         @unique @map("inbound_for_split_order_id")
-  courierId                String?         @map("courier_id")
-  status                   ShipmentStatus  @default(PENDING)
+  id                     String          @id @default(cuid())
+  splitOrderId           String?         @map("split_order_id")
+  shippingBundleId       String?         @unique @map("shipping_bundle_id")
+  inboundForSplitOrderId String?         @unique @map("inbound_for_split_order_id")
+  courierId              String?         @map("courier_id")
+  status                 ShipmentStatus  @default(PENDING)
   /// Operational lifecycle (pickup / warehouse / customer); optional alongside legacy `status`.
-  shipmentStatus           ShipmentStatus? @map("shipment_status")
-  type                     ShipmentType    @default(OUTBOUND_DELIVERY)
-  region                   String?
-  claimedAt                DateTime?       @map("claimed_at")
-  pickedUpAt               DateTime?       @map("picked_up_at")
-  trackingNumber           String?         @map("tracking_number")
-  carrier                  String?
-  proofUrl                 String?         @map("proof_url")
-  estimatedDeliveryAt      DateTime?       @map("estimated_delivery_at")
-  deliveredAt              DateTime?       @map("delivered_at")
-  totalWeightLbs           Float?          @map("total_weight_lbs")
-  pickupFeeMinor           Int?            @map("pickup_fee_minor")
-  createdAt                DateTime        @default(now()) @map("created_at")
-  updatedAt                DateTime        @updatedAt @map("updated_at")
-  courier                  User?           @relation("CourierShipments", fields: [courierId], references: [id])
-  shippingBundle           ShippingBundle? @relation(fields: [shippingBundleId], references: [id])
-  splitOrder               SplitOrder?     @relation("OutboundShipment", fields: [splitOrderId], references: [id], onDelete: Cascade)
-  inboundForSplitOrder     SplitOrder?     @relation("InboundShipment", fields: [inboundForSplitOrderId], references: [id])
-  batchedSplitOrders       SplitOrder[]    @relation("BatchInboundShipment")
+  shipmentStatus         ShipmentStatus? @map("shipment_status")
+  type                   ShipmentType    @default(OUTBOUND_DELIVERY)
+  region                 String?
+  claimedAt              DateTime?       @map("claimed_at")
+  pickedUpAt             DateTime?       @map("picked_up_at")
+  trackingNumber         String?         @map("tracking_number")
+  carrier                String?
+  proofUrl               String?         @map("proof_url")
+  estimatedDeliveryAt    DateTime?       @map("estimated_delivery_at")
+  deliveredAt            DateTime?       @map("delivered_at")
+  totalWeightLbs         Float?          @map("total_weight_lbs")
+  pickupFeeMinor         Int?            @map("pickup_fee_minor")
+  createdAt              DateTime        @default(now()) @map("created_at")
+  updatedAt              DateTime        @updatedAt @map("updated_at")
+  courier                User?           @relation("CourierShipments", fields: [courierId], references: [id])
+  shippingBundle         ShippingBundle? @relation(fields: [shippingBundleId], references: [id])
+  splitOrder             SplitOrder?     @relation("OutboundShipment", fields: [splitOrderId], references: [id], onDelete: Cascade)
+  inboundForSplitOrder   SplitOrder?     @relation("InboundShipment", fields: [inboundForSplitOrderId], references: [id])
+  batchedSplitOrders     SplitOrder[]    @relation("BatchInboundShipment")
 
   @@index([splitOrderId])
   @@index([courierId, status])
@@ -834,29 +946,29 @@ model PayoutRequest {
 }
 
 model Review {
-  id                 String     @id @default(cuid())
-  userId             String     @map("user_id")
-  listingId          String?    @map("listing_id")
-  productId          String?    @map("product_id")
-  storeId            String?    @map("store_id")
-  mainOrderId        String?    @map("main_order_id")
-  bookingId          String?    @unique @map("booking_id")
+  id                 String          @id @default(cuid())
+  userId             String          @map("user_id")
+  listingId          String?         @map("listing_id")
+  productId          String?         @map("product_id")
+  storeId            String?         @map("store_id")
+  mainOrderId        String?         @map("main_order_id")
+  bookingId          String?         @unique @map("booking_id")
   rating             Int
   title              String?
   body               String?
-  photos             String[]   @default([])
-  isVerifiedPurchase Boolean    @default(false) @map("is_verified_purchase")
-  helpfulCount       Int        @default(0) @map("helpful_count")
-  vendorReply        String?    @map("vendor_reply")
-  vendorRepliedAt    DateTime?  @map("vendor_replied_at")
-  createdAt          DateTime   @default(now()) @map("created_at")
-  updatedAt          DateTime   @updatedAt @map("updated_at")
-  listing            Listing?   @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  product            Product?   @relation("ProductReviews", fields: [productId], references: [id], onDelete: Cascade)
-  store              Store?     @relation("StoreReviews", fields: [storeId], references: [id], onDelete: Cascade)
-  mainOrder          MainOrder? @relation(fields: [mainOrderId], references: [id])
+  photos             String[]        @default([])
+  isVerifiedPurchase Boolean         @default(false) @map("is_verified_purchase")
+  helpfulCount       Int             @default(0) @map("helpful_count")
+  vendorReply        String?         @map("vendor_reply")
+  vendorRepliedAt    DateTime?       @map("vendor_replied_at")
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
+  listing            Listing?        @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  product            Product?        @relation("ProductReviews", fields: [productId], references: [id], onDelete: Cascade)
+  store              Store?          @relation("StoreReviews", fields: [storeId], references: [id], onDelete: Cascade)
+  mainOrder          MainOrder?      @relation(fields: [mainOrderId], references: [id])
   booking            ProductBooking? @relation(fields: [bookingId], references: [id])
-  user               User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([listingId])
   @@index([productId])
@@ -916,7 +1028,7 @@ model AITopupPurchase {
   usesPurchased         Int       @map("uses_purchased")
   pricePaidMinor        Int       @map("price_paid_minor")
   currency              String    @default("ttd")
-  stripePaymentIntentId String    @unique @map("stripe_payment_intent_id")
+  stripePaymentIntentId String?   @unique @map("stripe_payment_intent_id")
   status                String    @default("PENDING")
   createdAt             DateTime  @default(now()) @map("created_at")
   paidAt                DateTime? @map("paid_at")
@@ -989,9 +1101,9 @@ enum IdVerificationStatus {
 }
 
 enum StoreStatus {
-  DRAFT             @map("draft")
-  PENDING_APPROVAL  @map("pending_approval")
-  ACTIVE            @map("active")
+  DRAFT            @map("draft")
+  PENDING_APPROVAL @map("pending_approval")
+  ACTIVE           @map("active")
 }
 
 enum StoreShippingMode {
@@ -1146,8 +1258,11 @@ model CustomerServiceSubscription {
   storeId              String                     @map("store_id")
   store                Store                      @relation(fields: [storeId], references: [id], onDelete: Cascade)
   stripeSubscriptionId String?                    @map("stripe_subscription_id")
+  wipayTrustedCardId   String?                    @map("wipay_trusted_card_id")
   status               CustomerSubscriptionStatus @default(ACTIVE)
   currentPeriodEnd     DateTime?                  @map("current_period_end")
+  nextChargeAt         DateTime?                  @map("next_charge_at")
+  lastChargeAt         DateTime?                  @map("last_charge_at")
   /// TTD minor units at subscribe time (snapshot).
   priceMinor           Int                        @map("price_minor")
   /// Billing interval snapshot: weekly|fortnightly|monthly|quarterly.
@@ -1451,6 +1566,7 @@ enum TicketOrderStatus {
   PAID
   FAILED
   CANCELLED
+  REFUNDED
 }
 
 enum RefundPolicyType {
@@ -1460,85 +1576,85 @@ enum RefundPolicyType {
 }
 
 model Product {
-  id                    String            @id @default(cuid())
-  storeId               String
-  store                 Store             @relation(fields: [storeId], references: [id])
+  id      String @id @default(cuid())
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id])
 
-  name                  String
-  slug                  String            @unique
-  description           String?
-  shortDescription      String?
-  deliveryFee           Float?
-  deliveryRegions       String[]          @default([])
-  price                 Float             @default(0)
-  compareAtPrice        Float?
-  sku                   String?
-  stock                 Int?
-  condition             ProductCondition?
-  brand                 String?
-  category              String?
-  tags                  String[]
-  images                String[]
+  name             String
+  slug             String            @unique
+  description      String?
+  shortDescription String?
+  deliveryFee      Float?
+  deliveryRegions  String[]          @default([])
+  price            Float             @default(0)
+  compareAtPrice   Float?
+  sku              String?
+  stock            Int?
+  condition        ProductCondition?
+  brand            String?
+  category         String?
+  tags             String[]
+  images           String[]
 
-  weight                Float?
-  weightUnit            WeightUnit?
-  length                Float?
-  width                 Float?
-  height                Float?
-  allowPickup           Boolean           @default(false)
-  allowDelivery         Boolean           @default(false)
-  returnPolicy          String?
+  weight        Float?
+  weightUnit    WeightUnit?
+  length        Float?
+  width         Float?
+  height        Float?
+  allowPickup   Boolean     @default(false)
+  allowDelivery Boolean     @default(false)
+  returnPolicy  String?
 
-  isDigital             Boolean           @default(false)
-  digitalFileUrl        String?
-  fileType              String?
-  fileSizeKb            Int?
-  downloadLimit         Int?
-  downloadExpiryDays    Int?
-  previewUrl            String?
-  licenceType           LicenceType?
+  isDigital          Boolean      @default(false)
+  digitalFileUrl     String?
+  fileType           String?
+  fileSizeKb         Int?
+  downloadLimit      Int?
+  downloadExpiryDays Int?
+  previewUrl         String?
+  licenceType        LicenceType?
 
-  isBookable            Boolean           @default(false)
-  isService             Boolean           @default(false)
-  serviceType           ServiceType?
-  serviceLocation       ServiceLocation?
-  serviceDuration       Int?
+  isBookable      Boolean          @default(false)
+  isService       Boolean          @default(false)
+  serviceType     ServiceType?
+  serviceLocation ServiceLocation?
+  serviceDuration Int?
   /// Bookable service availability (vendor Availability page)
-  durationMinutes       Int               @default(60)
-  bufferMinutes         Int               @default(0)
-  maxPerDay             Int?
-  useStoreHours         Boolean           @default(true)
-  availableDays         String[]          @default([])
-  availableFrom         String?
-  availableTo           String?
-  isAvailable           Boolean           @default(true)
-  requiresDeposit       Boolean           @default(false)
-  depositAmount         Float?
+  durationMinutes Int              @default(60)
+  bufferMinutes   Int              @default(0)
+  maxPerDay       Int?
+  useStoreHours   Boolean          @default(true)
+  availableDays   String[]         @default([])
+  availableFrom   String?
+  availableTo     String?
+  isAvailable     Boolean          @default(true)
+  requiresDeposit Boolean          @default(false)
+  depositAmount   Float?
 
-  bookingType           BookingType?
-  sessionDuration       Int?
-  advanceBookingDays    Int?
-  cancellationHours     Int?
-  maxGroupSize          Int?
-  requiresApproval      Boolean           @default(false)
-  bookingPaymentMode    BookingPaymentMode? @default(CUSTOMER_CHOOSES)
-  quotePriceType        QuotePriceType?
+  bookingType        BookingType?
+  sessionDuration    Int?
+  advanceBookingDays Int?
+  cancellationHours  Int?
+  maxGroupSize       Int?
+  requiresApproval   Boolean             @default(false)
+  bookingPaymentMode BookingPaymentMode? @default(CUSTOMER_CHOOSES)
+  quotePriceType     QuotePriceType?
 
   // Quote-based service fields
-  responseTime          String?
-  minimumQuoteAmount    Float?
-  siteVisitRequired     Boolean           @default(false)
+  responseTime       String?
+  minimumQuoteAmount Float?
+  siteVisitRequired  Boolean @default(false)
 
   // Subscription service fields
-  subscriptionInterval  String?
-  sessionsIncluded      Int?
+  subscriptionInterval         String?
+  sessionsIncluded             Int?
   subscriptionCancellationDays Int?
 
   // Subscription trial + pause
-  subscriptionTrialPeriod       Int?
-  subscriptionTrialPrice        Float?
-  subscriptionCanPause          Boolean   @default(false)
-  subscriptionPauseMaxWeeks     Int?
+  subscriptionTrialPeriod   Int?
+  subscriptionTrialPrice    Float?
+  subscriptionCanPause      Boolean @default(false)
+  subscriptionPauseMaxWeeks Int?
 
   // On-demand service fields
   travelFee             Float?
@@ -1546,38 +1662,38 @@ model Product {
   estimatedResponseMins Int?
 
   // Virtual service fields
-  virtualPlatform       String?
-  virtualMeetingInfo    String?
+  virtualPlatform    String?
+  virtualMeetingInfo String?
 
-  latitude              Float?
-  longitude             Float?
-  address               String?
+  latitude  Float?
+  longitude Float?
+  address   String?
 
-  isPublished           Boolean           @default(false)
+  isPublished     Boolean @default(false)
   /// Soft admin archive — not shown on storefront alongside drafts.
-  isArchived            Boolean           @default(false)
-  isFeatured            Boolean           @default(false)
-  viewCount             Int               @default(0)
-  metaTitle             String?
-  metaDescription       String?
+  isArchived      Boolean @default(false)
+  isFeatured      Boolean @default(false)
+  viewCount       Int     @default(0)
+  metaTitle       String?
+  metaDescription String?
 
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  hasVariants           Boolean           @default(false) @map("has_variants")
+  hasVariants Boolean @default(false) @map("has_variants")
 
-  variants              ProductVariant[]
-  availabilitySchedule  ProductAvailabilitySchedule[]
-  availabilityOverrides ProductAvailabilityOverride[]
-  bookingSlots          ProductBookingSlot[]
-  bookings              ProductBooking[]
-  digitalDownloads      DigitalDownload[]
-  cartItems             ProductCartItem[]
-  orderItems            OrderItem[]
-  staffServices         StaffService[]
-  wishlistItems         WishlistItem[]
-  onDemandRequests      OnDemandRequest[]
-  reviews               Review[]   @relation("ProductReviews")
+  variants                     ProductVariant[]
+  availabilitySchedule         ProductAvailabilitySchedule[]
+  availabilityOverrides        ProductAvailabilityOverride[]
+  bookingSlots                 ProductBookingSlot[]
+  bookings                     ProductBooking[]
+  digitalDownloads             DigitalDownload[]
+  cartItems                    ProductCartItem[]
+  orderItems                   OrderItem[]
+  staffServices                StaffService[]
+  wishlistItems                WishlistItem[]
+  onDemandRequests             OnDemandRequest[]
+  reviews                      Review[]                      @relation("ProductReviews")
   customerServiceSubscriptions CustomerServiceSubscription[]
 
   @@index([storeId])
@@ -1604,68 +1720,68 @@ model ProductCartItem {
 }
 
 model ProductVariant {
-  id          String    @id @default(cuid())
-  productId   String
-  product     Product   @relation(fields: [productId], references: [id])
-  name        String
-  sku         String?
-  price       Float?
-  stock       Int?
-  images      String[]
-  attributes  Json
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  cartItems   ProductCartItem[]
+  id         String            @id @default(cuid())
+  productId  String
+  product    Product           @relation(fields: [productId], references: [id])
+  name       String
+  sku        String?
+  price      Float?
+  stock      Int?
+  images     String[]
+  attributes Json
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  cartItems  ProductCartItem[]
 
   @@index([productId])
 }
 
 model ProductAvailabilitySchedule {
-  id                  String    @id @default(cuid())
-  productId           String
-  product             Product   @relation(fields: [productId], references: [id])
-  dayOfWeek           Int
-  startTime           String
-  endTime             String
-  slotDurationMins    Int
-  slotBufferMins      Int       @default(0)
-  maxBookingsPerSlot  Int       @default(1)
-  isActive            Boolean   @default(true)
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  id                 String   @id @default(cuid())
+  productId          String
+  product            Product  @relation(fields: [productId], references: [id])
+  dayOfWeek          Int
+  startTime          String
+  endTime            String
+  slotDurationMins   Int
+  slotBufferMins     Int      @default(0)
+  maxBookingsPerSlot Int      @default(1)
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@index([productId])
 }
 
 model ProductAvailabilityOverride {
-  id                String    @id @default(cuid())
-  productId         String
-  product           Product   @relation(fields: [productId], references: [id])
-  date              DateTime
-  isBlocked         Boolean   @default(false)
-  customStartTime   String?
-  customEndTime     String?
-  reason            String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id              String   @id @default(cuid())
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id])
+  date            DateTime
+  isBlocked       Boolean  @default(false)
+  customStartTime String?
+  customEndTime   String?
+  reason          String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([productId, date])
 }
 
 model ProductBookingSlot {
-  id               String           @id @default(cuid())
-  productId        String
-  product          Product          @relation(fields: [productId], references: [id])
-  date             DateTime
-  startTime        String
-  endTime          String
-  maxBookings      Int
-  currentBookings  Int              @default(0)
-  isAvailable      Boolean          @default(true)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  id              String   @id @default(cuid())
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id])
+  date            DateTime
+  startTime       String
+  endTime         String
+  maxBookings     Int
+  currentBookings Int      @default(0)
+  isAvailable     Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  bookings         ProductBooking[]
+  bookings ProductBooking[]
 
   @@unique([productId, date, startTime])
   @@index([productId])
@@ -1673,40 +1789,40 @@ model ProductBookingSlot {
 }
 
 model ProductBooking {
-  id                 String              @id @default(cuid())
-  productId          String
-  product            Product             @relation(fields: [productId], references: [id])
-  slotId             String
-  slot               ProductBookingSlot  @relation(fields: [slotId], references: [id])
-  customerId         String
-  bookingDate        DateTime
-  startTime          String
-  endTime            String
-  guestCount         Int                 @default(1)
-  totalPrice         Float
-  status             BookingStatus       @default(PENDING)
-  cancellationReason String?
-  cancelledBy        CancelledBy?
-  cancelledAt        DateTime?
-  vendorNotes        String?
-  meetingLink        String?
-  customerNotes      String?
-  staffMemberId      String?
-  staffMember        StaffMember? @relation(fields: [staffMemberId], references: [id], onDelete: SetNull)
-  reminderSentAt     DateTime?
+  id                    String             @id @default(cuid())
+  productId             String
+  product               Product            @relation(fields: [productId], references: [id])
+  slotId                String
+  slot                  ProductBookingSlot @relation(fields: [slotId], references: [id])
+  customerId            String
+  bookingDate           DateTime
+  startTime             String
+  endTime               String
+  guestCount            Int                @default(1)
+  totalPrice            Float
+  status                BookingStatus      @default(PENDING)
+  cancellationReason    String?
+  cancelledBy           CancelledBy?
+  cancelledAt           DateTime?
+  vendorNotes           String?
+  meetingLink           String?
+  customerNotes         String?
+  staffMemberId         String?
+  staffMember           StaffMember?       @relation(fields: [staffMemberId], references: [id], onDelete: SetNull)
+  reminderSentAt        DateTime?
   /// Total paid via Stripe so far (full or deposit).
-  amountPaid             Float?              @map("amount_paid")
-  stripePaymentIntentId  String?             @map("stripe_payment_intent_id")
-  completedAt        DateTime?           @map("completed_at")
-  autoCompleteAt     DateTime?           @map("auto_complete_at")
-  markedCompleteBy   String?             @map("marked_complete_by")
-  earningsReleased   Boolean             @default(false) @map("earnings_released")
-  earningsAmount     Float?              @map("earnings_amount")
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  amountPaid            Float?             @map("amount_paid")
+  stripePaymentIntentId String?            @map("stripe_payment_intent_id")
+  completedAt           DateTime?          @map("completed_at")
+  autoCompleteAt        DateTime?          @map("auto_complete_at")
+  markedCompleteBy      String?            @map("marked_complete_by")
+  earningsReleased      Boolean            @default(false) @map("earnings_released")
+  earningsAmount        Float?             @map("earnings_amount")
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
 
-  review             Review?
-  ledgerEntries      VendorLedgerEntry[]
+  review        Review?
+  ledgerEntries VendorLedgerEntry[]
 
   @@index([productId])
   @@index([autoCompleteAt, earningsReleased])
@@ -1755,30 +1871,30 @@ model SavedStore {
 }
 
 model OnDemandRequest {
-  id               String                @id @default(cuid())
-  serviceId        String
-  service          Product               @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  customerId       String
-  customer         User                  @relation("CustomerRequests", fields: [customerId], references: [id], onDelete: Cascade)
-  storeId          String
-  store            Store                 @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  description      String
-  photos           String[]              @default([])
-  customerLat      Float?
-  customerLng      Float?
-  customerAddress  String?
-  status           OnDemandRequestStatus @default(PENDING)
-  requestType      RequestType           @default(ON_DEMAND) @map("request_type")
-  vendorNotes      String?
-  quotedPrice      Float?
-  amountPaid             Float?   @map("amount_paid")
-  stripePaymentIntentId  String?  @map("stripe_payment_intent_id")
-  estimatedArrival String?
-  declineReason    String?
-  respondedAt      DateTime?
-  completedAt      DateTime?
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
+  id                    String                @id @default(cuid())
+  serviceId             String
+  service               Product               @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  customerId            String
+  customer              User                  @relation("CustomerRequests", fields: [customerId], references: [id], onDelete: Cascade)
+  storeId               String
+  store                 Store                 @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  description           String
+  photos                String[]              @default([])
+  customerLat           Float?
+  customerLng           Float?
+  customerAddress       String?
+  status                OnDemandRequestStatus @default(PENDING)
+  requestType           RequestType           @default(ON_DEMAND) @map("request_type")
+  vendorNotes           String?
+  quotedPrice           Float?
+  amountPaid            Float?                @map("amount_paid")
+  stripePaymentIntentId String?               @map("stripe_payment_intent_id")
+  estimatedArrival      String?
+  declineReason         String?
+  respondedAt           DateTime?
+  completedAt           DateTime?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
 
   @@index([serviceId])
   @@index([customerId])
@@ -1788,18 +1904,18 @@ model OnDemandRequest {
 }
 
 model DigitalDownload {
-  id                String    @id @default(cuid())
-  productId         String
-  product           Product   @relation(fields: [productId], references: [id])
-  orderId           String
-  customerId        String
-  downloadCount     Int       @default(0)
-  firstDownloadAt   DateTime?
-  lastDownloadAt    DateTime?
-  expiresAt         DateTime?
-  isActive          Boolean   @default(true)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  productId       String
+  product         Product   @relation(fields: [productId], references: [id])
+  orderId         String
+  customerId      String
+  downloadCount   Int       @default(0)
+  firstDownloadAt DateTime?
+  lastDownloadAt  DateTime?
+  expiresAt       DateTime?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@index([productId])
   @@index([customerId])
@@ -1807,52 +1923,52 @@ model DigitalDownload {
 }
 
 model RealEstate {
-  id                String                  @id @default(cuid())
-  storeId           String
-  store             Store                   @relation(fields: [storeId], references: [id])
-  title             String
-  slug              String                  @unique
-  description       String?
-  type              RealEstateType
-  listingType       RealEstateListingType
+  id          String                @id @default(cuid())
+  storeId     String
+  store       Store                 @relation(fields: [storeId], references: [id])
+  title       String
+  slug        String                @unique
+  description String?
+  type        RealEstateType
+  listingType RealEstateListingType
 
-  price             Float
-  bedrooms          Int?
-  bathrooms         Int?
-  sizeSqFt          Float?
-  lotSize           Float?
-  lotSizeUnit       LotSizeUnit?
-  yearBuilt         Int?
-  floorLevel        Int?
-  totalFloors       Int?
-  furnished         Boolean?
-  parkingSpaces     Int?
-  isNewDevelopment  Boolean                 @default(false)
+  price            Float
+  bedrooms         Int?
+  bathrooms        Int?
+  sizeSqFt         Float?
+  lotSize          Float?
+  lotSizeUnit      LotSizeUnit?
+  yearBuilt        Int?
+  floorLevel       Int?
+  totalFloors      Int?
+  furnished        Boolean?
+  parkingSpaces    Int?
+  isNewDevelopment Boolean      @default(false)
 
-  titleType         TitleType?
-  propertyTax       Float?
+  titleType   TitleType?
+  propertyTax Float?
 
-  tenure            TenureType?
-  depositRequired   Float?
-  availableFrom     DateTime?
+  tenure          TenureType?
+  depositRequired Float?
+  availableFrom   DateTime?
 
-  amenities         String[]
-  nearbyAmenities   String[]
-  images            String[]
+  amenities       String[]
+  nearbyAmenities String[]
+  images          String[]
 
-  latitude          Float
-  longitude         Float
-  address           String
-  region            String
+  latitude  Float
+  longitude Float
+  address   String
+  region    String
 
-  isPublished       Boolean                 @default(false)
-  isFeatured        Boolean                 @default(false)
-  viewCount         Int                     @default(0)
-  metaTitle         String?
-  metaDescription   String?
+  isPublished     Boolean @default(false)
+  isFeatured      Boolean @default(false)
+  viewCount       Int     @default(0)
+  metaTitle       String?
+  metaDescription String?
 
-  createdAt         DateTime                @default(now())
-  updatedAt         DateTime                @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([storeId])
   @@index([isPublished])
@@ -1861,56 +1977,56 @@ model RealEstate {
 }
 
 model Vehicle {
-  id                  String              @id @default(cuid())
-  storeId             String
-  store               Store               @relation(fields: [storeId], references: [id])
-  title               String
-  slug                String              @unique
-  description         String?
-  listingType         VehicleListingType
-  condition           VehicleCondition?
+  id          String             @id @default(cuid())
+  storeId     String
+  store       Store              @relation(fields: [storeId], references: [id])
+  title       String
+  slug        String             @unique
+  description String?
+  listingType VehicleListingType
+  condition   VehicleCondition?
 
-  make                String
-  model               String
-  year                Int
-  registrationYear    Int?
-  colour              String?
-  interiorColour      String?
-  mileage             Int?
-  engineSize          String?
-  transmission        Transmission
-  fuelType            FuelType
-  bodyType            BodyType?
-  driveType           DriveType?
-  doors               Int?
-  seatingCapacity     Int?
-  features            String[]
+  make             String
+  model            String
+  year             Int
+  registrationYear Int?
+  colour           String?
+  interiorColour   String?
+  mileage          Int?
+  engineSize       String?
+  transmission     Transmission
+  fuelType         FuelType
+  bodyType         BodyType?
+  driveType        DriveType?
+  doors            Int?
+  seatingCapacity  Int?
+  features         String[]
 
-  price               Float
-  priceUnit           VehiclePriceUnit
+  price     Float
+  priceUnit VehiclePriceUnit
 
-  depositRequired     Float?
-  minimumRentalDays   Int?
-  insuranceIncluded   Boolean             @default(false)
-  availableFrom       DateTime?
-  driverIncluded      Boolean             @default(false)
-  inspectionExpiry    DateTime?
+  depositRequired   Float?
+  minimumRentalDays Int?
+  insuranceIncluded Boolean   @default(false)
+  availableFrom     DateTime?
+  driverIncluded    Boolean   @default(false)
+  inspectionExpiry  DateTime?
 
-  images              String[]
+  images String[]
 
-  latitude            Float?
-  longitude           Float?
-  address             String?
-  region              String
+  latitude  Float?
+  longitude Float?
+  address   String?
+  region    String
 
-  isPublished         Boolean             @default(false)
-  isFeatured          Boolean             @default(false)
-  viewCount           Int                 @default(0)
-  metaTitle           String?
-  metaDescription     String?
+  isPublished     Boolean @default(false)
+  isFeatured      Boolean @default(false)
+  viewCount       Int     @default(0)
+  metaTitle       String?
+  metaDescription String?
 
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([storeId])
   @@index([isPublished])
@@ -1919,63 +2035,63 @@ model Vehicle {
 }
 
 model Event {
-  id                    String            @id @default(cuid())
-  storeId               String
-  store                 Store             @relation(fields: [storeId], references: [id])
-  title                 String
-  slug                  String            @unique
-  description           String?
-  category              String?
-  tags                  String[]
-  organiserName         String?
+  id            String   @id @default(cuid())
+  storeId       String
+  store         Store    @relation(fields: [storeId], references: [id])
+  title         String
+  slug          String   @unique
+  description   String?
+  category      String?
+  tags          String[]
+  organiserName String?
 
-  startDate             DateTime
-  endDate               DateTime?
-  isOnline              Boolean           @default(false)
+  startDate DateTime
+  endDate   DateTime?
+  isOnline  Boolean   @default(false)
 
-  venueName             String?
-  address               String?
-  latitude              Float?
-  longitude             Float?
-  region                String?
-  capacity              Int?
-  dressCode             String?
+  venueName String?
+  address   String?
+  latitude  Float?
+  longitude Float?
+  region    String?
+  capacity  Int?
+  dressCode String?
 
-  ticketPrice           Float?
-  ticketUrl             String?
-  refundPolicy          String?
+  ticketPrice  Float?
+  ticketUrl    String?
+  refundPolicy String?
 
-  registrationRequired  Boolean           @default(false)
-  registrationDeadline  DateTime?
+  registrationRequired Boolean   @default(false)
+  registrationDeadline DateTime?
 
-  ageRestriction        String?
-  isPublished           Boolean           @default(false)
-  isFeatured            Boolean           @default(false)
-  viewCount             Int               @default(0)
-  metaTitle             String?
-  metaDescription       String?
+  ageRestriction  String?
+  isPublished     Boolean @default(false)
+  isFeatured      Boolean @default(false)
+  viewCount       Int     @default(0)
+  metaTitle       String?
+  metaDescription String?
 
-  status                EventStatus       @default(DRAFT)
-  eventType             String            @default("SINGLE")
-  coverImage            String?
-  galleryImages         String[]
-  streamUrl             String?
-  hasSeating            Boolean           @default(false)
-  lineup                Json?
-  refundPolicyType      RefundPolicyType  @default(FULL)
-  refundCutoffHours     Int               @default(48)
-  scanCode              String?
-  scanCodeSetAt         DateTime?
+  status            EventStatus      @default(DRAFT)
+  eventType         String           @default("SINGLE")
+  coverImage        String?
+  galleryImages     String[]
+  streamUrl         String?
+  hasSeating        Boolean          @default(false)
+  lineup            Json?
+  refundPolicyType  RefundPolicyType @default(FULL)
+  refundCutoffHours Int              @default(48)
+  scanCode          String?
+  scanCodeSetAt     DateTime?
 
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  ticketTypes           EventTicketType[]
-  tickets               Ticket[]
-  checkIns              TicketCheckIn[]
-  promoCodes            EventPromoCode[]
-  waitlist              EventWaitlist[]
-  ticketOrders          TicketOrder[]
+  ticketTypes  EventTicketType[]
+  tickets      Ticket[]
+  checkIns     TicketCheckIn[]
+  promoCodes   EventPromoCode[]
+  waitlist     EventWaitlist[]
+  ticketOrders TicketOrder[]
 
   @@index([storeId])
   @@index([isPublished])
@@ -2003,8 +2119,8 @@ model EventTicketType {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  tickets       Ticket[]
-  cartItems     EventTicketCartItem[]
+  tickets   Ticket[]
+  cartItems EventTicketCartItem[]
 
   @@index([eventId])
 }
@@ -2026,34 +2142,34 @@ model EventTicketCartItem {
 }
 
 model Ticket {
-  id              String       @id @default(cuid())
-  ticketNumber    String       @unique
-  qrToken         String       @unique
-  eventId         String
-  ticketTypeId    String
-  userId          String
-  orderId         String?
-  holderName      String
-  holderEmail     String
-  status          TicketStatus @default(VALID)
-  checkedInAt         DateTime?
-  checkedInBy         String?
-  transferredToId     String?
-  transferredAt       DateTime?
-  transferredToName   String?
-  validDays       Json?
+  id                String       @id @default(cuid())
+  ticketNumber      String       @unique
+  qrToken           String       @unique
+  eventId           String
+  ticketTypeId      String
+  userId            String
+  orderId           String?
+  holderName        String
+  holderEmail       String
+  status            TicketStatus @default(VALID)
+  checkedInAt       DateTime?
+  checkedInBy       String?
+  transferredToId   String?
+  transferredAt     DateTime?
+  transferredToName String?
+  validDays         Json?
   pricePaidMinor    Int          @default(0) @map("price_paid_minor")
-  refundedAt      DateTime?    @map("refunded_at")
-  refundAmountMinor Int?       @map("refund_amount_minor")
-  stripeRefundId  String?      @map("stripe_refund_id")
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  refundedAt        DateTime?    @map("refunded_at")
+  refundAmountMinor Int?         @map("refund_amount_minor")
+  stripeRefundId    String?      @map("stripe_refund_id")
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
-  event      Event           @relation(fields: [eventId], references: [id])
-  ticketType EventTicketType @relation(fields: [ticketTypeId], references: [id])
-  user       User            @relation(fields: [userId], references: [id])
-  ticketOrder TicketOrder?   @relation(fields: [orderId], references: [id])
-  checkIns   TicketCheckIn[]
+  event       Event           @relation(fields: [eventId], references: [id])
+  ticketType  EventTicketType @relation(fields: [ticketTypeId], references: [id])
+  user        User            @relation(fields: [userId], references: [id])
+  ticketOrder TicketOrder?    @relation(fields: [orderId], references: [id])
+  checkIns    TicketCheckIn[]
 
   @@index([eventId])
   @@index([userId])
@@ -2063,16 +2179,16 @@ model Ticket {
 }
 
 model TicketCheckIn {
-  id        String   @id @default(cuid())
-  ticketId  String
-  eventId   String
-  scannedAt DateTime
-  syncedAt  DateTime @default(now())
-  source    String
+  id          String   @id @default(cuid())
+  ticketId    String
+  eventId     String
+  scannedAt   DateTime
+  syncedAt    DateTime @default(now())
+  source      String
   deviceId    String?
   deviceLabel String?
   outcome     String
-  createdAt DateTime @default(now())
+  createdAt   DateTime @default(now())
 
   ticket Ticket @relation(fields: [ticketId], references: [id])
   event  Event  @relation(fields: [eventId], references: [id])
@@ -2119,20 +2235,20 @@ model EventWaitlist {
 }
 
 model TicketOrder {
-  id                    String            @id @default(cuid())
-  reference             String            @unique
-  userId                String
-  eventId               String
-  status                TicketOrderStatus @default(PENDING_PAYMENT)
-  subtotal              Int
-  total                 Int
+  id                        String            @id @default(cuid())
+  reference                 String            @unique
+  userId                    String
+  eventId                   String
+  status                    TicketOrderStatus @default(PENDING_PAYMENT)
+  subtotal                  Int
+  total                     Int
   stripePaymentIntentId     String?
-  promoCodeId                String?           @map("promo_code_id")
+  promoCodeId               String?           @map("promo_code_id")
   promoReservationExpiresAt DateTime?         @map("promo_reservation_expires_at")
-  earningsReleased      Boolean           @default(false) @map("earnings_released")
-  payoutEligibleAt      DateTime?         @map("payout_eligible_at")
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
+  earningsReleased          Boolean           @default(false) @map("earnings_released")
+  payoutEligibleAt          DateTime?         @map("payout_eligible_at")
+  createdAt                 DateTime          @default(now())
+  updatedAt                 DateTime          @updatedAt
 
   user      User            @relation(fields: [userId], references: [id])
   event     Event           @relation(fields: [eventId], references: [id])
@@ -2147,41 +2263,41 @@ model TicketOrder {
 }
 
 model Place {
-  id              String    @id @default(cuid())
-  storeId         String
-  store           Store     @relation(fields: [storeId], references: [id])
-  name            String
-  slug            String    @unique
-  description     String?
-  category        String?
-  tags            String[]
+  id          String   @id @default(cuid())
+  storeId     String
+  store       Store    @relation(fields: [storeId], references: [id])
+  name        String
+  slug        String   @unique
+  description String?
+  category    String?
+  tags        String[]
 
-  openingHours    Json?
-  entryFee        Float?
-  priceNotes      String?
-  amenities       String[]
-  accessibility   Boolean   @default(false)
-  ageRestriction  String?
+  openingHours   Json?
+  entryFee       Float?
+  priceNotes     String?
+  amenities      String[]
+  accessibility  Boolean  @default(false)
+  ageRestriction String?
 
-  images          String[]
-  latitude        Float
-  longitude       Float
-  address         String
-  region          String
+  images    String[]
+  latitude  Float
+  longitude Float
+  address   String
+  region    String
 
-  website         String?
-  phone           String?
-  socialLinks     Json?
-  rating          Float?
+  website     String?
+  phone       String?
+  socialLinks Json?
+  rating      Float?
 
-  isPublished     Boolean   @default(false)
-  isFeatured      Boolean   @default(false)
-  viewCount       Int       @default(0)
+  isPublished     Boolean @default(false)
+  isFeatured      Boolean @default(false)
+  viewCount       Int     @default(0)
   metaTitle       String?
   metaDescription String?
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([storeId])
   @@index([isPublished])
@@ -2189,52 +2305,52 @@ model Place {
 }
 
 model FoodOutlet {
-  id                  String          @id @default(cuid())
-  storeId             String
-  store               Store           @relation(fields: [storeId], references: [id])
-  name                String
-  slug                String          @unique
-  description         String?
-  cuisineType         String[]
-  outletType          FoodOutletType
-  priceRange          PriceRange
-  tags                String[]
+  id          String         @id @default(cuid())
+  storeId     String
+  store       Store          @relation(fields: [storeId], references: [id])
+  name        String
+  slug        String         @unique
+  description String?
+  cuisineType String[]
+  outletType  FoodOutletType
+  priceRange  PriceRange
+  tags        String[]
 
-  openingHours        Json?
+  openingHours Json?
 
-  hasDelivery         Boolean         @default(false)
-  deliveryRadius      Float?
-  deliveryFee         Float?
-  minimumOrder        Float?
-  averageWaitTime     Int?
+  hasDelivery     Boolean @default(false)
+  deliveryRadius  Float?
+  deliveryFee     Float?
+  minimumOrder    Float?
+  averageWaitTime Int?
 
-  hasPickup           Boolean         @default(false)
+  hasPickup Boolean @default(false)
 
-  hasDineIn           Boolean         @default(false)
-  acceptsReservations Boolean         @default(false)
+  hasDineIn           Boolean @default(false)
+  acceptsReservations Boolean @default(false)
   reservationUrl      String?
 
-  menuUrl             String?
-  allergenInfo        String?
-  isHalal             Boolean         @default(false)
+  menuUrl      String?
+  allergenInfo String?
+  isHalal      Boolean @default(false)
 
-  images              String[]
-  latitude            Float
-  longitude           Float
-  address             String
-  region              String
-  phone               String?
-  socialLinks         Json?
-  rating              Float?
+  images      String[]
+  latitude    Float
+  longitude   Float
+  address     String
+  region      String
+  phone       String?
+  socialLinks Json?
+  rating      Float?
 
-  isPublished         Boolean         @default(false)
-  isFeatured          Boolean         @default(false)
-  viewCount           Int             @default(0)
-  metaTitle           String?
-  metaDescription     String?
+  isPublished     Boolean @default(false)
+  isFeatured      Boolean @default(false)
+  viewCount       Int     @default(0)
+  metaTitle       String?
+  metaDescription String?
 
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([storeId])
   @@index([isPublished])
@@ -2243,58 +2359,58 @@ model FoodOutlet {
 }
 
 model Accommodation {
-  id                  String                @id @default(cuid())
-  storeId             String
-  store               Store                 @relation(fields: [storeId], references: [id])
-  name                String
-  slug                String                @unique
-  description         String?
-  type                AccommodationType
-  tags                String[]
+  id          String            @id @default(cuid())
+  storeId     String
+  store       Store             @relation(fields: [storeId], references: [id])
+  name        String
+  slug        String            @unique
+  description String?
+  type        AccommodationType
+  tags        String[]
 
-  pricePerNight       Float
-  weeklyRate          Float?
-  monthlyRate         Float?
-  cleaningFee         Float?
-  securityDeposit     Float?
+  pricePerNight   Float
+  weeklyRate      Float?
+  monthlyRate     Float?
+  cleaningFee     Float?
+  securityDeposit Float?
 
-  bedrooms            Int?
-  bathrooms           Int?
-  maxGuests           Int
-  minimumStay         Int?
-  amenities           String[]
+  bedrooms    Int?
+  bathrooms   Int?
+  maxGuests   Int
+  minimumStay Int?
+  amenities   String[]
 
-  checkInTime         String?
-  checkOutTime        String?
-  availableFrom       DateTime?
+  checkInTime   String?
+  checkOutTime  String?
+  availableFrom DateTime?
 
-  cancellationPolicy  CancellationPolicy?
-  instantBook         Boolean               @default(false)
-  breakfastIncluded   Boolean               @default(false)
-  petsAllowed         Boolean               @default(false)
-  smokingAllowed      Boolean               @default(false)
-  childrenAllowed     Boolean               @default(true)
-  poolAccess          Boolean               @default(false)
-  parkingAvailable    Boolean               @default(false)
+  cancellationPolicy CancellationPolicy?
+  instantBook        Boolean             @default(false)
+  breakfastIncluded  Boolean             @default(false)
+  petsAllowed        Boolean             @default(false)
+  smokingAllowed     Boolean             @default(false)
+  childrenAllowed    Boolean             @default(true)
+  poolAccess         Boolean             @default(false)
+  parkingAvailable   Boolean             @default(false)
 
-  images              String[]
-  latitude            Float
-  longitude           Float
-  address             String
-  region              String
-  website             String?
-  phone               String?
-  socialLinks         Json?
-  rating              Float?
+  images      String[]
+  latitude    Float
+  longitude   Float
+  address     String
+  region      String
+  website     String?
+  phone       String?
+  socialLinks Json?
+  rating      Float?
 
-  isPublished         Boolean               @default(false)
-  isFeatured          Boolean               @default(false)
-  viewCount           Int                   @default(0)
-  metaTitle           String?
-  metaDescription     String?
+  isPublished     Boolean @default(false)
+  isFeatured      Boolean @default(false)
+  viewCount       Int     @default(0)
+  metaTitle       String?
+  metaDescription String?
 
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([storeId])
   @@index([isPublished])
@@ -2303,55 +2419,55 @@ model Accommodation {
 }
 
 model Service {
-  id                      String            @id @default(cuid())
-  storeId                 String
-  store                   Store             @relation(fields: [storeId], references: [id])
-  title                   String
-  slug                    String            @unique
-  description             String?
-  category                String?
-  tags                    String[]
+  id          String   @id @default(cuid())
+  storeId     String
+  store       Store    @relation(fields: [storeId], references: [id])
+  title       String
+  slug        String   @unique
+  description String?
+  category    String?
+  tags        String[]
 
-  priceType               ServicePriceType
-  price                   Float?
-  duration                Int?
+  priceType ServicePriceType
+  price     Float?
+  duration  Int?
 
-  isBookable              Boolean           @default(false)
-  availableDays           String[]          @default([])
+  isBookable      Boolean  @default(false)
+  availableDays   String[] @default([])
   /// Legacy combined hours hint; prefer availableFrom / availableTo
-  availableHours          String?
-  durationMinutes         Int               @default(60)
-  bufferMinutes           Int               @default(0)
-  maxPerDay               Int?
-  useStoreHours           Boolean           @default(true)
-  availableFrom           String?
-  availableTo             String?
-  isAvailable             Boolean           @default(true)
-  responseTime            String?
+  availableHours  String?
+  durationMinutes Int      @default(60)
+  bufferMinutes   Int      @default(0)
+  maxPerDay       Int?
+  useStoreHours   Boolean  @default(true)
+  availableFrom   String?
+  availableTo     String?
+  isAvailable     Boolean  @default(true)
+  responseTime    String?
 
-  onlineSessionAvailable  Boolean           @default(false)
-  travelFee               Float?
-  serviceArea             String[]
+  onlineSessionAvailable Boolean  @default(false)
+  travelFee              Float?
+  serviceArea            String[]
 
-  experience              Int?
-  qualifications          String[]
-  languages               String[]
-  portfolio               String[]
+  experience     Int?
+  qualifications String[]
+  languages      String[]
+  portfolio      String[]
 
-  latitude                Float?
-  longitude               Float?
-  address                 String?
-  region                  String?
+  latitude  Float?
+  longitude Float?
+  address   String?
+  region    String?
 
-  rating                  Float?
-  isPublished             Boolean           @default(false)
-  isFeatured              Boolean           @default(false)
-  viewCount               Int               @default(0)
-  metaTitle               String?
-  metaDescription         String?
+  rating          Float?
+  isPublished     Boolean @default(false)
+  isFeatured      Boolean @default(false)
+  viewCount       Int     @default(0)
+  metaTitle       String?
+  metaDescription String?
 
-  createdAt               DateTime          @default(now())
-  updatedAt               DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([storeId])
   @@index([isPublished])
@@ -2359,16 +2475,16 @@ model Service {
 }
 
 model StoreContentRelationship {
-  id                  String              @id @default(cuid())
-  requestingStoreId   String
-  requestingStore     Store               @relation("RequestingStore", fields: [requestingStoreId], references: [id])
-  targetStoreId       String
-  targetStore         Store               @relation("TargetStore", fields: [targetStoreId], references: [id])
-  contentType         String
-  contentId           String
-  status              RelationshipStatus  @default(PENDING)
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
+  id                String             @id @default(cuid())
+  requestingStoreId String
+  requestingStore   Store              @relation("RequestingStore", fields: [requestingStoreId], references: [id])
+  targetStoreId     String
+  targetStore       Store              @relation("TargetStore", fields: [targetStoreId], references: [id])
+  contentType       String
+  contentId         String
+  status            RelationshipStatus @default(PENDING)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
   @@unique([requestingStoreId, targetStoreId, contentType, contentId])
   @@index([requestingStoreId])
@@ -2452,15 +2568,15 @@ model Message {
 }
 
 model StaffMember {
-  id           String    @id @default(cuid())
-  storeId      String
-  store        Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  name         String
-  bio          String?
-  photoUrl     String?
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name      String
+  bio       String?
+  photoUrl  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   availability StaffAvailability[]
   overrides    StaffAvailabilityOverride[]

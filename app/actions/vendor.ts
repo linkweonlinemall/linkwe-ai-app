@@ -3,13 +3,12 @@
 import type { AccountType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getAppBaseUrl } from "@/lib/app-base-url";
 import { getSession } from "@/lib/auth/session";
 import { chargeSubscriptionFromBalance } from "@/lib/finance/subscription-billing";
 import { PLAN_PRICE_MINOR } from "@/lib/finance/plan-limits";
 import { isVendorBalanceDebit } from "@/lib/finance/vendor-balance";
 import { prisma } from "@/lib/prisma";
-import { stripe } from "@/lib/stripe/stripe";
+import { beginWiPaySubscription } from "@/lib/wipay/subscriptions";
 
 export async function saveVendorBankDetails(formData: FormData): Promise<void> {
   const session = await getSession();
@@ -131,12 +130,12 @@ export async function payMySubscriptionFromBalance(): Promise<
       id: true,
       subscriptionPlan: true,
       planRenewsAt: true,
-      stripeSubscriptionId: true,
+      wipayTrustedCardId: true,
     },
   });
   if (!store) return { ok: false, error: "No store found" };
 
-  if (store.stripeSubscriptionId) {
+  if (store.wipayTrustedCardId) {
     return { ok: false, error: "card_subscription_active" };
   }
 
@@ -168,53 +167,28 @@ export async function startSubscriptionCheckout(
 
   const store = await prisma.store.findFirst({
     where: { ownerId: session.userId },
-    select: { id: true, name: true, stripeCustomerId: true },
+    select: { id: true, subscriptionPlan: true, planRenewsAt: true },
   });
   if (!store) return { ok: false, error: "No store found" };
+  if (
+    store.subscriptionPlan === plan &&
+    store.planRenewsAt &&
+    store.planRenewsAt.getTime() > Date.now() + 7 * 24 * 60 * 60 * 1000
+  ) {
+    return { ok: false, error: "Renewal opens seven days before your current period ends." };
+  }
 
   try {
-    let customerId = store.stripeCustomerId;
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        name: store.name,
-        metadata: { storeId: store.id, userId: session.userId },
-      });
-      customerId = customer.id;
-      await prisma.store.update({
-        where: { id: store.id },
-        data: { stripeCustomerId: customerId },
-      });
-    }
-
-    const baseUrl = getAppBaseUrl();
-    const checkoutSession = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      customer: customerId,
-      line_items: [
-        {
-          price_data: {
-            currency: "ttd",
-            product_data: {
-              name: `LinkWe ${plan.charAt(0) + plan.slice(1).toLowerCase()} Plan`,
-            },
-            unit_amount: priceMinor,
-            recurring: { interval: "month" },
-          },
-          quantity: 1,
-        },
-      ],
-      success_url: `${baseUrl}/dashboard/vendor/finance?sub=success`,
-      cancel_url: `${baseUrl}/dashboard/vendor?upgrade=cancelled`,
-      metadata: { subscriptionStoreId: store.id, targetPlan: plan, userId: session.userId },
-      subscription_data: {
-        metadata: { subscriptionStoreId: store.id, targetPlan: plan },
-      },
+    const checkoutUrl = await beginWiPaySubscription({
+      userId: session.userId,
+      purpose: "VENDOR_SUBSCRIPTION",
+      targetId: store.id,
+      amountMinor: priceMinor,
+      metadata: { targetPlan: plan },
     });
-
-    if (!checkoutSession.url) return { ok: false, error: "Could not create checkout session" };
-    return { ok: true, checkoutUrl: checkoutSession.url };
+    return { ok: true, checkoutUrl };
   } catch (err) {
-    console.error("startSubscriptionCheckout Stripe error:", err);
+    console.error("startSubscriptionCheckout WiPay error:", err);
     return { ok: false, error: "Could not start checkout. Please try again from your dashboard." };
   }
 }
@@ -227,90 +201,24 @@ export async function startSubscriptionBillingPortal(): Promise<
 
   const store = await prisma.store.findFirst({
     where: { ownerId: session.userId },
-    select: { stripeCustomerId: true, stripeSubscriptionId: true },
+    select: { id: true, subscriptionPlan: true, wipayTrustedCardId: true },
   });
-  if (!store?.stripeCustomerId || !store.stripeSubscriptionId) {
+  if (!store?.wipayTrustedCardId || store.subscriptionPlan === "STARTER") {
     return { ok: false, error: "No active card subscription" };
   }
 
   try {
-    const returnUrl = `${getAppBaseUrl()}/dashboard/vendor/finance`;
-    const portalSession = await stripe.billingPortal.sessions.create({
-      customer: store.stripeCustomerId,
-      return_url: returnUrl,
-      flow_data: {
-        type: "payment_method_update",
-        after_completion: {
-          type: "redirect",
-          redirect: { return_url: returnUrl },
-        },
-      },
+    const portalUrl = await beginWiPaySubscription({
+      userId: session.userId,
+      purpose: "VENDOR_SUBSCRIPTION",
+      targetId: store.id,
+      amountMinor: PLAN_PRICE_MINOR[store.subscriptionPlan],
+      metadata: { targetPlan: store.subscriptionPlan, replaceOnly: true },
+      forceEnroll: true,
     });
-    return { ok: true, portalUrl: portalSession.url };
+    return { ok: true, portalUrl };
   } catch (err) {
-    console.error("startSubscriptionBillingPortal Stripe error:", err);
+    console.error("startSubscriptionBillingPortal WiPay error:", err);
     return { ok: false, error: "Could not open billing settings. Please try again." };
   }
-}
-
-export async function cancelAutoRenew(): Promise<{ ok: true } | { ok: false; error: string }> {
-  const session = await getSession();
-  if (!session || session.role !== "VENDOR") return { ok: false, error: "Not authorized" };
-
-  const store = await prisma.store.findFirst({
-    where: { ownerId: session.userId },
-    select: { id: true, stripeSubscriptionId: true },
-  });
-  if (!store) return { ok: false, error: "No store found" };
-  if (!store.stripeSubscriptionId) return { ok: false, error: "No active card subscription" };
-
-  let periodEnd: Date | null = null;
-  try {
-    const subscription = await stripe.subscriptions.update(store.stripeSubscriptionId, {
-      cancel_at_period_end: true,
-    });
-    const periodEndUnix = subscription.items.data[0]?.current_period_end;
-    periodEnd = periodEndUnix ? new Date(periodEndUnix * 1000) : null;
-  } catch (e) {
-    console.error("[autoRenew] cancel failed", e);
-    return { ok: false, error: "Could not update subscription" };
-  }
-
-  await prisma.store.update({
-    where: { id: store.id },
-    data: { autoRenew: false, ...(periodEnd ? { planRenewsAt: periodEnd } : {}) },
-  });
-  revalidatePath("/dashboard/vendor/finance");
-  return { ok: true };
-}
-
-export async function resumeAutoRenew(): Promise<{ ok: true } | { ok: false; error: string }> {
-  const session = await getSession();
-  if (!session || session.role !== "VENDOR") return { ok: false, error: "Not authorized" };
-
-  const store = await prisma.store.findFirst({
-    where: { ownerId: session.userId },
-    select: { id: true, stripeSubscriptionId: true },
-  });
-  if (!store) return { ok: false, error: "No store found" };
-  if (!store.stripeSubscriptionId) return { ok: false, error: "No active card subscription" };
-
-  let periodEnd: Date | null = null;
-  try {
-    const subscription = await stripe.subscriptions.update(store.stripeSubscriptionId, {
-      cancel_at_period_end: false,
-    });
-    const periodEndUnix = subscription.items.data[0]?.current_period_end;
-    periodEnd = periodEndUnix ? new Date(periodEndUnix * 1000) : null;
-  } catch (e) {
-    console.error("[autoRenew] resume failed", e);
-    return { ok: false, error: "Could not update subscription" };
-  }
-
-  await prisma.store.update({
-    where: { id: store.id },
-    data: { autoRenew: true, ...(periodEnd ? { planRenewsAt: periodEnd } : {}) },
-  });
-  revalidatePath("/dashboard/vendor/finance");
-  return { ok: true };
 }

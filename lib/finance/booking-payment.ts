@@ -1,5 +1,4 @@
 import { BookingStatus, NotificationType } from "@prisma/client";
-import type Stripe from "stripe";
 
 import { revalidatePath } from "next/cache";
 
@@ -10,23 +9,13 @@ import { createVendorEarningsLedgerPair } from "@/lib/finance/release-earnings";
 import { resolveVendorPlan } from "@/lib/finance/vendor-plan";
 import { prisma } from "@/lib/prisma";
 
-function paymentTypeFromMetadata(
-  metadata: Stripe.Metadata | null | undefined,
-): "full_payment" | "deposit" {
-  const raw = metadata?.paymentType;
-  if (raw === "deposit" || raw === "full_payment") return raw;
-  if (raw === "full") return "full_payment";
-  return "full_payment";
-}
-
-export async function handleBookingPaymentIntentSucceeded(
-  paymentIntent: Stripe.PaymentIntent,
-) {
-  const bookingId = paymentIntent.metadata?.bookingId;
-  if (!bookingId) return;
-
-  const paymentType = paymentTypeFromMetadata(paymentIntent.metadata);
-  const amountPaid = paymentIntent.amount / 100;
+export async function handleBookingPaymentSucceeded(input: {
+  bookingId: string;
+  paymentType: "full_payment" | "deposit";
+  amountPaid: number;
+  providerTransactionId?: string;
+}) {
+  const { bookingId, paymentType, amountPaid } = input;
 
   const booking = await prisma.productBooking.findUnique({
     where: { id: bookingId },
@@ -77,7 +66,6 @@ export async function handleBookingPaymentIntentSucceeded(
             status: BookingStatus.DEPOSIT_PAID,
             amountPaid: amountPaid,
             autoCompleteAt,
-            stripePaymentIntentId: paymentIntent.id,
           },
         });
 
@@ -119,8 +107,7 @@ export async function handleBookingPaymentIntentSucceeded(
     ? BookingStatus.PENDING
     : BookingStatus.CONFIRMED;
 
-  // Idempotency guard: true only on the first successful webhook delivery.
-  // Stripe retries on 500 would otherwise re-send confirmation emails.
+  // Idempotency guard: true only on the first successful provider callback.
   const isFirstProcessing =
     booking.status !== nextStatus ||
     booking.amountPaid == null ||
@@ -133,7 +120,6 @@ export async function handleBookingPaymentIntentSucceeded(
         status: nextStatus,
         amountPaid: amountPaid,
         autoCompleteAt,
-        stripePaymentIntentId: paymentIntent.id,
       },
     });
 

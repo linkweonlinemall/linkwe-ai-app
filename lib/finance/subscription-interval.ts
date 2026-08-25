@@ -1,10 +1,10 @@
-/** Stripe recurring config for LinkWe service subscription intervals. */
-export type StripeRecurringInterval = {
+/** Canonical recurring config for LinkWe service subscription intervals. */
+export type RecurringInterval = {
   interval: "week" | "month";
   interval_count: number;
 };
 
-const INTERVAL_MAP: Record<string, StripeRecurringInterval> = {
+const INTERVAL_MAP: Record<string, RecurringInterval> = {
   weekly: { interval: "week", interval_count: 1 },
   fortnightly: { interval: "week", interval_count: 2 },
   monthly: { interval: "month", interval_count: 1 },
@@ -18,18 +18,18 @@ const INTERVAL_DISPLAY: Record<string, string> = {
   quarterly: "per quarter",
 };
 
-/** Canonical billing interval keys accepted by mapSubscriptionIntervalToStripe. */
+/** Canonical billing interval keys accepted by mapSubscriptionInterval. */
 export const SUBSCRIPTION_INTERVAL_KEYS = Object.keys(INTERVAL_MAP) as Array<
   keyof typeof INTERVAL_MAP
 >;
 
 /**
- * Maps Product.subscriptionInterval strings to Stripe price recurring config.
+ * Maps Product.subscriptionInterval strings to LinkWe's recurring schedule.
  * Returns null for unknown or empty values (callers should treat as invalid).
  */
-export function mapSubscriptionIntervalToStripe(
+export function mapSubscriptionInterval(
   interval: string | null | undefined,
-): StripeRecurringInterval | null {
+): RecurringInterval | null {
   if (!interval) return null;
   const key = interval.trim().toLowerCase();
   return INTERVAL_MAP[key] ?? null;

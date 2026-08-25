@@ -2,9 +2,8 @@ import { NotificationType, OnDemandRequestStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import { createNotification } from "@/app/actions/notifications";
-import { ttdToMinor } from "@/lib/finance/commission";
 import { prisma } from "@/lib/prisma";
-import { stripe } from "@/lib/stripe/stripe";
+import { requestWiPayRefund } from "@/lib/wipay/wapi";
 
 export async function cancelOnDemandCore(
   requestId: string,
@@ -21,7 +20,6 @@ export async function cancelOnDemandCore(
       id: true,
       status: true,
       amountPaid: true,
-      stripePaymentIntentId: true,
       customerId: true,
       store: {
         select: { id: true, ownerId: true },
@@ -40,52 +38,37 @@ export async function cancelOnDemandCore(
     return { ok: false, error: "This request is already closed" };
   }
 
-  // 2. Stripe refund — must happen before any DB write.
+  // 2. WiPay refund — must happen before any DB write.
   // Invariant: it must be structurally impossible to reach the DB write
   // with amountPaid > 0 and no successful (or already-refunded) refund.
   let refundedTTD = 0;
   if (request.amountPaid != null && request.amountPaid > 0) {
-    // Resolve the PaymentIntent id: stored column first, then metadata search.
-    let paymentIntentId = request.stripePaymentIntentId ?? null;
-
-    if (!paymentIntentId) {
-      let intents;
-      try {
-        intents = await stripe.paymentIntents.search({
-          query: `metadata['requestId']:'${requestId}'`,
-          limit: 1,
-        });
-      } catch (err) {
-        console.error("[cancelOnDemandCore] PaymentIntent search failed", err);
-        return {
-          ok: false,
-          error: "Could not locate the payment to refund. Nothing was changed.",
-        };
-      }
-      paymentIntentId = intents.data[0]?.id ?? null;
-    }
-
-    // No PaymentIntent found — refuse to cancel without refunding.
-    if (!paymentIntentId) {
+    const payment = await prisma.paymentAttempt.findFirst({
+      where: {
+        purpose: "ON_DEMAND_SERVICE",
+        targetId: requestId,
+        status: { in: ["SUCCEEDED", "REFUND_REQUESTED", "REFUNDED"] },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!payment?.providerTransactionId) {
       return {
         ok: false,
         error: "Could not locate the payment to refund. Nothing was changed.",
       };
     }
-
-    // Attempt the refund. charge_already_refunded is treated as success.
-    try {
-      await stripe.refunds.create({
-        payment_intent: paymentIntentId,
-        amount: ttdToMinor(request.amountPaid),
-      });
+    if (payment.status === "REFUND_REQUESTED" || payment.status === "REFUNDED") {
       refundedTTD = request.amountPaid;
-    } catch (err: unknown) {
-      const stripeErr = err as { code?: string };
-      if (stripeErr?.code === "charge_already_refunded") {
+    } else {
+      try {
+        await requestWiPayRefund(payment.providerTransactionId);
+        await prisma.paymentAttempt.update({
+          where: { id: payment.id },
+          data: { status: "REFUND_REQUESTED" },
+        });
         refundedTTD = request.amountPaid;
-      } else {
-        console.error("[cancelOnDemandCore] Stripe refund failed", err);
+      } catch (err) {
+        console.error("[cancelOnDemandCore] WiPay refund failed", err);
         return { ok: false, error: "Refund failed. Please try again." };
       }
     }
