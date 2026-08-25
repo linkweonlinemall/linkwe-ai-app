@@ -169,7 +169,13 @@ export default function PublicNav({
   function LogoMark({ desktop }: { desktop: boolean }) {
     return (
       <img
-        src="/linkwe-new-logo-light-2.png"
+        src={
+          logoVariant === "ai"
+            ? "/linkwe-logo-mark-on-dark.png"
+            : desktop
+              ? "/linkwe-logo-on-dark.png"
+              : "/linkwe-logo-mobile-on-dark.png"
+        }
         alt="LinkWe"
         className={desktop ? "block h-8 w-auto shrink-0" : "block h-7 w-auto shrink-0"}
       />

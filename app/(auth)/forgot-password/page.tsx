@@ -36,7 +36,7 @@ export default function ForgotPasswordPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#F5F5F5] px-4">
       <div className="w-full max-w-md">
         <div className="mb-8 flex justify-center">
-          <Image src="/linkwe-new-logo-light-2.png" alt="LinkWe" width={120} height={40} style={{ width: "auto", height: "40px" }} />
+          <Image src="/linkwe-logo-on-light.png" alt="LinkWe" width={120} height={40} style={{ width: "auto", height: "40px" }} />
         </div>
         <div className="rounded-2xl bg-white p-8 shadow-sm border border-zinc-100">
           {submitted ? (

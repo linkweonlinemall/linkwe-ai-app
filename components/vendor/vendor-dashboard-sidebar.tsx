@@ -198,12 +198,12 @@ export default function VendorDashboardSidebar({
       <div className="shrink-0 pt-5">
         <div className="px-4">
           <Link href="/" className="flex items-start justify-center gap-2 lg:justify-start lg:gap-2.5">
-            <div
-              className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#D4450A] text-sm font-black text-white"
+            <img
+              src="/linkwe-logo-mark-on-dark.png"
+              alt=""
+              className="size-8 shrink-0 object-contain"
               aria-hidden
-            >
-              L
-            </div>
+            />
             <div className="min-w-0 hidden lg:block">
               <p className="text-[14px] font-semibold leading-tight text-white">LinkWe</p>
               <p className="text-[10px] font-bold uppercase leading-tight tracking-wider text-[#E8820C]">Vendor</p>

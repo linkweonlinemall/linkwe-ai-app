@@ -48,18 +48,18 @@ export const metadata: Metadata = {
       "Trinidad & Tobago's multi-vendor marketplace. Shop local vendors, book services, discover stores across T&T.",
     images: [
       {
-        url: "/icon-512x512.png",
-        width: 512,
-        height: 512,
+        url: "/linkwe-social-share.png",
+        width: 1200,
+        height: 630,
         alt: "LinkWe Online Mall",
       },
     ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "LinkWe Online Mall — Shop Local Trinidad & Tobago",
     description: "Trinidad & Tobago's multi-vendor marketplace.",
-    images: ["/icon-512x512.png"],
+    images: ["/linkwe-social-share.png"],
   },
 };
 

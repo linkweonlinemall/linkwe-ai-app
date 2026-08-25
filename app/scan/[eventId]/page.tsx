@@ -8,7 +8,7 @@ export default function StaffScanRoutePage() {
       <div className="mx-auto w-full max-w-lg">
         <div className="mb-8 text-center">
           <img
-            src="/linkwe-new-logo-light-2.png"
+            src="/linkwe-logo-on-light.png"
             alt="LinkWe"
             className="mx-auto h-12 w-auto object-contain sm:h-14"
           />

@@ -18,15 +18,12 @@ export default function SiteFooter() {
       <div className="mx-auto max-w-7xl px-6 pb-8 pt-8 sm:px-8 lg:px-10">
         <div className="pt-2">
           <div className="flex items-center gap-2.5">
-            <span
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl font-black text-white"
-              style={{ backgroundColor: SCARLET }}
-              aria-hidden
-            >
-              L
-            </span>
+            <img
+              src="/linkwe-logo-mobile-on-dark.png"
+              alt="LinkWe"
+              className="h-11 w-auto shrink-0 object-contain"
+            />
             <div>
-              <p className="text-[17px] font-bold text-white">LinkWe</p>
               <p className="mt-1 text-[11px] leading-snug text-[rgba(255,255,255,0.4)]">
                 Trinidad & Tobago&apos;s local marketplace
               </p>

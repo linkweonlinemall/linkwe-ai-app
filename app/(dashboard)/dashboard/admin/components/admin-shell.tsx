@@ -230,8 +230,12 @@ export default function AdminShell({ adminName, children }: Props) {
             </svg>
           </button>
 
-          <Link href="/dashboard/admin" className="text-lg font-bold text-white tracking-tight">
-            LinkWe
+          <Link href="/dashboard/admin" className="flex items-center">
+            <img
+              src="/linkwe-logo-mobile-on-dark.png"
+              alt="LinkWe"
+              className="h-8 w-auto object-contain"
+            />
           </Link>
           <span className="rounded-md bg-[#D4450A] px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white">
             Admin

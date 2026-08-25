@@ -9,8 +9,12 @@ export default async function OnboardingLayout({ children }: { children: React.R
     <div className="flex min-h-full flex-1 flex-col bg-[#f5f5f5]">
       <header className="flex items-center justify-between border-b border-zinc-800 bg-[#1C1C1A] px-6 py-4">
         <div className="flex items-center gap-6">
-          <Link className="text-sm font-semibold tracking-tight text-white" href="/">
-            LinkWe
+          <Link className="flex items-center" href="/">
+            <img
+              src="/linkwe-logo-mobile-on-dark.png"
+              alt="LinkWe"
+              className="h-8 w-auto object-contain"
+            />
           </Link>
           {session ? (
             <span className="text-sm font-medium text-[#D4450A] capitalize">{session.role.toLowerCase()}</span>

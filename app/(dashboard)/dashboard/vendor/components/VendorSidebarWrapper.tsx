@@ -61,7 +61,7 @@ export default function VendorSidebarWrapper() {
         <div className="mb-4 px-4">
           <Link href="/" className="block">
             <img
-              src="/linkwe-new-log-dark.png"
+              src="/linkwe-logo-on-light.png"
               alt="LinkWe"
               className="h-7 w-auto object-contain"
             />

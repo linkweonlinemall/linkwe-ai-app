@@ -69,7 +69,7 @@ export async function GET(
   }
 
   const qrCodeDataUrl = await generateOrderQRCodeDataURL(orderId);
-  const logoDataUrl = readPublicImageDataUrl("linkwe-new-log-dark.png");
+  const logoDataUrl = readPublicImageDataUrl("linkwe-logo-on-light.png");
   const waveDataUrl = readPublicImageDataUrl("wave.png");
 
   const buffer = await renderToBuffer(

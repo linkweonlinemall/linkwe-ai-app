@@ -53,7 +53,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <div className="flex min-w-0 flex-wrap items-center">
           <Link href="/" className="flex items-center">
             <img
-              src="/linkwe-new-logo-light-2.png"
+              src="/linkwe-logo-on-dark.png"
               alt="LinkWe"
               className="h-8 w-auto object-contain"
             />
