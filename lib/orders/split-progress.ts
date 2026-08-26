@@ -1,6 +1,9 @@
 import type { StoreShippingMode } from "@prisma/client";
 
 export type SplitProgressAudience = "customer" | "vendor";
+export type SplitFulfillment = "delivery" | "pickup";
+
+const CUSTOMER_PICKUP_STEPS = ["Placed", "Preparing", "Ready for pickup", "Picked up"] as const;
 
 const CUSTOMER_SELF_STEPS = ["Placed", "Preparing", "Out for delivery", "Received"] as const;
 const CUSTOMER_LINKWE_STEPS = [
@@ -23,14 +26,30 @@ const VENDOR_LINKWE_STEPS = [
 export function getSplitProgressSteps(
   shippingMode: StoreShippingMode,
   audience: SplitProgressAudience = "customer",
+  fulfillment: SplitFulfillment = "delivery",
 ): readonly string[] {
+  if (audience === "customer" && fulfillment === "pickup") return CUSTOMER_PICKUP_STEPS;
   if (audience === "vendor") {
     return shippingMode === "SELF" ? VENDOR_SELF_STEPS : VENDOR_LINKWE_STEPS;
   }
   return shippingMode === "SELF" ? CUSTOMER_SELF_STEPS : CUSTOMER_LINKWE_STEPS;
 }
 
-export function getSplitStepIndex(status: string, shippingMode: StoreShippingMode): number {
+export function getSplitStepIndex(
+  status: string,
+  shippingMode: StoreShippingMode,
+  fulfillment: SplitFulfillment = "delivery",
+): number {
+  if (fulfillment === "pickup") {
+    switch (status) {
+      case "AWAITING_VENDOR_ACTION": return 0;
+      case "PREPARING":
+      case "VENDOR_PREPARING": return 1;
+      case "DELIVERED":
+      case "COMPLETED": return 3;
+      default: return 2;
+    }
+  }
   if (shippingMode === "SELF") {
     switch (status) {
       case "AWAITING_VENDOR_ACTION":

@@ -235,14 +235,14 @@ export default function PartnerRequestsClient({
 
                   <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
                     <StatusPill status={request.status} />
-                    {request.status === "APPROVED" ? (
+                    {request.status === "APPROVED" || request.status === "PENDING" ? (
                       <button
                         type="button"
                         disabled={busy}
                         onClick={() => handleRemove(request.relationshipId)}
                         className="min-h-[40px] rounded-xl border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-600 transition-colors hover:bg-zinc-50 disabled:opacity-50"
                       >
-                        Remove
+                        {request.status === "PENDING" ? "Cancel request" : "Remove"}
                       </button>
                     ) : null}
                   </div>

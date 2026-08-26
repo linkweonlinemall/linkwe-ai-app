@@ -15,6 +15,9 @@ import {
   IconLayoutDashboard,
   IconLogout,
   IconMessageCircle,
+  IconRobot,
+  IconRoute,
+  IconTruckDelivery,
   IconPackage,
   IconRefresh,
   IconSettings,
@@ -38,6 +41,7 @@ type MoreNavItem = {
 };
 
 const MORE_ITEMS: MoreNavItem[] = [
+  { href: "/dashboard/vendor/ai-assistant", label: "Rex AI", Icon: IconRobot },
   { href: "/dashboard/vendor/services", label: "My Services", Icon: IconTools },
   { href: "/dashboard/vendor/bookings", label: "Bookings", Icon: IconCalendarEvent },
   { href: "/dashboard/vendor/subscribers", label: "Subscribers", Icon: IconRefresh },
@@ -45,6 +49,8 @@ const MORE_ITEMS: MoreNavItem[] = [
   { href: "/dashboard/vendor/requests", label: "Requests", Icon: IconBolt },
   { href: "/dashboard/vendor/staff", label: "Staff/Availability", Icon: IconClock },
   { href: "/dashboard/vendor/store/edit", label: "Store profile", Icon: IconBuildingStore },
+  { href: "/dashboard/vendor/partners", label: "Partners", Icon: IconRoute },
+  { href: "/dashboard/vendor/shipping", label: "Shipping", Icon: IconTruckDelivery },
   { href: "/dashboard/vendor/finance", label: "Finance", Icon: IconCoin },
   { href: "/dashboard/vendor/reviews", label: "Reviews", Icon: IconStar },
   { href: "/dashboard/vendor/settings", label: "Settings", Icon: IconSettings },
@@ -121,7 +127,7 @@ function VendorMoreSheet({
         role="dialog"
         aria-modal="true"
         aria-label="Menu"
-        className="fixed inset-x-0 bottom-0 z-[111] max-h-[min(85vh,520px)] overflow-y-auto rounded-t-2xl bg-white pb-[calc(env(safe-area-inset-bottom,0px)+16px)] shadow-[0_-8px_32px_rgba(0,0,0,0.12)] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-[111] max-h-[min(88vh,620px)] overflow-y-auto rounded-t-[28px] border-t border-white bg-gradient-to-b from-white to-[#F7F5F2] pb-[calc(env(safe-area-inset-bottom,0px)+18px)] shadow-[0_-20px_60px_rgba(28,28,26,0.24)] md:hidden"
       >
         <div className="flex justify-center pt-3 pb-1">
           <span className="h-1 w-10 rounded-full bg-[rgba(28,28,26,0.15)]" aria-hidden />
@@ -129,7 +135,7 @@ function VendorMoreSheet({
 
         <p className="px-4 pb-3 text-center text-[13px] font-medium text-[#1C1C1A]">Menu</p>
 
-        <div className="grid grid-cols-3 gap-2 px-4">
+        <div className="grid grid-cols-3 gap-3 px-4">
           {MORE_ITEMS.map((item) => {
             const active = isHrefActive(pathname, searchParams, item.href, item.exact);
             const { Icon } = item;
@@ -138,8 +144,8 @@ function VendorMoreSheet({
                 key={item.href + item.label}
                 href={item.href}
                 onClick={onClose}
-                className={`flex flex-col items-center justify-center gap-1.5 rounded-xl px-2 py-3 transition-colors ${
-                  active ? "bg-[#FEF0EB]" : "hover:bg-[#F7F7F6]"
+                className={`flex min-h-[82px] flex-col items-center justify-center gap-2 rounded-2xl border px-2 py-3 shadow-[0_5px_12px_rgba(28,28,26,0.08)] transition-all active:translate-y-0.5 active:shadow-sm ${
+                  active ? "border-[#D4450A]/20 bg-[#FEF0EB]" : "border-white bg-white hover:bg-[#F7F7F6]"
                 }`}
               >
                 <Icon className="size-[22px] shrink-0" style={{ color: SCARLET }} stroke={1.75} aria-hidden />
@@ -189,33 +195,33 @@ export default function VendorMobileBottomNav() {
   return (
     <>
       <nav
-        className="fixed bottom-0 left-0 right-0 z-[101] grid grid-cols-5 border-t border-[rgba(28,28,26,0.12)] bg-white pb-safe pt-2 md:hidden"
+        className="fixed bottom-0 left-2 right-2 z-[101] grid grid-cols-5 rounded-t-[22px] border border-b-0 border-white/90 bg-white/95 pb-safe pt-1 shadow-[0_-10px_34px_rgba(28,28,26,0.16)] backdrop-blur-xl md:hidden"
         aria-label="Vendor navigation"
       >
         <Link
           href="/dashboard/vendor"
-          className={`flex flex-col items-center gap-1 py-2 text-[10px] font-medium ${activeStyle(dash)}`}
+          className={`flex flex-col items-center gap-1 rounded-2xl py-2 text-[10px] font-medium transition-all ${dash ? "-translate-y-1 bg-[#FEF0EB] shadow-sm" : ""} ${activeStyle(dash)}`}
         >
           <IconLayoutDashboard className="size-5" stroke={1.75} aria-hidden />
           Dashboard
         </Link>
         <Link
           href="/dashboard/vendor/products"
-          className={`flex flex-col items-center gap-1 py-2 text-[10px] font-medium ${activeStyle(products)}`}
+          className={`flex flex-col items-center gap-1 rounded-2xl py-2 text-[10px] font-medium transition-all ${products ? "-translate-y-1 bg-[#FEF0EB] shadow-sm" : ""} ${activeStyle(products)}`}
         >
           <IconPackage className="size-5" stroke={1.75} aria-hidden />
           Products
         </Link>
         <Link
           href="/dashboard/vendor/orders"
-          className={`flex flex-col items-center gap-1 py-2 text-[10px] font-medium ${activeStyle(orders)}`}
+          className={`flex flex-col items-center gap-1 rounded-2xl py-2 text-[10px] font-medium transition-all ${orders ? "-translate-y-1 bg-[#FEF0EB] shadow-sm" : ""} ${activeStyle(orders)}`}
         >
           <IconShoppingBag className="size-5" stroke={1.75} aria-hidden />
           Orders
         </Link>
         <Link
           href="/dashboard/vendor/messages"
-          className={`flex flex-col items-center gap-1 py-2 text-[10px] font-medium ${activeStyle(messages)}`}
+          className={`flex flex-col items-center gap-1 rounded-2xl py-2 text-[10px] font-medium transition-all ${messages ? "-translate-y-1 bg-[#FEF0EB] shadow-sm" : ""} ${activeStyle(messages)}`}
         >
           <IconMessageCircle className="size-5" stroke={1.75} aria-hidden />
           Messages
@@ -223,7 +229,7 @@ export default function VendorMobileBottomNav() {
         <button
           type="button"
           onClick={() => setMoreOpen(true)}
-          className={`flex flex-col items-center gap-1 py-2 text-[10px] font-medium ${activeStyle(more)}`}
+          className={`flex flex-col items-center gap-1 rounded-2xl py-2 text-[10px] font-medium transition-all ${more ? "-translate-y-1 bg-[#FEF0EB] shadow-sm" : ""} ${activeStyle(more)}`}
           aria-expanded={moreOpen}
           aria-haspopup="dialog"
         >

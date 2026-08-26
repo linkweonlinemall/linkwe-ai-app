@@ -41,6 +41,7 @@ export type CheckoutClientItem = {
 type CheckoutClientProps = {
   items: CheckoutClientItem[];
   subtotal: number;
+  initialPhone?: string;
 };
 
 const mobilePrimaryBtn = `flex w-full min-h-[44px] items-center justify-center ${radius.button} py-3.5 text-base font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60 ${tw.bgScarlet}`;
@@ -50,14 +51,14 @@ function getRegionOptionLabel(slug: string): string {
   return match?.label ?? slug.replace(/_/g, " ");
 }
 
-export default function CheckoutClient({ items, subtotal }: CheckoutClientProps) {
+export default function CheckoutClient({ items, subtotal, initialPhone = "" }: CheckoutClientProps) {
   const allDigital = useMemo(() => items.every((item) => item.product.isDigital), [items]);
   const anyDelivery = useMemo(() => items.some((i) => i.product.allowDelivery), [items]);
   const anyPickup = useMemo(() => items.some((i) => i.product.allowPickup), [items]);
 
   const step = "details" as const;
   const [deliveryRegion, setDeliveryRegion] = useState("");
-  const [deliveryPhone, setDeliveryPhone] = useState("");
+  const [deliveryPhone, setDeliveryPhone] = useState(initialPhone);
   const [fulfillmentChoice, setFulfillmentChoice] = useState<"delivery" | "pickup" | null>(() => null);
   const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
 
@@ -69,7 +70,7 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
   }, [anyDelivery, anyPickup, fulfillmentChoice]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  /** Pin-derived region suggestion — never applied without explicit customer confirmation. */
+  /** Pin-derived region; the map location is authoritative for delivery pricing. */
   const [suggestedRegion, setSuggestedRegion] = useState<string | null>(null);
   /** Pin/address geocode could not match any known delivery area. */
   const [pinRegionUnmatched, setPinRegionUnmatched] = useState(false);
@@ -92,8 +93,9 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
   function handlePinRegionDetected(detected: string | null) {
     if (detected) {
       setSuggestedRegion(detected);
+      setDeliveryRegion(detected);
       setPinRegionUnmatched(false);
-      setRegionNeedsConfirmation(detected !== deliveryRegion);
+      setRegionNeedsConfirmation(false);
       return;
     }
     setSuggestedRegion(null);
@@ -188,6 +190,11 @@ export default function CheckoutClient({ items, subtotal }: CheckoutClientProps)
 
     if (!allDigital && useDelivery && !deliveryRegion) {
       setError("Please select your delivery region.");
+      return;
+    }
+
+    if (!allDigital && useDelivery && !address.trim()) {
+      setError("Please enter or pin your delivery location.");
       return;
     }
 

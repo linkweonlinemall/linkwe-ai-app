@@ -132,7 +132,7 @@ export function MessageThread({
   return (
     <div className={`flex min-w-0 max-w-full overflow-hidden ${shellClassName}`}>
       <header
-        className={`sticky top-0 z-10 flex items-center gap-2 border-b border-[rgba(28,28,26,0.08)] bg-white px-3 py-2.5 sm:px-4 sm:py-3`}
+        className="sticky top-0 z-10 flex items-center gap-3 border-b border-orange-100 bg-white/95 px-3 py-2.5 shadow-sm backdrop-blur-xl sm:px-4 sm:py-3"
       >
         <Link
           href={backHref}
@@ -141,12 +141,13 @@ export function MessageThread({
         >
           <IconArrowLeft className="size-5" stroke={1.75} aria-hidden />
         </Link>
-        <h1 className="truncate text-[15px] font-medium text-[#1C1C1A]">{headerTitle}</h1>
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-amber-50 text-xs font-black text-[#D4450A] ring-1 ring-orange-200">{headerTitle.charAt(0).toUpperCase()}</div>
+        <div className="min-w-0"><h1 className="truncate text-[15px] font-bold text-[#1C1C1A]">{headerTitle}</h1><p className="text-[10px] font-medium text-emerald-600">Conversation active</p></div>
       </header>
 
       <div
         ref={listRef}
-        className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-2 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4"
+        className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-2 overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(251,146,60,0.08),transparent_32%)] px-3 py-4 sm:px-5 sm:py-6"
       >
         {messages.length === 0 ? (
           <p className="py-10 text-center text-[13px] text-[#7c7b77]">{emptyHint}</p>
@@ -177,7 +178,7 @@ export function MessageThread({
                 className={`flex flex-col gap-0.5 py-0.5 ${isMine ? "items-end" : "items-start"}`}
               >
                 <div
-                  className={`max-w-[75%] rounded-2xl px-4 py-2 text-[13px] leading-snug ${
+                  className={`max-w-[84%] whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed shadow-sm sm:max-w-[72%] ${
                     isMine
                       ? "rounded-br-sm bg-[#D4450A] text-white"
                       : `rounded-bl-sm bg-[#f5f5f5] text-[#1C1C1A] ${CARD_BORDER}`
@@ -194,9 +195,9 @@ export function MessageThread({
 
       <form
         onSubmit={handleSend}
-        className={`sticky bottom-0 z-20 border-t border-[rgba(28,28,26,0.08)] bg-white px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-3`}
+        className="sticky bottom-0 z-20 border-t border-orange-100 bg-white/95 px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(0,0,0,0.05)] backdrop-blur-xl sm:px-4 sm:py-3"
       >
-        <div className="mx-auto flex max-w-lg items-end gap-2">
+        <div className="mx-auto flex max-w-2xl items-end gap-2">
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}

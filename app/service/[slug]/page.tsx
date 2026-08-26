@@ -620,7 +620,7 @@ export default async function ServiceDetailPage({ params }: Props) {
           </div>
 
           <div className="flex flex-col gap-4 lg:col-span-5 lg:sticky lg:top-6 lg:self-start">
-            <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+            <div id="service-booking" className="scroll-mt-24 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
               <div className="mb-4 border-b border-zinc-100 pb-4">
                 {service.serviceType === "QUOTE" ? (
                   <div>
@@ -913,6 +913,19 @@ export default async function ServiceDetailPage({ params }: Props) {
           </div>
         </div>
       </div>
+      {!isOwner ? (
+        <div className="fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-30 rounded-2xl border border-white/70 bg-white/95 p-2 shadow-[0_16px_45px_rgba(24,24,27,0.22)] backdrop-blur-xl lg:hidden">
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1 pl-2">
+              <p className="truncate text-xs font-medium text-zinc-500">{service.name}</p>
+              <p className="text-sm font-black text-zinc-950">TTD {service.price.toFixed(2)}</p>
+            </div>
+            <a href="#service-booking" className="flex min-h-11 shrink-0 items-center rounded-xl bg-[#D4450A] px-5 text-sm font-bold text-white shadow-md shadow-orange-900/20">
+              View options
+            </a>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

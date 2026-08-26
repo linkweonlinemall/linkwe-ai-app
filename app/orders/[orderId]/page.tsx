@@ -94,6 +94,7 @@ export default async function OrderDetailPage({ params }: Props) {
       subtotalMinor: true,
       shippingMinor: true,
       totalMinor: true,
+      shippingAddressId: true,
       buyer: { select: { fullName: true, email: true } },
       shippingAddress: {
         select: {
@@ -396,7 +397,9 @@ export default async function OrderDetailPage({ params }: Props) {
               <p className="text-xs text-zinc-600">
                 This order has items from{" "}
                 <span className="font-semibold">{physicalSplitOrders.length} stores</span>. Each store
-                ships its items separately.
+                {order.shippingAddressId == null
+                  ? " prepares its items for pickup separately."
+                  : " ships its items separately."}
               </p>
             </div>
           ) : null}
@@ -512,10 +515,15 @@ export default async function OrderDetailPage({ params }: Props) {
                         {splitHasPhysicalItems ? (
                           <div className="border-b border-zinc-100 bg-white">
                             <SplitProgressMini
-                              steps={getSplitProgressSteps(splitOrder.store.shippingMode)}
+                              steps={getSplitProgressSteps(
+                                splitOrder.store.shippingMode,
+                                "customer",
+                                order.shippingAddressId == null ? "pickup" : "delivery",
+                              )}
                               stepIndex={getSplitStepIndex(
                                 splitOrder.status,
                                 splitOrder.store.shippingMode,
+                                order.shippingAddressId == null ? "pickup" : "delivery",
                               )}
                             />
                           </div>
@@ -585,7 +593,9 @@ export default async function OrderDetailPage({ params }: Props) {
                             <p className="text-xs text-zinc-500">
                               {!splitHasPhysicalItems
                                 ? "Digital delivery"
-                                : splitOrder.store.shippingMode === "SELF"
+                                : order.shippingAddressId == null
+                                  ? `Pickup from ${splitOrder.store.name}`
+                                  : splitOrder.store.shippingMode === "SELF"
                                   ? `Delivered by ${splitOrder.store.name}`
                                   : "LinkWe delivery"}
                             </p>

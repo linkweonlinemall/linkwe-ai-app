@@ -238,7 +238,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Cover Photo
           </h2>
-          <div className="flex items-start gap-4">
+          <div className="flex min-w-0 flex-col items-start gap-4 sm:flex-row">
             <div className="min-w-0 flex-1">
               <StoreEditFileInput
                 uploadKey="cover"
@@ -342,7 +342,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
                       instagram.com/
                     </span>
                     <input
-                      className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
+                      className="min-w-0 flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
                       defaultValue={parsedSocialLinks.instagram ?? ""}
                       name="social_instagram"
                       placeholder="yourhandle"
@@ -357,7 +357,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
                       facebook.com/
                     </span>
                     <input
-                      className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
+                      className="min-w-0 flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
                       defaultValue={parsedSocialLinks.facebook ?? ""}
                       name="social_facebook"
                       placeholder="yourpage"
@@ -372,7 +372,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
                       tiktok.com/@
                     </span>
                     <input
-                      className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
+                      className="min-w-0 flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
                       defaultValue={parsedSocialLinks.tiktok ?? ""}
                       name="social_tiktok"
                       placeholder="yourhandle"

@@ -96,13 +96,13 @@ export default function OpeningHoursEditor({ initialHours }: Props) {
         return (
           <div
             key={day}
-            className={`rounded-xl p-4 transition-colors ${
+            className={`min-w-0 rounded-xl p-3 transition-colors sm:p-4 ${
               d.closed ? "bg-zinc-50" : "border border-zinc-200 bg-white"
             }`}
           >
-            <div className="mb-3 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="w-24 text-sm font-semibold capitalize text-zinc-900">{day}</span>
+            <div className="mb-3 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
+                <span className="w-full text-sm font-semibold capitalize text-zinc-900 min-[420px]:w-24">{day}</span>
 
                 <button
                   type="button"
@@ -142,7 +142,7 @@ export default function OpeningHoursEditor({ initialHours }: Props) {
               </div>
 
               {!d.closed && !d.allDay ? (
-                <div className="flex items-center gap-1">
+                <div className="flex flex-wrap items-center gap-1 sm:justify-end">
                   {!isWeekend ? (
                     <button
                       type="button"
@@ -166,13 +166,13 @@ export default function OpeningHoursEditor({ initialHours }: Props) {
             {!d.closed && !d.allDay ? (
               <div className="ml-0 flex min-w-0 flex-col gap-2 sm:ml-32">
                 {(d.slots ?? []).map((slot, i) => (
-                  <div key={i} className="flex min-w-0 items-center gap-2">
+                  <div key={i} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto] items-center gap-2">
                     <input
                       type="time"
                       value={slot.from}
                       onChange={(e) => updateSlot(day, i, "from", e.target.value)}
                       name={`hours_${day}_from_${i}`}
-                      className="min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm focus:border-[#D4450A] focus:outline-none sm:w-36 sm:flex-none"
+                      className="w-full min-w-0 rounded-lg border border-zinc-200 bg-white px-2 py-2 text-sm focus:border-[#D4450A] focus:outline-none sm:w-36 sm:px-3"
                     />
                     <span className="text-xs font-medium text-zinc-400">to</span>
                     <input
@@ -180,7 +180,7 @@ export default function OpeningHoursEditor({ initialHours }: Props) {
                       value={slot.to}
                       onChange={(e) => updateSlot(day, i, "to", e.target.value)}
                       name={`hours_${day}_to_${i}`}
-                      className="min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm focus:border-[#D4450A] focus:outline-none sm:w-36 sm:flex-none"
+                      className="w-full min-w-0 rounded-lg border border-zinc-200 bg-white px-2 py-2 text-sm focus:border-[#D4450A] focus:outline-none sm:w-36 sm:px-3"
                     />
                     {i === 0 && (d.slots ?? []).length < 3 ? (
                       <button
@@ -217,7 +217,7 @@ export default function OpeningHoursEditor({ initialHours }: Props) {
             ) : null}
 
             {d.allDay && !d.closed ? (
-              <p className="ml-28 text-xs font-medium text-emerald-600 sm:ml-32">Open 24 hours</p>
+              <p className="text-xs font-medium text-emerald-600 sm:ml-32">Open 24 hours</p>
             ) : null}
 
             <input type="hidden" name={`hours_${day}_closed`} value={d.closed ? "on" : ""} />

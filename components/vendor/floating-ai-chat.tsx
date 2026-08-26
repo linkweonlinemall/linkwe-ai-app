@@ -453,7 +453,7 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
             aria-hidden
           />
           <div
-            className="fixed bottom-0 left-0 right-0 z-50 flex h-[75dvh] w-full flex-col overflow-hidden rounded-t-2xl sm:bottom-6 sm:right-6 sm:left-auto sm:h-[600px] sm:w-[380px] sm:rounded-2xl"
+            className="fixed inset-0 z-50 flex h-[100dvh] w-full flex-col overflow-hidden sm:inset-auto sm:bottom-6 sm:right-6 sm:h-[600px] sm:w-[380px] sm:rounded-2xl"
             style={{
               backgroundColor: "#161B27",
               border: "1px solid rgba(255,255,255,0.12)",
@@ -461,7 +461,7 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
             }}
           >
           <div
-            className="flex items-center justify-between px-4 py-3"
+            className="flex shrink-0 items-center justify-between px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]"
             style={{
               backgroundColor: "#161B27",
               borderBottom: "1px solid rgba(255,255,255,0.08)",

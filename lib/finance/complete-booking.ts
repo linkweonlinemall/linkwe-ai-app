@@ -13,16 +13,9 @@ export function bookingCompletionGrossTTD(booking: {
   amountPaid: number | null;
   product: { depositAmount: number | null };
 }): number {
-  const deposit =
-    booking.product.depositAmount != null && booking.product.depositAmount > 0
-      ? booking.product.depositAmount
-      : 0;
-
-  if (booking.status === BookingStatus.DEPOSIT_PAID && deposit > 0) {
-    return Math.max(0, booking.totalPrice - deposit);
-  }
-
-  return booking.totalPrice;
+  // Only money collected through LinkWe/WiPay can become an available platform payout.
+  // Pay-on-arrival balances are settled directly with the vendor and must never enter the ledger.
+  return Math.max(0, booking.amountPaid ?? 0);
 }
 
 export async function releaseBookingEarnings(
