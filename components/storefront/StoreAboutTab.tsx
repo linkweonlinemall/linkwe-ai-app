@@ -386,7 +386,7 @@ export default function StoreAboutTab({
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-[1fr_264px] md:gap-5">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_300px] lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-7">
         <div>
           {/* Gallery card */}
           <div className="mb-3.5 overflow-hidden rounded-xl border border-[0.5px] border-[var(--color-border-tertiary)] bg-white">

@@ -1258,10 +1258,9 @@ export default function VendorAIAssistantPage() {
         ) : null}
 
         <div
-          className="border-t px-1 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_32px_rgba(0,0,0,0.25)]"
+          className="px-1 pb-[max(12px,env(safe-area-inset-bottom))] pt-3"
           style={{
-            backgroundColor: "#161B27",
-            borderColor: CARD_BORDER_STYLE.borderColor,
+            backgroundColor: "transparent",
             flexShrink: 0,
           }}
         >
@@ -1323,14 +1322,13 @@ export default function VendorAIAssistantPage() {
             </div>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-[#191F2C]/95 p-2 shadow-[0_16px_45px_rgba(0,0,0,0.35)] backdrop-blur-xl focus-within:border-[#D4450A]/60 focus-within:ring-2 focus-within:ring-[#D4450A]/10">
             {/* Paperclip / attach button */}
             <button
               type="button"
               onClick={() => chatFileInputRef.current?.click()}
               disabled={loading}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-zinc-400 transition-colors hover:bg-[rgba(255,255,255,0.06)] hover:text-zinc-200 disabled:opacity-40"
-              style={{ border: "1px solid rgba(255,255,255,0.1)", backgroundColor: "#0F1117" }}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-40"
               title="Attach images (JPG, PNG, WebP)"
             >
               <svg
@@ -1365,10 +1363,9 @@ export default function VendorAIAssistantPage() {
               }}
               placeholder="Ask Rex to manage, analyse or improve your business…"
               disabled={loading}
-              className="min-h-11 max-h-48 min-w-0 flex-1 resize-none overflow-y-auto rounded-xl px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-[rgba(212,69,10,0.5)] focus:outline-none focus:ring-0 disabled:opacity-50"
+              className="min-h-11 max-h-48 min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-2 py-3 text-sm text-white outline-none placeholder:text-zinc-500 focus:outline-none focus:ring-0 disabled:opacity-50"
               style={{
-                backgroundColor: "#0F1117",
-                border: "1px solid rgba(255,255,255,0.1)",
+                backgroundColor: "transparent",
               }}
             />
             <button
@@ -1383,8 +1380,7 @@ export default function VendorAIAssistantPage() {
                     startImagePreviews.length > 0
                   ))
               }
-              className="h-auto min-h-[44px] shrink-0 self-start rounded-[10px] px-[14px] py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-40"
-              style={{ backgroundColor: "#D4450A" }}
+              className="h-11 shrink-0 rounded-xl bg-gradient-to-br from-[#D4450A] to-[#E8820C] px-5 text-sm font-bold text-white shadow-lg shadow-orange-950/30 transition-all hover:-translate-y-0.5 hover:brightness-110 disabled:translate-y-0 disabled:grayscale disabled:opacity-40"
             >
               Send
             </button>

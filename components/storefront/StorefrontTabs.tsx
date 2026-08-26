@@ -248,7 +248,7 @@ const TAB_IDS = ["about", "store", "services", "reviews"] as const;
 type TabId = (typeof TAB_IDS)[number];
 
 /** Constrains tab body width; hero, stats, and tab bar stay full width. */
-const TAB_CONTENT_CLASS = "mx-auto w-full max-w-[1100px] px-7 py-5";
+const TAB_CONTENT_CLASS = "mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-7 lg:py-8";
 
 type Props = {
   store: StorefrontTabsStore;
@@ -325,6 +325,8 @@ export default function StorefrontTabs({
   const [serviceSort, setServiceSort] = useState("default");
   const [servicePriceMin, setServicePriceMin] = useState("");
   const [servicePriceMax, setServicePriceMax] = useState("");
+  const [serviceLocation, setServiceLocation] = useState("All");
+  const [serviceCategory, setServiceCategory] = useState("All");
   const [servicesFilterOpen, setServicesFilterOpen] = useState(false);
 
   function resetStoreFilters() {
@@ -342,6 +344,8 @@ export default function StorefrontTabs({
     setServiceSort("default");
     setServicePriceMin("");
     setServicePriceMax("");
+    setServiceLocation("All");
+    setServiceCategory("All");
   }
 
   const categories = useMemo(() => {
@@ -376,6 +380,8 @@ export default function StorefrontTabs({
     .filter((s) => {
       if (serviceSearch && !s.name.toLowerCase().includes(serviceSearch.toLowerCase())) return false;
       if (serviceType !== "All" && s.serviceType !== serviceType) return false;
+      if (serviceLocation !== "All" && s.serviceLocation !== serviceLocation) return false;
+      if (serviceCategory !== "All" && s.category !== serviceCategory) return false;
       const min = servicePriceMin ? parseFloat(servicePriceMin) : null;
       const max = servicePriceMax ? parseFloat(servicePriceMax) : null;
       if (min !== null && !Number.isNaN(min) && s.price < min) return false;
@@ -388,6 +394,11 @@ export default function StorefrontTabs({
       if (serviceSort === "name") return a.name.localeCompare(b.name);
       return (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
     });
+
+  const serviceCategories = useMemo(
+    () => Array.from(new Set((services ?? []).map((service) => service.category).filter(Boolean) as string[])).sort(),
+    [services],
+  );
 
   const tabItems: { id: TabId; label: string; count?: number }[] = [
     { id: "about", label: "About" },
@@ -502,7 +513,7 @@ export default function StorefrontTabs({
           </div>
 
           <div className="flex flex-col gap-6 lg:flex-row">
-            <aside className="hidden w-64 shrink-0 lg:block lg:sticky lg:top-[60px] lg:max-h-[calc(100vh-140px)] lg:overflow-y-auto">
+            <aside className="hidden w-72 shrink-0 lg:block lg:sticky lg:top-[60px] lg:max-h-[calc(100vh-140px)] lg:overflow-y-auto">
               <StoreProductFiltersPanel
                 search={search}
                 setSearch={setSearch}
@@ -617,7 +628,7 @@ export default function StorefrontTabs({
             </div>
 
             <div className="flex flex-col gap-6 lg:flex-row">
-              <aside className="hidden w-64 shrink-0 lg:block lg:sticky lg:top-[60px] lg:max-h-[calc(100vh-140px)] lg:overflow-y-auto">
+              <aside className="hidden w-72 shrink-0 lg:block lg:sticky lg:top-[60px] lg:max-h-[calc(100vh-140px)] lg:overflow-y-auto">
                 <StoreServiceFiltersPanel
                   serviceSearch={serviceSearch}
                   setServiceSearch={setServiceSearch}
@@ -629,6 +640,11 @@ export default function StorefrontTabs({
                   setServicePriceMin={setServicePriceMin}
                   servicePriceMax={servicePriceMax}
                   setServicePriceMax={setServicePriceMax}
+                  serviceLocation={serviceLocation}
+                  setServiceLocation={setServiceLocation}
+                  serviceCategory={serviceCategory}
+                  setServiceCategory={setServiceCategory}
+                  categories={serviceCategories}
                   onClear={resetServiceFilters}
                 />
               </aside>
@@ -741,6 +757,11 @@ export default function StorefrontTabs({
                 setServicePriceMin={setServicePriceMin}
                 servicePriceMax={servicePriceMax}
                 setServicePriceMax={setServicePriceMax}
+                serviceLocation={serviceLocation}
+                setServiceLocation={setServiceLocation}
+                serviceCategory={serviceCategory}
+                setServiceCategory={setServiceCategory}
+                categories={serviceCategories}
                 onClear={resetServiceFilters}
               />
             </StoreMobileFilterSheet>

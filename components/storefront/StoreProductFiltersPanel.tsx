@@ -34,10 +34,10 @@ export default function StoreProductFiltersPanel({
   onClear,
 }: Props) {
   return (
-    <div className="overflow-hidden rounded-xl border border-[0.5px] border-[var(--color-border-tertiary)] bg-white">
-      <div className="flex items-center justify-between border-b border-[var(--color-border-tertiary)] px-4 py-3">
-        <p className="text-sm font-bold text-[var(--text-primary)]">Filters</p>
-        <button type="button" onClick={onClear} className="text-xs font-medium text-[#D4450A] hover:underline">
+    <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-[0_16px_45px_rgba(24,24,27,0.08)]">
+      <div className="flex items-center justify-between bg-gradient-to-br from-zinc-950 to-[#3a1b0f] px-5 py-4">
+        <div><p className="text-sm font-black text-white">Shop filters</p><p className="text-[10px] text-white/50">Refine this store</p></div>
+        <button type="button" onClick={onClear} className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20">
           Clear all
         </button>
       </div>
@@ -49,7 +49,7 @@ export default function StoreProductFiltersPanel({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search products…"
-          className="w-full rounded-lg border border-[0.5px] border-[var(--color-border-tertiary)] bg-[var(--color-background-secondary)] px-3 py-2 text-sm outline-none focus:border-[#D4450A]"
+          className="min-h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-[#D4450A] focus:ring-2 focus:ring-orange-100"
         />
       </div>
 

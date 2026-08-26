@@ -123,9 +123,9 @@ export default function ShopFilters({
   const hasFilters = activeFilterCount > 0;
 
   const filterBody = (
-    <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-[0_18px_50px_rgba(24,24,27,0.08)]">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
+        <div className="flex items-center justify-between bg-gradient-to-br from-zinc-950 via-zinc-900 to-[#3a1b0f] px-5 py-4 text-white">
           <div className="flex items-center gap-2">
             <svg
               width="13"
@@ -134,13 +134,13 @@ export default function ShopFilters({
               fill="none"
               stroke="currentColor"
               strokeWidth="2.5"
-              className="text-zinc-400"
+              className="text-orange-300"
             >
               <line x1="4" y1="6" x2="20" y2="6" />
               <line x1="8" y1="12" x2="16" y2="12" />
               <line x1="11" y1="18" x2="13" y2="18" />
             </svg>
-            <p className="text-sm font-bold text-zinc-900">Filters</p>
+            <div><p className="text-sm font-black text-white">Refine products</p><p className="mt-0.5 text-[10px] text-white/50">Find the right item faster</p></div>
             {hasFilters ? (
               <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#D4450A] text-[9px] font-bold text-white">
                 {activeFilterCount}
@@ -148,7 +148,7 @@ export default function ShopFilters({
             ) : null}
           </div>
           {hasFilters ? (
-            <button type="button" onClick={clearAll} className="text-xs font-semibold text-[#D4450A] hover:underline">
+            <button type="button" onClick={clearAll} className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20">
               Clear all
             </button>
           ) : null}
@@ -198,7 +198,8 @@ export default function ShopFilters({
                       setColour(next);
                       applyFilters({ colour: next });
                     }}
-                    className={`relative h-8 w-8 rounded-full transition-all ${
+                    aria-label={`Filter by ${c.value}`}
+                    className={`relative h-9 w-9 rounded-full border border-black/10 shadow-sm transition-all ${
                       isSelected ? "scale-110 ring-2 ring-[#D4450A] ring-offset-2" : "ring-1 ring-zinc-200 hover:ring-zinc-400"
                     }`}
                     style={{ background: c.hex }}
@@ -489,7 +490,7 @@ export default function ShopFilters({
       ) : null}
 
       {/* Desktop sidebar — hidden on mobile */}
-      <aside className="hidden w-full shrink-0 lg:block lg:w-56">
+      <aside className="hidden w-full shrink-0 lg:block lg:w-72">
         <div className="sticky top-4">{filterBody}</div>
       </aside>
     </>
