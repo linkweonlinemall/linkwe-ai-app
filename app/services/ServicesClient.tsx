@@ -28,6 +28,7 @@ const SERVICE_TYPE_OPTIONS = [
 
 const SORT_OPTIONS = [
   { value: "featured", label: "Featured" },
+  { value: "rating", label: "Customer rating" },
   { value: "price_asc", label: "Price: Low to High" },
   { value: "price_desc", label: "Price: High to Low" },
   { value: "name", label: "Name A–Z" },
@@ -82,6 +83,9 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   const [sort, setSort] = useState("featured");
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
+  const [region, setRegion] = useState("all");
+  const [location, setLocation] = useState("all");
+  const [minimumRating, setMinimumRating] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
 
@@ -91,7 +95,15 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     sort !== "featured" ||
     !!search ||
     !!priceMin ||
-    !!priceMax;
+    !!priceMax ||
+    region !== "all" ||
+    location !== "all" ||
+    minimumRating > 0;
+
+  const availableRegions = useMemo(
+    () => Array.from(new Set(initialServices.map((service) => service.store.region).filter(Boolean) as string[])).sort(),
+    [initialServices],
+  );
 
   const filtered = useMemo(() => {
     return initialServices
@@ -105,6 +117,9 @@ export default function ServicesClient({ initialServices }: { initialServices: S
         }
         if (category !== "all" && s.category !== category) return false;
         if (serviceType !== "all" && s.serviceType !== serviceType) return false;
+        if (region !== "all" && s.store.region !== region) return false;
+        if (location !== "all" && s.serviceLocation !== location) return false;
+        if (minimumRating > 0 && s.reviewAvg < minimumRating) return false;
         const min = priceMin ? parseFloat(priceMin) : null;
         const max = priceMax ? parseFloat(priceMax) : null;
         if (min !== null && !Number.isNaN(min) && s.price < min) return false;
@@ -115,9 +130,10 @@ export default function ServicesClient({ initialServices }: { initialServices: S
         if (sort === "price_asc") return a.price - b.price;
         if (sort === "price_desc") return b.price - a.price;
         if (sort === "name") return a.name.localeCompare(b.name);
+        if (sort === "rating") return b.reviewAvg - a.reviewAvg || b.reviewCount - a.reviewCount;
         return (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
       });
-  }, [initialServices, search, category, serviceType, sort, priceMin, priceMax]);
+  }, [initialServices, search, category, serviceType, sort, priceMin, priceMax, region, location, minimumRating]);
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
@@ -188,6 +204,9 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                     sort !== "featured",
                     !!search,
                     !!priceMin || !!priceMax,
+                    region !== "all",
+                    location !== "all",
+                    minimumRating > 0,
                   ].filter(Boolean).length
                 }
               </span>
@@ -203,6 +222,9 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                 setSort("featured");
                 setPriceMin("");
                 setPriceMax("");
+                setRegion("all");
+                setLocation("all");
+                setMinimumRating(0);
               }}
               className="text-xs font-semibold text-zinc-400 transition-colors hover:text-[#D4450A]"
             >
@@ -310,6 +332,24 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                 </div>
               </div>
 
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-zinc-700">Location & quality</label>
+                <select value={region} onChange={(e) => setRegion(e.target.value)} className="mb-2 min-h-[44px] w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-base">
+                  <option value="all">All regions</option>
+                  {availableRegions.map((value) => <option key={value} value={value}>{getRegionLabel(value)}</option>)}
+                </select>
+                <select value={location} onChange={(e) => setLocation(e.target.value)} className="mb-2 min-h-[44px] w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-base">
+                  <option value="all">Any service location</option>
+                  <option value="AT_CUSTOMER">At my location</option>
+                  <option value="AT_VENDOR">At provider</option>
+                  <option value="FLEXIBLE">Flexible location</option>
+                  <option value="VIRTUAL">Online / virtual</option>
+                </select>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[0, 3, 4, 4.5].map((rating) => <button key={rating} type="button" onClick={() => setMinimumRating(rating)} className={`min-h-11 rounded-lg text-xs font-bold ${minimumRating === rating ? "bg-[#D4450A] text-white" : "border border-zinc-200 bg-white text-zinc-600"}`}>{rating === 0 ? "Any" : `${rating}+ ★`}</button>)}
+                </div>
+              </div>
+
               {/* Price */}
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-zinc-700">Price range (TTD)</label>
@@ -368,6 +408,9 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                   setSort("featured");
                   setPriceMin("");
                   setPriceMax("");
+                  setRegion("all");
+                  setLocation("all");
+                  setMinimumRating(0);
                   setDrawerOpen(false);
                 }}
                 className="flex min-h-[48px] flex-1 items-center justify-center rounded-xl border-2 border-zinc-200 text-sm font-bold text-zinc-700 hover:border-zinc-300"
@@ -406,6 +449,9 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                           sort !== "featured",
                           !!search,
                           !!priceMin || !!priceMax,
+                          region !== "all",
+                          location !== "all",
+                          minimumRating > 0,
                         ].filter(Boolean).length
                       }
                     </span>
@@ -421,6 +467,9 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                       setSearch("");
                       setPriceMin("");
                       setPriceMax("");
+                      setRegion("all");
+                      setLocation("all");
+                      setMinimumRating(0);
                     }}
                     className="text-xs font-semibold text-[#D4450A] hover:underline"
                   >
@@ -492,6 +541,24 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                     </button>
                     );
                   })}
+                </div>
+              </div>
+
+              <div className="border-b border-zinc-100 px-4 py-3">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Location & quality</p>
+                <select value={region} onChange={(e) => setRegion(e.target.value)} className="mb-2 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-xs">
+                  <option value="all">All regions</option>
+                  {availableRegions.map((value) => <option key={value} value={value}>{getRegionLabel(value)}</option>)}
+                </select>
+                <select value={location} onChange={(e) => setLocation(e.target.value)} className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-xs">
+                  <option value="all">Any service location</option>
+                  <option value="AT_CUSTOMER">At my location</option>
+                  <option value="AT_VENDOR">At provider</option>
+                  <option value="FLEXIBLE">Flexible location</option>
+                  <option value="VIRTUAL">Online / virtual</option>
+                </select>
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
+                  {[0, 3, 4, 4.5].map((rating) => <button key={rating} type="button" onClick={() => setMinimumRating(rating)} className={`rounded-lg px-2 py-1.5 text-xs font-semibold ${minimumRating === rating ? "bg-[#D4450A] text-white" : "bg-zinc-50 text-zinc-600"}`}>{rating === 0 ? "Any rating" : `${rating}+ ★`}</button>)}
                 </div>
               </div>
 

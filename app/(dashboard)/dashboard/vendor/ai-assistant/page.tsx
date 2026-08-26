@@ -674,11 +674,11 @@ export default function VendorAIAssistantPage() {
 
   return (
     <div
-      className={`flex flex-col overflow-hidden ${REX_FONT.className}`}
-      style={{ background: "#0F1117", height: "calc(100dvh - 56px)" }}
+      className={`flex h-[calc(100dvh-56px)] flex-col overflow-hidden pb-[76px] md:pb-0 ${REX_FONT.className}`}
+      style={{ background: "radial-gradient(circle at 70% 0%, rgba(212,69,10,0.12), transparent 34%), #0F1117" }}
     >
       <header
-        className="shrink-0 border-b px-4 py-3 md:py-4"
+        className="shrink-0 border-b px-4 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.18)] md:py-4"
         style={{
           backgroundColor: "#161B27",
           borderColor: CARD_BORDER_STYLE.borderColor,
@@ -695,7 +695,8 @@ export default function VendorAIAssistantPage() {
           </button>
           <div className="flex min-w-0 flex-1 flex-col items-start md:absolute md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:items-center">
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold leading-none text-white">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[#D4450A] to-[#F59E0B] text-sm shadow-lg shadow-orange-950/30" aria-hidden>⚡</div>
+              <h1 className="text-xl font-black leading-none tracking-tight text-white">
                 Rex
               </h1>
               <span
@@ -708,7 +709,7 @@ export default function VendorAIAssistantPage() {
               />
             </div>
             <p className="mt-1 text-[11px] leading-tight text-zinc-400">
-              Your AI business partner
+              LinkWe business intelligence
             </p>
             {aiAllowance != null && aiAllowance > 0 ? (
               <p className="mt-0.5 text-[11px] leading-tight text-zinc-400">
@@ -719,7 +720,7 @@ export default function VendorAIAssistantPage() {
           </div>
           <Link
             href="/dashboard/vendor"
-            className="ml-auto shrink-0 text-xs text-zinc-400 transition-colors hover:text-zinc-200"
+            className="ml-auto shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
           >
             ← Dashboard
           </Link>
@@ -741,7 +742,7 @@ export default function VendorAIAssistantPage() {
             sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
           }`}
           style={{
-            backgroundColor: "#161B27",
+            background: "linear-gradient(180deg, #191F2C 0%, #121620 100%)",
             borderColor: "rgba(255,255,255,0.08)",
           }}
         >
@@ -833,7 +834,7 @@ export default function VendorAIAssistantPage() {
                   Upload product images (optional)
                 </p>
                 <p className="mb-3 text-xs text-zinc-500">
-                  Claude will analyse your images and help fill in the details.
+                  Rex will analyse your images and help fill in the details.
                   First image becomes the featured image.
                 </p>
 
@@ -1257,7 +1258,7 @@ export default function VendorAIAssistantPage() {
         ) : null}
 
         <div
-          className="border-t pb-[max(16px,env(safe-area-inset-bottom))] pt-3"
+          className="border-t px-1 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_32px_rgba(0,0,0,0.25)]"
           style={{
             backgroundColor: "#161B27",
             borderColor: CARD_BORDER_STYLE.borderColor,
@@ -1362,7 +1363,7 @@ export default function VendorAIAssistantPage() {
                   void handleSend()
                 }
               }}
-              placeholder="Describe what you want to list…"
+              placeholder="Ask Rex to manage, analyse or improve your business…"
               disabled={loading}
               className="min-h-11 max-h-48 min-w-0 flex-1 resize-none overflow-y-auto rounded-xl px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-[rgba(212,69,10,0.5)] focus:outline-none focus:ring-0 disabled:opacity-50"
               style={{
