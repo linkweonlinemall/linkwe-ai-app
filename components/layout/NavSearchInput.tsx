@@ -12,12 +12,14 @@ type Props = {
   variant: "desktop" | "mobile-overlay";
   inputId?: string;
   onCloseOverlay?: () => void;
+  light?: boolean;
 };
 
 export default function NavSearchInput({
   variant,
   inputId = "public-nav-search",
   onCloseOverlay,
+  light = false,
 }: Props) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -129,12 +131,12 @@ export default function NavSearchInput({
 
   const inputClass =
     variant === "desktop"
-      ? "h-full w-full border-0 bg-transparent pl-[30px] pr-2 text-sm text-white caret-white outline-none placeholder:text-[13px] placeholder:text-white/40"
+      ? `h-full w-full border-0 bg-transparent pl-[30px] pr-2 text-sm outline-none placeholder:text-[13px] ${light ? "text-zinc-900 caret-[#D4450A] placeholder:text-zinc-400" : "text-white caret-white placeholder:text-white/40"}`
       : "h-10 w-full border-0 bg-transparent text-base text-white caret-white outline-none placeholder:text-white/50";
 
   const wrapperClass =
     variant === "desktop"
-      ? "relative flex h-[38px] items-center rounded-[10px] border-[0.5px] border-white/[0.15] bg-white/[0.10] px-4"
+      ? `relative flex h-[38px] items-center rounded-[10px] border-[0.5px] px-4 transition-colors ${light ? "border-zinc-200 bg-zinc-100" : "border-white/[0.15] bg-white/[0.10]"}`
       : "relative min-w-0 flex-1";
 
   if (variant === "mobile-overlay") {
@@ -174,7 +176,7 @@ export default function NavSearchInput({
       <form className="w-full" onSubmit={handleSubmit}>
         <div className={wrapperClass}>
           <IconSearch
-            className="pointer-events-none absolute left-3 top-1/2 size-[17px] -translate-y-1/2 text-white/50"
+            className={`pointer-events-none absolute left-3 top-1/2 size-[17px] -translate-y-1/2 ${light ? "text-zinc-500" : "text-white/50"}`}
             stroke={1.75}
             aria-hidden
           />

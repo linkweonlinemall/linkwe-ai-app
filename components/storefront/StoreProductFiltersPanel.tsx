@@ -15,6 +15,12 @@ type Props = {
   inStockOnly: boolean;
   setInStockOnly: (v: boolean | ((prev: boolean) => boolean)) => void;
   onClear: () => void;
+  colour: string;
+  setColour: (v: string) => void;
+  size: string;
+  setSize: (v: string) => void;
+  availableColours: { value: string; hex: string }[];
+  availableSizes: string[];
 };
 
 export default function StoreProductFiltersPanel({
@@ -32,6 +38,12 @@ export default function StoreProductFiltersPanel({
   inStockOnly,
   setInStockOnly,
   onClear,
+  colour,
+  setColour,
+  size,
+  setSize,
+  availableColours,
+  availableSizes,
 }: Props) {
   return (
     <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-[0_16px_45px_rgba(24,24,27,0.08)]">
@@ -41,6 +53,10 @@ export default function StoreProductFiltersPanel({
           Clear all
         </button>
       </div>
+
+      {availableColours.length > 0 ? <div className="border-b border-zinc-100 px-4 py-3"><p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-zinc-500">Colour</p><div className="flex flex-wrap gap-2.5">{availableColours.map((option) => <button key={option.value} type="button" aria-label={`Filter by ${option.value}`} title={option.value} onClick={() => setColour(colour === option.value ? "" : option.value)} className={`h-9 w-9 rounded-full border border-black/10 shadow-sm ${colour === option.value ? "ring-2 ring-[#D4450A] ring-offset-2" : ""}`} style={{ background: option.hex }} />)}</div></div> : null}
+
+      {availableSizes.length > 0 ? <div className="border-b border-zinc-100 px-4 py-3"><p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-zinc-500">Size</p><div className="flex flex-wrap gap-2">{availableSizes.map((option) => <button key={option} type="button" onClick={() => setSize(size === option ? "" : option)} className={`min-w-10 rounded-lg border px-2.5 py-1.5 text-xs font-bold ${size === option ? "border-[#D4450A] bg-[#D4450A] text-white" : "border-zinc-200 text-zinc-600"}`}>{option}</button>)}</div></div> : null}
 
       <div className="border-b border-[var(--color-border-tertiary)] px-4 py-3">
         <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Search</p>

@@ -16,6 +16,7 @@ import ReviewsList from "@/components/ui/ReviewsList";
 import { StorefrontMapAndProducts, type StorefrontProductRow } from "@/components/storefront/StorefrontMapAndProducts";
 import type { PartnerContentItem } from "@/lib/cross-store/types";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
+import { COLOUR_OPTIONS } from "@/lib/variant-options";
 
 const PLACEHOLDER_COLORS = ["#E8820C", "#1A7FB5", "#D4450A", "#15803D", "#7C3AED"] as const;
 
@@ -76,6 +77,7 @@ type StoreTabProduct = StorefrontProductRow & {
   compareAtPrice?: number | null;
   hasVariants: boolean;
   isFeatured?: boolean;
+  variants: { attributes: unknown }[];
 };
 
 type StoreTabServiceRow = {
@@ -319,6 +321,8 @@ export default function StorefrontTabs({
   const [priceMax, setPriceMax] = useState("");
   const [sortBy, setSortBy] = useState("default");
   const [inStockOnly, setInStockOnly] = useState(false);
+  const [productColour, setProductColour] = useState("");
+  const [productSize, setProductSize] = useState("");
   const [storeFilterOpen, setStoreFilterOpen] = useState(false);
   const [serviceSearch, setServiceSearch] = useState("");
   const [serviceType, setServiceType] = useState("All");
@@ -336,6 +340,8 @@ export default function StorefrontTabs({
     setPriceMax("");
     setSortBy("default");
     setInStockOnly(false);
+    setProductColour("");
+    setProductSize("");
   }
 
   function resetServiceFilters() {
@@ -368,13 +374,35 @@ export default function StorefrontTabs({
       const minOk = !priceMin || p.price >= parseFloat(priceMin);
       const maxOk = !priceMax || p.price <= parseFloat(priceMax);
       const stockOk = !inStockOnly || p.stock === null || p.stock > 0;
-      return nameOk && catOk && minOk && maxOk && stockOk;
+      const attributes = p.variants.flatMap((variant) => Array.isArray(variant.attributes) ? variant.attributes : []);
+      const hasAttribute = (name: string, value: string) => !value || attributes.some((raw) => {
+        if (!raw || typeof raw !== "object" || Array.isArray(raw)) return false;
+        const attr = raw as { name?: unknown; value?: unknown };
+        return typeof attr.name === "string" && typeof attr.value === "string" && attr.name.toLowerCase() === name && attr.value.toLowerCase() === value.toLowerCase();
+      });
+      return nameOk && catOk && minOk && maxOk && stockOk && hasAttribute("colour", productColour) && hasAttribute("size", productSize);
     });
     if (sortBy === "price_asc") result = [...result].sort((a, b) => a.price - b.price);
     if (sortBy === "price_desc") result = [...result].sort((a, b) => b.price - a.price);
     if (sortBy === "name") result = [...result].sort((a, b) => a.name.localeCompare(b.name));
     return result;
-  }, [products, search, category, priceMin, priceMax, sortBy, inStockOnly]);
+  }, [products, search, category, priceMin, priceMax, sortBy, inStockOnly, productColour, productSize]);
+
+  const storeVariantFilters = useMemo(() => {
+    const colours = new Set<string>(); const sizes = new Set<string>();
+    for (const product of products) for (const variant of product.variants) {
+      if (!Array.isArray(variant.attributes)) continue;
+      for (const raw of variant.attributes) {
+        if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+        const attr = raw as { name?: unknown; value?: unknown };
+        if (typeof attr.name !== "string" || typeof attr.value !== "string") continue;
+        if (attr.name.toLowerCase() === "colour") colours.add(attr.value.toLowerCase());
+        if (attr.name.toLowerCase() === "size") sizes.add(attr.value);
+      }
+    }
+    const hex = new Map(COLOUR_OPTIONS.map((option) => [option.value, option.hex]));
+    return { colours: Array.from(colours).sort().map((value) => ({ value, hex: hex.get(value) ?? "#a1a1aa" })), sizes: Array.from(sizes).sort() };
+  }, [products]);
 
   const filteredServices = (services ?? [])
     .filter((s) => {
@@ -529,6 +557,12 @@ export default function StorefrontTabs({
                 inStockOnly={inStockOnly}
                 setInStockOnly={setInStockOnly}
                 onClear={resetStoreFilters}
+                colour={productColour}
+                setColour={setProductColour}
+                size={productSize}
+                setSize={setProductSize}
+                availableColours={storeVariantFilters.colours}
+                availableSizes={storeVariantFilters.sizes}
               />
             </aside>
 
@@ -571,6 +605,12 @@ export default function StorefrontTabs({
               inStockOnly={inStockOnly}
               setInStockOnly={setInStockOnly}
               onClear={resetStoreFilters}
+              colour={productColour}
+              setColour={setProductColour}
+              size={productSize}
+              setSize={setProductSize}
+              availableColours={storeVariantFilters.colours}
+              availableSizes={storeVariantFilters.sizes}
             />
           </StoreMobileFilterSheet>
         </div>

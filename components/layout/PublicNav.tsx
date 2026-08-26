@@ -445,7 +445,7 @@ export default function PublicNav({
 
           <div className="flex min-h-0 min-w-0 flex-1 justify-center overflow-visible px-2 lg:px-6">
             <div className="w-full max-w-[420px] min-w-[180px] overflow-visible">
-              <NavSearchInput variant="desktop" inputId="public-nav-desktop-search" />
+              <NavSearchInput variant="desktop" inputId="public-nav-desktop-search" light={navIsLight} />
             </div>
           </div>
 
@@ -510,15 +510,15 @@ export default function PublicNav({
           <div className="flex shrink-0 items-center gap-2">
             {user ? (
               <>
-                <MessageNavBadge href={messagesHref} enabled />
-                <div className="flex h-9 w-9 items-center justify-center rounded-[10px] border-[0.5px] border-white/[0.12] bg-white/[0.08] text-white [&_button]:rounded-[10px] [&_button]:bg-transparent [&_button]:border-0 [&_button]:shadow-none [&_button]:hover:bg-transparent">
-                  <NotificationBell initialUnreadCount={unreadCount} variant="dark" compactToolbar />
+                <MessageNavBadge href={messagesHref} enabled className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border-[0.5px] ${navIsLight ? "border-zinc-200 bg-zinc-100 text-zinc-800 hover:bg-zinc-200" : "border-white/[0.12] bg-white/[0.08] text-white hover:bg-white/[0.14]"}`} />
+                <div className={`flex h-9 w-9 items-center justify-center rounded-[10px] border-[0.5px] [&_button]:rounded-[10px] [&_button]:border-0 [&_button]:bg-transparent [&_button]:shadow-none [&_button]:hover:bg-transparent ${navIsLight ? "border-zinc-200 bg-zinc-100 text-zinc-800" : "border-white/[0.12] bg-white/[0.08] text-white"}`}>
+                  <NotificationBell initialUnreadCount={unreadCount} variant={navIsLight ? "light" : "dark"} compactToolbar />
                 </div>
                 <button
                   type="button"
                   aria-label="Open cart"
                   onClick={toggleDrawerCart}
-                  className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border-[0.5px] border-white/[0.12] bg-white/[0.08] text-white hover:bg-white/[0.14]"
+                  className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border-[0.5px] ${navIsLight ? "border-zinc-200 bg-zinc-100 text-zinc-800 hover:bg-zinc-200" : "border-white/[0.12] bg-white/[0.08] text-white hover:bg-white/[0.14]"}`}
                 >
                   <IconShoppingCart
                     className={`size-5 shrink-0 ${cartBumpPlay ? "lw-cart-icon-bump" : ""}`}
@@ -536,7 +536,7 @@ export default function PublicNav({
                   aria-label="Open account menu"
                   aria-haspopup="dialog"
                   aria-expanded={drawerOpen.value}
-                  className="flex h-[34px] min-w-[34px] shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-white/20 text-xs font-black text-white"
+                  className={`flex h-[34px] min-w-[34px] shrink-0 cursor-pointer items-center justify-center rounded-full border-2 text-xs font-black text-white ${navIsLight ? "border-[#D4450A]/20" : "border-white/20"}`}
                   style={{ backgroundColor: SCARLET }}
                   onClick={() => drawerOpen.toggle()}
                 >

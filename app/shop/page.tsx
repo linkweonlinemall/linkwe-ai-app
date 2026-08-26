@@ -22,6 +22,7 @@ import { PRODUCT_CATEGORIES } from "@/lib/categories";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { sellableStoreWhere } from "@/lib/store/sellable-store";
 import { typography, radius, shadow, tw } from "@/lib/design-system";
+import { COLOUR_OPTIONS } from "@/lib/variant-options";
 
 export const metadata: Metadata = {
   title: "Shop",
@@ -93,12 +94,12 @@ export default async function ShopPage({ searchParams }: Props) {
     const predicates: Prisma.Sql[] = [];
     if (colour) {
       predicates.push(
-        Prisma.sql`pv."attributes"::jsonb @> (${JSON.stringify([{ name: "Colour", value: colour }])})::jsonb`,
+        Prisma.sql`EXISTS (SELECT 1 FROM jsonb_array_elements(pv."attributes"::jsonb) attr WHERE lower(attr->>'name') = 'colour' AND lower(attr->>'value') = lower(${colour}))`,
       );
     }
     if (size) {
       predicates.push(
-        Prisma.sql`pv."attributes"::jsonb @> (${JSON.stringify([{ name: "Size", value: size }])})::jsonb`,
+        Prisma.sql`EXISTS (SELECT 1 FROM jsonb_array_elements(pv."attributes"::jsonb) attr WHERE lower(attr->>'name') = 'size' AND lower(attr->>'value') = lower(${size}))`,
       );
     }
     const variantWhere = predicates.length === 1 ? predicates[0]! : Prisma.join(predicates, " AND ");
@@ -179,6 +180,28 @@ export default async function ShopPage({ searchParams }: Props) {
   );
 
   const wishlistIds = await getWishlistProductIds();
+  const filterInventory = await prisma.product.findMany({
+    where: { isPublished: true, isService: false, store: sellableStoreWhere() },
+    select: { brand: true, category: true, variants: { select: { attributes: true } } },
+  });
+  const availableBrands = Array.from(new Set(filterInventory.map((p) => p.brand?.trim()).filter(Boolean) as string[])).sort();
+  const availableCategories = Array.from(new Set(filterInventory.map((p) => p.category).filter(Boolean) as string[]));
+  const colourValues = new Set<string>();
+  const sizeValues = new Set<string>();
+  for (const product of filterInventory) for (const variant of product.variants) {
+    if (!Array.isArray(variant.attributes)) continue;
+    for (const raw of variant.attributes) {
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+      const attribute = raw as { name?: unknown; value?: unknown };
+      const name = typeof attribute.name === "string" ? attribute.name.toLowerCase() : "";
+      const value = typeof attribute.value === "string" ? attribute.value.trim() : "";
+      if (name === "colour" && value) colourValues.add(value.toLowerCase());
+      if (name === "size" && value) sizeValues.add(value);
+    }
+  }
+  const colourHex = new Map(COLOUR_OPTIONS.map((option) => [option.value, option.hex]));
+  const availableColours = Array.from(colourValues).sort().map((value) => ({ value, hex: colourHex.get(value) ?? "#a1a1aa" }));
+  const availableSizes = Array.from(sizeValues).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
   return (
     <div className={`min-h-screen pb-mobile-public lg:pb-0 ${tw.bgPage} ${tw.fontSans}`}>
@@ -256,30 +279,16 @@ export default async function ShopPage({ searchParams }: Props) {
               </div>
             }
           >
-            <div className="w-full shrink-0 lg:w-56">
+            <div className="w-full shrink-0 lg:w-72">
               <ShopFilters
                 key={shopFiltersKey}
                 defaultCategory={category ?? "all"}
                 defaultSort={sort}
                 productCount={products.length}
-                availableBrands={["Aurevia", "Bad Dawg", "Serato", "Virgo Vibes TT", "VYNTIX"]}
-                availableCategories={[
-                  "bags_luggage",
-                  "clothing_apparel",
-                  "electronics",
-                  "health_beauty",
-                  "home_kitchen",
-                  "jewellery_watches",
-                  "stationery",
-                ]}
-                availableColours={[
-                  { value: "black", hex: "#000000" },
-                  {
-                    value: "multicolour",
-                    hex: "linear-gradient(135deg, #ff0000, #ffff00, #00ff00, #0000ff)",
-                  },
-                ]}
-                availableSizes={["S", "M"]}
+                availableBrands={availableBrands}
+                availableCategories={availableCategories}
+                availableColours={availableColours}
+                availableSizes={availableSizes}
               />
             </div>
           </Suspense>
