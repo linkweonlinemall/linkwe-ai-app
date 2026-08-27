@@ -197,12 +197,12 @@ export default async function OrderDetailPage({ params }: Props) {
   const isMultiStore = splitTotal > 1;
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5]">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#F5F5F5]">
       <PublicNav
         user={session ? { name: session.fullName ?? "Account", href: dashboardHref! } : null}
         dashboardHref={dashboardHref ?? undefined}
       />
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+      <div className="mx-auto w-full min-w-0 max-w-4xl px-3 py-5 sm:px-6 sm:py-8">
         <Link
           href="/orders"
           className="mb-4 inline-flex items-center gap-1 text-xs hover:underline"
@@ -211,20 +211,20 @@ export default async function OrderDetailPage({ params }: Props) {
           ← Back to orders
         </Link>
 
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+        <div className="mb-6 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="break-words text-xl font-bold" style={{ color: "var(--text-primary)" }}>
               Order #{order.referenceNumber ?? order.id.slice(-8).toUpperCase()}
             </h1>
             <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
               Placed {formatOrderDate(order.createdAt)}
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:shrink-0 sm:justify-end sm:gap-3">
             {getOrderStatusBadge(order.status)}
             <a
               href={`/api/invoice/${order.id}`}
-              className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50"
+              className="inline-flex min-h-11 min-w-0 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50 sm:shrink-0 sm:px-4"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -249,7 +249,7 @@ export default async function OrderDetailPage({ params }: Props) {
 
         {/* Progress */}
         <section
-          className="mb-5 rounded-xl bg-white p-5 sm:p-6"
+          className="mb-5 min-w-0 overflow-hidden rounded-xl bg-white p-4 sm:p-6"
           style={{ border: "1px solid var(--card-border)" }}
         >
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
@@ -443,11 +443,11 @@ export default async function OrderDetailPage({ params }: Props) {
           </section>
         ) : null}
 
-        <div className="grid gap-5 lg:grid-cols-3">
+        <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-3">
           {/* Items */}
-          <div className="mb-5 lg:col-span-2 lg:mb-0">
+          <div className="mb-5 min-w-0 lg:col-span-2 lg:mb-0">
             <section
-              className="rounded-xl bg-white p-5 sm:p-6"
+              className="min-w-0 overflow-hidden rounded-xl bg-white p-4 sm:p-6"
               style={{ border: "1px solid var(--card-border)" }}
             >
               <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
@@ -487,9 +487,9 @@ export default async function OrderDetailPage({ params }: Props) {
                       splitWeight.lines.map((line) => [line.titleSnapshot, line]),
                     );
                     return (
-                      <div key={splitOrder.id} className="overflow-hidden rounded-xl border border-zinc-100">
-                        <div className="flex items-center justify-between border-b border-zinc-100 bg-zinc-50 px-4 py-3">
-                          <div className="flex items-center gap-2">
+                      <div key={splitOrder.id} className="min-w-0 overflow-hidden rounded-xl border border-zinc-100">
+                        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-b border-zinc-100 bg-zinc-50 px-3 py-3 sm:px-4">
+                          <div className="flex min-w-0 items-center gap-2">
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               width="14"
@@ -505,7 +505,7 @@ export default async function OrderDetailPage({ params }: Props) {
                               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
                               <polyline points="9 22 9 12 15 12 15 22" />
                             </svg>
-                            <p className="text-sm font-semibold text-zinc-900">{splitOrder.store.name}</p>
+                            <p className="min-w-0 truncate text-sm font-semibold text-zinc-900">{splitOrder.store.name}</p>
                           </div>
                           <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${badge.className}`}>
                             {badge.label}
@@ -529,7 +529,7 @@ export default async function OrderDetailPage({ params }: Props) {
                           </div>
                         ) : null}
 
-                        <ul className="divide-y divide-zinc-100 px-4">
+                        <ul className="min-w-0 divide-y divide-zinc-100 px-3 sm:px-4">
                           {splitOrder.items.map((item) => {
                             const orderItem = order.items.find(
                               (oi) =>
@@ -540,7 +540,7 @@ export default async function OrderDetailPage({ params }: Props) {
                             const img = orderItem?.product?.images?.[0];
                             const weightLine = weightByTitle.get(item.titleSnapshot);
                             return (
-                              <li key={item.id} className="flex gap-4 py-4">
+                              <li key={item.id} className="flex min-w-0 gap-3 py-4 sm:gap-4">
                                 <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-zinc-100">
                                   {img ? (
                                     // eslint-disable-next-line @next/next/no-img-element
@@ -552,7 +552,7 @@ export default async function OrderDetailPage({ params }: Props) {
                                   )}
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-medium text-zinc-900">{item.titleSnapshot}</p>
+                                  <p className="break-words text-sm font-medium text-zinc-900">{item.titleSnapshot}</p>
                                   <p className="mt-0.5 text-xs text-zinc-400">{splitOrder.store.name}</p>
                                   <p className="mt-1 text-xs text-zinc-600">
                                     {item.quantity} × TTD {(item.unitPriceMinor / 100).toFixed(2)}
@@ -580,7 +580,7 @@ export default async function OrderDetailPage({ params }: Props) {
                                     </p>
                                   ) : null}
                                 </div>
-                                <p className="shrink-0 text-sm font-semibold text-zinc-900">
+                                <p className="hidden shrink-0 text-sm font-semibold text-zinc-900 min-[430px]:block">
                                   TTD {(item.lineTotalMinor / 100).toFixed(2)}
                                 </p>
                               </li>
@@ -588,8 +588,8 @@ export default async function OrderDetailPage({ params }: Props) {
                           })}
                         </ul>
 
-                        <div className="flex items-center justify-between border-t border-zinc-100 bg-zinc-50 px-4 py-2.5">
-                          <div>
+                        <div className="flex min-w-0 items-center justify-between gap-3 border-t border-zinc-100 bg-zinc-50 px-3 py-2.5 sm:px-4">
+                          <div className="min-w-0">
                             <p className="text-xs text-zinc-500">
                               {!splitHasPhysicalItems
                                 ? "Digital delivery"
@@ -670,7 +670,7 @@ export default async function OrderDetailPage({ params }: Props) {
           </div>
 
           {/* Sidebar */}
-          <div className="order-2 flex flex-col gap-5 md:col-span-1">
+          <div className="order-2 flex min-w-0 flex-col gap-5 md:col-span-1">
             <section
               className="rounded-xl bg-white p-5 sm:p-6"
               style={{ border: "1px solid var(--card-border)" }}

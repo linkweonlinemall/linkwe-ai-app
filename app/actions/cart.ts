@@ -134,28 +134,28 @@ export async function addToCart(
   return { ok: true };
 }
 
-export async function removeFromCart(productId: string): Promise<void> {
+export async function removeFromCart(cartItemId: string): Promise<void> {
   const session = await getSession();
   if (!session) return;
 
   await prisma.productCartItem.deleteMany({
-    where: { userId: session.userId, productId },
+    where: { id: cartItemId, userId: session.userId },
   });
 
   revalidatePath("/cart");
 }
 
-export async function updateCartQuantity(productId: string, quantity: number): Promise<void> {
+export async function updateCartQuantity(cartItemId: string, quantity: number): Promise<void> {
   const session = await getSession();
   if (!session) return;
 
   if (quantity <= 0) {
     await prisma.productCartItem.deleteMany({
-      where: { userId: session.userId, productId },
+      where: { id: cartItemId, userId: session.userId },
     });
   } else {
     await prisma.productCartItem.updateMany({
-      where: { userId: session.userId, productId },
+      where: { id: cartItemId, userId: session.userId },
       data: { quantity },
     });
   }

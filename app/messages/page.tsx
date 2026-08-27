@@ -10,6 +10,7 @@ import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { formatConversationListTime } from "@/lib/messages/format-time";
 import { prisma } from "@/lib/prisma";
+import ConversationInboxList from "@/components/messages/ConversationInboxList";
 
 export const metadata: Metadata = {
   title: "Messages",
@@ -51,7 +52,6 @@ export default async function MessagesInboxPage() {
     );
   }
 
-  const now = new Date();
   const conversations = result.side === "customer" ? result.conversations : [];
 
   return (
@@ -89,52 +89,7 @@ export default async function MessagesInboxPage() {
             </Link>
           </div>
         ) : (
-          <ul className="mt-5 flex flex-col gap-2">
-            {conversations.map((row) => (
-              <li key={row.id}>
-                <Link
-                  href={`/messages/${row.id}`}
-                  className={`flex min-h-[64px] items-center gap-3 rounded-[12px] bg-white p-3 transition-colors hover:bg-[#FAFAF9] ${CARD_BORDER}`}
-                >
-                  <div
-                    className={`relative h-11 w-11 shrink-0 overflow-hidden rounded-[10px] bg-[#FEF0EB] ${CARD_BORDER}`}
-                  >
-                    {row.storeLogoUrl ? (
-                      <Image
-                        src={row.storeLogoUrl}
-                        alt=""
-                        fill
-                        className="object-cover"
-                        sizes="44px"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-[13px] font-semibold text-[#D4450A]">
-                        {row.storeName.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <p className="truncate text-[14px] font-medium text-[#1C1C1A]">
-                        {row.storeName}
-                      </p>
-                      <span className="shrink-0 text-[11px] text-[#7c7b77]">
-                        {formatConversationListTime(row.lastMessageAt, now)}
-                      </span>
-                    </div>
-                    <p className="mt-0.5 truncate text-[13px] text-[#7c7b77]">
-                      {truncateSnippet(row.lastMessageText)}
-                    </p>
-                  </div>
-                  {row.unread > 0 ? (
-                    <span className="flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-[#D4450A] px-1 text-[10px] font-semibold text-white">
-                      {row.unread > 99 ? "99+" : row.unread}
-                    </span>
-                  ) : null}
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <ConversationInboxList conversations={conversations.map((row) => ({ id: row.id, name: row.storeName, imageUrl: row.storeLogoUrl, lastMessageText: row.lastMessageText, lastMessageAt: row.lastMessageAt, unread: row.unread, href: `/messages/${row.id}` }))} />
         )}
       </div>
     </div>

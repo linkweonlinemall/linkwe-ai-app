@@ -8,18 +8,18 @@ import { tw } from "@/lib/design-system";
 import { toastRemovedFromCart } from "@/lib/feedback/toasts";
 
 type Props = {
-  productId: string;
+  cartItemId: string;
   productName: string;
 };
 
-export default function CartRemoveButton({ productId, productName }: Props) {
+export default function CartRemoveButton({ cartItemId, productName }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   async function handleClick() {
     setBusy(true);
     try {
-      await removeFromCart(productId);
+      await removeFromCart(cartItemId);
       toastRemovedFromCart(productName);
       router.refresh();
     } finally {

@@ -183,10 +183,10 @@ export default function PublicNav({
             ? `/linkwe-logo-mark-on-${surface}.png`
             : desktop
               ? `/linkwe-logo-on-${surface}.png`
-              : `/linkwe-logo-mobile-on-${surface}.png`
+              : `/linkwe-logo-mark-on-${surface}.png`
         }
         alt="LinkWe"
-        className={desktop ? "block h-11 w-auto shrink-0" : "block h-10 w-auto shrink-0"}
+        className={desktop ? "block h-11 w-auto shrink-0" : "block size-11 shrink-0 object-contain"}
       />
     );
   }

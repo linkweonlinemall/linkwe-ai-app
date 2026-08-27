@@ -221,9 +221,9 @@ export default async function CartPage() {
                         </p>
                       </div>
                       <div className="col-span-2 flex min-w-0 flex-row-reverse items-center justify-between gap-3 sm:col-auto sm:flex-col sm:items-end sm:self-stretch">
-                        <CartRemoveButton productId={item.productId} productName={item.product.name} />
+                        <CartRemoveButton cartItemId={item.id} productName={item.product.name} />
                         <div className={`flex min-h-[44px] items-center gap-2 ${radius.card} border border-zinc-200 bg-zinc-50 px-2`}>
-                          <form action={updateCartQuantity.bind(null, item.productId, item.quantity - 1)}>
+                          <form action={updateCartQuantity.bind(null, item.id, item.quantity - 1)}>
                             <button
                               type="submit"
                               className={`flex min-h-[44px] min-w-[44px] items-center justify-center text-lg font-medium text-zinc-700 hover:bg-white`}
@@ -232,7 +232,7 @@ export default async function CartPage() {
                             </button>
                           </form>
                           <span className={`min-w-[1.75rem] text-center ${typography.bodySmall} font-semibold ${tw.textPrimary}`}>{item.quantity}</span>
-                          <form action={updateCartQuantity.bind(null, item.productId, item.quantity + 1)}>
+                          <form action={updateCartQuantity.bind(null, item.id, item.quantity + 1)}>
                             <button
                               type="submit"
                               disabled={atMaxStock}

@@ -40,7 +40,7 @@ export default function CartDrawer() {
   const closeDrawer = useCartStore((s) => s.closeDrawer);
   const setItems = useCartStore((s) => s.setItems);
 
-  const [busyProductId, setBusyProductId] = useState<string | null>(null);
+  const [busyItemId, setBusyItemId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -59,19 +59,19 @@ export default function CartDrawer() {
   );
   const allDigital = items.length > 0 && items.every((item) => item.product.isDigital);
 
-  const onQty = async (productId: string, nextQty: number) => {
-    setBusyProductId(productId);
-    await updateCartQuantity(productId, nextQty);
+  const onQty = async (cartItemId: string, nextQty: number) => {
+    setBusyItemId(cartItemId);
+    await updateCartQuantity(cartItemId, nextQty);
     await refresh();
-    setBusyProductId(null);
+    setBusyItemId(null);
   };
 
-  const onRemove = async (productId: string, productName: string) => {
-    setBusyProductId(productId);
-    await removeFromCart(productId);
+  const onRemove = async (cartItemId: string, productName: string) => {
+    setBusyItemId(cartItemId);
+    await removeFromCart(cartItemId);
     toastRemovedFromCart(productName);
     await refresh();
-    setBusyProductId(null);
+    setBusyItemId(null);
   };
 
   return (
@@ -153,7 +153,7 @@ export default function CartDrawer() {
           ) : (
             <ul className="divide-y divide-zinc-100 px-4 py-2">
               {items.map((item) => {
-                const busy = busyProductId === item.productId;
+                const busy = busyItemId === item.id;
                 const img = item.product.images[0];
 
                 return (
@@ -185,7 +185,7 @@ export default function CartDrawer() {
                         <button
                           type="button"
                           disabled={busy}
-                          onClick={() => void onQty(item.productId, item.quantity - 1)}
+                          onClick={() => void onQty(item.id, item.quantity - 1)}
                           className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
                         >
                           −
@@ -197,7 +197,7 @@ export default function CartDrawer() {
                             busy ||
                             (item.product.stock !== null && item.quantity >= item.product.stock)
                           }
-                          onClick={() => void onQty(item.productId, item.quantity + 1)}
+                          onClick={() => void onQty(item.id, item.quantity + 1)}
                           className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           +
@@ -206,7 +206,7 @@ export default function CartDrawer() {
                       <button
                         type="button"
                         disabled={busy}
-                        onClick={() => void onRemove(item.productId, item.product.name)}
+                        onClick={() => void onRemove(item.id, item.product.name)}
                         className="mt-1 text-xs text-zinc-400 hover:text-red-500 disabled:opacity-50"
                       >
                         Remove
