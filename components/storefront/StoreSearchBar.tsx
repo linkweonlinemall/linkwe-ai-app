@@ -58,17 +58,15 @@ export default function StoreSearchBar() {
   }, [query])
 
   return (
-    <div ref={containerRef} className="relative mx-auto w-full max-w-2xl">
-      <div className="flex gap-2">
+    <div ref={containerRef} className="relative mx-auto w-full max-w-3xl">
+      <div className="flex flex-col gap-2 rounded-2xl border border-white/15 bg-white/10 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-xl sm:flex-row">
         <div className="relative flex-1">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => results.length > 0 && setShowDropdown(true)}
             placeholder='Try "handmade", "electronics", or a shop name...'
-            className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm
-              text-white placeholder-white/50 backdrop-blur-sm focus:border-white/50
-              focus:outline-none"
+            className="w-full rounded-xl border border-white/15 bg-white px-4 py-3 text-base text-zinc-900 shadow-inner placeholder:text-zinc-400 focus:border-orange-300 focus:outline-none focus:ring-4 focus:ring-orange-500/10"
           />
           {loading && (
             <div className="absolute top-1/2 right-3 -translate-y-1/2">
@@ -85,8 +83,7 @@ export default function StoreSearchBar() {
               window.location.href = `/stores?q=${encodeURIComponent(query)}`
             }
           }}
-          className="shrink-0 rounded-xl bg-[#D4450A] px-6 py-3 text-sm
-            font-semibold whitespace-nowrap text-white hover:opacity-90"
+          className="min-h-12 shrink-0 rounded-xl bg-[#D4450A] px-6 py-3 text-sm font-semibold whitespace-nowrap text-white shadow-lg shadow-black/15 transition hover:-translate-y-0.5 hover:bg-[#B83A08] sm:min-w-40"
         >
           Search stores
         </button>

@@ -133,8 +133,8 @@ export default async function StoresDiscoveryPage({
         unreadCount={unreadCount}
       />
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        <section className="overflow-visible rounded-2xl border border-zinc-200 bg-gradient-to-br from-[#2E2D2A] via-[#1C1C1A] to-[#2E2D2A] p-6 shadow-sm sm:p-10">
+      <main className="mx-auto max-w-7xl px-3 py-5 sm:px-6 sm:py-8">
+        <section className="relative overflow-visible rounded-3xl border border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(232,130,12,0.28),transparent_32%),linear-gradient(135deg,#30231d,#1C1C1A_55%,#111)] p-5 shadow-[0_24px_70px_rgba(28,28,26,0.18)] sm:p-10">
           <p className="text-xs font-semibold uppercase tracking-widest text-orange-200/90">
             Marketplaces
           </p>
@@ -144,7 +144,7 @@ export default async function StoresDiscoveryPage({
           <p className="mt-2 max-w-2xl text-sm text-white/75">
             Discover vendors — live shop products, published listings, or shops that finished onboarding.
           </p>
-          <div className="mt-8">
+          <div className="mt-6 sm:mt-8">
             <StoreSearchBar />
           </div>
         </section>
