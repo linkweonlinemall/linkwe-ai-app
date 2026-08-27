@@ -1258,7 +1258,7 @@ export default function VendorAIAssistantPage() {
         ) : null}
 
         <div
-          className="px-1 pb-[max(12px,env(safe-area-inset-bottom))] pt-3"
+          className="px-1 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 sm:pb-[max(12px,env(safe-area-inset-bottom))] sm:pt-3"
           style={{
             backgroundColor: "transparent",
             flexShrink: 0,
@@ -1322,13 +1322,13 @@ export default function VendorAIAssistantPage() {
             </div>
           )}
 
-          <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-[#191F2C]/95 p-2 shadow-[0_16px_45px_rgba(0,0,0,0.35)] backdrop-blur-xl focus-within:border-[#D4450A]/60 focus-within:ring-2 focus-within:ring-[#D4450A]/10">
+          <div className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-[#191F2C]/95 p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.32)] backdrop-blur-xl focus-within:border-[#D4450A]/60 focus-within:ring-2 focus-within:ring-[#D4450A]/10 sm:gap-2 sm:rounded-2xl sm:p-2">
             {/* Paperclip / attach button */}
             <button
               type="button"
               onClick={() => chatFileInputRef.current?.click()}
               disabled={loading}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-40"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-40 sm:h-11 sm:w-11 sm:rounded-xl"
               title="Attach images (JPG, PNG, WebP)"
             >
               <svg
@@ -1353,7 +1353,7 @@ export default function VendorAIAssistantPage() {
               onChange={(e) => {
                 setInput(e.target.value)
                 e.target.style.height = "auto"
-                e.target.style.height = `${Math.max(44, e.target.scrollHeight)}px`
+                e.target.style.height = `${Math.max(36, e.target.scrollHeight)}px`
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -1363,7 +1363,7 @@ export default function VendorAIAssistantPage() {
               }}
               placeholder="Ask Rex to manage, analyse or improve your business…"
               disabled={loading}
-              className="min-h-11 max-h-48 min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-2 py-3 text-sm text-white outline-none placeholder:text-zinc-500 focus:outline-none focus:ring-0 disabled:opacity-50"
+              className="min-h-9 max-h-28 min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-1.5 py-2 text-[13px] leading-5 text-white outline-none placeholder:text-zinc-500 focus:outline-none focus:ring-0 disabled:opacity-50 sm:min-h-11 sm:max-h-48 sm:px-2 sm:py-3 sm:text-sm"
               style={{
                 backgroundColor: "transparent",
               }}
@@ -1380,7 +1380,7 @@ export default function VendorAIAssistantPage() {
                     startImagePreviews.length > 0
                   ))
               }
-              className="h-11 shrink-0 rounded-xl bg-gradient-to-br from-[#D4450A] to-[#E8820C] px-5 text-sm font-bold text-white shadow-lg shadow-orange-950/30 transition-all hover:-translate-y-0.5 hover:brightness-110 disabled:translate-y-0 disabled:grayscale disabled:opacity-40"
+              className="h-9 shrink-0 rounded-lg bg-gradient-to-br from-[#D4450A] to-[#E8820C] px-3 text-xs font-bold text-white shadow-lg shadow-orange-950/30 transition-all hover:-translate-y-0.5 hover:brightness-110 disabled:translate-y-0 disabled:grayscale disabled:opacity-40 sm:h-11 sm:rounded-xl sm:px-5 sm:text-sm"
             >
               Send
             </button>

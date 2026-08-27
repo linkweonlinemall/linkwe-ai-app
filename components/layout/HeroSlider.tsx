@@ -18,7 +18,7 @@ const SLIDES = [
     heading: ["Shop local.", "Support local.", "Powered by AI."],
     headingHighlight: 2,
     sub: "LinkWe connects you with vendors across Trinidad and Tobago. Search naturally, discover local stores, and shop with confidence.",
-    primaryBtn: { label: "Shop with AI", href: "/chat" },
+    primaryBtn: { label: "Start shopping", href: "/shop" },
     secondaryBtn: { label: "Browse stores", href: "/stores" },
     pan: "from-left" as const,
   },
