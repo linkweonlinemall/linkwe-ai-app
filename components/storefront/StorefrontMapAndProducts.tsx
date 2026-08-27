@@ -21,7 +21,7 @@ type Props = {
   products: StorefrontProductRow[];
 };
 
-function StoreMapBox({
+export function StoreMapBox({
   latitude,
   longitude,
   mapboxAccessToken,

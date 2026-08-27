@@ -46,6 +46,18 @@ export type PublicStoresPageResult = {
   pageSize: number;
 };
 
+export type PublicStoreMapPoint = Pick<PublicStoreCard, "id" | "name" | "slug" | "logoUrl" | "region" | "latitude" | "longitude">;
+
+export async function getPublicStoreMapPoints(search?: string, filters?: PublicStoresFilters): Promise<PublicStoreMapPoint[]> {
+  const rows = await prisma.store.findMany({
+    where: { AND: [buildPublicStoresWhere(search, filters), { latitude: { not: null }, longitude: { not: null } }] },
+    select: { id: true, name: true, slug: true, logoUrl: true, region: true, latitude: true, longitude: true },
+    orderBy: { name: "asc" },
+    take: 250,
+  });
+  return rows;
+}
+
 type StoreCardRow = {
   id: string;
   name: string;

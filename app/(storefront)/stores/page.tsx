@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 
 import {
   getPublicStorePopularTags,
+  getPublicStoreMapPoints,
   getPublicStores,
   type PublicStoresFilters,
   type PublicStoreSort,
@@ -108,9 +109,10 @@ export default async function StoresDiscoveryPage({
     userLng,
   };
 
-  const [tags, result] = await Promise.all([
+  const [tags, result, mapStores] = await Promise.all([
     getPublicStorePopularTags(32),
     getPublicStores(qRaw.trim() || undefined, filters, page),
+    getPublicStoreMapPoints(qRaw.trim() || undefined, filters),
   ]);
 
   const queryState = {
@@ -150,7 +152,7 @@ export default async function StoresDiscoveryPage({
           </div>
         </section>
 
-        <StoreDiscoveryMap stores={result.items} />
+        <StoreDiscoveryMap stores={mapStores} />
 
         <div className="mt-10 flex flex-col gap-10 lg:flex-row">
           <StoreFiltersDrawer

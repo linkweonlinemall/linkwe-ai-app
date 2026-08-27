@@ -175,7 +175,7 @@ export default function PublicNav({
 
   function LogoMark({ desktop }: { desktop: boolean }) {
     // Asset names describe the logo artwork: "light" belongs on dark surfaces.
-    const surface = navScrolled ? "dark" : "light";
+    const surface = navScrolled ? "light" : "dark";
     return (
       <img
         src={

@@ -41,6 +41,7 @@ import type { PartnerContentItem } from "@/lib/cross-store/types";
 import RelatedContentCards from "./RelatedContentCards";
 import StoreCompactCartButton from "./StoreCompactCartButton";
 import StoreFollowCard from "./StoreFollowCard";
+import { StoreMapBox } from "./StorefrontMapAndProducts";
 import type { StorefrontTabsStore } from "./StorefrontTabs";
 
 const SCARLET = "#D4450A";
@@ -526,6 +527,16 @@ export default function StoreAboutTab({
             initialFollowing={initialFollowing}
             followerCount={followerCount}
           />
+
+          {store.latitude !== null && store.longitude !== null && process.env.NEXT_PUBLIC_MAPBOX_TOKEN ? (
+            <div className="mb-3.5 overflow-hidden rounded-xl border border-[0.5px] border-[var(--color-border-tertiary)] bg-white shadow-sm">
+              <div className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0"><p className="text-[13px] font-semibold text-[var(--text-primary)]">Store location</p><p className="truncate text-[11px] text-[var(--text-muted)]">{store.address?.trim() || store.region}</p></div>
+                <a href={`https://www.google.com/maps/dir/?api=1&destination=${store.latitude},${store.longitude}`} target="_blank" rel="noopener noreferrer" className="shrink-0 rounded-lg bg-[#FEF0EB] px-3 py-2 text-[11px] font-semibold text-[#D4450A]">Directions</a>
+              </div>
+              <StoreMapBox latitude={store.latitude} longitude={store.longitude} mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN} />
+            </div>
+          ) : null}
 
           <div className="mb-3.5 overflow-hidden rounded-xl border border-[0.5px] border-[var(--color-border-tertiary)] bg-white">
             <div className="flex items-center gap-2 border-b border-[0.5px] border-[var(--color-border-tertiary)] px-4 py-3">
