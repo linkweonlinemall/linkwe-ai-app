@@ -285,7 +285,7 @@ export default async function Home() {
   const TOP_CATEGORIES = PRODUCT_CATEGORIES.slice(0, 14);
 
   return (
-    <div className={`min-h-screen pb-mobile-public lg:pb-0 ${tw.fontSans} ${tw.bgPage}`}>
+    <div className={`min-h-screen overflow-x-hidden pb-mobile-public lg:pb-0 ${tw.fontSans} bg-[#F7F5F1]`}>
       <PublicNav
         transparent
         logoVariant="wordmark"
@@ -302,18 +302,18 @@ export default async function Home() {
         />
 
         {/* Stats bar */}
-        <div className={`relative overflow-hidden ${tw.bgDark}`}>
+        <div className="relative overflow-hidden border-y border-white/10 bg-[#171714]">
           <div className="absolute inset-0" style={{ background: css.scarletGlowRow }} />
-          <div className="relative mx-auto max-w-screen-xl px-4 py-8 font-sans sm:px-6">
-            <div className="flex flex-wrap items-start justify-center gap-12">
+          <div className="relative mx-auto max-w-screen-xl px-4 py-5 font-sans sm:px-6 sm:py-7">
+            <div className="grid grid-cols-3 divide-x divide-white/10">
               {[
                 { value: `${storeCount}+`, label: "Local stores" },
                 { value: `${productCount}+`, label: "Products listed" },
                 { value: "T&T", label: "Island-wide delivery" },
               ].map((stat) => (
-                <div key={stat.label} className="flex flex-col items-center gap-2 text-center">
-                  <p className="text-4xl font-semibold tabular-nums text-white">{stat.value}</p>
-                  <p className="text-[11px] uppercase tracking-wide text-gray-300">{stat.label}</p>
+                <div key={stat.label} className="flex min-w-0 flex-col items-center gap-1 px-2 text-center sm:gap-2">
+                  <p className="text-xl font-black tabular-nums text-white sm:text-4xl">{stat.value}</p>
+                  <p className="max-w-28 text-[8px] font-bold uppercase leading-3 tracking-[0.12em] text-white/50 sm:text-[11px]">{stat.label}</p>
                 </div>
               ))}
             </div>
@@ -323,10 +323,10 @@ export default async function Home() {
         {/* Sticky category strip */}
         <div
           id="browse-categories"
-          className={`static z-30 border-b border-zinc-900/10 pt-6 ${tw.bgPageTranslucent95} shadow-sm backdrop-blur-sm sm:sticky sm:top-0 sm:border-t sm:border-zinc-900/10`}
+          className="static z-30 border-b border-zinc-900/10 bg-white/95 shadow-[0_10px_35px_rgba(30,25,20,.06)] backdrop-blur-xl sm:sticky sm:top-0"
         >
           <div className="relative mx-auto max-w-screen-xl px-4 sm:px-6">
-            <div className="scrollbar-hide flex gap-2 overflow-x-auto py-2">
+            <div className="scrollbar-hide flex gap-2 overflow-x-auto py-3 sm:py-4">
               <Link
                 href="/shop"
                 className={`shrink-0 whitespace-nowrap ${radius.pill} ${tw.bgScarlet} px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition-all duration-200 ease-in-out ${tw.hoverBgScarletHover}`}
@@ -337,7 +337,7 @@ export default async function Home() {
                 <Link
                   key={cat.value}
                   href={`/shop?category=${cat.value}`}
-                  className={`shrink-0 whitespace-nowrap ${radius.pill} border border-gray-300 bg-white px-4 py-1.5 text-xs font-semibold text-[#1C1C1A] transition-all duration-200 ease-in-out hover:border-[#D4450A]`}
+                  className={`shrink-0 whitespace-nowrap ${radius.pill} border border-zinc-200 bg-[#F8F7F4] px-4 py-1.5 text-xs font-semibold text-[#1C1C1A] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#D4450A]/50 hover:bg-orange-50`}
                 >
                   {cat.label}
                 </Link>
@@ -353,8 +353,8 @@ export default async function Home() {
 
       {/* Featured products */}
       {featuredProducts.length > 0 && (
-        <section className={`mx-auto max-w-screen-xl px-4 sm:px-6 ${spacing.sectionY}`}>
-          <div className="mb-10 flex items-end justify-between">
+        <section className={`relative mx-auto max-w-screen-xl px-4 sm:px-6 ${spacing.sectionY}`}>
+          <div className="mb-8 flex items-end justify-between gap-4 sm:mb-12">
             <div>
               <div className="mb-3 flex items-center gap-3">
                 <div className={`h-0.5 w-10 shrink-0 ${radius.pill} ${tw.bgScarlet}`} />
@@ -368,7 +368,7 @@ export default async function Home() {
             </div>
             <Link
               href="/shop"
-              className={`group flex items-center gap-2 ${radius.pill} border-2 border-zinc-900 px-5 py-2.5 text-xs font-semibold uppercase tracking-wide ${tw.textPrimary} transition-all hover:bg-zinc-900 hover:text-white`}
+              className={`group flex shrink-0 items-center gap-2 ${radius.pill} border border-zinc-300 bg-white px-4 py-2.5 text-[10px] font-bold uppercase tracking-wide ${tw.textPrimary} shadow-sm transition-all hover:border-zinc-900 hover:bg-zinc-900 hover:text-white sm:px-5 sm:text-xs`}
             >
               View all
               <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" strokeWidth={2.5} aria-hidden />
@@ -386,7 +386,7 @@ export default async function Home() {
                 <Link
                   key={product.id}
                   href={`/products/${product.slug}`}
-                  className={`group relative overflow-hidden ${radius.card} bg-white ring-1 ring-black/[0.04] transition-all duration-300 hover:-translate-y-1 ${shadow.card} hover:shadow-md ${
+                  className={`group relative overflow-hidden rounded-[1.35rem] bg-white ring-1 ring-black/[0.05] transition-all duration-300 hover:-translate-y-1.5 ${shadow.card} hover:shadow-xl ${
                     isHero ? "col-span-2 row-span-2" : ""
                   }`}
                 >
@@ -449,7 +449,7 @@ export default async function Home() {
 
       {/* Featured services — warm dark section */}
       {featuredServices.length > 0 && (
-        <section className={`relative overflow-hidden ${spacing.sectionY} ${tw.bgDark}`}>
+        <section className={`relative overflow-hidden border-y border-white/5 ${spacing.sectionY} bg-[#171714]`}>
           <div
             className="absolute right-0 top-0 h-[500px] w-[500px] rounded-full opacity-20 blur-3xl"
             style={{ background: css.scarletRadialSoft }}
@@ -484,7 +484,7 @@ export default async function Home() {
                 <Link
                   key={service.id}
                   href={`/service/${service.slug}`}
-                  className={`group overflow-hidden ${radius.card} border border-white/10 bg-white/5 transition-all duration-300 hover:-translate-y-1 ${shadow.card} hover:shadow-md`}
+                  className="group overflow-hidden rounded-[1.35rem] border border-white/10 bg-white/[0.065] shadow-[0_16px_50px_rgba(0,0,0,.18)] backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:border-[#D4450A]/40 hover:bg-white/[0.09]"
                 >
                   <div className="flex h-full">
                     <div className="relative w-32 shrink-0 overflow-hidden">
@@ -547,7 +547,7 @@ export default async function Home() {
       )}
 
       {/* Service categories */}
-      <section className={`${tw.bgPage} ${spacing.sectionY}`}>
+      <section className={`bg-gradient-to-b from-[#FFF9F5] to-[#F7F5F1] ${spacing.sectionY}`}>
         <div className="mx-auto max-w-screen-xl px-4 sm:px-6">
           <div className="mb-10 flex items-end justify-between">
             <div>
@@ -569,12 +569,12 @@ export default async function Home() {
               <ArrowRight className="size-3.5" strokeWidth={2.5} aria-hidden />
             </Link>
           </div>
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {SERVICE_CATEGORY_LINKS.map((item) => (
               <Link
                 key={item.label}
                 href={item.href}
-                className={`group flex flex-col items-center justify-center gap-3 ${radius.card} border border-zinc-900/10 bg-white py-8 text-center ${shadow.card} transition-all duration-200 hover:-translate-y-1 hover:border-[#D4450A]/35 hover:bg-[#D4450A]/5 hover:shadow-md`}
+                className="group flex min-h-32 flex-col items-center justify-center gap-3 rounded-[1.35rem] border border-orange-900/10 bg-white/90 px-2 py-6 text-center shadow-[0_12px_35px_rgba(70,35,15,.06)] transition-all duration-300 hover:-translate-y-1 hover:border-[#D4450A]/35 hover:bg-[#FFF5EF] hover:shadow-lg sm:py-8"
               >
                 <item.Icon
                   className={`size-8 transition-transform duration-300 group-hover:scale-110 ${tw.textScarlet}`}
@@ -592,13 +592,13 @@ export default async function Home() {
 
       {/* Featured stores — require ≥3 stores for a balanced grid */}
       {featuredStoreCards.length > 0 && (
-        <section className={`${tw.bgPage} py-20 md:py-28`}>
+        <section className="bg-white py-14 sm:py-20 md:py-28">
           <div className="mx-auto max-w-screen-xl px-4 sm:px-6">
             <div className="mb-10 flex items-end justify-between gap-6">
               <div>
                 <p className="font-sans text-xs uppercase tracking-wide text-[#D4450A]">Discover</p>
                 <div className="mt-2 h-px w-8 bg-[#D4450A]" aria-hidden />
-                <h2 className="mt-4 font-sans text-5xl font-semibold tracking-tight text-[#1C1C1A]">Local stores</h2>
+                <h2 className="mt-4 font-sans text-3xl font-black tracking-[-0.035em] text-[#1C1C1A] sm:text-5xl">Local stores</h2>
               </div>
               <Link
                 href="/stores"
@@ -619,14 +619,14 @@ export default async function Home() {
 
       {/* Upcoming events */}
       {upcomingEvents.length > 0 && (
-        <section className={`${tw.bgPage} py-20 md:py-28`}>
+        <section className="bg-[#F0ECE6] py-14 sm:py-20 md:py-28">
           <div className="mx-auto max-w-screen-xl px-4 sm:px-6">
             <div className="mb-8 flex items-center justify-between gap-4">
               <div>
                 <p className={`mb-1 text-xs font-bold uppercase tracking-widest ${tw.textScarlet}`}>
                   Get tickets
                 </p>
-                <h2 className="font-sans text-2xl font-bold text-[#1C1C1A]">
+                <h2 className="font-sans text-3xl font-black tracking-tight text-[#1C1C1A] sm:text-5xl">
                   Upcoming Events
                 </h2>
               </div>
@@ -651,7 +651,7 @@ export default async function Home() {
       )}
 
       {/* How it works */}
-      <section className={`relative overflow-hidden ${tw.bgPage} ${spacing.sectionY}`}>
+      <section className={`relative overflow-hidden bg-white ${spacing.sectionY}`}>
         <div className="absolute inset-0 opacity-[0.42]" style={{ backgroundImage: css.scarletDotsBg }} />
         <div className="relative mx-auto max-w-screen-xl px-4 sm:px-6">
           <div className="mb-16 text-center">
@@ -664,11 +664,11 @@ export default async function Home() {
               How <span className={`italic ${tw.textScarlet}`}>LinkWe</span> works
             </h2>
           </div>
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-3 sm:gap-0">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
             {HOW_IT_WORKS_STEPS.map((item, idx) => (
               <div
                 key={item.step}
-                className={`relative flex flex-col items-center text-center sm:px-10 ${idx < 2 ? "sm:border-r sm:border-zinc-100" : ""}`}
+                className="relative flex flex-col items-center rounded-[1.5rem] border border-zinc-900/5 bg-[#FAF8F5] px-6 py-8 text-center shadow-[0_12px_40px_rgba(40,30,20,.05)] sm:px-8"
               >
                 <div
                   className={`mb-6 flex h-20 w-20 items-center justify-center rounded-lg ${item.lightClass} ${shadow.modal} ring-2 ring-[#D4450A]/25`}
@@ -750,9 +750,9 @@ export default async function Home() {
       </section>
 
       {/* Get the app section */}
-      <section className={`${spacing.sectionY} px-4 sm:px-6 ${tw.bgDark}`}>
+      <section className={`${spacing.sectionY} border-t border-white/10 bg-[#11110F] px-4 sm:px-6`}>
         <div className="mx-auto max-w-screen-xl">
-          <div className="flex flex-col items-center gap-8 text-center lg:flex-row lg:text-left lg:gap-16">
+          <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-white/[0.08] to-white/[0.02] px-5 py-9 text-center shadow-2xl sm:px-10 lg:flex lg:items-center lg:gap-16 lg:px-14 lg:py-12 lg:text-left">
             <div className="flex-1">
               <p className={`${typography.caption} ${tw.textScarlet}`}>Free download</p>
               <h2 className={`mt-3 ${typography.h2} text-white`}>Take LinkWe everywhere</h2>
@@ -788,7 +788,7 @@ export default async function Home() {
                 ))}
               </div>
             </div>
-            <div className="shrink-0">
+            <div className="mt-10 flex shrink-0 justify-center lg:mt-0">
               <div className="relative">
                 <div className={`absolute inset-0 rounded-xl blur-3xl opacity-30`} style={{ background: css.scarletRadialLight }} />
                 <img
@@ -803,11 +803,11 @@ export default async function Home() {
       </section>
 
       {/* Footer */}
-      <footer className={`${tw.bgDark} px-4 py-16 sm:px-6`}>
+      <footer className="bg-[#11110F] px-4 py-12 sm:px-6 sm:py-16">
         <div className="mx-auto max-w-screen-xl">
           <div className="grid grid-cols-2 gap-10 sm:grid-cols-4 lg:grid-cols-5">
             <div className="col-span-2 sm:col-span-4 lg:col-span-2">
-              <img src="/linkwe-logo-on-light.png" alt="LinkWe" className="mb-5 h-10 w-auto object-contain" />
+              <img src="/linkwe-logo-on-dark.png" alt="LinkWe" className="mb-5 h-10 w-auto object-contain" />
               <p className={`max-w-xs ${typography.bodySmall} leading-7 text-zinc-500`}>
                 Trinidad and Tobago&apos;s local marketplace. Shop local, support local, powered by AI.
               </p>
