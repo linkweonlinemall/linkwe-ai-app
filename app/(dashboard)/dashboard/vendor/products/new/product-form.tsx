@@ -169,6 +169,7 @@ export function ProductForm() {
         <input type="hidden" name="hasVariants" value={productType === "variable" ? "true" : "false"} />
 
         <div
+          data-tour="product-type"
           className="rounded-xl bg-white p-5 sm:p-6"
           style={{ border: "1px solid var(--card-border)" }}
         >
@@ -241,6 +242,7 @@ export function ProductForm() {
         </div>
 
         <div
+          data-tour="product-details"
           className="rounded-xl bg-white p-5 sm:p-6"
           style={{ border: "1px solid var(--card-border)" }}
         >
@@ -315,6 +317,7 @@ export function ProductForm() {
         </div>
 
         <div
+          data-tour="product-pricing"
           className="rounded-xl bg-white p-5 sm:p-6"
           style={{ border: "1px solid var(--card-border)" }}
         >
@@ -521,6 +524,7 @@ export function ProductForm() {
         ) : null}
 
         <div
+          data-tour="product-images"
           className="rounded-xl bg-white p-5 sm:p-6"
           style={{ border: "1px solid var(--card-border)" }}
         >
@@ -552,6 +556,7 @@ export function ProductForm() {
 
         {productType !== "digital" ? (
           <div
+            data-tour="product-shipping"
             className="rounded-xl bg-white p-5 sm:p-6"
             style={{ border: "1px solid var(--card-border)" }}
           >
@@ -644,7 +649,7 @@ export function ProductForm() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <div data-tour="product-actions" className="flex flex-wrap gap-3">
           <button
             type="submit"
             name="intent"

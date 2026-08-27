@@ -262,6 +262,7 @@ export default function VendorDashboardSidebar({
         </Link>
         <Link
           href={`/store/${storeSlug}`}
+          data-tour="public-store"
           title="View public store"
           className="flex items-center justify-center gap-3 rounded-lg py-2.5 text-[13px] text-[rgba(255,255,255,0.5)] transition-colors hover:bg-white/[0.05] hover:text-white lg:justify-start lg:px-0"
         >

@@ -8,6 +8,7 @@ import VendorDashboardSidebar from "@/components/vendor/vendor-dashboard-sidebar
 import VendorDashboardTopbar from "@/components/vendor/vendor-dashboard-topbar";
 import VendorMobileBottomNav from "@/components/vendor/vendor-mobile-bottom-nav";
 import FloatingAIChat from "@/components/vendor/floating-ai-chat";
+import VendorGuidedTours from "@/components/vendor/VendorGuidedTours";
 
 export type VendorDashboardShellProps = {
   children: React.ReactNode;
@@ -83,6 +84,7 @@ export default function VendorDashboardShell({
           <VendorMobileBottomNav />
         </Suspense>
         <FloatingAIChat aiEnabled={aiEnabled} />
+        <VendorGuidedTours />
       </div>
     </div>
   );

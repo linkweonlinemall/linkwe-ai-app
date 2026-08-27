@@ -183,6 +183,17 @@ export default function VendorMobileBottomNav() {
 
   const closeMore = useCallback(() => setMoreOpen(false), []);
 
+  useEffect(() => {
+    const open = () => setMoreOpen(true);
+    const close = () => setMoreOpen(false);
+    window.addEventListener("vendor-tour:open-more", open);
+    window.addEventListener("vendor-tour:close-more", close);
+    return () => {
+      window.removeEventListener("vendor-tour:open-more", open);
+      window.removeEventListener("vendor-tour:close-more", close);
+    };
+  }, []);
+
   const tab = searchParams.get("tab");
 
   const dash = pathname === "/dashboard/vendor" && !tab;
