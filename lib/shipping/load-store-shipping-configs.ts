@@ -4,7 +4,7 @@ export type StoreShippingConfig = {
   storeId: string;
   storeName: string;
   shippingMode: "SELF" | "LINKWE";
-  selfRates: Array<{ zone: string; rateMinor: number; active: boolean }>;
+  selfRates: Array<{ zone: string; rateMinor: number; active: boolean; linkweFallback: boolean }>;
 };
 
 /**
@@ -28,6 +28,7 @@ export async function loadStoreShippingConfigs(
           zone: true,
           rateMinor: true,
           active: true,
+          linkweFallback: true,
         },
       },
     },
@@ -44,6 +45,7 @@ export async function loadStoreShippingConfigs(
           zone: r.zone,
           rateMinor: r.rateMinor,
           active: r.active,
+          linkweFallback: r.linkweFallback,
         })),
       } satisfies StoreShippingConfig,
     ]),

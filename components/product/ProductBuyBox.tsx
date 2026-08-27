@@ -134,7 +134,8 @@ export default function ProductBuyBox({
       ) : null}
 
       {/* 5 Quantity */}
-      <div className="mb-4 w-full min-w-0">
+      <div className={`mb-3 flex w-full min-w-0 items-end gap-2 ${mobileStickyBar ? "max-md:hidden" : ""}`}>
+      <div className="w-36 shrink-0">
         <label
           htmlFor="product-qty-pdp"
           className="mb-2 block font-sans text-xs font-semibold uppercase tracking-wide text-zinc-500"
@@ -182,7 +183,7 @@ export default function ProductBuyBox({
       </div>
 
       {/* 6 Add to cart */}
-      <div className={`mb-3 w-full min-w-0 ${mobileStickyBar ? "max-md:hidden" : ""}`}>
+      <div className="min-w-0 flex-1">
         <AddToCartButton
           productId={productId}
           productName={productName}
@@ -191,6 +192,7 @@ export default function ProductBuyBox({
           quantity={effectiveQty}
           disabled={hasVariants && !allSelected}
         />
+      </div>
       </div>
 
       {mobileStickyBar ? (
@@ -207,6 +209,11 @@ export default function ProductBuyBox({
             ) : (
               <p className="shrink-0 text-sm font-semibold text-[#D4450A]">TTD {price.toFixed(2)}</p>
             )}
+            {allSelected ? <div className="flex h-11 w-[84px] shrink-0 overflow-hidden rounded-xl border border-zinc-200 bg-white">
+              <button type="button" aria-label="Decrease quantity" disabled={cap === 0 || effectiveQty <= 1} onClick={() => setQuantity(effectiveQty - 1)} className="flex w-7 items-center justify-center text-zinc-700 disabled:opacity-30"><Minus className="size-3.5" /></button>
+              <span className="flex min-w-0 flex-1 items-center justify-center border-x border-zinc-100 text-sm font-bold tabular-nums">{effectiveQty}</span>
+              <button type="button" aria-label="Increase quantity" disabled={cap === 0 || effectiveQty >= cap} onClick={() => setQuantity(effectiveQty + 1)} className="flex w-7 items-center justify-center text-zinc-700 disabled:opacity-30"><Plus className="size-3.5" /></button>
+            </div> : null}
             <div className="min-w-0 flex-1">
               <AddToCartButton
                 productId={productId}

@@ -1,7 +1,9 @@
 @import "tailwindcss";
 
 html {
-  scroll-behavior: smooth;
+  /* Route changes must reset instantly behind the full-screen loader. Individual
+     in-page anchor controls opt into smooth scrolling where it is useful. */
+  scroll-behavior: auto;
 }
 
 * {

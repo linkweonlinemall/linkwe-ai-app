@@ -2,17 +2,17 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useState, useTransition } from "react";
 import {
   IconEdit,
   IconMessage,
-  IconShare2,
-  IconUserPlus,
+  IconBookmark,
 } from "@tabler/icons-react";
 
 import { getOrCreateConversation } from "@/app/actions/messages";
 import { toggleFollowStore } from "@/app/actions/store";
 import { toastFormError } from "@/lib/feedback/toasts";
+import ShareActionButton from "@/components/ui/ShareActionButton";
 
 const SCARLET = "#D4450A";
 
@@ -44,18 +44,9 @@ export default function StoreHeroActions({
   const router = useRouter();
   const [following, setFollowing] = useState(initialFollowing);
   const [followBusy, setFollowBusy] = useState(false);
-  const [showShare, setShowShare] = useState(false);
   const [messagePending, startMessageTransition] = useTransition();
 
-  const shareUrl = typeof window !== "undefined" ? window.location.href : "";
   const loginHref = `/login?callbackUrl=${encodeURIComponent(`/store/${storeSlug}`)}`;
-
-  useEffect(() => {
-    if (!showShare) return;
-    const onDocClick = () => setShowShare(false);
-    document.addEventListener("click", onDocClick);
-    return () => document.removeEventListener("click", onDocClick);
-  }, [showShare]);
 
   const onFollow = useCallback(async () => {
     setFollowBusy(true);
@@ -109,55 +100,12 @@ export default function StoreHeroActions({
           className={`${glassBtn} min-w-0 flex-1 px-3 md:flex-none`}
           style={glassStyle}
         >
-          <IconUserPlus className="size-4 shrink-0" stroke={1.75} aria-hidden />
-          {following ? "Following" : "Follow"}
+          <IconBookmark className="size-4 shrink-0" stroke={1.75} aria-hidden />
+          {following ? "Saved" : "Save store"}
         </button>
       )}
 
-      <div className="relative shrink-0">
-        <button
-          type="button"
-          className={glassBtn}
-          style={glassStyle}
-          aria-label="Share store"
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowShare((v) => !v);
-          }}
-        >
-          <IconShare2 className="size-4" stroke={1.75} aria-hidden />
-        </button>
-        {showShare ? (
-          <div
-            className="absolute bottom-11 right-0 z-[90] w-52 rounded-xl border border-zinc-200 bg-white p-3 shadow-xl md:bottom-auto md:top-10"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-              Share
-            </p>
-            <div className="flex flex-col gap-1">
-              <a
-                href={`https://wa.me/?text=${encodeURIComponent(`${storeName} — ${shareUrl}`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-lg px-2 py-1.5 text-xs text-zinc-700 hover:bg-zinc-50"
-              >
-                WhatsApp
-              </a>
-              <button
-                type="button"
-                className="rounded-lg px-2 py-1.5 text-left text-xs text-zinc-700 hover:bg-zinc-50"
-                onClick={() => {
-                  void navigator.clipboard.writeText(shareUrl);
-                  setShowShare(false);
-                }}
-              >
-                Copy link
-              </button>
-            </div>
-          </div>
-        ) : null}
-      </div>
+      <ShareActionButton title={storeName} label="" className="!min-h-[34px] !h-[34px] !min-w-[34px] !rounded-[9px] !border-0 !bg-white/15 !px-0 !text-white !shadow-none backdrop-blur" />
 
       {!canEditStore ? (
         isLoggedIn ? (

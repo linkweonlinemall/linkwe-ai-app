@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Sora } from "next/font/google";
 
 import CartProvider from "@/components/cart/CartProvider";
-import PublicFloatingChatButton from "@/components/layout/PublicFloatingChatButton";
 import FooterWrapper from "@/components/layout/FooterWrapper";
 import SiteFooter from "@/components/layout/SiteFooter";
 import InstallPrompt from "@/components/pwa/InstallPrompt";
@@ -94,7 +93,6 @@ export default function RootLayout({
         <CartProvider>
           <LinkWeToaster />
           {children}
-          <PublicFloatingChatButton />
         </CartProvider>
         <FooterWrapper>
           <SiteFooter />

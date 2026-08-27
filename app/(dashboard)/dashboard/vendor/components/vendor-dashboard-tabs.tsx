@@ -117,6 +117,7 @@ export default function VendorDashboardTabs({
         idVerificationStatus={idVerificationStatus}
         verificationChecks={verificationChecks}
         openForBusinessChecklist={openForBusinessChecklist}
+        verificationChecklist={verificationChecklist}
         store={{
           id: store.id,
           status: store.status,
@@ -129,11 +130,6 @@ export default function VendorDashboardTabs({
         }}
       />
 
-      {verificationChecklist ? (
-        <div className="min-w-0 space-y-4 pb-16 pt-6 md:pb-12 md:pt-8 lg:pb-12">
-          {verificationChecklist}
-        </div>
-      ) : null}
     </main>
   );
 }

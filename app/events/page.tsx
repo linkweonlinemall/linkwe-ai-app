@@ -173,7 +173,7 @@ export default async function EventsPage({
         {/* Dark gradient overlay */}
         <div className="absolute inset-0 z-0 bg-gradient-to-b from-black/75 via-black/65 to-black/85" />
 
-        <div className="relative z-10 mx-auto max-w-7xl px-6 pb-14 pt-28">
+        <div className="relative z-10 mx-auto max-w-7xl px-4 pb-8 pt-20 sm:px-6 sm:pb-14 sm:pt-28">
           {/* Eyebrow pill */}
           <div className="mb-5 flex justify-center">
             <span
@@ -234,7 +234,7 @@ export default async function EventsPage({
       </section>
 
       {/* ── Results ── */}
-      <section className="mx-auto max-w-7xl px-6 pb-16 pt-8">
+      <section className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6 sm:pt-8">
         {/* Results bar */}
         <div className="mb-5 flex items-center justify-between gap-4">
           <p className="text-sm text-[#888]">

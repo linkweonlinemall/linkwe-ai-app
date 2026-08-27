@@ -206,7 +206,7 @@ export function RegisterHubClient() {
       <div className="rounded-xl border border-zinc-200/60 bg-white p-8 shadow-sm">
         <div className="mb-8 text-center">
           <img
-            src="/linkwe-logo-on-light.png"
+            src="/linkwe-logo-on-dark.png"
             alt="LinkWe"
             className="mx-auto h-14 w-auto object-contain"
           />

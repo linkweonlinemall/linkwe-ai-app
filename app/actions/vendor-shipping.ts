@@ -54,7 +54,7 @@ async function requireCallerStore(): Promise<
 
 function buildSelfDeliveryZoneRows(
   storeRegion: string | null,
-  savedRates: Array<{ zone: string; rateMinor: number; active: boolean }>,
+  savedRates: Array<{ zone: string; rateMinor: number; active: boolean; linkweFallback: boolean }>,
 ): Pick<VendorShippingSettingsData, "selfDeliveryZones" | "homeZone" | "homeZoneLabel"> {
   const homeZone = mapStoreRegionToHomeZone(storeRegion ?? "");
   const defaultsMajor = getDefaultRatesForHomeZone(homeZone);
@@ -75,6 +75,7 @@ function buildSelfDeliveryZoneRows(
       rateMinor: saved ? saved.rateMinor : ttdToMinor(defaultMajor),
       isSuggested: !saved,
       active: saved?.active ?? true,
+      linkweFallback: saved?.linkweFallback ?? false,
     };
   });
 
@@ -174,6 +175,7 @@ export async function setShippingRates(
     if (typeof row.active !== "boolean") {
       return { ok: false, error: "Each zone must include an active flag." };
     }
+    if (typeof row.linkweFallback !== "boolean") return { ok: false, error: "Each zone must include a LinkWe delivery flag." };
   }
 
   for (const zone of SELF_DELIVERY_ZONES) {
@@ -197,10 +199,12 @@ export async function setShippingRates(
             zone: row.zone,
             rateMinor: row.rateMinor,
             active: row.active,
+            linkweFallback: row.linkweFallback,
           },
           update: {
             rateMinor: row.rateMinor,
             active: row.active,
+            linkweFallback: row.linkweFallback,
           },
         }),
       ),

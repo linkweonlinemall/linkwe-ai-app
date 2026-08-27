@@ -10,7 +10,7 @@ export default async function BusinessOnboardingLayout({ children }: { children:
   }
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
-      <div className="mx-auto max-w-2xl px-4 py-10">{children}</div>
+      <div className="mx-auto w-full min-w-0 max-w-2xl px-3 py-5 sm:px-4 sm:py-10">{children}</div>
     </div>
   );
 }

@@ -179,7 +179,7 @@ export default async function EventDetailPage({ params }: Props) {
       {/* ════════════════════════════════════════════
           HERO — 520px full bleed
       ════════════════════════════════════════════ */}
-      <div className="relative h-[520px] w-full overflow-hidden bg-[#1C1C1A]">
+      <div className="relative h-[430px] w-full overflow-hidden bg-[#1C1C1A] sm:h-[520px]">
         {/* Cover image */}
         {event.coverImage && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -194,11 +194,11 @@ export default async function EventDetailPage({ params }: Props) {
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/15 via-black/20 to-black/85" />
 
         {/* ── Top bar ── */}
-        <div className="absolute left-6 right-6 top-6 flex items-center justify-between">
+        <div className="absolute left-3 right-3 top-3 flex items-center justify-between sm:left-6 sm:right-6 sm:top-6">
           {/* Back link */}
           <Link
             href="/events"
-            className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/25"
+            className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/15 px-3 py-2 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/25 sm:px-4 sm:text-sm"
           >
             ← All events
           </Link>
@@ -216,14 +216,14 @@ export default async function EventDetailPage({ params }: Props) {
         </div>
 
         {/* ── Bottom section: category + title + meta ── */}
-        <div className="absolute bottom-0 left-0 right-0 p-10">
+        <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-10">
           {catLabel && (
             <span className="mb-4 inline-block rounded-full bg-[#D4450A] px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-white shadow">
               {catLabel}
             </span>
           )}
           <h1
-            className="mb-5 max-w-2xl font-sans text-5xl font-extrabold leading-tight text-white drop-shadow-md"
+            className="mb-4 max-w-2xl break-words font-sans text-3xl font-extrabold leading-tight text-white drop-shadow-md sm:mb-5 sm:text-5xl"
             style={{ textShadow: "0 2px 16px rgba(0,0,0,0.35)" }}
           >
             {event.title}
@@ -265,9 +265,9 @@ export default async function EventDetailPage({ params }: Props) {
           QUICK STRIP
       ════════════════════════════════════════════ */}
       {quickStripItems.length > 0 && (
-        <div className="mx-auto max-w-5xl px-6 pt-6">
+        <div className="mx-auto max-w-5xl px-4 pt-4 sm:px-6 sm:pt-6">
           <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
-            <div className="grid divide-x divide-zinc-100"
+            <div className="flex flex-col divide-y divide-zinc-100 sm:grid sm:divide-x sm:divide-y-0"
               style={{ gridTemplateColumns: `repeat(${quickStripItems.length}, 1fr)` }}>
               {quickStripItems.map(({ Icon, label, value }) => (
                 <div key={label} className="flex items-center gap-3 px-5 py-4">

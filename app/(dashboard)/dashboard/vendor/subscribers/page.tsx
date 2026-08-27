@@ -57,7 +57,7 @@ export default async function VendorSubscribersPage() {
   const past = subscribers.filter((s) => s.status === "CANCELED");
 
   return (
-    <div className="px-6 py-8">
+    <div className="min-w-0 px-4 py-5 sm:px-6 sm:py-8">
       <Link
         href="/dashboard/vendor"
         className="mb-4 inline-block text-sm text-zinc-500 hover:text-zinc-800"
@@ -119,7 +119,19 @@ export default async function VendorSubscribersPage() {
                 Active ({active.length})
               </h2>
               <div className="overflow-hidden rounded-xl border border-[rgba(28,28,26,0.08)] bg-white shadow-sm">
-                <div className="overflow-x-auto">
+                <div className="divide-y divide-zinc-100 md:hidden">
+                  {active.map((sub) => {
+                    const badge = subscriberStatusBadge(sub);
+                    return <article key={sub.id} className="min-w-0 p-4">
+                      <div className="flex min-w-0 items-start justify-between gap-3">
+                        <div className="min-w-0"><p className="truncate font-semibold text-zinc-900">{sub.customer.fullName ?? "Customer"}</p><Link href={`/service/${sub.product.slug}`} className="mt-1 block break-words text-sm font-medium text-[#D4450A]">{sub.product.name}</Link></div>
+                        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${badge.className}`}>{badge.label}</span>
+                      </div>
+                      <dl className="mt-4 grid grid-cols-2 gap-3 text-xs"><div><dt className="text-zinc-400">Price</dt><dd className="mt-1 font-medium text-zinc-700">{formatPriceMinor(sub.priceMinor, sub.interval)}</dd></div><div><dt className="text-zinc-400">Next renewal</dt><dd className="mt-1 font-medium text-zinc-700">{sub.status === "ACTIVE" ? formatDate(sub.currentPeriodEnd) : "—"}</dd></div></dl>
+                    </article>;
+                  })}
+                </div>
+                <div className="hidden overflow-x-auto md:block">
                   <table className="min-w-full text-left text-sm">
                     <thead className="border-b border-zinc-100 bg-zinc-50/80 text-xs font-bold uppercase tracking-wide text-zinc-500">
                       <tr>
@@ -177,7 +189,10 @@ export default async function VendorSubscribersPage() {
                 Past ({past.length})
               </h2>
               <div className="overflow-hidden rounded-xl border border-[rgba(28,28,26,0.08)] bg-zinc-50/50 shadow-sm">
-                <div className="overflow-x-auto">
+                <div className="divide-y divide-zinc-200/60 md:hidden">
+                  {past.map((sub) => { const badge = subscriberStatusBadge(sub); return <article key={sub.id} className="min-w-0 p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-semibold text-zinc-800">{sub.customer.fullName ?? "Customer"}</p><p className="mt-1 break-words text-sm text-zinc-600">{sub.product.name}</p></div><span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${badge.className}`}>{badge.label}</span></div><dl className="mt-4 grid grid-cols-2 gap-3 text-xs"><div><dt className="text-zinc-400">Price</dt><dd className="mt-1 font-medium text-zinc-700">{formatPriceMinor(sub.priceMinor, sub.interval)}</dd></div><div><dt className="text-zinc-400">Canceled</dt><dd className="mt-1 font-medium text-zinc-700">{formatDate(sub.canceledAt)}</dd></div></dl></article>; })}
+                </div>
+                <div className="hidden overflow-x-auto md:block">
                   <table className="min-w-full text-left text-sm">
                     <thead className="border-b border-zinc-200/80 text-xs font-bold uppercase tracking-wide text-zinc-400">
                       <tr>

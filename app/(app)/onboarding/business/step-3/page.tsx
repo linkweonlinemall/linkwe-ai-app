@@ -45,7 +45,7 @@ function BusinessOnboardingProgress({ currentStep }: { currentStep: number }) {
             </div>
             {i < STEPS.length - 1 ? (
               <div
-                className="mx-1 mb-5 h-0.5 w-12"
+                className="mx-1 mb-5 h-0.5 w-5 min-[390px]:w-8 sm:w-12"
                 style={{
                   backgroundColor: i < currentStep ? "var(--scarlet)" : "var(--card-border)",
                 }}
@@ -71,7 +71,7 @@ export default async function BusinessOnboardingStep3Page() {
     <>
       <BusinessOnboardingProgress currentStep={2} />
       <div
-        className="rounded-xl bg-white p-6 sm:p-8"
+        className="min-w-0 rounded-xl bg-white p-4 sm:p-8"
         style={{ border: "1px solid var(--card-border)" }}
       >
         <h1 className="mb-1 text-xl font-bold" style={{ color: "var(--text-primary)" }}>

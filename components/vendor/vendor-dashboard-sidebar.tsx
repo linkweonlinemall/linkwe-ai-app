@@ -199,7 +199,7 @@ export default function VendorDashboardSidebar({
         <div className="px-4">
           <Link href="/" className="flex items-start justify-center gap-2 lg:justify-start lg:gap-2.5">
             <img
-              src="/linkwe-logo-mark-on-dark.png"
+              src="/linkwe-logo-mark-on-light.png"
               alt=""
               className="size-8 shrink-0 object-contain"
               aria-hidden

@@ -28,6 +28,7 @@ type SelfZoneRowState = {
   regionsPreview: string;
   priceInput: string;
   active: boolean;
+  linkweFallback: boolean;
   isSuggested: boolean;
 };
 
@@ -49,6 +50,7 @@ function buildSelfZoneRows(rows: SelfDeliveryZoneRowData[]): SelfZoneRowState[] 
     regionsPreview: row.regionsPreview,
     priceInput: (row.rateMinor / 100).toFixed(2),
     active: row.active,
+    linkweFallback: row.linkweFallback,
     isSuggested: row.isSuggested,
   }));
 }
@@ -197,7 +199,7 @@ export default function ShippingSettingsClient({
     const payload = zoneRows.map((row) => {
       const parsed = Number.parseFloat(row.priceInput);
       const rateMinor = Number.isFinite(parsed) && parsed >= 0 ? ttdToMinor(parsed) : 0;
-      return { zone: row.zone, rateMinor, active: row.active };
+      return { zone: row.zone, rateMinor, active: row.active, linkweFallback: row.linkweFallback };
     });
 
     startRatesTransition(async () => {
@@ -347,6 +349,10 @@ export default function ShippingSettingsClient({
                             onChange={(active) => updateZoneRow(zone, { active })}
                           />
                           <span className="text-xs text-[#7c7b77]">Deliver here</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Toggle checked={row.linkweFallback} disabled={isRatesPending || row.active} label={`Let LinkWe deliver to ${row.label}`} onChange={(linkweFallback) => updateZoneRow(zone, { linkweFallback })} />
+                          <span className="text-xs text-[#7c7b77]">LinkWe delivers</span>
                         </div>
                       </div>
                     </li>

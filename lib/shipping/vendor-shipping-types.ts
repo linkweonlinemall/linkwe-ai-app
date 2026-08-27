@@ -26,6 +26,7 @@ export type VendorShippingRateInput = {
   zone: string;
   rateMinor: number;
   active: boolean;
+  linkweFallback: boolean;
 };
 
 export type LinkWeRateDisplay = {
@@ -40,6 +41,7 @@ export type SelfDeliveryZoneRowData = {
   rateMinor: number;
   isSuggested: boolean;
   active: boolean;
+  linkweFallback: boolean;
 };
 
 export type VendorShippingSettingsData = {
@@ -51,6 +53,7 @@ export type VendorShippingSettingsData = {
     zone: string;
     rateMinor: number;
     active: boolean;
+    linkweFallback: boolean;
     createdAt: Date;
     updatedAt: Date;
   }>;

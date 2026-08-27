@@ -12,7 +12,7 @@ import { prisma } from "@/lib/prisma";
 
 function readLogoDataUrl(): string | null {
   try {
-    const logoPath = path.join(process.cwd(), "public", "linkwe-logo-on-light.png");
+    const logoPath = path.join(process.cwd(), "public", "linkwe-logo-on-dark.png");
     const buffer = fs.readFileSync(logoPath);
     return `data:image/png;base64,${buffer.toString("base64")}`;
   } catch {

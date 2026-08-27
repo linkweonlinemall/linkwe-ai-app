@@ -115,6 +115,7 @@ export default function VendorDashboardOverview(props: {
   idVerificationStatus: IdVerificationStatus;
   verificationChecks: VendorReadinessCheck[];
   openForBusinessChecklist?: ReactNode;
+  verificationChecklist?: ReactNode;
   store: {
     id: string;
     status: StoreStatus;
@@ -134,6 +135,7 @@ export default function VendorDashboardOverview(props: {
     idVerificationStatus,
     verificationChecks,
     openForBusinessChecklist,
+    verificationChecklist,
     store,
   } = props;
 
@@ -159,6 +161,7 @@ export default function VendorDashboardOverview(props: {
   return (
     <div className="min-w-0 max-w-full space-y-5 font-sans max-md:[&_.dash-card-pad]:p-3">
       {openForBusinessChecklist}
+      {verificationChecklist ? <div className="min-w-0">{verificationChecklist}</div> : null}
       {overallPct < 100 ? (
         <div className={`mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-[#B5D4F4] bg-[#EBF5FB] px-4 py-3 max-md:flex-col max-md:items-start`}>
           <div className="flex min-w-0 items-start gap-3">

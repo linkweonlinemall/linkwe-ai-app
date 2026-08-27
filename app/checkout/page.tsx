@@ -63,7 +63,7 @@ export default async function CheckoutPage() {
         <div className="mb-6 overflow-hidden rounded-3xl border border-orange-100 bg-gradient-to-br from-white via-orange-50 to-amber-50 p-5 shadow-sm sm:p-7">
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-md ring-1 ring-orange-100">
-              <Image src="/linkwe-logo-on-light.png" alt="LinkWe" width={44} height={44} className="h-11 w-11 object-contain" />
+              <Image src="/linkwe-logo-on-dark.png" alt="LinkWe" width={44} height={44} className="h-11 w-11 object-contain" />
             </div>
             <div>
               <h1 className={`${typography.h3} ${tw.textPrimary}`}>Secure checkout</h1>

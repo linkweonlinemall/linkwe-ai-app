@@ -174,7 +174,8 @@ export default function PublicNav({
   const roleLabel = user ? accountRoleLabel(dashboardHref, user.href) : "Customer";
 
   function LogoMark({ desktop }: { desktop: boolean }) {
-    const surface = navScrolled ? "light" : "dark";
+    // Asset names describe the logo artwork: "light" belongs on dark surfaces.
+    const surface = navScrolled ? "dark" : "light";
     return (
       <img
         src={

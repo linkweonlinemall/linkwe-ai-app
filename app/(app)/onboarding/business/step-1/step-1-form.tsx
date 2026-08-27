@@ -32,7 +32,7 @@ function WizardFormFooter({
   const stepsLength = 3;
   return (
     <div
-      className="mt-8 flex items-center justify-between pt-6"
+      className="mt-8 grid grid-cols-[1fr_auto] items-center gap-3 pt-6 sm:grid-cols-[1fr_auto_1fr]"
       style={{ borderTop: "1px solid var(--card-border-subtle)" }}
     >
       <div>
@@ -46,13 +46,13 @@ function WizardFormFooter({
           </a>
         ) : null}
       </div>
-      <span className="text-xs" style={{ color: "var(--text-faint)" }}>
+      <span className="order-first col-span-2 text-center text-xs sm:order-none sm:col-span-1" style={{ color: "var(--text-faint)" }}>
         Step {currentStep + 1} of {stepsLength}
       </span>
       <button
         type="submit"
         disabled={pending}
-        className="rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+        className="justify-self-end rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
         style={{ backgroundColor: "var(--scarlet)" }}
       >
         {pending ? pendingLabel : isLastStep ? "Complete Setup" : "Continue →"}
@@ -77,17 +77,25 @@ export function BusinessStep1Form({ defaultFullName, defaultPhone, defaultRegion
         />
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="step1-phone">Phone number</Label>
-          <div className="flex">
+          <div className="flex min-w-0">
             <span className="inline-flex items-center rounded-l-lg border border-r-0 border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-500">
               +1 (868)
             </span>
             <input
               required
               autoComplete="tel"
-              className="flex-1 rounded-r-lg border border-l-0 border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2"
+              className="min-w-0 flex-1 rounded-r-lg border border-l-0 border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-zinc-400 focus:ring-2"
               defaultValue={defaultPhone}
               id="step1-phone"
               maxLength={8}
+              minLength={7}
+              inputMode="numeric"
+              pattern="[0-9]{3}-?[0-9]{4}"
+              onInput={(event) => {
+                const input = event.currentTarget;
+                const digits = input.value.replace(/\D/g, "").slice(0, 7);
+                input.value = digits.length > 3 ? `${digits.slice(0, 3)}-${digits.slice(3)}` : digits;
+              }}
               name="phone"
               placeholder="XXX-XXXX"
               type="tel"

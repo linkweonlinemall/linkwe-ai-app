@@ -19,7 +19,7 @@ export default function SiteFooter() {
         <div className="pt-2">
           <div className="flex items-center gap-2.5">
             <img
-              src="/linkwe-logo-mobile-on-dark.png"
+              src="/linkwe-logo-mobile-on-light.png"
               alt="LinkWe"
               className="h-11 w-auto shrink-0 object-contain"
             />

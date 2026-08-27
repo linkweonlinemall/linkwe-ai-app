@@ -85,7 +85,7 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-md">
         <div className="mb-8 flex justify-center">
           <Image
-            src="/linkwe-logo-on-light.png"
+            src="/linkwe-logo-on-dark.png"
             alt="LinkWe"
             width={180}
             height={56}

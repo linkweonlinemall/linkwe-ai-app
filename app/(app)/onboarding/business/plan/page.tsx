@@ -26,7 +26,7 @@ export default async function BusinessOnboardingPlanPage() {
 
   return (
     <div
-      className="rounded-xl bg-white p-6 sm:p-8"
+      className="min-w-0 rounded-xl bg-white p-4 sm:p-8"
       style={{ border: "1px solid var(--card-border)" }}
     >
       <h1 className="mb-1 text-xl font-bold" style={{ color: "var(--text-primary)" }}>

@@ -23,7 +23,7 @@ function WizardFormFooter({
   const stepsLength = 3;
   return (
     <div
-      className="mt-8 flex items-center justify-between pt-6"
+      className="mt-8 flex flex-wrap items-center justify-between gap-3 pt-6"
       style={{ borderTop: "1px solid var(--card-border-subtle)" }}
     >
       <div>

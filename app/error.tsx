@@ -5,7 +5,7 @@ import Image from "next/image"
 export default function Error({ reset }: { reset: () => void }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#F5F5F5] px-4 text-center">
-      <Image src="/linkwe-logo-on-light.png" alt="LinkWe" width={120} height={40} style={{ width: "auto", height: "40px" }} className="mb-8" />
+      <Image src="/linkwe-logo-on-dark.png" alt="LinkWe" width={120} height={40} style={{ width: "auto", height: "40px" }} className="mb-8" />
       <p className="text-8xl font-black text-[#D4450A] mb-4">500</p>
       <h1 className="text-2xl font-bold text-zinc-900 mb-2">Something went wrong</h1>
       <p className="text-zinc-500 text-sm mb-8 max-w-sm">An unexpected error occurred. Try refreshing the page or come back shortly.</p>

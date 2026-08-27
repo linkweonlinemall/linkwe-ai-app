@@ -267,7 +267,7 @@ export default function VendorBookingsClient({
   const isUpcoming = (b: Booking) => new Date(b.bookingDate) >= new Date();
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex min-w-0 flex-col gap-5">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           {
@@ -290,7 +290,7 @@ export default function VendorBookingsClient({
           },
           { label: "Total", value: stats.total, color: "text-zinc-700", bg: "bg-zinc-50 border-zinc-200" },
         ].map((stat) => (
-          <div key={stat.label} className={`rounded-2xl border px-4 py-3 ${stat.bg}`}>
+        <div key={stat.label} className={`min-w-0 rounded-2xl border px-3 py-3 sm:px-4 ${stat.bg}`}>
             <p className={`text-2xl font-black ${stat.color}`}>{stat.value}</p>
             <p className="text-xs font-medium text-zinc-500">{stat.label}</p>
           </div>
@@ -391,7 +391,7 @@ export default function VendorBookingsClient({
       }
       .bookings-calendar .rdp-month_grid { width: 100%; }
       .bookings-calendar .rdp-day_button {
-        width: 40px; height: 40px;
+        width: min(40px, 10vw); height: min(40px, 10vw);
         border-radius: 10px;
         font-size: 0.85rem;
         position: relative;
@@ -517,11 +517,11 @@ export default function VendorBookingsClient({
             return (
               <div
                 key={booking.id}
-                className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition-all ${
+                className={`min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm transition-all ${
                   isSelected ? "border-[#D4450A]/40 ring-1 ring-[#D4450A]/20" : "border-zinc-200"
                 }`}
               >
-                <div className="flex items-start gap-3 p-4">
+                <div className="flex min-w-0 items-start gap-2 p-3 sm:gap-3 sm:p-4">
                   <input
                     type="checkbox"
                     checked={isSelected}
@@ -533,9 +533,9 @@ export default function VendorBookingsClient({
                   <button
                     type="button"
                     onClick={() => setExpandedId(expanded ? null : booking.id)}
-                    className="flex flex-1 items-start gap-4 text-left"
+                    className="flex min-w-0 flex-1 items-start gap-3 text-left sm:gap-4"
                   >
-                    <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-zinc-100">
+                    <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-zinc-100 sm:h-14 sm:w-14">
                       <p className="text-lg font-black leading-none text-zinc-900">
                         {new Date(booking.bookingDate).getUTCDate()}
                       </p>
@@ -592,10 +592,10 @@ export default function VendorBookingsClient({
 
                 {expanded ? (
                   <div className="border-t border-zinc-100 px-4 pb-4 pt-3">
-                    <div className="mb-4 grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
+                    <div className="mb-4 grid grid-cols-1 gap-3 text-xs min-[430px]:grid-cols-2 min-[430px]:gap-x-6 min-[430px]:gap-y-2">
                       <div>
                         <p className="text-zinc-400">Date</p>
-                        <p className="font-semibold text-zinc-900">
+                        <p className="break-all font-semibold text-zinc-900">
                           {formatBookingDate(booking.bookingDate)}
                         </p>
                       </div>
@@ -630,7 +630,7 @@ export default function VendorBookingsClient({
                         </div>
                       ) : null}
                       {booking.customerNotes ? (
-                        <div className="col-span-2">
+                        <div className="min-[430px]:col-span-2">
                           <p className="text-zinc-400">Customer notes</p>
                           <p className="font-semibold text-zinc-900">{booking.customerNotes}</p>
                         </div>

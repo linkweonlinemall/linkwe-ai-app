@@ -5,6 +5,7 @@ import { MainOrderStatus, type ProductCondition } from "@prisma/client";
 import { Package } from "lucide-react";
 
 import ProductBuyBox from "@/components/product/ProductBuyBox";
+import ProductContactActions from "@/components/product/ProductContactActions";
 import ProductCollapsibleTags from "@/components/product/ProductCollapsibleTags";
 import FrequentlyBoughtTogether from "@/components/product/FrequentlyBoughtTogether";
 import ProductReviewsSection from "@/components/product/ProductReviewsSection";
@@ -464,6 +465,7 @@ export default async function PublicProductPage({ params }: Props) {
           {/* Purchase card — full width on tablet, sidebar on desktop */}
           <aside className="min-w-0 md:col-span-2 lg:col-span-1">
             <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm lg:sticky lg:top-24 lg:z-10">
+              <div className="mb-4"><ProductContactActions storeId={product.storeId} title={product.name} isOwner={isOwner} /></div>
               <ProductBuyBox
                 mobileStickyBar
                 productId={product.id}

@@ -674,11 +674,11 @@ export default function VendorAIAssistantPage() {
 
   return (
     <div
-      className={`flex h-[calc(100dvh-56px)] flex-col overflow-hidden pb-[76px] md:pb-0 ${REX_FONT.className}`}
+      className={`flex h-full min-h-0 flex-col overflow-hidden ${REX_FONT.className}`}
       style={{ background: "radial-gradient(circle at 70% 0%, rgba(212,69,10,0.12), transparent 34%), #0F1117" }}
     >
       <header
-        className="shrink-0 border-b px-4 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.18)] md:py-4"
+        className="shrink-0 border-b px-3 py-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.18)] sm:px-4 md:py-4"
         style={{
           backgroundColor: "#161B27",
           borderColor: CARD_BORDER_STYLE.borderColor,
@@ -689,14 +689,14 @@ export default function VendorAIAssistantPage() {
             type="button"
             aria-label="Open conversations"
             onClick={() => setSidebarOpen(true)}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xl text-white hover:bg-[rgba(255,255,255,0.06)] md:hidden"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-lg text-white hover:bg-[rgba(255,255,255,0.06)] md:hidden"
           >
             ☰
           </button>
           <div className="flex min-w-0 flex-1 flex-col items-start md:absolute md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:items-center">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[#D4450A] to-[#F59E0B] text-sm shadow-lg shadow-orange-950/30" aria-hidden>⚡</div>
-              <h1 className="text-xl font-black leading-none tracking-tight text-white">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#D4450A] to-[#F59E0B] text-xs shadow-lg shadow-orange-950/30 sm:h-8 sm:w-8 sm:rounded-xl sm:text-sm" aria-hidden>⚡</div>
+              <h1 className="text-lg font-black leading-none tracking-tight text-white sm:text-xl">
                 Rex
               </h1>
               <span
@@ -708,11 +708,11 @@ export default function VendorAIAssistantPage() {
                 aria-hidden
               />
             </div>
-            <p className="mt-1 text-[11px] leading-tight text-zinc-400">
+            <p className="mt-0.5 hidden text-[10px] leading-tight text-zinc-400 min-[390px]:block sm:text-[11px]">
               LinkWe business intelligence
             </p>
             {aiAllowance != null && aiAllowance > 0 ? (
-              <p className="mt-0.5 text-[11px] leading-tight text-zinc-400">
+              <p className="mt-0.5 text-[9px] leading-tight text-zinc-400 sm:text-[11px]">
                 {aiRemaining ?? aiAllowance} of {aiAllowance} uses left this
                 period
               </p>
@@ -720,7 +720,7 @@ export default function VendorAIAssistantPage() {
           </div>
           <Link
             href="/dashboard/vendor"
-            className="ml-auto shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
+            className="ml-auto shrink-0 rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-[10px] font-semibold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white sm:rounded-xl sm:px-3 sm:text-xs"
           >
             ← Dashboard
           </Link>
@@ -776,7 +776,7 @@ export default function VendorAIAssistantPage() {
             <button
               type="button"
               onClick={() => setActiveTab("assistant")}
-              className={`px-6 py-3 text-sm transition-colors ${
+              className={`flex-1 px-3 py-3 text-xs transition-colors sm:flex-none sm:px-6 sm:text-sm ${
                 activeTab === "assistant"
                   ? "border-b-2 border-[#D4450A] font-semibold text-white"
                   : "font-normal text-zinc-500 hover:text-zinc-300"
@@ -787,7 +787,7 @@ export default function VendorAIAssistantPage() {
             <button
               type="button"
               onClick={() => setActiveTab("bulk")}
-              className={`px-6 py-3 text-sm transition-colors ${
+              className={`flex-1 px-3 py-3 text-xs transition-colors sm:flex-none sm:px-6 sm:text-sm ${
                 activeTab === "bulk"
                   ? "border-b-2 border-[#D4450A] font-semibold text-white"
                   : "font-normal text-zinc-500 hover:text-zinc-300"
@@ -797,15 +797,15 @@ export default function VendorAIAssistantPage() {
             </button>
           </div>
           {activeTab === "assistant" && (
-            <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col px-4 py-4">
+            <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col px-3 py-2 sm:px-4 sm:py-4">
             <div
               className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-4"
               style={{ flex: 1, overflowY: "auto", minHeight: 0 }}
             >
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center px-4 py-8 text-center">
+            <div className="flex flex-col items-center px-1 py-4 text-center sm:px-4 sm:py-8">
               <div
-                className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full text-[36px] leading-none"
+                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl leading-none sm:h-20 sm:w-20 sm:rounded-full sm:text-[36px]"
                 style={{
                   backgroundImage:
                     "linear-gradient(135deg, #D4450A, #E8820C)",
@@ -814,17 +814,17 @@ export default function VendorAIAssistantPage() {
               >
                 ⚡
               </div>
-              <h2 className="mt-6 text-[22px] font-bold text-white md:text-[28px]">
+              <h2 className="mt-3 text-xl font-bold text-white sm:mt-6 md:text-[28px]">
                 Rex
               </h2>
-              <p className="mt-3 max-w-[360px] text-[13px] leading-snug text-zinc-400 md:text-sm md:leading-relaxed">
+              <p className="mt-2 max-w-[420px] text-xs leading-relaxed text-zinc-400 sm:mt-3 md:text-sm">
                 Your AI business partner for LinkWe. I can update your store,
                 manage products, analyse your sales, and run your business with
                 you.
               </p>
 
               <div
-                className="mt-8 w-full max-w-lg rounded-xl p-4 text-left"
+                className="mt-4 w-full max-w-lg rounded-xl p-3 text-left sm:mt-8 sm:p-4"
                 style={{
                   backgroundColor: "rgba(255,255,255,0.04)",
                   border: "1px solid rgba(255,255,255,0.08)",

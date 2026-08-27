@@ -428,7 +428,7 @@ export async function toggleFollowStore(
 
   const session = await getSession();
   if (!session) {
-    return { error: "Sign in to follow stores" };
+    return { error: "Sign in to save stores" };
   }
 
   const store = await prisma.store.findUnique({

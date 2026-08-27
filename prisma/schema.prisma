@@ -228,6 +228,7 @@ model VendorShippingRate {
   zone      String
   rateMinor Int      @map("rate_minor")
   active    Boolean  @default(true)
+  linkweFallback Boolean @default(false) @map("linkwe_fallback")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)

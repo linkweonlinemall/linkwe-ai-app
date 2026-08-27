@@ -232,7 +232,7 @@ export default function AdminShell({ adminName, children }: Props) {
 
           <Link href="/dashboard/admin" className="flex items-center">
             <img
-              src="/linkwe-logo-mobile-on-dark.png"
+              src="/linkwe-logo-mobile-on-light.png"
               alt="LinkWe"
               className="h-8 w-auto object-contain"
             />

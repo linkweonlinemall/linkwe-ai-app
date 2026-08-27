@@ -807,7 +807,7 @@ export default async function Home() {
         <div className="mx-auto max-w-screen-xl">
           <div className="grid grid-cols-2 gap-10 sm:grid-cols-4 lg:grid-cols-5">
             <div className="col-span-2 sm:col-span-4 lg:col-span-2">
-              <img src="/linkwe-logo-on-dark.png" alt="LinkWe" className="mb-5 h-10 w-auto object-contain" />
+              <img src="/linkwe-logo-on-light.png" alt="LinkWe" className="mb-5 h-10 w-auto object-contain" />
               <p className={`max-w-xs ${typography.bodySmall} leading-7 text-zinc-500`}>
                 Trinidad and Tobago&apos;s local marketplace. Shop local, support local, powered by AI.
               </p>

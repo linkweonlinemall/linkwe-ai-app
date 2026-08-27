@@ -8,7 +8,7 @@ export type PerStoreShippingInput = {
     storeId: string;
     storeName: string;
     shippingMode: "SELF" | "LINKWE";
-    selfRates: Array<{ zone: string; rateMinor: number; active: boolean }>;
+    selfRates: Array<{ zone: string; rateMinor: number; active: boolean; linkweFallback: boolean }>;
     totalWeightLbs: number;
     allItemsDigitalOrPickup: boolean;
     isDigitalOnly: boolean;
@@ -60,6 +60,11 @@ function computeStoreShipping(
         deliversToZone: true,
         isDigitalOnly: store.isDigitalOnly,
       };
+    }
+    const fallback = store.selfRates.find((r) => r.zone === selfZone && r.linkweFallback);
+    if (fallback) {
+      const weight = Number(store.totalWeightLbs);
+      return { storeId: store.storeId, storeName: store.storeName, mode: "LINKWE", shippingMinor: getCheckoutShipping(input.region, Number.isFinite(weight) && weight > 0 ? weight : 0), deliversToZone: true, isDigitalOnly: store.isDigitalOnly };
     }
     return {
       storeId: store.storeId,

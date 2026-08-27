@@ -123,11 +123,11 @@ export default function OrdersClient({ orders }: Props) {
           className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-900 outline-none ring-zinc-300 placeholder:text-zinc-400 focus:ring-2"
         />
 
-        <div className="mt-3 flex min-w-0 flex-wrap items-center gap-3">
+        <div className="mt-3 grid min-w-0 grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 outline-none ring-zinc-300 focus:ring-2"
+            className="min-h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 outline-none ring-zinc-300 focus:ring-2 sm:w-auto"
           >
             <option value="all">All statuses</option>
             <option value="DRAFT">Draft</option>
@@ -146,7 +146,7 @@ export default function OrdersClient({ orders }: Props) {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortBy)}
-            className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 outline-none ring-zinc-300 focus:ring-2"
+            className="min-h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 outline-none ring-zinc-300 focus:ring-2 sm:w-auto"
           >
             <option value="newest">Newest first</option>
             <option value="oldest">Oldest first</option>
@@ -206,10 +206,10 @@ export default function OrdersClient({ orders }: Props) {
             return (
               <div
                 key={order.id}
-                className="rounded-xl bg-white p-5 transition-shadow hover:shadow-md"
+                className="min-w-0 overflow-hidden rounded-xl bg-white p-4 transition-shadow hover:shadow-md sm:p-5"
                 style={{ border: "1px solid var(--card-border)" }}
               >
-                <div className="flex items-start justify-between">
+                <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
                   <div>
                     <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
                       Order #

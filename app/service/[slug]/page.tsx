@@ -19,6 +19,7 @@ import ReviewForm from "@/components/ui/ReviewForm";
 import ReviewsList from "@/components/ui/ReviewsList";
 import StarRating from "@/components/ui/StarRating";
 import ExpandableDescription from "@/components/ui/ExpandableDescription";
+import ShareActionButton from "@/components/ui/ShareActionButton";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { getServiceCategoryLabel } from "@/lib/categories";
 import { formatSubscriptionIntervalDisplay } from "@/lib/finance/subscription-interval";
@@ -230,6 +231,7 @@ export default async function ServiceDetailPage({ params }: Props) {
 
   const typeInfo = serviceTypeDisplay(service.serviceType);
   const location = locationDisplay(service.serviceLocation);
+  const mobileActionLabel = service.serviceType === "QUOTE" ? "Request quote" : service.serviceType === "SUBSCRIPTION" ? "Subscribe" : service.serviceType === "ON_DEMAND" ? "Request now" : service.serviceType === "BOOKABLE" || service.serviceType === "VIRTUAL" ? "Book now" : "Contact";
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
@@ -909,19 +911,20 @@ export default async function ServiceDetailPage({ params }: Props) {
                   alreadyRequested={featureButtonState.alreadyRequested}
                 />
               </div>
+              <ShareActionButton title={service.name} className="mt-3 w-full" />
             </div>
           </div>
         </div>
       </div>
       {!isOwner ? (
-        <div className="fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-30 rounded-2xl border border-white/70 bg-white/95 p-2 shadow-[0_16px_45px_rgba(24,24,27,0.22)] backdrop-blur-xl lg:hidden">
-          <div className="flex items-center gap-3">
-            <div className="min-w-0 flex-1 pl-2">
+        <div className="fixed inset-x-2 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30 rounded-2xl border border-white/70 bg-white/95 p-2 shadow-[0_16px_45px_rgba(24,24,27,0.22)] backdrop-blur-xl sm:inset-x-3 sm:bottom-[calc(5.5rem+env(safe-area-inset-bottom))] lg:hidden">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <div className="min-w-0 flex-1 pl-1 sm:pl-2">
               <p className="truncate text-xs font-medium text-zinc-500">{service.name}</p>
               <p className="text-sm font-black text-zinc-950">TTD {service.price.toFixed(2)}</p>
             </div>
-            <a href="#service-booking" className="flex min-h-11 shrink-0 items-center rounded-xl bg-[#D4450A] px-5 text-sm font-bold text-white shadow-md shadow-orange-900/20">
-              View options
+            <a href="#service-booking" className="flex min-h-11 max-w-[46%] shrink-0 items-center justify-center rounded-xl bg-[#D4450A] px-3 text-center text-sm font-bold leading-tight text-white shadow-md shadow-orange-900/20 sm:max-w-none sm:px-5">
+              {mobileActionLabel}
             </a>
           </div>
         </div>
