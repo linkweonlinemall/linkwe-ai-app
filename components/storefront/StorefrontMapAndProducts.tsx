@@ -51,7 +51,7 @@ function StoreMapBox({
   const { Map: MapComponent, Marker } = modules ?? {};
 
   return (
-    <div className="h-[280px] w-full overflow-hidden">
+    <div className="h-[190px] w-full overflow-hidden sm:h-[230px]">
       {!MapComponent || !Marker ? (
         <div className="h-full w-full bg-zinc-100" aria-hidden />
       ) : (
@@ -60,7 +60,7 @@ function StoreMapBox({
           scrollZoom={true}
           doubleClickZoom={true}
           touchZoomRotate={true}
-          dragPan={false}
+          dragPan
           initialViewState={{
             longitude,
             latitude,

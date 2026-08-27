@@ -366,7 +366,7 @@ export default function VendorEventsPage() {
   const someSelected = selectedIds.size > 0;
 
   return (
-    <div className="px-6 py-8">
+    <div className="min-w-0 overflow-x-hidden px-4 py-5 sm:px-6 sm:py-8">
       <Link
         href="/dashboard/vendor"
         className="mb-4 inline-block text-sm text-zinc-500 hover:text-zinc-800"
@@ -374,8 +374,8 @@ export default function VendorEventsPage() {
         ← Back to dashboard
       </Link>
 
-      <div className="mb-6 flex items-center justify-between">
-        <div>
+      <div className="mb-6 flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
             Events
           </h1>
@@ -385,7 +385,7 @@ export default function VendorEventsPage() {
         </div>
         <Link
           href="/dashboard/vendor/events/new"
-          className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 sm:w-auto"
           style={{ backgroundColor: "var(--scarlet)" }}
         >
           + Create event
@@ -454,7 +454,7 @@ export default function VendorEventsPage() {
       )}
 
       <div
-        className="overflow-hidden rounded-xl bg-white"
+        className="min-w-0 overflow-hidden rounded-xl bg-white"
         style={{ border: "1px solid var(--card-border)" }}
       >
         {all.length === 0 ? (
@@ -515,14 +515,14 @@ export default function VendorEventsPage() {
               return (
                 <div
                   key={event.id}
-                  className={`px-4 py-4 transition-colors md:grid md:grid-cols-12 md:items-center md:gap-4 md:px-5 ${
+                  className={`min-w-0 px-3 py-4 transition-colors sm:px-4 md:grid md:grid-cols-12 md:items-center md:gap-4 md:px-5 ${
                     checked ? "bg-orange-50/60" : "hover:bg-zinc-50/60"
                   }`}
                   style={{ borderBottom: "1px solid var(--card-border-subtle)" }}
                 >
-                  <div className="flex w-full items-center gap-2.5 md:contents">
+                  <div className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 md:contents">
                     {/* Checkbox + thumbnail */}
-                    <div className="flex shrink-0 items-center gap-2.5 md:col-span-1">
+                    <div className="flex shrink-0 items-center gap-2 md:col-span-1">
                       <input
                         type="checkbox"
                         checked={checked}
@@ -530,7 +530,7 @@ export default function VendorEventsPage() {
                         className="h-4 w-4 cursor-pointer rounded border-zinc-300 accent-[#D4450A]"
                         aria-label={`Select ${event.title}`}
                       />
-                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-zinc-100">
+                      <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-zinc-100 sm:h-10 sm:w-10">
                         {event.coverImage ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
@@ -601,7 +601,7 @@ export default function VendorEventsPage() {
                     </div>
 
                     {/* Status (mobile) + actions menu */}
-                    <div className="flex shrink-0 items-center gap-2 md:col-span-2 md:justify-end">
+                    <div className="flex min-w-0 flex-col items-end gap-2 sm:flex-row sm:items-center md:col-span-2 md:justify-end">
                       <span
                         className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium md:hidden"
                         style={{ backgroundColor: badge.bg, color: badge.color }}

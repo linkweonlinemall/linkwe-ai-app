@@ -11,6 +11,7 @@ import PublicNav from "@/components/layout/PublicNav";
 import PublicStoreCard from "@/components/storefront/PublicStoreCard";
 import StoreFiltersDrawer from "@/components/storefront/StoreFiltersDrawer";
 import StoreSearchBar from "@/components/storefront/StoreSearchBar";
+import StoreDiscoveryMap from "@/components/storefront/StoreDiscoveryMap";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
@@ -148,6 +149,8 @@ export default async function StoresDiscoveryPage({
             <StoreSearchBar />
           </div>
         </section>
+
+        <StoreDiscoveryMap stores={result.items} />
 
         <div className="mt-10 flex flex-col gap-10 lg:flex-row">
           <StoreFiltersDrawer

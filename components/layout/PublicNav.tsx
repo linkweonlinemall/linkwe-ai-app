@@ -306,12 +306,6 @@ export default function PublicNav({
                       active: pathname.startsWith("/stores") || pathname.startsWith("/store"),
                     },
                     { href: "/events", label: "Events", Icon: IconCalendarEvent, active: pathname.startsWith("/events") },
-                    {
-                      href: "/chat",
-                      label: "AI Shopping",
-                      Icon: IconMessageCircle,
-                      active: pathname.startsWith("/chat"),
-                    },
                   ] as const
                 ).map((item) => (
                   <DrawerRowLink
@@ -493,14 +487,6 @@ export default function PublicNav({
             >
               <IconTag className="size-4 shrink-0" stroke={1.75} aria-hidden /> Pricing
             </Link>
-            <Link
-              href="/chat"
-              className={`${desktopNavLinkClass} ${
-                navIsLight ? (pathname.startsWith("/chat") ? "bg-zinc-100 text-[#1C1C1A]" : "text-zinc-600 hover:bg-zinc-100 hover:text-[#1C1C1A]") : (pathname.startsWith("/chat") ? "bg-white/[0.12] text-white" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white")
-              }`}
-            >
-              <IconMessageCircle className="size-4 shrink-0" stroke={1.75} aria-hidden /> AI
-            </Link>
             {mounted && !isInstalled ? (
               <Link href="/get-app" className={`ml-1 shrink-0 text-[11px] font-semibold ${navIsLight ? "text-zinc-500 hover:text-zinc-900" : "text-white/[0.55] hover:text-white"}`}>
                 Get app
@@ -678,7 +664,6 @@ function PublicMoreSheet({
     { href: "/stores", label: "Stores", Icon: IconBuildingStore },
     { href: "/events", label: "Events", Icon: IconCalendarEvent },
     { href: "/pricing", label: "Pricing", Icon: IconTag },
-    { href: "/chat", label: "AI Chat", Icon: IconMessageCircle },
     { href: "/orders", label: "My Orders", Icon: IconPackage, authOnly: true },
     { href: "/wishlist", label: "My Wishlist", Icon: IconHeart, authOnly: true },
     { href: "/saved-stores", label: "Saved Stores", Icon: IconBookmark, authOnly: true },
@@ -747,7 +732,6 @@ function PublicMoreSheet({
             <Link
               key={item.href}
               href={item.href}
-              onClick={onClose}
               className="flex flex-col items-center justify-center gap-2 rounded-xl bg-white p-4 text-center transition-colors hover:bg-[#F7F7F6]"
               style={{ border: "0.5px solid var(--color-border-tertiary)" }}
             >
@@ -762,7 +746,6 @@ function PublicMoreSheet({
             <button
               type="submit"
               className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-[0.5px] border-[var(--color-border-tertiary)] text-[13px] font-semibold text-[#D4450A] transition-colors hover:bg-[#FEF0EB]"
-              onClick={onClose}
             >
               <IconLogout className="size-[18px]" stroke={1.75} aria-hidden />
               Sign out

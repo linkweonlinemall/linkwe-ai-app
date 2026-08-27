@@ -34,6 +34,8 @@ export type PublicStoreCard = {
   categoryId: string;
   averageRating: number | null;
   reviewCount: number;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 export type PublicStoresPageResult = {
@@ -241,6 +243,8 @@ function toPublicCard(
     categoryId: row.categoryId,
     averageRating: s?.average ?? null,
     reviewCount: s?.count ?? 0,
+    latitude: row.latitude,
+    longitude: row.longitude,
   };
 }
 

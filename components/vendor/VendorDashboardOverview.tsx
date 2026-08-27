@@ -146,7 +146,7 @@ export default function VendorDashboardOverview(props: {
 
   const amounts = analytics.salesLast30Days.map((d) => d.amountTtd);
   const maxAmt = amounts.length ? Math.max(...amounts, 1) : 1;
-  const maxBarH = 140;
+  const maxBarH = 82;
 
   const salesFmt = analytics.salesThisMonthTtd.toLocaleString("en-TT", {
     minimumFractionDigits: 2,
@@ -245,14 +245,15 @@ export default function VendorDashboardOverview(props: {
                 View report
               </Link>
             </div>
-            <div className="flex h-[140px] items-end justify-between gap-1 pb-8">
-              {analytics.salesLast30Days.map((d) => {
+            <div className="flex h-[104px] items-end justify-between gap-1 border-b border-zinc-100 pb-3">
+              {analytics.salesLast30Days.slice(-14).map((d) => {
                 const pct = Math.max(10, Math.round((d.amountTtd / maxAmt) * 100));
                 const hPx = Math.round((maxBarH * pct) / 100);
                 return (
                   <div key={d.date} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1">
                     <div
-                      className={`w-full max-w-[10px] rounded-t-sm ${d.amountTtd > 0 ? "bg-[#D4450A]" : "bg-[#FEF0EB]"}`}
+                      title={`${d.date}: TTD ${d.amountTtd.toFixed(2)}`}
+                      className={`w-full max-w-[14px] rounded-t-md transition-opacity hover:opacity-75 ${d.amountTtd > 0 ? "bg-gradient-to-t from-[#D4450A] to-[#E8820C]" : "bg-[#FEF0EB]"}`}
                       style={{ height: `${Math.max(4, hPx)}px` }}
                     />
                     <span className="absolute bottom-0 hidden text-[9px] text-[#a09f9b]">
@@ -262,12 +263,12 @@ export default function VendorDashboardOverview(props: {
                 );
               })}
             </div>
-            <div className="-mt-6 flex justify-between gap-0.5">
-              {analytics.salesLast30Days.map((d) => {
-                const day = new Date(d.date + "T12:00:00.000Z").toLocaleDateString("en-TT", { weekday: "narrow" });
+            <div className="mt-2 flex justify-between gap-0.5">
+              {analytics.salesLast30Days.slice(-14).map((d, index) => {
+                const day = new Date(d.date + "T12:00:00.000Z").toLocaleDateString("en-TT", { day: "numeric" });
                 return (
                   <div key={`l-${d.date}`} className="min-w-0 flex-1 text-center text-[9px] text-[#a09f9b]">
-                    {day}
+                    {index % 2 === 0 || index === 13 ? day : ""}
                   </div>
                 );
               })}

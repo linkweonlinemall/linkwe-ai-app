@@ -166,7 +166,6 @@ function VendorMoreSheet({
             type="submit"
             className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border text-[13px] font-semibold transition-colors hover:bg-[#FEF0EB]"
             style={{ borderColor: SCARLET, color: SCARLET }}
-            onClick={onClose}
           >
             <IconLogout className="size-[18px]" stroke={1.75} aria-hidden />
             Sign out
