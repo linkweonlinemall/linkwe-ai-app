@@ -14,6 +14,7 @@ import InlineSpinner from "@/components/ui/InlineSpinner";
 import Select from "@/components/ui/Select";
 import { TRINIDAD_ONBOARDING_REGION_OPTIONS } from "@/lib/onboarding/tt-region-options";
 import { radius, spacing, tw } from "@/lib/design-system";
+import { normalizeTTPhone } from "@/lib/phone";
 
 export type CheckoutClientItem = {
   id: string;
@@ -51,6 +52,14 @@ function getRegionOptionLabel(slug: string): string {
   return match?.label ?? slug.replace(/_/g, " ");
 }
 
+function localPhoneDisplay(raw: string): string {
+  let digits = raw.replace(/\D/g, "");
+  if (digits.startsWith("1868")) digits = digits.slice(4);
+  else if (digits.startsWith("868") && digits.length > 7) digits = digits.slice(3);
+  digits = digits.slice(0, 7);
+  return digits.length > 3 ? `${digits.slice(0, 3)}-${digits.slice(3)}` : digits;
+}
+
 export default function CheckoutClient({ items, subtotal, initialPhone = "" }: CheckoutClientProps) {
   const allDigital = useMemo(() => items.every((item) => item.product.isDigital), [items]);
   const anyDelivery = useMemo(() => items.some((i) => i.product.allowDelivery), [items]);
@@ -58,7 +67,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
 
   const step = "details" as const;
   const [deliveryRegion, setDeliveryRegion] = useState("");
-  const [deliveryPhone, setDeliveryPhone] = useState(initialPhone);
+  const [deliveryPhone, setDeliveryPhone] = useState(() => localPhoneDisplay(initialPhone));
   const [fulfillmentChoice, setFulfillmentChoice] = useState<"delivery" | "pickup" | null>(() => null);
   const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
 
@@ -170,11 +179,13 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
   const displayTotal = subtotal + totalShippingMinor / 100;
 
   const needsRegionConfirmation = !allDigital && useDelivery && regionNeedsConfirmation;
+  const deliveryPhoneValid = !useDelivery || allDigital || normalizeTTPhone(deliveryPhone).ok;
 
   const payBlocked =
     loading ||
     (!allDigital && !anyDelivery && !anyPickup) ||
     hasCoverageFailure ||
+    !deliveryPhoneValid ||
     needsRegionConfirmation ||
     (needsShippingQuote && shippingLoading);
 
@@ -200,6 +211,10 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
 
     if (!allDigital && useDelivery && regionNeedsConfirmation) {
       setError("Please confirm your delivery region matches your pin location before continuing.");
+      return;
+    }
+    if (!allDigital && useDelivery && !deliveryPhoneValid) {
+      setError("Enter a valid 7-digit Trinidad & Tobago phone number.");
       return;
     }
 
@@ -523,13 +538,19 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
 
                       <label className="flex flex-col gap-1 text-sm font-medium text-zinc-800">
                         Contact phone (for delivery)
-                        <input
+                        <div className="flex min-w-0"><span className="inline-flex items-center rounded-l-xl border border-r-0 border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-500">+1 (868)</span><input
                           type="tel"
                           value={deliveryPhone}
-                          onChange={(e) => setDeliveryPhone(e.target.value)}
-                          placeholder="868 123 4567"
-                          className={`${radius.card} min-h-[44px] border border-zinc-200 bg-white px-4 py-3 text-base outline-none ring-zinc-300 focus:ring-2`}
-                        />
+                          required
+                          inputMode="numeric"
+                          minLength={7}
+                          maxLength={8}
+                          pattern="[0-9]{3}-?[0-9]{4}"
+                          onChange={(e) => setDeliveryPhone(localPhoneDisplay(e.target.value))}
+                          placeholder="XXX-XXXX"
+                          className="min-h-[44px] min-w-0 flex-1 rounded-r-xl border border-l-0 border-zinc-200 bg-white px-3 py-3 text-base outline-none ring-zinc-300 focus:ring-2"
+                        /></div>
+                        {!deliveryPhoneValid ? <span className="text-xs font-normal text-red-600">Enter a valid 7-digit Trinidad & Tobago number.</span> : null}
                       </label>
                     </div>
                   ) : null}

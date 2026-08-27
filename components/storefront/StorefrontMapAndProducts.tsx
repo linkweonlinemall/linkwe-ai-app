@@ -66,7 +66,7 @@ export function StoreMapBox({
             latitude,
             zoom: 14,
           }}
-          mapStyle="mapbox://styles/mapbox/light-v11"
+          mapStyle="mapbox://styles/mapbox/streets-v12"
           style={{ width: "100%", height: "100%" }}
         >
           <Marker longitude={longitude} latitude={latitude} anchor="center">

@@ -14,6 +14,7 @@ import { BASE_URL } from "@/lib/email/resend";
 import { isStoreSellable } from "@/lib/store/sellable-store";
 import { isValidRegion } from "@/lib/regions/tt-regions";
 import { failWiPayAttempt } from "@/lib/payments/fail-wipay-attempt";
+import { normalizeTTPhone } from "@/lib/phone";
 
 export type CheckoutItem = {
   productId: string;
@@ -86,6 +87,9 @@ export async function createPaymentIntent(
     if (!region || !isValidRegion(region)) {
       return { ok: false, error: "Please select a valid delivery region." };
     }
+    const phoneResult = normalizeTTPhone(deliveryPhone ?? "");
+    if (!phoneResult.ok) return { ok: false, error: phoneResult.error };
+    deliveryPhone = phoneResult.normalized;
   }
 
   const shipping = await computeCartShippingFromItems(
