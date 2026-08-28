@@ -16,6 +16,7 @@ import {
   IconLogout,
   IconMessageCircle,
   IconRobot,
+  IconRouteSquare,
   IconRoute,
   IconTruckDelivery,
   IconPackage,
@@ -159,6 +160,20 @@ function VendorMoreSheet({
               </Link>
             );
           })}
+        </div>
+
+        <div className="mt-4 px-4">
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              window.dispatchEvent(new CustomEvent("vendor-tour:open-library"));
+            }}
+            className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#D4450A] to-[#E8820C] text-[13px] font-bold text-white shadow-lg shadow-orange-900/15"
+          >
+            <IconRouteSquare className="size-[19px]" stroke={1.75} aria-hidden />
+            Take a Dashboard Tour
+          </button>
         </div>
 
         <form action={logoutAction} className="mt-4 px-4">

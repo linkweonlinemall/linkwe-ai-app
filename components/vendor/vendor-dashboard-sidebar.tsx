@@ -12,6 +12,7 @@ import {
   IconLayoutDashboard,
   IconLink,
   IconMessageCircle,
+  IconRouteSquare,
   IconPackage,
   IconRefresh,
   IconSettings,
@@ -252,6 +253,15 @@ export default function VendorDashboardSidebar({
         className="mt-auto flex shrink-0 flex-col border-t border-[rgba(255,255,255,0.08)] px-4 py-3 pb-[max(12px,env(safe-area-inset-bottom,0px))]"
         style={{ borderTopWidth: "0.5px" }}
       >
+        <button
+          type="button"
+          title="Take a tour"
+          onClick={() => window.dispatchEvent(new CustomEvent("vendor-tour:open-library"))}
+          className="mb-1 flex items-center justify-center gap-3 rounded-lg bg-[#D4450A]/15 py-2.5 text-[13px] font-semibold text-[#F08A58] transition-colors hover:bg-[#D4450A]/25 hover:text-white lg:justify-start lg:px-3"
+        >
+          <IconRouteSquare className="size-4 shrink-0" stroke={1.6} aria-hidden />
+          <span className="hidden lg:inline">Take a Tour</span>
+        </button>
         <Link
           href="/dashboard/vendor/settings"
           title="Settings"

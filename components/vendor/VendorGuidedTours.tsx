@@ -59,6 +59,12 @@ export default function VendorGuidedTours() {
     }
   }, [pathname]);
 
+  useEffect(() => {
+    const openLibrary = () => setLibrary(true);
+    window.addEventListener("vendor-tour:open-library", openLibrary);
+    return () => window.removeEventListener("vendor-tour:open-library", openLibrary);
+  }, []);
+
   const measure = useCallback(() => setRect(visible(step?.selector)?.getBoundingClientRect() ?? null), [step?.selector]);
   useEffect(() => {
     if (!tour || !step) return;
