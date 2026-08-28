@@ -73,8 +73,19 @@ export default function VendorGuidedTours() {
       visible(step.selector)?.scrollIntoView({ behavior: "smooth", block: "center" });
       window.setTimeout(measure, 430);
     }, step.mobileMore ? 330 : 50);
-    addEventListener("resize", measure);
-    return () => { clearTimeout(id); removeEventListener("resize", measure); };
+    let frame = 0;
+    const followTarget = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(measure);
+    };
+    addEventListener("resize", followTarget);
+    addEventListener("scroll", followTarget, true);
+    return () => {
+      clearTimeout(id);
+      cancelAnimationFrame(frame);
+      removeEventListener("resize", followTarget);
+      removeEventListener("scroll", followTarget, true);
+    };
   }, [measure, step, tour]);
 
   const close = useCallback((complete = false) => {
@@ -83,13 +94,14 @@ export default function VendorGuidedTours() {
     setTour(null); setIndex(0); setRect(null);
   }, [tour]);
 
-  const cardStyle = useMemo(() => {
-    if (!rect) return { left: "50%", top: "50%", transform: "translate(-50%,-50%)" };
-    const width = Math.min(380, innerWidth - 24);
-    const below = rect.bottom + 18;
-    const placeBelow = below + 270 < innerHeight;
-    const left = Math.min(Math.max(12, rect.left + rect.width / 2 - width / 2), innerWidth - width - 12);
-    return { width, left, top: placeBelow ? below : Math.max(12, rect.top - 18), transform: placeBelow ? "none" : "translateY(-100%)" };
+  const spotlightStyle = useMemo(() => {
+    if (!rect) return null;
+    const left = Math.max(6, rect.left - 7);
+    const top = Math.max(6, rect.top - 7);
+    const right = Math.min(innerWidth - 6, rect.right + 7);
+    const bottom = Math.min(innerHeight - 6, rect.bottom + 7);
+    if (right <= left || bottom <= top) return null;
+    return { left, top, width: right - left, height: bottom - top };
   }, [rect]);
 
   function start(name: TourName) {
@@ -122,8 +134,8 @@ export default function VendorGuidedTours() {
     </div>}
 
     {tour && step && <div className="fixed inset-0 z-[300]" role="dialog" aria-modal="true">
-      {rect ? <div className="pointer-events-none fixed rounded-[18px] border-2 border-[#FF7A3D] shadow-[0_0_0_9999px_rgba(12,12,11,.72),0_0_0_6px_rgba(212,69,10,.2)] transition-all duration-500" style={{left:rect.left-7,top:rect.top-7,width:rect.width+14,height:rect.height+14}}/> : <div className="fixed inset-0 bg-black/70 backdrop-blur-[2px]"/>}
-      <div className="fixed max-w-[calc(100vw-24px)] overflow-hidden rounded-[22px] border border-white/70 bg-white shadow-[0_28px_80px_rgba(0,0,0,.35)] transition-all duration-500" style={cardStyle}>
+      {spotlightStyle ? <div className="pointer-events-none fixed rounded-[18px] border-2 border-[#FF7A3D] shadow-[0_0_0_9999px_rgba(12,12,11,.72),0_0_0_6px_rgba(212,69,10,.2)] transition-[left,top,width,height] duration-300 ease-out" style={spotlightStyle}/> : <div className="fixed inset-0 bg-black/70 backdrop-blur-[2px]"/>}
+      <div className="fixed bottom-3 left-1/2 max-h-[min(70dvh,430px)] w-[min(380px,calc(100vw-24px))] -translate-x-1/2 overflow-y-auto rounded-[22px] border border-white/70 bg-white shadow-[0_28px_80px_rgba(0,0,0,.35)] sm:bottom-6">
         <div className="h-1 bg-gradient-to-r from-[#D4450A] via-[#F27B42] to-[#E8820C]"/><div className="p-5">
           <div className="mb-4 flex items-center justify-between"><span className="rounded-full bg-[#FEF0EB] px-3 py-1 text-[10px] font-black uppercase tracking-wider text-[#D4450A]">{index+1} of {steps.length}</span><button type="button" onClick={() => close(false)} className="rounded-full p-1.5 text-zinc-400 hover:bg-zinc-100" aria-label="Close"><IconX className="size-4"/></button></div>
           <h3 className="text-xl font-black tracking-tight text-[#1C1C1A]">{step.title}</h3><p className="mt-2 text-sm leading-6 text-zinc-600">{step.body}</p>
