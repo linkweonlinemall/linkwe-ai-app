@@ -255,12 +255,12 @@ export default function VendorDashboardSidebar({
       >
         <button
           type="button"
-          title="Take a tour"
+          title="Help and feature tutorials"
           onClick={() => window.dispatchEvent(new CustomEvent("vendor-tour:open-library"))}
           className="mb-1 flex items-center justify-center gap-3 rounded-lg bg-[#D4450A]/15 py-2.5 text-[13px] font-semibold text-[#F08A58] transition-colors hover:bg-[#D4450A]/25 hover:text-white lg:justify-start lg:px-3"
         >
           <IconRouteSquare className="size-4 shrink-0" stroke={1.6} aria-hidden />
-          <span className="hidden lg:inline">Take a Tour</span>
+          <span className="hidden lg:inline">Help &amp; Tutorials</span>
         </button>
         <Link
           href="/dashboard/vendor/settings"

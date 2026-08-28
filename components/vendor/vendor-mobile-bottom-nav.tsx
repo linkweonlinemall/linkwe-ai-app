@@ -172,7 +172,7 @@ function VendorMoreSheet({
             className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#D4450A] to-[#E8820C] text-[13px] font-bold text-white shadow-lg shadow-orange-900/15"
           >
             <IconRouteSquare className="size-[19px]" stroke={1.75} aria-hidden />
-            Take a Dashboard Tour
+            Help &amp; Feature Tutorials
           </button>
         </div>
 
