@@ -241,7 +241,7 @@ export default function VendorDashboardOverview(props: {
                 <IconChartBar className="size-[18px] text-[#7c7b77]" stroke={1.5} aria-hidden />
                 Sales — last 30 days
               </div>
-              <Link href="/dashboard/vendor/finance" className="text-[12px] font-semibold text-[#1A7FB5] hover:underline">
+              <Link href="/dashboard/vendor/reports" className="text-[12px] font-semibold text-[#1A7FB5] hover:underline">
                 View report
               </Link>
             </div>

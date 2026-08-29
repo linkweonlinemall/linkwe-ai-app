@@ -422,7 +422,7 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
     return (
       <Link
         href="/dashboard/vendor/finance"
-        className="fixed right-4 bottom-[80px] z-50 inline-flex items-center gap-1.5 rounded-full border border-zinc-300/80 bg-zinc-100 px-3 py-2 text-xs font-medium text-zinc-600 shadow-sm transition-colors hover:bg-zinc-200/90 lg:right-6 lg:bottom-6"
+        className="fixed right-4 bottom-[calc(6.75rem+env(safe-area-inset-bottom,0px))] z-[115] inline-flex items-center gap-1.5 rounded-full border border-zinc-300/80 bg-zinc-100 px-3 py-2 text-xs font-medium text-zinc-600 shadow-sm transition-colors hover:bg-zinc-200/90 lg:right-6 lg:bottom-6"
         title="Upgrade to unlock AI"
       >
         <svg
@@ -449,11 +449,11 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
       {open && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-black/60 sm:hidden"
+            className="fixed inset-0 z-[140] bg-black/60 sm:hidden"
             aria-hidden
           />
           <div
-            className="fixed inset-0 z-50 flex h-[100dvh] w-full flex-col overflow-hidden sm:inset-auto sm:bottom-6 sm:right-6 sm:h-[600px] sm:w-[380px] sm:rounded-2xl"
+            className="fixed inset-0 z-[150] flex h-[100dvh] w-full flex-col overflow-hidden sm:inset-auto sm:bottom-6 sm:right-6 sm:h-[600px] sm:w-[380px] sm:rounded-2xl"
             style={{
               backgroundColor: "#161B27",
               border: "1px solid rgba(255,255,255,0.12)",
@@ -1002,7 +1002,7 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="fixed right-4 bottom-[80px] z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#D4450A] shadow-lg transition-all hover:opacity-90 lg:right-6 lg:bottom-6"
+        className="fixed right-4 bottom-[calc(6.75rem+env(safe-area-inset-bottom,0px))] z-[115] flex h-14 w-14 items-center justify-center rounded-full bg-[#D4450A] shadow-lg transition-all hover:opacity-90 lg:right-6 lg:bottom-6"
       >
         {open ? (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="white">

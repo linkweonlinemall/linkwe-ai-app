@@ -44,14 +44,12 @@ function shortGreeting(firstName: string, now: Date) {
 export type VendorDashboardTopbarProps = {
   firstName: string;
   unreadCount: number;
-  aiEnabled: boolean;
   renderedAt: string;
 };
 
 export default function VendorDashboardTopbar({
   firstName,
   unreadCount,
-  aiEnabled,
   renderedAt,
 }: VendorDashboardTopbarProps) {
   const now = new Date(renderedAt);
@@ -94,14 +92,12 @@ export default function VendorDashboardTopbar({
           <IconPlus className="size-[18px] sm:hidden" stroke={2} aria-hidden />
           <span className="hidden sm:inline">Add product</span>
         </Link>
-        {aiEnabled ? (
           <Link
-            href="/dashboard/vendor/ai-assistant"
+            href="/dashboard/vendor/reports"
             className="hidden items-center justify-center whitespace-nowrap rounded-lg bg-[#D4450A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#b83a09] md:inline-flex"
           >
-            Analytics
+            Reports
           </Link>
-        ) : null}
       </div>
     </header>
   );

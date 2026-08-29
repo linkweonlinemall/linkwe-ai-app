@@ -1361,7 +1361,7 @@ export default function VendorAIAssistantPage() {
                   void handleSend()
                 }
               }}
-              placeholder="Ask Rex to manage, analyse or improve your business…"
+              placeholder="Ask Rex…"
               disabled={loading}
               className="min-h-9 max-h-28 min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-1.5 py-2 text-[13px] leading-5 text-white outline-none placeholder:text-zinc-500 focus:outline-none focus:ring-0 disabled:opacity-50 sm:min-h-11 sm:max-h-48 sm:px-2 sm:py-3 sm:text-sm"
               style={{

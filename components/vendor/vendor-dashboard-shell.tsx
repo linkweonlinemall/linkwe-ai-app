@@ -72,7 +72,6 @@ export default function VendorDashboardShell({
         <VendorDashboardTopbar
           firstName={userFirstName}
           unreadCount={unreadCount}
-          aiEnabled={aiEnabled}
           renderedAt={renderedAt}
         />
 

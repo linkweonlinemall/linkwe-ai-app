@@ -6,6 +6,7 @@ import type { ReadonlyURLSearchParams } from "next/navigation";
 import {
   IconBuildingStore,
   IconCalendarEvent,
+  IconChartBar,
   IconClipboardList,
   IconCreditCard,
   IconExternalLink,
@@ -187,6 +188,7 @@ export default function VendorDashboardSidebar({
       badge: activeOrdersCount > 0 ? activeOrdersCount : undefined,
     },
     { href: VENDOR_VENDOR_FINANCE_PATH, label: "Finance", Icon: IconCreditCard },
+    { href: "/dashboard/vendor/reports", label: "Reports", Icon: IconChartBar },
     { href: VENDOR_VENDOR_MESSAGES_PATH, label: "Messages", Icon: IconMessageCircle },
     { href: VENDOR_VENDOR_REVIEWS_PATH, label: "Reviews", Icon: IconStar },
   ];

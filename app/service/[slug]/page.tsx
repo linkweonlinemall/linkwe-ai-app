@@ -917,7 +917,7 @@ export default async function ServiceDetailPage({ params }: Props) {
         </div>
       </div>
       {!isOwner ? (
-        <div className="fixed inset-x-2 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30 rounded-2xl border border-white/70 bg-white/95 p-2 shadow-[0_16px_45px_rgba(24,24,27,0.22)] backdrop-blur-xl sm:inset-x-3 sm:bottom-[calc(5.5rem+env(safe-area-inset-bottom))] lg:hidden">
+        <div className="fixed inset-x-2 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-[110] rounded-2xl border border-white/70 bg-white/95 p-2 shadow-[0_16px_45px_rgba(24,24,27,0.22)] backdrop-blur-xl sm:inset-x-3 sm:bottom-[calc(5.5rem+env(safe-area-inset-bottom))] lg:hidden">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <div className="min-w-0 flex-1 pl-1 sm:pl-2">
               <p className="truncate text-xs font-medium text-zinc-500">{service.name}</p>

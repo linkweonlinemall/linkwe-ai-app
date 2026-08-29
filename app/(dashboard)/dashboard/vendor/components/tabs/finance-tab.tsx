@@ -212,6 +212,7 @@ export default function FinanceTab({
     (s, e) => s + (e.commissionMinor ?? 0),
     0,
   );
+  const pendingReleaseMinor = earningCredits.filter((entry) => !entry.releasedAt).reduce((sum, entry) => sum + (entry.netMinor ?? entry.amountMinor), 0);
 
   const credits = ledgerEntries
     .filter((e) => e.entryType === "CREDIT_ORDER_SETTLEMENT")
@@ -306,7 +307,7 @@ export default function FinanceTab({
     setSubPayError(result.error);
   }
 
-  const CARD = "rounded-[12px] border-[0.5px] border-[rgba(28,28,26,0.12)] bg-white";
+  const CARD = "rounded-2xl border border-zinc-200/80 bg-white shadow-sm";
 
   const downgradeDate = pastDueSince
     ? new Date(new Date(pastDueSince).getTime() + 7 * 24 * 60 * 60 * 1000)
@@ -315,7 +316,7 @@ export default function FinanceTab({
   return (
     <div className="flex flex-col gap-4">
       {/* Balance summary cards — denser */}
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <div data-tour="finance-balances" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className={`${CARD} p-4 shadow-none`}>
           <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Total earned (net)</p>
           <p className="mt-1 truncate text-xl font-bold text-zinc-900">{formatTTD(totalEarnedMinor)}</p>
@@ -334,7 +335,10 @@ export default function FinanceTab({
           </p>
           <p className="mt-0.5 text-[11px] text-zinc-500">Ready to withdraw</p>
         </div>
+        <div className={`${CARD} p-4 shadow-none`}><p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Pending release</p><p className="mt-1 truncate text-xl font-bold text-amber-600">{formatTTD(pendingReleaseMinor)}</p><p className="mt-0.5 text-[11px] text-zinc-500">Awaiting completion or release</p></div>
       </div>
+
+      <div className="grid gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 p-4 text-xs leading-5 text-blue-950 sm:grid-cols-3"><p><strong className="block">Gross sales</strong><span className="text-blue-700">What customers paid before commission.</span></p><p><strong className="block">Pending release</strong><span className="text-blue-700">Eligible money still waiting on completion.</span></p><p><strong className="block">Available balance</strong><span className="text-blue-700">Funds that can be requested for payout now.</span></p></div>
 
       {/* Pending payout alert */}
       {pendingPayout ? (
@@ -405,7 +409,7 @@ export default function FinanceTab({
         </div>
       ) : null}
 
-      <div className={`${CARD} p-4 shadow-none`}>
+      <div data-tour="finance-plan" className={`${CARD} p-4 shadow-none`}>
         <div className="flex items-start justify-between">
           <div>
             <h2 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
@@ -581,14 +585,14 @@ export default function FinanceTab({
       </div>
 
       {/* Section tabs */}
-      <div className={`flex overflow-hidden ${CARD} shadow-none`}>
+      <div className={`grid grid-cols-3 overflow-hidden ${CARD} p-1 shadow-none`}>
         {(["earnings", "bank", "history"] as const).map((s) => (
           <button
             key={s}
             type="button"
             onClick={() => setActiveSection(s)}
-            className={`flex-1 px-4 py-2.5 text-sm font-medium capitalize transition-colors ${
-              activeSection === s ? "bg-zinc-900 text-white" : "text-zinc-600 hover:bg-zinc-50"
+            className={`min-h-10 rounded-xl px-2 py-2.5 text-xs font-bold capitalize transition-all sm:px-4 sm:text-sm ${
+              activeSection === s ? "bg-zinc-900 text-white shadow-md" : "text-zinc-600 hover:bg-zinc-50"
             }`}
           >
             {s === "earnings" ? "Earnings Ledger" : s === "bank" ? "Bank Details" : "Payout History"}
@@ -598,7 +602,7 @@ export default function FinanceTab({
 
       {/* Earnings ledger */}
       {activeSection === "earnings" ? (
-        <div>
+        <div data-tour="finance-transactions">
           {ledgerEntries.length === 0 ? (
             <div className={`${CARD} p-6 text-center shadow-none`}>
               <p className="text-sm text-zinc-500">

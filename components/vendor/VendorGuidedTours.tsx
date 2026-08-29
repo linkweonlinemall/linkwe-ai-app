@@ -123,6 +123,7 @@ export default function VendorGuidedTours() {
     if (innerWidth < 768) return rect.top < innerHeight * .52 ? "tour-bottom" : "tour-top";
     return rect.left < innerWidth * .58 ? "tour-right" : "tour-left";
   }, [rect]);
+  const waitingForTarget = Boolean(step?.selector && !rect && !missing);
 
   function start(name: TutorialName) {
     const first = tutorialCatalog[name].steps[0];
@@ -167,7 +168,7 @@ export default function VendorGuidedTours() {
 
     {tour && definition && step && <div className="pointer-events-none fixed inset-0 z-[300] animate-[tour-layer-in_700ms_cubic-bezier(.22,1,.36,1)_both]" role="dialog" aria-modal="true">
       {spotlight ? <div className="pointer-events-none fixed rounded-[18px] border-2 border-[#FF7A3D] shadow-[0_0_0_9999px_rgba(10,10,9,.68),0_0_0_6px_rgba(212,69,10,.20),0_16px_45px_rgba(0,0,0,.22)] transition-[left,top,width,height,opacity] duration-700 ease-[cubic-bezier(.22,1,.36,1)]" style={spotlight}/> : <div className="pointer-events-none fixed inset-0 bg-black/68 backdrop-blur-[2px]"/>}
-      <div className={`tour-coach pointer-events-auto fixed overflow-hidden rounded-[20px] border border-white/80 bg-white/95 shadow-[0_22px_70px_rgba(0,0,0,.34)] backdrop-blur-xl ${position}`}>
+      {waitingForTarget ? <div className="tour-target-loader fixed left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-2xl border border-white/20 bg-[#1C1C1A]/90 px-4 py-3 text-white shadow-2xl backdrop-blur-xl"><img src="/icon.png" alt="" className="size-9 rounded-full object-cover"/><span className="text-xs font-bold">Opening this step…</span></div> : <div className={`tour-coach pointer-events-auto fixed overflow-hidden rounded-[20px] border border-white/80 bg-white/95 shadow-[0_22px_70px_rgba(0,0,0,.34)] backdrop-blur-xl ${position}`}>
         <div className="h-1 bg-gradient-to-r from-[#D4450A] via-[#F27B42] to-[#F2A20C]"/><div key={`${tour}-${index}`} className="tour-explanation p-3.5 sm:p-5">
           <div className="mb-2 flex items-center justify-between gap-2"><div className="min-w-0"><span className="block truncate text-[9px] font-black uppercase tracking-[.15em] text-[#D4450A]">{definition.label}</span><span className="text-[9px] font-bold text-zinc-400">Step {index+1} of {steps.length}</span></div><button type="button" onClick={() => close(false)} className="rounded-full p-1.5 text-zinc-400 hover:bg-zinc-100" aria-label="Exit tutorial"><IconX className="size-4"/></button></div>
           <h3 className="text-[15px] font-black leading-5 tracking-tight sm:text-xl sm:leading-tight">{step.title}</h3><p className="mt-1.5 text-[11px] leading-[17px] text-zinc-600 sm:mt-2 sm:text-sm sm:leading-6">{step.body}</p>
@@ -176,10 +177,10 @@ export default function VendorGuidedTours() {
           <div className="mt-3 h-1 overflow-hidden rounded-full bg-zinc-100"><div className="h-full rounded-full bg-gradient-to-r from-[#D4450A] to-[#F28A2D] transition-all duration-500" style={{width:`${((index+1)/steps.length)*100}%`}}/></div>
           <div className="mt-3 flex items-center justify-between gap-2"><button type="button" disabled={!index} onClick={() => move(index-1)} className="inline-flex h-9 items-center gap-1 rounded-xl px-2.5 text-[11px] font-bold text-zinc-500 disabled:opacity-25"><IconArrowLeft className="size-4"/>Back</button>{index===steps.length-1?<button type="button" onClick={() => close(true)} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#D4450A] px-4 text-[11px] font-bold text-white"><IconCheck className="size-4"/>Finish</button>:<button type="button" onClick={() => move(index+1)} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#1C1C1A] px-4 text-[11px] font-bold text-white">Next<IconArrowRight className="size-4"/></button>}</div>
         </div>
-      </div>
+      </div>}
       <style jsx>{`
         @keyframes tour-layer-in{from{opacity:0}to{opacity:1}}@keyframes tour-coach-in{from{opacity:0;scale:.94;filter:blur(5px)}to{opacity:1;scale:1;filter:blur(0)}}@keyframes tour-explanation-in{from{opacity:0;transform:translateY(9px);filter:blur(2px)}to{opacity:1;transform:translateY(0);filter:blur(0)}}
-        .tour-coach{left:10px;right:10px;width:auto;max-height:min(42dvh,360px);overflow-y:auto;animation:tour-coach-in 850ms cubic-bezier(.22,1,.36,1) both;transition:top 750ms cubic-bezier(.22,1,.36,1),bottom 750ms cubic-bezier(.22,1,.36,1),left 750ms cubic-bezier(.22,1,.36,1),right 750ms cubic-bezier(.22,1,.36,1)}.tour-explanation{animation:tour-explanation-in 560ms cubic-bezier(.22,1,.36,1) both}.tour-bottom{bottom:calc(78px + env(safe-area-inset-bottom,0px))}.tour-top{top:calc(8px + env(safe-area-inset-top,0px))}.tour-centre{top:50%;transform:translateY(-50%)}
+        .tour-target-loader{animation:tour-coach-in 500ms cubic-bezier(.22,1,.36,1) both}.tour-target-loader img{animation:tour-logo-breathe 1.5s ease-in-out infinite}@keyframes tour-logo-breathe{50%{transform:scale(1.08);filter:brightness(1.12)}}.tour-coach{left:10px;right:10px;width:auto;max-height:min(42dvh,360px);overflow-y:auto;animation:tour-coach-in 850ms cubic-bezier(.22,1,.36,1) both;transition:top 750ms cubic-bezier(.22,1,.36,1),bottom 750ms cubic-bezier(.22,1,.36,1),left 750ms cubic-bezier(.22,1,.36,1),right 750ms cubic-bezier(.22,1,.36,1)}.tour-explanation{animation:tour-explanation-in 560ms cubic-bezier(.22,1,.36,1) both}.tour-bottom{bottom:calc(78px + env(safe-area-inset-bottom,0px))}.tour-top{top:calc(8px + env(safe-area-inset-top,0px))}.tour-centre{top:50%;transform:translateY(-50%)}
         @media(prefers-reduced-motion:reduce){.tour-coach,.tour-explanation{animation-duration:1ms!important;transition-duration:1ms!important}}
         @media(min-width:768px){.tour-coach{left:auto;right:auto;top:50%;bottom:auto;width:360px;max-height:min(76dvh,620px);transform:translateY(-50%)}.tour-right{right:24px}.tour-left{left:24px}.tour-centre{left:50%;transform:translate(-50%,-50%)}}
       `}</style>
