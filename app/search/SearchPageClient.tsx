@@ -37,14 +37,16 @@ import {
   type SearchStoreResult,
   type UniversalSearchResponse,
 } from "@/lib/search/types";
+import WishlistButton from "@/components/ui/WishlistButton";
+import SaveStoreButton from "@/components/ui/SaveStoreButton";
 
 const SCARLET = "#D4450A";
 
 const CARD_LINK =
-  "flex h-full flex-col overflow-hidden rounded-[12px] border-[0.5px] border-[var(--color-border-tertiary)] bg-white transition-[border-color] duration-200 hover:border-[rgba(28,28,26,0.2)]";
+  "group flex h-full flex-col overflow-hidden rounded-[20px] border border-white/80 bg-white shadow-[0_10px_35px_rgba(28,28,26,.07)] transition-all duration-300 hover:-translate-y-1 hover:border-orange-200 hover:shadow-[0_18px_45px_rgba(212,69,10,.13)]";
 
 const RESULT_GRID =
-  "grid grid-cols-2 items-stretch gap-2 md:grid-cols-2 md:gap-3 lg:grid-cols-3";
+  "grid grid-cols-1 items-stretch gap-4 min-[420px]:grid-cols-2 lg:grid-cols-3";
 
 type TabType = "all" | "services" | "stores" | "products";
 
@@ -68,10 +70,11 @@ function AmberStars({ value, count }: { value: number; count: number }) {
   );
 }
 
-function SearchProductCard({ product: p }: { product: SearchProductResult }) {
+function SearchProductCard({ product: p, wishlisted }: { product: SearchProductResult; wishlisted: boolean }) {
   return (
     <Link href={`/products/${p.slug}`} prefetch className={CARD_LINK}>
       <div className="relative h-[140px] w-full shrink-0 bg-[#F7F5F2]">
+        <div className="absolute right-2 top-2 z-20"><WishlistButton productId={p.id} initialWishlisted={wishlisted} /></div>
         {p.images[0] ? (
           <Image
             src={p.images[0]}
@@ -112,7 +115,7 @@ function SearchProductCard({ product: p }: { product: SearchProductResult }) {
   );
 }
 
-function SearchServiceCard({ service: s }: { service: SearchServiceResult }) {
+function SearchServiceCard({ service: s, wishlisted }: { service: SearchServiceResult; wishlisted: boolean }) {
   return (
     <Link
       href={`/service/${s.slug}`}
@@ -120,6 +123,7 @@ function SearchServiceCard({ service: s }: { service: SearchServiceResult }) {
       className={`${CARD_LINK} border-l-[3px] border-l-[#1A7FB5]`}
     >
       <div className="relative h-[140px] w-full shrink-0 bg-[#E6F1FB]">
+        <div className="absolute right-2 top-2 z-20"><WishlistButton productId={s.id} initialWishlisted={wishlisted} /></div>
         {s.images[0] ? (
           <Image
             src={s.images[0]}
@@ -158,12 +162,13 @@ function SearchServiceCard({ service: s }: { service: SearchServiceResult }) {
   );
 }
 
-function SearchStoreCard({ store: s }: { store: SearchStoreResult }) {
+function SearchStoreCard({ store: s, saved }: { store: SearchStoreResult; saved: boolean }) {
   const tagPreview = s.tags.slice(0, 2);
 
   return (
     <Link href={`/store/${s.slug}`} prefetch className={CARD_LINK}>
       <div className="relative h-[70px] w-full shrink-0 bg-[#1C1C1A]">
+        <SaveStoreButton storeId={s.id} initialSaved={saved} variant="iconOverlay" />
         {s.coverPhotoUrl ? (
           <Image
             src={s.coverPhotoUrl}
@@ -238,7 +243,7 @@ function buildSearchUrl(params: Record<string, string | undefined>) {
 
 const SEARCH_DEBOUNCE_MS = 300;
 
-export default function SearchPageClient() {
+export default function SearchPageClient({ wishlistProductIds = [], savedStoreIds = [] }: { wishlistProductIds?: string[]; savedStoreIds?: string[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const q = searchParams.get("q")?.trim() ?? "";
@@ -254,6 +259,7 @@ export default function SearchPageClient() {
   const minPrice = searchParams.get("minPrice") ?? "";
   const maxPrice = searchParams.get("maxPrice") ?? "";
   const rating = searchParams.get("rating") ?? "";
+  const sort = searchParams.get("sort") ?? "relevance";
   const page = searchParams.get("page") ?? "1";
 
   const detectedRegion = data?.detectedRegion ?? null;
@@ -279,6 +285,7 @@ export default function SearchPageClient() {
         minPrice: minPrice || undefined,
         maxPrice: maxPrice || undefined,
         rating: rating || undefined,
+        sort: sort !== "relevance" ? sort : undefined,
         page: "1",
       };
       if (trimmed.length > 0) {
@@ -286,7 +293,7 @@ export default function SearchPageClient() {
       }
       router.replace(buildSearchUrl(params), { scroll: false });
     },
-    [router, type, effectiveRegion, category, minPrice, maxPrice, rating],
+    [router, type, effectiveRegion, category, minPrice, maxPrice, rating, sort],
   );
 
   useEffect(() => {
@@ -353,15 +360,23 @@ export default function SearchPageClient() {
         minPrice: minPrice || undefined,
         maxPrice: maxPrice || undefined,
         rating: rating || undefined,
+        sort: sort !== "relevance" ? sort : undefined,
         page: "1",
         ...updates,
       }),
     );
   }
 
-  const products = data?.results?.products ?? [];
-  const services = data?.results?.services ?? [];
-  const stores = data?.results?.stores ?? [];
+  const sortItems = useCallback(<T extends { name?: string; title?: string; price?: number; averageRating?: number | null },>(items: T[]) => [...items].sort((a,b) => {
+    if (sort === "price_asc") return (a.price ?? Number.MAX_SAFE_INTEGER) - (b.price ?? Number.MAX_SAFE_INTEGER);
+    if (sort === "price_desc") return (b.price ?? -1) - (a.price ?? -1);
+    if (sort === "rating") return (b.averageRating ?? 0) - (a.averageRating ?? 0);
+    if (sort === "name") return (a.name ?? a.title ?? "").localeCompare(b.name ?? b.title ?? "");
+    return 0;
+  }), [sort]);
+  const products = sortItems(data?.results?.products ?? []);
+  const services = sortItems(data?.results?.services ?? []);
+  const stores = sortItems(data?.results?.stores ?? []);
   const resultTotal =
     data?.results?.total ??
     (data?.counts?.products ?? 0) + (data?.counts?.services ?? 0) + (data?.counts?.stores ?? 0);
@@ -387,6 +402,12 @@ export default function SearchPageClient() {
 
   const filterSidebar = (
     <div className="space-y-5">
+      <div>
+        <p className="mb-2 text-xs font-bold uppercase tracking-widest text-zinc-400">Sort by</p>
+        <select value={sort} onChange={(e) => updateParams({ sort: e.target.value === "relevance" ? undefined : e.target.value })} className="min-h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-xs font-semibold outline-none focus:border-[#D4450A]">
+          <option value="relevance">Most relevant</option><option value="rating">Highest rated</option><option value="price_asc">Price: low to high</option><option value="price_desc">Price: high to low</option><option value="name">Name: A–Z</option>
+        </select>
+      </div>
       <div>
         <p className="mb-2 text-xs font-bold uppercase tracking-widest text-zinc-400">Region</p>
         <div className="max-h-48 space-y-1 overflow-y-auto">
@@ -466,9 +487,11 @@ export default function SearchPageClient() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] pb-[80px] lg:pb-8">
-      <header className="bg-[#1C1C1A] px-4 py-4 md:px-8">
+      <header className="relative overflow-hidden bg-[radial-gradient(circle_at_15%_0%,rgba(242,122,61,.35),transparent_35%),radial-gradient(circle_at_90%_20%,rgba(26,127,181,.22),transparent_30%),linear-gradient(135deg,#11110F,#27231F)] px-4 pb-5 pt-6 md:px-8 md:py-8">
+        <div className="pointer-events-none absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.05)_1px,transparent_1px)] [background-size:28px_28px]" />
+        <div className="relative mx-auto mb-4 max-w-2xl text-center"><p className="text-[10px] font-black uppercase tracking-[.24em] text-orange-300">Discover LinkWe</p><h1 className="mt-1 text-2xl font-black text-white sm:text-3xl">Find exactly what you need</h1><p className="mt-1 text-xs text-white/55">Products, trusted stores and professional services across Trinidad &amp; Tobago.</p></div>
         <form
-          className="mx-auto flex max-w-2xl items-center gap-2 rounded-[10px] border-[0.5px] border-white/[0.15] bg-white/[0.10] px-4 py-1"
+          className="relative mx-auto flex max-w-2xl items-center gap-2 rounded-2xl border border-white/25 bg-white/10 px-3 py-1 shadow-[0_16px_50px_rgba(0,0,0,.3),inset_0_1px_rgba(255,255,255,.12)] backdrop-blur-xl focus-within:border-orange-300/70 focus-within:ring-4 focus-within:ring-orange-500/10 sm:px-4"
           onSubmit={(e) => {
             e.preventDefault();
             if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
@@ -495,7 +518,7 @@ export default function SearchPageClient() {
           />
         </form>
 
-        <div className="mx-auto mt-4 flex max-w-4xl flex-wrap gap-2">
+        <div className="relative mx-auto mt-4 flex max-w-4xl flex-wrap justify-center gap-2">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -621,17 +644,17 @@ export default function SearchPageClient() {
             ) : (
               <div className={RESULT_GRID}>
                 {showServices
-                  ? services.map((s) => <SearchServiceCard key={s.id} service={s} />)
+                  ? services.map((s) => <SearchServiceCard key={s.id} service={s} wishlisted={wishlistProductIds.includes(s.id)} />)
                   : null}
                 {showStores
-                  ? stores.map((s) => <SearchStoreCard key={s.id} store={s} />)
+                  ? stores.map((s) => <SearchStoreCard key={s.id} store={s} saved={savedStoreIds.includes(s.id)} />)
                   : null}
                 {showProducts
                   ? products.map((p) =>
                       isServiceCatalogItem(p) ? (
-                        <SearchServiceCard key={p.id} service={productResultAsService(p)} />
+                        <SearchServiceCard key={p.id} service={productResultAsService(p)} wishlisted={wishlistProductIds.includes(p.id)} />
                       ) : (
-                        <SearchProductCard key={p.id} product={p} />
+                        <SearchProductCard key={p.id} product={p} wishlisted={wishlistProductIds.includes(p.id)} />
                       ),
                     )
                   : null}

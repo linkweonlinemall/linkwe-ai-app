@@ -6,6 +6,7 @@ import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { prisma } from "@/lib/prisma";
+import { getSavedStoreIds, getWishlistProductIds } from "@/app/actions/wishlist";
 
 export const metadata: Metadata = {
   title: "Search",
@@ -25,6 +26,7 @@ export default async function SearchPage({ searchParams }: Props) {
     : null;
   const continueHref = user ? getRoleDashboardPath(user.role) : null;
   const unreadCount = await getNavUnreadCount();
+  const [wishlistProductIds, savedStoreIds] = await Promise.all([getWishlistProductIds(), getSavedStoreIds()]);
 
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
@@ -44,7 +46,7 @@ export default async function SearchPage({ searchParams }: Props) {
           </div>
         }
       >
-        <SearchPageClient />
+        <SearchPageClient wishlistProductIds={wishlistProductIds} savedStoreIds={savedStoreIds} />
       </Suspense>
     </div>
   );

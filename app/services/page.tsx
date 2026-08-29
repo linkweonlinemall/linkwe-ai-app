@@ -6,6 +6,7 @@ import PublicNav from "@/components/layout/PublicNav";
 import { prisma } from "@/lib/prisma";
 
 import ServicesClient from "./ServicesClient";
+import { getWishlistProductIds } from "@/app/actions/wishlist";
 
 export default async function ServicesPage() {
   const session = await getSession();
@@ -14,7 +15,7 @@ export default async function ServicesPage() {
 
   const unreadCount = await getNavUnreadCount();
 
-  const services = await getPublicServices({});
+  const [services, wishlistProductIds] = await Promise.all([getPublicServices({}), getWishlistProductIds()]);
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
@@ -23,7 +24,7 @@ export default async function ServicesPage() {
         dashboardHref={continueHref ?? undefined}
         unreadCount={unreadCount}
       />
-      <ServicesClient initialServices={services} />
+      <ServicesClient initialServices={services} wishlistProductIds={wishlistProductIds} />
     </div>
   );
 }

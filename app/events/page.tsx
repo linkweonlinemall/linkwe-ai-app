@@ -104,7 +104,7 @@ export default async function EventsPage({
       : {};
 
   // Events query + category count query in parallel
-  const [events, categoryCounts] = await Promise.all([
+  const [eventsRaw, categoryCounts] = await Promise.all([
     prisma.event.findMany({
       where: {
         status: "PUBLISHED",
@@ -143,6 +143,16 @@ export default async function EventsPage({
       _count: { id: true },
     }),
   ]);
+  const eventPrice = (event: (typeof eventsRaw)[number]) => {
+    const visible = event.ticketTypes.filter((ticket) => ticket.isVisible);
+    return visible.length ? Math.min(...visible.map((ticket) => ticket.price)) : 0;
+  };
+  const events = [...eventsRaw].sort((a,b) => {
+    if (sort === "price_asc") return eventPrice(a) - eventPrice(b);
+    if (sort === "price_desc") return eventPrice(b) - eventPrice(a);
+    if (sort === "name") return a.title.localeCompare(b.title);
+    return 0;
+  });
 
   // Build a map: category value → count
   const countByCategory: Record<string, number> = {};

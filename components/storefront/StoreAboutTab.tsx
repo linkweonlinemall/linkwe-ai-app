@@ -447,6 +447,7 @@ export default function StoreAboutTab({
               <>
                 {products.length > 0 ? (
                   <>
+                    {previewProducts.some((product) => product.isFeatured) ? <div className="relative overflow-hidden border-b border-orange-100 bg-[radial-gradient(circle_at_90%_0%,rgba(242,162,12,.28),transparent_40%),linear-gradient(135deg,#fff4eb,#fffaf6)] px-4 py-4"><span className="inline-flex items-center gap-2 rounded-full bg-[#D4450A] px-3 py-1 text-[9px] font-black uppercase tracking-[.16em] text-white shadow-sm">✦ Featured picks</span><p className="mt-2 text-xs leading-5 text-[#8D3511]">A hand-picked selection this store wants you to discover first.</p></div> : null}
                     <SectionBar
                       icon={<IconShoppingBag className="size-[13px]" stroke={1.75} aria-hidden />}
                       label="Products"

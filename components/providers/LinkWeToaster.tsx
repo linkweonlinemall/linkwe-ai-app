@@ -22,6 +22,7 @@ export default function LinkWeToaster() {
   return (
     <Toaster
       position={mobile ? "bottom-center" : "bottom-right"}
+      offset={mobile ? "calc(6.5rem + env(safe-area-inset-bottom, 0px))" : "24px"}
       duration={3000}
       closeButton={false}
       richColors

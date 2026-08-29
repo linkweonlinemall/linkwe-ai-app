@@ -18,6 +18,7 @@ import { getSession } from "@/lib/auth/session";
 import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { prisma } from "@/lib/prisma";
 import { tw } from "@/lib/design-system";
+import { getSavedStoreIds } from "@/app/actions/wishlist";
 
 export const metadata: Metadata = {
   title: "Discover stores · LinkWe",
@@ -109,10 +110,11 @@ export default async function StoresDiscoveryPage({
     userLng,
   };
 
-  const [tags, result, mapStores] = await Promise.all([
+  const [tags, result, mapStores, savedStoreIds] = await Promise.all([
     getPublicStorePopularTags(32),
     getPublicStores(qRaw.trim() || undefined, filters, page),
     getPublicStoreMapPoints(qRaw.trim() || undefined, filters),
+    getSavedStoreIds(),
   ]);
 
   const queryState = {
@@ -205,7 +207,7 @@ export default async function StoresDiscoveryPage({
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {result.items.map((s) => (
-                  <PublicStoreCard key={s.id} store={s} />
+                  <PublicStoreCard key={s.id} store={s} initialSaved={savedStoreIds.includes(s.id)} />
                 ))}
               </div>
             )}

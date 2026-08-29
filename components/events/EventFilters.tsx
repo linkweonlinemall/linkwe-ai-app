@@ -226,6 +226,8 @@ export function EventFilters() {
         <option value="soonest" className="bg-[#1C1C1A] text-white">Soonest first</option>
         <option value="latest" className="bg-[#1C1C1A] text-white">Latest first</option>
         <option value="price_asc" className="bg-[#1C1C1A] text-white">Price: low to high</option>
+        <option value="price_desc" className="bg-[#1C1C1A] text-white">Price: high to low</option>
+        <option value="name" className="bg-[#1C1C1A] text-white">Name: A–Z</option>
       </>
     );
     const categoryOptions = (

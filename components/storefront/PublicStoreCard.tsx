@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import type { PublicStoreCard as PublicStoreCardType } from "@/app/actions/public-stores";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
+import SaveStoreButton from "@/components/ui/SaveStoreButton";
 
 function formatCategoryLabel(categoryId: string): string {
   return categoryId.replace(/_/g, " ");
@@ -25,7 +26,7 @@ function StarRow({ rating }: { rating: number }) {
   );
 }
 
-export default function PublicStoreCard({ store }: { store: PublicStoreCardType }) {
+export default function PublicStoreCard({ store, initialSaved = false }: { store: PublicStoreCardType; initialSaved?: boolean }) {
   const initials =
     store.name
       .split(/\s+/)
@@ -61,6 +62,7 @@ export default function PublicStoreCard({ store }: { store: PublicStoreCardType 
             <span className="text-sm font-bold text-[#D4450A]">{initials.slice(0, 1)}</span>
           )}
         </div>
+        <SaveStoreButton storeId={store.id} initialSaved={initialSaved} variant="iconOverlay" />
       </Link>
 
       <div className="flex min-h-[10rem] flex-1 flex-col p-4 pt-5">

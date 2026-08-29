@@ -4,7 +4,6 @@ import type { LucideIcon } from "lucide-react";
 import {
   Bell,
   Bookmark,
-  Bot,
   Calendar,
   ClipboardList,
   ConciergeBell,
@@ -34,6 +33,7 @@ import { icn } from "@/lib/iconography";
 import { formatConversationListTime } from "@/lib/messages/format-time";
 import { prisma } from "@/lib/prisma";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
+import NotificationBell from "@/components/ui/NotificationBell";
 
 export default async function CustomerDashboardPage() {
   const session = await getSession();
@@ -215,7 +215,6 @@ export default async function CustomerDashboardPage() {
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   const quickActions: { label: string; href: string; Icon: LucideIcon }[] = [
-    { label: "Shop with AI", href: "/chat", Icon: Bot },
     { label: "Browse shop", href: "/shop", Icon: ShoppingBag },
     { label: "Services", href: "/services", Icon: ConciergeBell },
     { label: "My requests", href: "/my-requests", Icon: ClipboardList },
@@ -232,8 +231,9 @@ export default async function CustomerDashboardPage() {
     <div className="h-full min-h-0 overflow-y-auto bg-[#F5F5F5] pb-mobile-public lg:pb-0">
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         {/* Header */}
-        <div className="mb-8 overflow-hidden rounded-2xl" style={{ background: "linear-gradient(135deg, #1C1C1A 0%, #2A1A0E 100%)" }}>
+        <div className="mb-5 overflow-hidden rounded-[28px] border border-white/10 shadow-[0_24px_70px_rgba(28,28,26,.18)]" style={{ background: "radial-gradient(circle at 88% 0%, rgba(242,138,45,.42), transparent 34%), radial-gradient(circle at 10% 100%, rgba(26,127,181,.18), transparent 36%), linear-gradient(135deg, #161614 0%, #342012 100%)" }}>
           <div className="relative px-6 py-8 sm:px-8">
+            <div className="absolute right-4 top-4 z-10 flex size-11 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white backdrop-blur sm:right-6 sm:top-6"><NotificationBell initialUnreadCount={notificationUnreadCount} variant="dark" compactToolbar /></div>
             <div
               className="absolute right-0 top-0 h-48 w-48 rounded-full opacity-10 blur-3xl"
               style={{ background: "radial-gradient(circle, #E8820C, transparent)" }}
@@ -267,8 +267,12 @@ export default async function CustomerDashboardPage() {
           </div>
         </div>
 
+        <nav className="sticky top-2 z-20 mb-6 flex gap-2 overflow-x-auto rounded-2xl border border-white/80 bg-white/90 p-2 shadow-[0_10px_35px_rgba(28,28,26,.10)] backdrop-blur-xl" aria-label="Customer dashboard sections">
+          {[{label:"Overview",href:"#overview"},{label:"Orders",href:"#orders"},{label:"Bookings",href:"#bookings"},{label:"Tickets",href:"#tickets"},{label:"Saved",href:"#saved"},{label:"Messages",href:"#messages"}].map((tab)=><a key={tab.href} href={tab.href} className="shrink-0 rounded-xl px-3.5 py-2 text-xs font-bold text-zinc-600 transition hover:bg-[#FFF0E8] hover:text-[#D4450A]">{tab.label}</a>)}
+        </nav>
+
         {/* Quick actions */}
-        <div className="mb-6 grid grid-cols-3 gap-3 sm:grid-cols-6">
+        <div id="overview" className="mb-6 grid scroll-mt-24 grid-cols-3 gap-3 sm:grid-cols-6">
           {quickActions.map((item) => (
             <Link
               key={item.href}
@@ -283,7 +287,7 @@ export default async function CustomerDashboardPage() {
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Messages */}
-          <div className="rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
+          <div id="messages" className="scroll-mt-24 rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
             <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
               <h2 className="font-bold text-zinc-900">
                 Messages
@@ -419,7 +423,7 @@ export default async function CustomerDashboardPage() {
           </div>
 
           {/* Recent orders */}
-          <div className="rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
+          <div id="orders" className="scroll-mt-24 rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
             <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
               <h2 className="font-bold text-zinc-900">Recent orders</h2>
               <Link href="/orders" className="text-xs font-semibold text-[#D4450A] hover:underline">
@@ -481,7 +485,7 @@ export default async function CustomerDashboardPage() {
           </div>
 
           {/* Upcoming bookings */}
-          <div className="rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
+          <div id="bookings" className="scroll-mt-24 rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
             <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
               <h2 className="font-bold text-zinc-900">Upcoming bookings</h2>
               <Link href="/orders?tab=bookings" className="text-xs font-semibold text-[#D4450A] hover:underline">
@@ -531,7 +535,7 @@ export default async function CustomerDashboardPage() {
           </div>
 
           {/* My tickets */}
-          <div className="rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
+          <div id="tickets" className="scroll-mt-24 rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
             <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
               <h2 className="font-bold text-zinc-900">My tickets</h2>
               <Link href="/my-tickets" className="text-xs font-semibold text-[#D4450A] hover:underline">
@@ -575,7 +579,7 @@ export default async function CustomerDashboardPage() {
           </div>
 
           {/* Wishlist preview */}
-          <div className="rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
+          <div id="saved" className="scroll-mt-24 rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
             <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
               <h2 className="font-bold text-zinc-900">
                 Wishlist

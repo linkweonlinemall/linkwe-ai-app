@@ -109,6 +109,8 @@ export default function StoreServiceFiltersPanel({
             { value: "price_asc", label: "Price Low-High" },
             { value: "price_desc", label: "Price High-Low" },
             { value: "name", label: "Name A-Z" },
+            { value: "name_desc", label: "Name Z-A" },
+            { value: "duration", label: "Shortest duration" },
           ].map((opt) => (
             <button
               key={opt.value}

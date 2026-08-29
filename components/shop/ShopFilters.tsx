@@ -11,6 +11,8 @@ const SORT_OPTIONS = [
   { value: "price_desc", label: "Price: High to Low" },
   { value: "newest", label: "Newest" },
   { value: "name", label: "Name A–Z" },
+  { value: "name_desc", label: "Name Z–A" },
+  { value: "stock", label: "Most in stock" },
 ];
 
 const CONDITIONS = [

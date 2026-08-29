@@ -8,7 +8,6 @@ import {
   MapPin,
   Video,
   Users,
-  Heart,
   ShieldCheck,
   Sparkles,
   Tag,
@@ -24,6 +23,7 @@ import PublicNav from "@/components/layout/PublicNav";
 import RelatedContentSection from "@/components/storefront/RelatedContentSection";
 import { TicketPurchaseCard } from "@/components/events/TicketPurchaseCard";
 import { EventShareButton } from "@/components/events/EventShareButton";
+import SaveEventButton from "@/components/events/SaveEventButton";
 import { categoryLabel } from "@/components/events/EventCard";
 import LineupLightbox from "@/components/events/LineupLightbox";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
@@ -47,7 +47,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${event.title} · LinkWe Events`,
     description: event.description?.replace(/<[^>]+>/g, "").slice(0, 160) ?? undefined,
-    openGraph: event.coverImage ? { images: [event.coverImage] } : undefined,
+    openGraph: event.coverImage ? { images: [{ url: event.coverImage, alt: event.title }] } : undefined,
+    twitter: event.coverImage ? { card: "summary_large_image", images: [event.coverImage] } : undefined,
   };
 }
 
@@ -206,12 +207,7 @@ export default async function EventDetailPage({ params }: Props) {
           {/* Action buttons */}
           <div className="flex items-center gap-2">
             <EventShareButton title={event.title} url={shareUrl} glass />
-            <button
-              aria-label="Save event"
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/15 text-white backdrop-blur-sm transition-colors hover:bg-white/25"
-            >
-              <Heart className="size-5" strokeWidth={2} />
-            </button>
+            <SaveEventButton eventId={event.id} glass />
           </div>
         </div>
 

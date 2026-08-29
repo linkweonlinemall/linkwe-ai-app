@@ -14,6 +14,7 @@ import EmptyState from "@/components/ui/empty-state";
 import { icn } from "@/lib/iconography";
 import { SERVICE_CATEGORIES } from "@/lib/categories";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
+import WishlistButton from "@/components/ui/WishlistButton";
 
 const ALL_CATEGORIES = [{ value: "all", label: "All Services" }, ...SERVICE_CATEGORIES];
 
@@ -32,6 +33,8 @@ const SORT_OPTIONS = [
   { value: "price_asc", label: "Price: Low to High" },
   { value: "price_desc", label: "Price: High to Low" },
   { value: "name", label: "Name A–Z" },
+  { value: "name_desc", label: "Name Z–A" },
+  { value: "duration", label: "Shortest duration" },
 ];
 
 function serviceTypeInfo(type: string | null) {
@@ -76,7 +79,7 @@ type Service = {
   reviewCount: number;
 };
 
-export default function ServicesClient({ initialServices }: { initialServices: Service[] }) {
+export default function ServicesClient({ initialServices, wishlistProductIds = [] }: { initialServices: Service[]; wishlistProductIds?: string[] }) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [serviceType, setServiceType] = useState("all");
@@ -130,6 +133,8 @@ export default function ServicesClient({ initialServices }: { initialServices: S
         if (sort === "price_asc") return a.price - b.price;
         if (sort === "price_desc") return b.price - a.price;
         if (sort === "name") return a.name.localeCompare(b.name);
+        if (sort === "name_desc") return b.name.localeCompare(a.name);
+        if (sort === "duration") return (a.serviceDuration ?? Number.MAX_SAFE_INTEGER) - (b.serviceDuration ?? Number.MAX_SAFE_INTEGER);
         if (sort === "rating") return b.reviewAvg - a.reviewAvg || b.reviewCount - a.reviewCount;
         return (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
       });
@@ -683,6 +688,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                       className="group flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60 transition-all hover:-translate-y-0.5 hover:shadow-lg"
                     >
                       <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-zinc-100 to-zinc-200">
+                        <div className="absolute right-2.5 top-2.5 z-20"><WishlistButton productId={service.id} initialWishlisted={wishlistProductIds.includes(service.id)} /></div>
                         {service.images[0] ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
@@ -708,7 +714,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                           </span>
                         </div>
                         {service.isFeatured ? (
-                          <div className="absolute right-2.5 top-2.5">
+                          <div className="absolute bottom-2.5 right-2.5">
                             <span className="rounded-full bg-[#D4450A] px-2.5 py-1 text-[10px] font-bold text-white">
                               Featured
                             </span>

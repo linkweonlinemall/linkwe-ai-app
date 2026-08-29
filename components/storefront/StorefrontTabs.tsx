@@ -17,6 +17,8 @@ import { StorefrontMapAndProducts, type StorefrontProductRow } from "@/component
 import type { PartnerContentItem } from "@/lib/cross-store/types";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { COLOUR_OPTIONS } from "@/lib/variant-options";
+import RelatedContentCards from "@/components/storefront/RelatedContentCards";
+import WishlistButton from "@/components/ui/WishlistButton";
 
 const PLACEHOLDER_COLORS = ["#E8820C", "#1A7FB5", "#D4450A", "#15803D", "#7C3AED"] as const;
 
@@ -104,7 +106,7 @@ type RelatedStore = {
   categoryId: string;
 };
 
-function StoreTabProductCard({ product }: { product: StoreTabProduct }) {
+function StoreTabProductCard({ product, wishlisted }: { product: StoreTabProduct; wishlisted: boolean }) {
   const [hovered, setHovered] = useState(false);
   const img = product.images[0];
   const bgColor = PLACEHOLDER_COLORS[product.name.length % PLACEHOLDER_COLORS.length];
@@ -126,6 +128,7 @@ function StoreTabProductCard({ product }: { product: StoreTabProduct }) {
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
+        <div className="absolute right-2.5 top-2.5 z-20"><WishlistButton productId={product.id} initialWishlisted={wishlisted} /></div>
         <div className="relative">
           <Link href={`/products/${product.slug}`} className="block">
             <div className="relative overflow-hidden" style={{ aspectRatio: "1/1" }}>
@@ -246,7 +249,7 @@ export type StorefrontTabsStore = {
   owner: { fullName: string };
 };
 
-const TAB_IDS = ["about", "store", "services", "reviews"] as const;
+const TAB_IDS = ["about", "store", "services", "partners", "reviews"] as const;
 type TabId = (typeof TAB_IDS)[number];
 
 /** Constrains tab body width; hero, stats, and tab bar stay full width. */
@@ -258,6 +261,7 @@ type Props = {
   initialSaved: boolean;
   followerCount: number;
   products: StoreTabProduct[];
+  wishlistProductIds?: string[];
   services?: StoreTabServiceRow[];
   partnerItems?: PartnerContentItem[];
   relatedStores?: RelatedStore[];
@@ -285,6 +289,7 @@ export default function StorefrontTabs({
   initialSaved,
   followerCount,
   products,
+  wishlistProductIds = [],
   services,
   partnerItems = [],
   relatedStores,
@@ -385,6 +390,9 @@ export default function StorefrontTabs({
     if (sortBy === "price_asc") result = [...result].sort((a, b) => a.price - b.price);
     if (sortBy === "price_desc") result = [...result].sort((a, b) => b.price - a.price);
     if (sortBy === "name") result = [...result].sort((a, b) => a.name.localeCompare(b.name));
+    if (sortBy === "name_desc") result = [...result].sort((a, b) => b.name.localeCompare(a.name));
+    if (sortBy === "newest") result = [...result].reverse();
+    if (sortBy === "stock") result = [...result].sort((a, b) => (b.stock ?? 0) - (a.stock ?? 0));
     return result;
   }, [products, search, category, priceMin, priceMax, sortBy, inStockOnly, productColour, productSize]);
 
@@ -420,6 +428,8 @@ export default function StorefrontTabs({
       if (serviceSort === "price_asc") return a.price - b.price;
       if (serviceSort === "price_desc") return b.price - a.price;
       if (serviceSort === "name") return a.name.localeCompare(b.name);
+      if (serviceSort === "name_desc") return b.name.localeCompare(a.name);
+      if (serviceSort === "duration") return (a.serviceDuration ?? Number.MAX_SAFE_INTEGER) - (b.serviceDuration ?? Number.MAX_SAFE_INTEGER);
       return (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
     });
 
@@ -432,6 +442,7 @@ export default function StorefrontTabs({
     { id: "about", label: "About" },
     { id: "store", label: "Store", count: products.length },
     { id: "services", label: "Services", count: services?.length ?? 0 },
+    { id: "partners", label: "Partners", count: partnerItems.length },
     { id: "reviews", label: "Reviews", count: reviewData?.count ?? 0 },
   ];
 
@@ -576,7 +587,7 @@ export default function StorefrontTabs({
               ) : (
                 <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                   {filteredProducts.map((product) => (
-                    <StoreTabProductCard key={product.id} product={product} />
+                    <StoreTabProductCard key={product.id} product={product} wishlisted={wishlistProductIds.includes(product.id)} />
                   ))}
                 </ul>
               )}
@@ -616,6 +627,8 @@ export default function StorefrontTabs({
         </div>
         </div>
       ) : null}
+
+      {activeTab === "partners" ? <div className={TAB_CONTENT_CLASS}><section className="overflow-hidden rounded-[28px] border border-orange-100 bg-[radial-gradient(circle_at_top_right,rgba(242,122,61,.18),transparent_36%),linear-gradient(145deg,#fff,#fff8f3)] p-5 shadow-[0_18px_55px_rgba(212,69,10,.10)] sm:p-8"><p className="text-[10px] font-black uppercase tracking-[.2em] text-[#D4450A]">Trusted network</p><h2 className="mt-2 text-2xl font-black text-zinc-950">From partner stores</h2><p className="mb-6 mt-2 max-w-2xl text-sm leading-6 text-zinc-500">Discover products and services this store recommends from approved LinkWe partners.</p>{partnerItems.length ? <RelatedContentCards items={partnerItems.map((item)=>({id:item.id,name:item.name,image:item.image,price:item.price,href:item.href}))}/>:<div className="rounded-2xl border border-dashed border-orange-200 bg-white/70 py-14 text-center text-sm text-zinc-500">This store has not featured any partner items yet.</div>}</section></div> : null}
 
       {activeTab === "services" ? (
         <div className={TAB_CONTENT_CLASS}>
@@ -721,6 +734,7 @@ export default function StorefrontTabs({
                         className="group flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
                       >
                         <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-zinc-100 to-zinc-200">
+                          <div className="absolute right-2.5 top-2.5 z-20"><WishlistButton productId={service.id} initialWishlisted={wishlistProductIds.includes(service.id)} /></div>
                           {service.images[0] ? (
                             <img
                               src={service.images[0]}
@@ -736,7 +750,7 @@ export default function StorefrontTabs({
                             </span>
                           </div>
                           {service.isFeatured ? (
-                            <div className="absolute right-2.5 top-2.5">
+                            <div className="absolute bottom-2.5 right-2.5">
                               <span className="rounded-full bg-[#D4450A] px-2.5 py-1 text-[10px] font-bold text-white">
                                 Featured
                               </span>

@@ -12,7 +12,7 @@ import StorefrontTabs from "@/components/storefront/StorefrontTabs";
 import StorePageHero from "@/components/storefront/StorePageHero";
 import StoreStatsBar from "@/components/storefront/StoreStatsBar";
 import { getApprovedPartnerContent } from "@/app/actions/cross-store";
-import { getSavedStoreIds } from "@/app/actions/wishlist";
+import { getSavedStoreIds, getWishlistProductIds } from "@/app/actions/wishlist";
 import { getStoreReviewsNew, getUserStoreReview } from "@/app/actions/reviews";
 import { tw } from "@/lib/design-system";
 import { isStoreSellable } from "@/lib/store/sellable-store";
@@ -41,6 +41,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ownerId: true,
       status: true,
       owner: { select: { idVerificationStatus: true } },
+      logoUrl: true,
+      coverPhotoUrl: true,
     },
   });
 
@@ -54,9 +56,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: "Store — LinkWe", description: "Shop on LinkWe" };
   }
 
+  const image = store.coverPhotoUrl ?? store.logoUrl;
   return {
     title: `${store.name} — LinkWe`,
     description: store.tagline ?? "Shop on LinkWe",
+    openGraph: image ? { images: [{ url: image, alt: store.name }] } : undefined,
+    twitter: image ? { card: "summary_large_image", images: [image] } : undefined,
   };
 }
 
@@ -125,7 +130,7 @@ export default async function PublicStorePage({ params }: Props) {
     notFound();
   }
 
-  const savedStoreIds = await getSavedStoreIds();
+  const [savedStoreIds, wishlistProductIds] = await Promise.all([getSavedStoreIds(), getWishlistProductIds()]);
   const isSaved = savedStoreIds.includes(store.id);
 
   const [reviewData, userReview, { items: partnerItems }] = await Promise.all([
@@ -277,6 +282,7 @@ export default async function PublicStorePage({ params }: Props) {
           initialSaved={isSaved}
           followerCount={store._count.savedBy}
           products={products}
+          wishlistProductIds={wishlistProductIds}
           services={services}
           partnerItems={partnerItems}
           relatedStores={relatedStores}

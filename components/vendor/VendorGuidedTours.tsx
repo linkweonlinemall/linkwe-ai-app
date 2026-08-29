@@ -92,10 +92,13 @@ export default function VendorGuidedTours() {
         timer = window.setTimeout(() => {
           if (!cancelled) { setRect(target.getBoundingClientRect()); setMissing(false); }
         }, 280);
-      } else if (++attempts < 24) timer = window.setTimeout(find, 125);
-      else setMissing(Boolean(step.selector));
+      } else if (++attempts < 8) timer = window.setTimeout(find, 80);
+      else if (step.selector && index < steps.length - 1) {
+        // Optional/record-specific controls should not stall an otherwise useful tour.
+        setIndex((value) => value + 1);
+      } else setMissing(Boolean(step.selector));
     };
-    timer = window.setTimeout(find, step.mobileMore ? 320 : 60);
+    timer = window.setTimeout(find, step.mobileMore ? 180 : 30);
     let frame = 0;
     const follow = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(measure); };
     addEventListener("resize", follow); addEventListener("scroll", follow, true);
@@ -168,12 +171,12 @@ export default function VendorGuidedTours() {
 
     {tour && definition && step && <div className="pointer-events-none fixed inset-0 z-[300] animate-[tour-layer-in_700ms_cubic-bezier(.22,1,.36,1)_both]" role="dialog" aria-modal="true">
       {spotlight ? <div className="pointer-events-none fixed rounded-[18px] border-2 border-[#FF7A3D] shadow-[0_0_0_9999px_rgba(10,10,9,.68),0_0_0_6px_rgba(212,69,10,.20),0_16px_45px_rgba(0,0,0,.22)] transition-[left,top,width,height,opacity] duration-700 ease-[cubic-bezier(.22,1,.36,1)]" style={spotlight}/> : <div className="pointer-events-none fixed inset-0 bg-black/68 backdrop-blur-[2px]"/>}
-      {waitingForTarget ? <div className="tour-target-loader fixed left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-2xl border border-white/20 bg-[#1C1C1A]/90 px-4 py-3 text-white shadow-2xl backdrop-blur-xl"><img src="/icon.png" alt="" className="size-9 rounded-full object-cover"/><span className="text-xs font-bold">Opening this step…</span></div> : <div className={`tour-coach pointer-events-auto fixed overflow-hidden rounded-[20px] border border-white/80 bg-white/95 shadow-[0_22px_70px_rgba(0,0,0,.34)] backdrop-blur-xl ${position}`}>
+      {waitingForTarget ? <div className="tour-target-loader fixed left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-full border border-white/15 bg-[#171715]/92 py-2 pl-2 pr-4 text-white shadow-2xl backdrop-blur-xl"><span className="relative flex size-9 items-center justify-center"><span className="absolute inset-0 animate-spin rounded-full border-2 border-white/15 border-t-[#F27B42]"/><img src="/icon.png" alt="" className="size-7 rounded-full object-cover"/></span><span><span className="block text-[11px] font-bold">Finding the next control</span><span className="block text-[9px] text-white/50">Just a moment</span></span></div> : <div className={`tour-coach pointer-events-auto fixed overflow-hidden rounded-[20px] border border-white/80 bg-white/95 shadow-[0_22px_70px_rgba(0,0,0,.34)] backdrop-blur-xl ${position}`}>
         <div className="h-1 bg-gradient-to-r from-[#D4450A] via-[#F27B42] to-[#F2A20C]"/><div key={`${tour}-${index}`} className="tour-explanation p-3.5 sm:p-5">
           <div className="mb-2 flex items-center justify-between gap-2"><div className="min-w-0"><span className="block truncate text-[9px] font-black uppercase tracking-[.15em] text-[#D4450A]">{definition.label}</span><span className="text-[9px] font-bold text-zinc-400">Step {index+1} of {steps.length}</span></div><button type="button" onClick={() => close(false)} className="rounded-full p-1.5 text-zinc-400 hover:bg-zinc-100" aria-label="Exit tutorial"><IconX className="size-4"/></button></div>
           <h3 className="text-[15px] font-black leading-5 tracking-tight sm:text-xl sm:leading-tight">{step.title}</h3><p className="mt-1.5 text-[11px] leading-[17px] text-zinc-600 sm:mt-2 sm:text-sm sm:leading-6">{step.body}</p>
           {step.note && <div className="mt-2 rounded-xl bg-[#FFF3EC] px-3 py-2 text-[10px] leading-4 text-[#8D3511]"><strong>Why this matters:</strong> {step.note}</div>}
-          {missing && <p className="mt-2 rounded-lg bg-amber-50 px-2.5 py-2 text-[9px] leading-4 text-amber-800">This control appears when the related record or option is available. The explanation still applies.</p>}
+          {missing && <p className="mt-2 rounded-lg bg-amber-50 px-2.5 py-2 text-[9px] leading-4 text-amber-800">This final control is not available on the current account yet.</p>}
           <div className="mt-3 h-1 overflow-hidden rounded-full bg-zinc-100"><div className="h-full rounded-full bg-gradient-to-r from-[#D4450A] to-[#F28A2D] transition-all duration-500" style={{width:`${((index+1)/steps.length)*100}%`}}/></div>
           <div className="mt-3 flex items-center justify-between gap-2"><button type="button" disabled={!index} onClick={() => move(index-1)} className="inline-flex h-9 items-center gap-1 rounded-xl px-2.5 text-[11px] font-bold text-zinc-500 disabled:opacity-25"><IconArrowLeft className="size-4"/>Back</button>{index===steps.length-1?<button type="button" onClick={() => close(true)} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#D4450A] px-4 text-[11px] font-bold text-white"><IconCheck className="size-4"/>Finish</button>:<button type="button" onClick={() => move(index+1)} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#1C1C1A] px-4 text-[11px] font-bold text-white">Next<IconArrowRight className="size-4"/></button>}</div>
         </div>

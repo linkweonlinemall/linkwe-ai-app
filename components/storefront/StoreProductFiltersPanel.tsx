@@ -77,6 +77,9 @@ export default function StoreProductFiltersPanel({
             { value: "price_asc", label: "Price Low-High" },
             { value: "price_desc", label: "Price High-Low" },
             { value: "name", label: "Name A-Z" },
+            { value: "name_desc", label: "Name Z-A" },
+            { value: "newest", label: "Newest" },
+            { value: "stock", label: "Most in stock" },
           ].map((opt) => (
             <button
               key={opt.value}

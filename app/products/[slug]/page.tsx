@@ -77,13 +77,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       metaTitle: true,
       metaDescription: true,
       shortDescription: true,
+      images: true,
       isPublished: true,
     },
   });
   if (!product?.isPublished) return { title: "Product" };
+  const image = product.images[0];
   return {
     title: product.metaTitle ?? product.name,
     description: product.metaDescription ?? product.shortDescription ?? undefined,
+    openGraph: image ? { images: [{ url: image, alt: product.name }] } : undefined,
+    twitter: image ? { card: "summary_large_image", images: [image] } : undefined,
   };
 }
 

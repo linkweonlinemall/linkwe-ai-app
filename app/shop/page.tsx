@@ -119,6 +119,10 @@ export default async function ShopPage({ searchParams }: Props) {
           ? [{ createdAt: "desc" as const }]
           : sort === "name"
             ? [{ name: "asc" as const }]
+            : sort === "name_desc"
+              ? [{ name: "desc" as const }]
+              : sort === "stock"
+                ? [{ stock: "desc" as const }]
             : [{ isFeatured: "desc" as const }, { createdAt: "desc" as const }];
 
   const products = await prisma.product.findMany({

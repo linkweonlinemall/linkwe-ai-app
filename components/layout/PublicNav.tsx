@@ -392,6 +392,9 @@ export default function PublicNav({
                     className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${navIsLight ? "bg-zinc-100 text-[#1C1C1A]" : "bg-white/[0.1] text-white"}`}
                     iconClassName="size-[20px] shrink-0"
                   />
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] [&_button]:rounded-[10px] [&_button]:border-0 [&_button]:bg-transparent [&_button]:shadow-none ${navIsLight ? "bg-zinc-100 text-[#1C1C1A]" : "bg-white/[0.1] text-white"}`}>
+                    <NotificationBell initialUnreadCount={unreadCount} variant={navIsLight ? "light" : "dark"} compactToolbar />
+                  </div>
                   <button
                     type="button"
                     onClick={toggleDrawerCart}

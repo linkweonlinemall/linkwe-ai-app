@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MapPin, Clock } from "lucide-react";
+import SaveEventButton from "@/components/events/SaveEventButton";
 
 import {
   formatEventCalendarDay,
@@ -115,6 +116,7 @@ export function EventCard({ event, featured = false }: EventCardProps) {
             ⭐ Featured
           </span>
         )}
+        <div className="absolute bottom-3 right-3 z-20"><SaveEventButton eventId={event.id} /></div>
 
         {/* Sold-out overlay */}
         {soldOut && (

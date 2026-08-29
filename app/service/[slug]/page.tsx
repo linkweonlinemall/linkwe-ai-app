@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 
 import { getCrossStoreFeatureButtonState } from "@/app/actions/cross-store";
 import { getLinkedContent } from "@/app/actions/content-links";
@@ -28,6 +29,22 @@ import { isStoreSellable } from "@/lib/store/sellable-store";
 import { canVendorUsePayOnArrival } from "@/lib/services/payment-policy";
 
 type Props = { params: Promise<{ slug: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const service = await prisma.product.findFirst({
+    where: { slug: slug.trim().toLowerCase(), isPublished: true, isService: true },
+    select: { name: true, shortDescription: true, description: true, images: true },
+  });
+  if (!service) return { title: "Service · LinkWe" };
+  const image = service.images[0];
+  const description = service.shortDescription ?? service.description?.replace(/<[^>]+>/g, "").slice(0, 160) ?? undefined;
+  return {
+    title: `${service.name} · LinkWe`, description,
+    openGraph: image ? { images: [{ url: image, alt: service.name }] } : undefined,
+    twitter: image ? { card: "summary_large_image", images: [image] } : undefined,
+  };
+}
 
 function serviceTypeDisplay(type: string | null) {
   switch (type) {

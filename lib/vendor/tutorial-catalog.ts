@@ -20,7 +20,7 @@ export type TutorialDefinition = {
   steps: TutorialStep[];
 };
 
-const routeStep = (route: string, title: string, body: string, selector = "main h1"): TutorialStep => ({ route, title, body, selector });
+const routeStep = (route: string, title: string, body: string): TutorialStep => ({ route, title, body });
 const field = (route: string, name: string, title: string, body: string, note?: string): TutorialStep => ({ route, title, body, selector: `[name="${name}"]`, field: true, note });
 
 const PRODUCT_ROUTE = "/dashboard/vendor/products/new";
