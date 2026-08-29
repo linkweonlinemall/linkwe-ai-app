@@ -46,15 +46,12 @@ export default function VendorDashboardShell({
     document.querySelector<HTMLElement>(".vendor-main-scroll")?.scrollTo({ top: 0, left: 0 });
   }, [pathname]);
 
-  if (isAIAssistant) {
-    return (
+  return <>
+    {isAIAssistant ? (
       <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#F7F5F2]">
         <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
       </div>
-    );
-  }
-
-  return (
+    ) : (
     <div className="flex h-full min-h-0 min-w-0 bg-[#F7F5F2]">
       <Suspense fallback={null}>
         <VendorDashboardSidebar
@@ -83,8 +80,9 @@ export default function VendorDashboardShell({
           <VendorMobileBottomNav />
         </Suspense>
         <FloatingAIChat aiEnabled={aiEnabled} />
-        <VendorGuidedTours />
       </div>
     </div>
-  );
+    )}
+    <VendorGuidedTours />
+  </>;
 }

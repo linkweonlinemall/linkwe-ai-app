@@ -380,9 +380,9 @@ export const tutorialCatalog = {
   reports: {
     label: "Business reports", description: "Read sales trends, customer reach, completion and product performance.", category: "Business operations", duration: "5 min",
     steps: [routeStep("/dashboard/vendor/reports", "Reports dashboard", "Reports turns paid LinkWe order activity into a practical view of how the store is performing."),
-      { route: "/dashboard/vendor/reports", selector: "main", title: "Headline performance", body: "Gross sales is before commission. Orders shows workload, Customers counts unique buyers and Completion shows delivered or completed orders." },
-      { route: "/dashboard/vendor/reports", selector: "section", title: "Six-month sales trend", body: "Compare monthly direction and order volume. Open Finance when you need net earnings, commission or available payout balance." },
-      { route: "/dashboard/vendor/reports", selector: "section:nth-of-type(2)", title: "Top products", body: "Use quantity and gross revenue together to understand which products attract demand and contribute most sales." }],
+      { route: "/dashboard/vendor/reports", selector: '[data-tour="reports-kpis"]', title: "Headline performance", body: "Gross sales is before commission. Orders shows workload, Customers counts unique buyers and Completion shows delivered or completed orders." },
+      { route: "/dashboard/vendor/reports", selector: '[data-tour="reports-trend"]', title: "Six-month sales trend", body: "Compare monthly direction and order volume. Open Finance when you need net earnings, commission or available payout balance." },
+      { route: "/dashboard/vendor/reports", selector: '[data-tour="reports-products"]', title: "Top products", body: "Use quantity and gross revenue together to understand which products attract demand and contribute most sales." }],
   },
   messages: {
     label: "Messages", description: "Find, filter and manage customer conversations professionally.", category: "Customers & fulfilment", duration: "5 min",

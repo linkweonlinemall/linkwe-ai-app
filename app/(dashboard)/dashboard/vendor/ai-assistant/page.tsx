@@ -693,7 +693,7 @@ export default function VendorAIAssistantPage() {
           >
             ☰
           </button>
-          <div className="flex min-w-0 flex-1 flex-col items-start md:absolute md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:items-center">
+          <div data-tour="rex-usage" className="flex min-w-0 flex-1 flex-col items-start md:absolute md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:items-center">
             <div className="flex items-center gap-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#D4450A] to-[#F59E0B] text-xs shadow-lg shadow-orange-950/30 sm:h-8 sm:w-8 sm:rounded-xl sm:text-sm" aria-hidden>⚡</div>
               <h1 className="text-lg font-black leading-none tracking-tight text-white sm:text-xl">
@@ -738,6 +738,7 @@ export default function VendorAIAssistantPage() {
         ) : null}
 
         <aside
+          data-tour="rex-history"
           className={`fixed inset-y-0 left-0 z-50 flex h-full max-h-[100dvh] w-[260px] flex-col overflow-hidden border-r transition-transform md:static md:z-0 md:max-h-none md:w-[220px] md:translate-x-0 md:transition-none lg:w-[260px] ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
           }`}
@@ -785,6 +786,7 @@ export default function VendorAIAssistantPage() {
               AI Assistant
             </button>
             <button
+              data-tour="rex-bulk"
               type="button"
               onClick={() => setActiveTab("bulk")}
               className={`flex-1 px-3 py-3 text-xs transition-colors sm:flex-none sm:px-6 sm:text-sm ${
@@ -824,6 +826,7 @@ export default function VendorAIAssistantPage() {
               </p>
 
               <div
+                data-tour="rex-images"
                 className="mt-4 w-full max-w-lg rounded-xl p-3 text-left sm:mt-8 sm:p-4"
                 style={{
                   backgroundColor: "rgba(255,255,255,0.04)",
@@ -1322,7 +1325,7 @@ export default function VendorAIAssistantPage() {
             </div>
           )}
 
-          <div className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-[#191F2C]/95 p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.32)] backdrop-blur-xl focus-within:border-[#D4450A]/60 focus-within:ring-2 focus-within:ring-[#D4450A]/10 sm:gap-2 sm:rounded-2xl sm:p-2">
+          <div data-tour="rex-prompts" className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-[#191F2C]/95 p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.32)] backdrop-blur-xl focus-within:border-[#D4450A]/60 focus-within:ring-2 focus-within:ring-[#D4450A]/10 sm:gap-2 sm:rounded-2xl sm:p-2">
             {/* Paperclip / attach button */}
             <button
               type="button"
@@ -1347,6 +1350,7 @@ export default function VendorAIAssistantPage() {
             </button>
 
             <textarea
+              data-tour="rex-composer"
               ref={inputRef}
               rows={1}
               value={input}
