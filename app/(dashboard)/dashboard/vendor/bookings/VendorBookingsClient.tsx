@@ -268,7 +268,7 @@ export default function VendorBookingsClient({
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div data-tour="booking-stats" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           {
             label: "Pending",
@@ -325,7 +325,7 @@ export default function VendorBookingsClient({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div data-tour="booking-filters" className="flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <button
             key={f.value}
@@ -496,7 +496,7 @@ export default function VendorBookingsClient({
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div data-tour="booking-list" className="flex flex-col gap-3">
           <div className="flex items-center gap-2 px-1">
             <input
               type="checkbox"
@@ -517,6 +517,7 @@ export default function VendorBookingsClient({
             return (
               <div
                 key={booking.id}
+                data-tour="booking-card"
                 className={`min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm transition-all ${
                   isSelected ? "border-[#D4450A]/40 ring-1 ring-[#D4450A]/20" : "border-zinc-200"
                 }`}
@@ -532,6 +533,7 @@ export default function VendorBookingsClient({
 
                   <button
                     type="button"
+                    data-tour="booking-expand"
                     onClick={() => setExpandedId(expanded ? null : booking.id)}
                     className="flex min-w-0 flex-1 items-start gap-3 text-left sm:gap-4"
                   >

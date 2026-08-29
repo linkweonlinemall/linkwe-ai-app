@@ -120,6 +120,44 @@ export async function markShipped(formData: FormData): Promise<void> {
   redirect(`/dashboard/vendor/orders/${splitOrderId}`);
 }
 
+export async function markReadyForCustomerPickup(formData: FormData): Promise<void> {
+  const session = await getSession();
+  if (!session || session.role !== "VENDOR") redirect("/");
+
+  const splitOrderId = String(formData.get("splitOrderId") ?? "").trim();
+  if (!splitOrderId) redirect("/dashboard/vendor");
+
+  const splitOrder = await prisma.splitOrder.findFirst({
+    where: {
+      id: splitOrderId,
+      store: { ownerId: session.userId },
+      mainOrder: { shippingAddressId: null },
+      status: "PREPARING",
+    },
+    select: {
+      id: true,
+      mainOrderId: true,
+      store: { select: { name: true } },
+      mainOrder: { select: { buyerId: true } },
+    },
+  });
+  if (!splitOrder) redirect("/dashboard/vendor");
+
+  await prisma.splitOrder.update({ where: { id: splitOrderId }, data: { status: "READY_FOR_CUSTOMER_PICKUP" } });
+  await recalculateMainOrderStatus(splitOrder.mainOrderId);
+  await createNotification({
+    userId: splitOrder.mainOrder.buyerId,
+    type: NotificationType.ORDER_STATUS_UPDATED,
+    title: "Your order is ready for pickup",
+    body: `Your items from ${splitOrder.store.name} are ready to collect.`,
+    linkUrl: `/orders/${splitOrder.mainOrderId}`,
+  });
+  revalidatePath(`/orders/${splitOrder.mainOrderId}`, "page");
+  revalidatePath("/dashboard/vendor");
+  revalidatePath(`/dashboard/vendor/orders/${splitOrderId}`, "page");
+  redirect(`/dashboard/vendor/orders/${splitOrderId}`);
+}
+
 export async function markReadyForLinkWe(formData: FormData): Promise<void> {
   const session = await getSession();
   if (!session || session.role !== "VENDOR") redirect("/");

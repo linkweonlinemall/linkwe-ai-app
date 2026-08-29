@@ -14,6 +14,7 @@ const CUSTOMER_LINKWE_STEPS = [
   "Received",
 ] as const;
 
+const VENDOR_PICKUP_STEPS = ["Action", "Preparing", "Ready for pickup", "Picked up"] as const;
 const VENDOR_SELF_STEPS = ["Action", "Preparing", "Shipped", "Delivered"] as const;
 const VENDOR_LINKWE_STEPS = [
   "Action",
@@ -29,6 +30,7 @@ export function getSplitProgressSteps(
   fulfillment: SplitFulfillment = "delivery",
 ): readonly string[] {
   if (audience === "customer" && fulfillment === "pickup") return CUSTOMER_PICKUP_STEPS;
+  if (audience === "vendor" && fulfillment === "pickup") return VENDOR_PICKUP_STEPS;
   if (audience === "vendor") {
     return shippingMode === "SELF" ? VENDOR_SELF_STEPS : VENDOR_LINKWE_STEPS;
   }
@@ -45,6 +47,7 @@ export function getSplitStepIndex(
       case "AWAITING_VENDOR_ACTION": return 0;
       case "PREPARING":
       case "VENDOR_PREPARING": return 1;
+      case "READY_FOR_CUSTOMER_PICKUP": return 2;
       case "DELIVERED":
       case "COMPLETED": return 3;
       default: return 2;

@@ -84,7 +84,7 @@ export async function markOrderReceived(
   return { ok: true };
 }
 
-const RECEIVABLE_SPLIT_STATUSES = ["SHIPPED", "OUT_FOR_DELIVERY"] as const;
+const RECEIVABLE_SPLIT_STATUSES = ["SHIPPED", "OUT_FOR_DELIVERY", "READY_FOR_CUSTOMER_PICKUP"] as const;
 
 export async function markSplitReceived(
   splitOrderId: string,

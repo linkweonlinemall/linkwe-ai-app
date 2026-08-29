@@ -6,6 +6,7 @@ export type TutorialStep = {
   route?: string;
   selector?: string;
   activateSelector?: string;
+  navigateSelector?: string;
   mobileMore?: boolean;
   field?: boolean;
   note?: string;
@@ -212,6 +213,12 @@ export const tutorialCatalog = {
       { route: "/dashboard/vendor/orders", selector: 'nav[aria-label="Order type"]', title: "Product vs service orders", body: "Use the two tabs to separate shipped/pickup/digital product work from bookings, quotes, requests and subscriptions." },
       { route: "/dashboard/vendor/orders", selector: '[data-tour="orders-action"]', title: "Action required", body: "Start here. Confirm payment and fulfilment method, then open the order. Never fulfil a pending-payment order as if it were paid." },
       { route: "/dashboard/vendor/orders", selector: '[data-tour="orders-list"]', title: "Order cards", body: "Read order number, date, customer, delivery method, total and current status. Use View order for the full record." },
+      { route: "/dashboard/vendor/orders", selector: 'a[href^="/dashboard/vendor/orders/"]', navigateSelector: 'a[href^="/dashboard/vendor/orders/"]', title: "Open an order", body: "We’ll open the first available order so you can learn the full fulfilment workspace. This only views the order; it does not change its status." },
+      { selector: '[data-tour="order-progress"]', title: "Follow the correct progress", body: "This progress changes for vendor delivery, LinkWe delivery and local pickup. Advance the real order only after completing the highlighted physical step." },
+      { selector: '[data-tour="order-items"]', title: "Verify items and variations", body: "Confirm every item, variation, quantity and image before packing. Similar-looking variants must remain separate." },
+      { selector: '[data-tour="order-fulfilment-action"]', title: "Take the next fulfilment action", body: "The action shown is based on payment, current status and delivery method. Never use it early just to clear the order." },
+      { selector: '[data-tour="order-delivery-location"]', title: "Customer delivery location", body: "For delivery orders, confirm the written address, phone and map pin before leaving. Pickup orders intentionally do not show a customer delivery map." },
+      { selector: '[data-tour="order-receipt-qr"]', title: "Secure receipt confirmation", body: "At delivery or collection, let the customer scan this QR. They must sign into their own account and confirm receipt before vendor earnings are released." },
       { route: "/dashboard/vendor/orders?view=services", selector: '[data-tour="service-order-links"]', title: "Service work shortcuts", body: "Bookings, requests and subscribers each have specialised controls. Use the shortcut that matches the service order type." },
       { title: "Shipping fulfilment", body: "Prepare the correct items, add tracking or handoff details when applicable, and advance statuses only after the real-world action occurs." },
       { title: "Local pickup fulfilment", body: "Mark the order ready for pickup and confirm collection. Do not use shipping or out-for-delivery statuses for pickup." },
@@ -226,6 +233,7 @@ export const tutorialCatalog = {
       { route: "/dashboard/vendor/bookings", selector: '[data-tour="booking-stats"]', title: "Booking summary", body: "Use the counts to see upcoming work and bookings requiring attention. Counts are operational, not settled earnings." },
       { route: "/dashboard/vendor/bookings", selector: '[data-tour="booking-filters"]', title: "Filters", body: "Filter by status and timing to plan the day, find deposit issues or review completed/cancelled appointments." },
       { route: "/dashboard/vendor/bookings", selector: '[data-tour="booking-list"]', title: "Booking cards", body: "Open a card to review customer, service, time, payment mode, deposit, staff and customer notes." },
+      { route: "/dashboard/vendor/bookings", selector: '[data-tour="booking-card"]', activateSelector: '[data-tour="booking-expand"]', title: "Open a booking safely", body: "The card expands in place. Review all details before confirming, cancelling, adding a meeting link or recording attendance. The tour does not submit an action." },
       field("/dashboard/vendor/bookings", "vendorNote", "Private vendor note", "Record operational details for your team. The customer should not see this field."),
       field("/dashboard/vendor/bookings", "meetingUrl", "Meeting link", "For virtual bookings, add the correct private session link. Verify it before the appointment."),
       { title: "Update the booking", body: "Confirm, reschedule, cancel or complete only when appropriate. Communicate changes to the customer and follow the cancellation/refund rules." },
@@ -374,8 +382,9 @@ export const tutorialCatalog = {
       { route: "/dashboard/vendor/messages", selector: '[data-tour="message-search"]', title: "Search", body: "Search by customer, subject or relevant text to find an older conversation quickly." },
       { route: "/dashboard/vendor/messages", selector: '[data-tour="message-filters"]', title: "Conversation filters", body: "Filter unread, orders, services and other message types so priority conversations are not missed." },
       { route: "/dashboard/vendor/messages", selector: '[data-tour="message-list"]', title: "Conversation list", body: "Read the customer, context, last message, time and unread status before opening." },
-      { route: "/dashboard/vendor/messages", selector: '[data-tour="message-thread"]', title: "Conversation thread", body: "Keep commitments and order/service context in the correct conversation. Be clear, timely and professional." },
-      { route: "/dashboard/vendor/messages", selector: '[data-tour="message-composer"]', title: "Reply and attachments", body: "Write a complete reply and attach only safe, relevant files. Never request passwords, card data or unnecessary identity documents." },
+      { route: "/dashboard/vendor/messages", selector: 'a[href^="/dashboard/vendor/messages/"]', navigateSelector: 'a[href^="/dashboard/vendor/messages/"]', title: "Open a conversation", body: "We’ll open the first available conversation to demonstrate the complete messaging workspace without sending anything." },
+      { selector: '[data-tour="message-thread"]', title: "Conversation thread", body: "Keep commitments and order/service context in the correct conversation. Be clear, timely and professional." },
+      { selector: '[data-tour="message-composer"]', title: "Practise a reply", body: "You can type here while the tour remains open. Nothing is sent unless you deliberately press Send. Never request passwords, card data or unnecessary identity documents." },
       { title: "Resolve the next action", body: "End with who will do what and when. Return to unread conversations and follow through on promises." }],
   },
   reviews: {

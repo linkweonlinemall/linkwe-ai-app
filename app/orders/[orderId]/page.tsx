@@ -22,7 +22,7 @@ const DIGITAL_PROGRESS_STEPS = [
   "Ready to Download",
 ];
 
-type Props = { params: Promise<{ orderId: string }> };
+type Props = { params: Promise<{ orderId: string }>; searchParams: Promise<{ confirmReceipt?: string }> };
 
 function getOrderStatusBadge(status: string) {
   const map: Record<string, { label: string; bg: string; color: string }> = {
@@ -71,8 +71,9 @@ function forceDownloadUrl(url: string, filename?: string): string {
   return url;
 }
 
-export default async function OrderDetailPage({ params }: Props) {
+export default async function OrderDetailPage({ params, searchParams }: Props) {
   const { orderId } = await params;
+  const { confirmReceipt } = await searchParams;
   if (!orderId?.trim()) {
     notFound();
   }
@@ -471,7 +472,7 @@ export default async function OrderDetailPage({ params }: Props) {
                     const isReceivable =
                       splitHasPhysicalItems &&
                       isBuyer &&
-                      (splitOrder.status === "SHIPPED" || splitOrder.status === "OUT_FOR_DELIVERY");
+                      (splitOrder.status === "SHIPPED" || splitOrder.status === "OUT_FOR_DELIVERY" || splitOrder.status === "READY_FOR_CUSTOMER_PICKUP");
                     const isReceived =
                       splitHasPhysicalItems &&
                       (splitOrder.status === "DELIVERED" || splitOrder.status === "COMPLETED");
@@ -611,10 +612,11 @@ export default async function OrderDetailPage({ params }: Props) {
                         </div>
 
                         {isReceivable ? (
-                          <div className="border-t border-zinc-100 bg-emerald-50/50 px-4 py-3">
+                          <div id={confirmReceipt === splitOrder.id ? "confirm-receipt" : undefined} className="scroll-mt-24 border-t border-zinc-100 bg-emerald-50/50 px-4 py-3">
                             <MarkReceivedButton
                               splitOrderId={splitOrder.id}
                               storeName={splitOrder.store.name}
+                              initiallyConfirming={confirmReceipt === splitOrder.id}
                             />
                           </div>
                         ) : isReceived ? (

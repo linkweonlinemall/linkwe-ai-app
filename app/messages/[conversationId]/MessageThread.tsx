@@ -146,6 +146,7 @@ export function MessageThread({
       </header>
 
       <div
+        data-tour="message-thread"
         ref={listRef}
         className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-2 overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(251,146,60,0.08),transparent_32%)] px-3 py-4 sm:px-5 sm:py-6"
       >
@@ -194,6 +195,7 @@ export function MessageThread({
       </div>
 
       <form
+        data-tour="message-composer"
         onSubmit={handleSend}
         className="sticky bottom-0 z-20 border-t border-orange-100 bg-white/95 px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(0,0,0,0.05)] backdrop-blur-xl sm:px-4 sm:py-3"
       >

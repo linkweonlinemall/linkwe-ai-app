@@ -96,6 +96,17 @@ export const vendorSplitOrderDetailSelect = {
       shippingMinor: true,
       totalMinor: true,
       createdAt: true,
+      shippingAddress: {
+        select: {
+          line1: true,
+          line2: true,
+          city: true,
+          region: true,
+          phone: true,
+          latitude: true,
+          longitude: true,
+        },
+      },
       buyer: {
         select: { id: true, fullName: true, email: true },
       },

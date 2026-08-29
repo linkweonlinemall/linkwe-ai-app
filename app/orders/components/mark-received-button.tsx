@@ -4,10 +4,10 @@ import { useState } from "react";
 
 import { markSplitReceived } from "@/app/actions/order-received";
 
-type Props = { splitOrderId: string; storeName?: string };
+type Props = { splitOrderId: string; storeName?: string; initiallyConfirming?: boolean };
 
-export default function MarkReceivedButton({ splitOrderId, storeName }: Props) {
-  const [confirming, setConfirming] = useState(false);
+export default function MarkReceivedButton({ splitOrderId, storeName, initiallyConfirming = false }: Props) {
+  const [confirming, setConfirming] = useState(initiallyConfirming);
   const [submitting, setSubmitting] = useState(false);
 
   const storeLabel = storeName ?? "this store";

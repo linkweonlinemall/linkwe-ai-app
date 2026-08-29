@@ -3,6 +3,7 @@ import type { StoreShippingMode } from "@prisma/client";
 import { redirect } from "next/navigation";
 
 import {
+  markReadyForCustomerPickup,
   markReadyForLinkWe,
   markShipped,
   startPreparing,
@@ -13,7 +14,9 @@ import { resolveVendorPlan } from "@/lib/finance/vendor-plan";
 import { getCourierPickupFeeMinor } from "@/lib/fulfillment/courier-pickup-rates";
 import { prisma } from "@/lib/prisma";
 import { getSplitProgressSteps, getSplitStepIndex } from "@/lib/orders/split-progress";
+import { generateOrderReceiptQRCodeDataURL } from "@/lib/orders/qr-code";
 import { vendorSplitOrderDetailSelect } from "@/lib/vendor/vendor-split-order-query";
+import { StoreMapBox } from "@/components/storefront/StorefrontMapAndProducts";
 import { MessageCustomerButton } from "./message-customer-button";
 
 type Props = { params: Promise<{ splitOrderId: string }> };
@@ -54,6 +57,11 @@ function getStatusBadge(status: string): { label: string; style: CSSProperties }
       return {
         label: "Ready for LinkWe",
         style: { ...pill, backgroundColor: "#EFF6FF", color: "#1D4ED8", borderColor: "#BFDBFE" },
+      };
+    case "READY_FOR_CUSTOMER_PICKUP":
+      return {
+        label: "Ready for customer pickup",
+        style: { ...pill, backgroundColor: "#ECFDF5", color: "#047857", borderColor: "#A7F3D0" },
       };
     case "AWAITING_COURIER_PICKUP":
     case "COURIER_ASSIGNED":
@@ -151,11 +159,12 @@ export default async function VendorOrderDetailPage({ params }: Props) {
   if (!splitOrder) redirect("/dashboard/vendor");
 
   const shippingMode = splitOrder.store.shippingMode;
+  const fulfillment = splitOrder.mainOrder.shippingAddress ? "delivery" : "pickup";
   const badge = getStatusBadge(splitOrder.status);
   const splitRef = `SP-${splitOrder.id.slice(-8).toUpperCase()}`;
   const mainRef = `LW-${splitOrder.mainOrderId.slice(-8).toUpperCase()}`;
-  const flowSteps = getSplitProgressSteps(shippingMode, "vendor");
-  const stepIndex = getSplitStepIndex(splitOrder.status, shippingMode);
+  const flowSteps = getSplitProgressSteps(shippingMode, "vendor", fulfillment);
+  const stepIndex = getSplitStepIndex(splitOrder.status, shippingMode, fulfillment);
   const plan = resolveVendorPlan(splitOrder.store.subscriptionPlan);
   const { commissionMinor, netMinor: netAfterCommission } = calculateEarningsMinor(
     splitOrder.subtotalMinor,
@@ -170,12 +179,18 @@ export default async function VendorOrderDetailPage({ params }: Props) {
   const netEarningsMinor = netAfterCommission - pickupFeeMinor;
 
   const showStartPreparing = splitOrder.status === "AWAITING_VENDOR_ACTION";
-  const showMarkShipped = splitOrder.status === "PREPARING" && shippingMode === "SELF";
-  const showMarkReadyForLinkWe = splitOrder.status === "PREPARING" && shippingMode === "LINKWE";
+  const showMarkPickupReady = splitOrder.status === "PREPARING" && fulfillment === "pickup";
+  const showMarkShipped = splitOrder.status === "PREPARING" && shippingMode === "SELF" && fulfillment === "delivery";
+  const showMarkReadyForLinkWe = splitOrder.status === "PREPARING" && shippingMode === "LINKWE" && fulfillment === "delivery";
+  const showPickupReadyPanel = splitOrder.status === "READY_FOR_CUSTOMER_PICKUP";
   const showShippedPanel = splitOrder.status === "SHIPPED";
   const showReadyForLinkWePanel = splitOrder.status === "READY_FOR_LINKWE";
   const showOutForDeliveryPanel = splitOrder.status === "OUT_FOR_DELIVERY";
   const showDeliveredPanel = splitOrder.status === "DELIVERED" || splitOrder.status === "COMPLETED";
+  const receiptQrDataUrl = await generateOrderReceiptQRCodeDataURL(splitOrder.mainOrderId, splitOrder.id);
+  const deliveryLat = splitOrder.mainOrder.shippingAddress?.latitude ? Number(splitOrder.mainOrder.shippingAddress.latitude) : null;
+  const deliveryLng = splitOrder.mainOrder.shippingAddress?.longitude ? Number(splitOrder.mainOrder.shippingAddress.longitude) : null;
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
   return (
     <div className="bg-[#f5f5f5] pb-24 sm:pb-0">
@@ -200,12 +215,12 @@ export default async function VendorOrderDetailPage({ params }: Props) {
               <span
                 className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
                 style={{
-                  backgroundColor: shippingMode === "SELF" ? "#FFF7ED" : "#EFF6FF",
-                  color: shippingMode === "SELF" ? "#C2410C" : "#1D4ED8",
-                  borderColor: shippingMode === "SELF" ? "#FED7AA" : "#BFDBFE",
+                  backgroundColor: fulfillment === "pickup" ? "#F0FDF4" : shippingMode === "SELF" ? "#FFF7ED" : "#EFF6FF",
+                  color: fulfillment === "pickup" ? "#047857" : shippingMode === "SELF" ? "#C2410C" : "#1D4ED8",
+                  borderColor: fulfillment === "pickup" ? "#A7F3D0" : shippingMode === "SELF" ? "#FED7AA" : "#BFDBFE",
                 }}
               >
-                {shippingMode === "SELF" ? "You deliver this order" : "LinkWe delivers this order"}
+                {fulfillment === "pickup" ? "Customer pickup" : shippingMode === "SELF" ? "You deliver this order" : "LinkWe delivers this order"}
               </span>
             </div>
           </div>
@@ -220,6 +235,7 @@ export default async function VendorOrderDetailPage({ params }: Props) {
         </div>
 
         <div
+          data-tour="order-progress"
           className="mt-8 rounded-xl bg-white p-5 sm:p-6"
           style={{ border: "1px solid var(--card-border)" }}
         >
@@ -256,6 +272,7 @@ export default async function VendorOrderDetailPage({ params }: Props) {
         <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
             <div
+              data-tour="order-items"
               className="rounded-xl bg-white p-5 sm:p-6"
               style={{ border: "1px solid var(--card-border)" }}
             >
@@ -299,6 +316,7 @@ export default async function VendorOrderDetailPage({ params }: Props) {
 
             {showStartPreparing ? (
               <div
+                data-tour="order-fulfilment-action"
                 className="rounded-xl bg-white p-5 sm:p-6"
                 style={{ border: "1px solid var(--card-border)" }}
               >
@@ -323,6 +341,7 @@ export default async function VendorOrderDetailPage({ params }: Props) {
 
             {showMarkShipped ? (
               <div
+                data-tour="order-fulfilment-action"
                 className="rounded-xl bg-white p-5 sm:p-6"
                 style={{ border: "1px solid var(--card-border)" }}
               >
@@ -345,8 +364,27 @@ export default async function VendorOrderDetailPage({ params }: Props) {
               </div>
             ) : null}
 
+            {showMarkPickupReady ? (
+              <div data-tour="order-fulfilment-action" className="rounded-xl bg-white p-5 sm:p-6" style={{ border: "1px solid var(--card-border)" }}>
+                <h2 className="mb-2 text-sm font-semibold text-zinc-900">Local pickup</h2>
+                <p className="mb-4 text-sm text-zinc-600">Use this only after the order is packed and ready at your collection location.</p>
+                <form action={markReadyForCustomerPickup}>
+                  <input type="hidden" name="splitOrderId" value={splitOrder.id} />
+                  <button type="submit" className="inline-flex w-full items-center justify-center rounded-xl bg-[#D4450A] px-4 py-3 text-sm font-semibold text-white hover:opacity-90 sm:w-auto">Mark ready for customer pickup</button>
+                </form>
+              </div>
+            ) : null}
+
+            {showPickupReadyPanel ? (
+              <div data-tour="order-pickup-ready" className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
+                <h2 className="mb-2 text-sm font-semibold text-emerald-900">Ready for customer pickup</h2>
+                <p className="text-sm text-emerald-800">Keep the order secure until the customer collects it and confirms receipt using their LinkWe order page or the QR code.</p>
+              </div>
+            ) : null}
+
             {showMarkReadyForLinkWe ? (
               <div
+                data-tour="order-fulfilment-action"
                 className="rounded-xl bg-white p-5 sm:p-6"
                 style={{ border: "1px solid var(--card-border)" }}
               >
@@ -425,6 +463,25 @@ export default async function VendorOrderDetailPage({ params }: Props) {
           </div>
 
           <div className="space-y-6 lg:col-span-1">
+            {fulfillment === "delivery" && splitOrder.mainOrder.shippingAddress ? (
+              <div data-tour="order-delivery-location" className="overflow-hidden rounded-xl bg-white" style={{ border: "1px solid var(--card-border)" }}>
+                <div className="p-5 pb-3">
+                  <h2 className="text-sm font-semibold text-zinc-900">Delivery location</h2>
+                  <p className="mt-1 text-xs leading-5 text-zinc-500">{splitOrder.mainOrder.shippingAddress.line1}{splitOrder.mainOrder.shippingAddress.line2 ? `, ${splitOrder.mainOrder.shippingAddress.line2}` : ""}, {splitOrder.mainOrder.shippingAddress.city}</p>
+                  {splitOrder.mainOrder.shippingAddress.phone ? <a href={`tel:${splitOrder.mainOrder.shippingAddress.phone}`} className="mt-1 inline-block text-xs font-semibold text-[#D4450A]">{splitOrder.mainOrder.shippingAddress.phone}</a> : null}
+                </div>
+                {deliveryLat !== null && deliveryLng !== null && mapboxToken ? <div className="h-52 border-t border-zinc-100"><StoreMapBox latitude={deliveryLat} longitude={deliveryLng} mapboxAccessToken={mapboxToken}/></div> : <div className="border-t border-zinc-100 bg-zinc-50 px-5 py-4 text-xs text-zinc-500">The customer supplied an address without a map pin. Use the written address above.</div>}
+              </div>
+            ) : null}
+
+            <div data-tour="order-receipt-qr" className="rounded-xl bg-white p-5 text-center" style={{ border: "1px solid var(--card-border)" }}>
+              <h2 className="text-sm font-semibold text-zinc-900">Customer receipt QR</h2>
+              <p className="mx-auto mt-1 max-w-[240px] text-xs leading-5 text-zinc-500">At handoff, ask the customer to scan this code on their phone. They sign in and confirm receipt securely.</p>
+              {/* eslint-disable-next-line @next/next/no-img-element -- generated QR data URL */}
+              <img src={receiptQrDataUrl} alt="QR code for customer to confirm order receipt" className="mx-auto mt-3 size-44 rounded-xl border border-zinc-100" />
+              <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Customer confirmation required</p>
+            </div>
+
             <div
               className="rounded-xl bg-white p-5 sm:p-6"
               style={{ border: "1px solid var(--card-border)" }}

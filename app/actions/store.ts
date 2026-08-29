@@ -192,10 +192,19 @@ export async function updateStore(formData: FormData): Promise<void> {
     updateData.openingHours = parsedOpeningHours;
   }
 
-  await prisma.store.update({
-    where: { id: storeId },
-    data: updateData,
-  });
+  try {
+    await prisma.store.update({
+      where: { id: storeId },
+      data: updateData,
+    });
+  } catch (error) {
+    // The lookup above gives immediate feedback; the database constraint closes
+    // the small race where two stores try to claim the same slug together.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      editRedirect("error=slug_taken");
+    }
+    throw error;
+  }
 
   revalidatePath("/dashboard/vendor");
   revalidatePath(EDIT_PATH);
