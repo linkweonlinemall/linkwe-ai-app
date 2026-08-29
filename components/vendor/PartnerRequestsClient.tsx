@@ -99,7 +99,7 @@ export default function PartnerRequestsClient({
 
   return (
     <div className="flex flex-col gap-8">
-      <section className="rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
+      <section data-tour="collab-incoming" className="rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
         <div className="border-b border-zinc-100 px-5 py-4">
           <h2 className="font-bold text-zinc-900">Requests to feature your items</h2>
           <p className="mt-0.5 text-xs text-zinc-500">
@@ -188,7 +188,7 @@ export default function PartnerRequestsClient({
         )}
       </section>
 
-      <section className="rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
+      <section data-tour="collab-outgoing" className="rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
         <div className="border-b border-zinc-100 px-5 py-4">
           <h2 className="font-bold text-zinc-900">Items you&apos;ve asked to feature</h2>
           <p className="mt-0.5 text-xs text-zinc-500">

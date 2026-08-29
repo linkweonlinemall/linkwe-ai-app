@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { logoutAction } from "@/app/(auth)/auth-actions";
+import NotificationBell from "@/components/ui/NotificationBell";
 
 // ─── Nav definition ────────────────────────────────────────────────────────────
 
@@ -13,6 +14,7 @@ type NavItem = {
   /** ?tab= value if this item activates a tab inside /dashboard/admin */
   tab?: string;
   icon: React.ReactNode;
+  badgeKey?: "verification" | "payouts" | "orders";
 };
 
 type NavGroup = { label: string; items: NavItem[] };
@@ -30,9 +32,9 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Operations",
     items: [
       { label: "Overview",  href: "/dashboard/admin?tab=overview",  tab: "overview",  icon: icon("M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z") },
-      { label: "Orders",    href: "/dashboard/admin?tab=orders",    tab: "orders",    icon: icon("M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8") },
+      { label: "Orders",    href: "/dashboard/admin?tab=orders",    tab: "orders", badgeKey: "orders", icon: icon("M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8") },
       { label: "LinkWe Delivery", href: "/dashboard/admin?tab=linkwe-delivery", tab: "linkwe-delivery", icon: icon("M1 3h15v13H1zM16 8h4l3 3v5h-7V8zM5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z") },
-      { label: "Payouts", href: "/dashboard/admin?tab=payouts", tab: "payouts", icon: icon("M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6") },
+      { label: "Payouts", href: "/dashboard/admin?tab=payouts", tab: "payouts", badgeKey: "payouts", icon: icon("M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6") },
       { label: "Tickets",   href: "/dashboard/admin?tab=tickets",   tab: "tickets",   icon: icon("M2 9a3 3 0 0 1 3-3h14a3 3 0 0 1 3 3v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V9zM6 12h.01M10 12h.01M2 14v3a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-3") },
     ],
   },
@@ -48,7 +50,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Customers",    href: "/dashboard/admin?tab=customers", tab: "customers", icon: icon("M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z") },
       { label: "Vendors",      href: "/dashboard/admin?tab=vendors",   tab: "vendors",   icon: icon("M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM9 22V12h6v10") },
-      { label: "Verification", href: "/dashboard/admin/verification",  icon: icon("M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z") },
+      { label: "Verification", href: "/dashboard/admin/verification", badgeKey: "verification", icon: icon("M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z") },
       { label: "Messages",     href: "/dashboard/admin/messages",      icon: icon("M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z") },
       { label: "Users",        href: "/dashboard/admin/users",         icon: icon("M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z") },
     ],
@@ -75,10 +77,12 @@ function SidebarNavLinks({
   pathname,
   activeTab,
   onLinkClick,
+  attentionCounts,
 }: {
   pathname: string;
   activeTab: string;
   onLinkClick?: () => void;
+  attentionCounts: Record<"verification" | "payouts" | "orders", number>;
 }) {
   return (
     <nav className="flex flex-col gap-0.5 p-3 pt-4">
@@ -104,6 +108,7 @@ function SidebarNavLinks({
                   {item.icon}
                 </span>
                 {item.label}
+                {item.badgeKey && attentionCounts[item.badgeKey] > 0 ? <span className="ml-auto min-w-5 rounded-full bg-[#D4450A] px-1.5 text-center text-[9px] font-black leading-5 text-white shadow-sm">{attentionCounts[item.badgeKey] > 99 ? "99+" : attentionCounts[item.badgeKey]}</span> : null}
               </Link>
             );
           })}
@@ -177,10 +182,12 @@ function AccountMenu({ adminName }: { adminName: string }) {
 
 type Props = {
   adminName: string;
+  unreadCount: number;
+  attentionCounts: Record<"verification" | "payouts" | "orders", number>;
   children: React.ReactNode;
 };
 
-export default function AdminShell({ adminName, children }: Props) {
+export default function AdminShell({ adminName, unreadCount, attentionCounts, children }: Props) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") ?? "overview";
@@ -244,16 +251,7 @@ export default function AdminShell({ adminName, children }: Props) {
 
         {/* Right: bell + account menu */}
         <div className="flex items-center gap-1 sm:gap-2">
-          {/* Bell */}
-          <button
-            type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-white/10 hover:text-zinc-200"
-            title="Notifications"
-          >
-            <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
-            </svg>
-          </button>
+          <NotificationBell compactToolbar initialUnreadCount={unreadCount} variant="dark" />
 
           <AccountMenu adminName={adminName} />
         </div>
@@ -314,6 +312,7 @@ export default function AdminShell({ adminName, children }: Props) {
             pathname={pathname}
             activeTab={activeTab}
             onLinkClick={closeDrawer}
+            attentionCounts={attentionCounts}
           />
         </div>
       </aside>
@@ -326,7 +325,7 @@ export default function AdminShell({ adminName, children }: Props) {
           className="fixed left-0 top-14 bottom-0 z-20 hidden w-[220px] flex-col overflow-y-auto bg-white md:flex"
           style={{ borderRight: "1px solid rgba(28,28,26,0.08)" }}
         >
-          <SidebarNavLinks pathname={pathname} activeTab={activeTab} />
+          <SidebarNavLinks pathname={pathname} activeTab={activeTab} attentionCounts={attentionCounts} />
         </aside>
 
         {/* ── Main content — full-width on mobile, offset on desktop ── */}

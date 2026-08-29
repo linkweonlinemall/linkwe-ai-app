@@ -31,9 +31,9 @@ export default async function VendorPartnersPage() {
         ← Back to dashboard
       </Link>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-zinc-900">Partners</h1>
+        <h1 className="text-xl font-bold text-zinc-900">Collab</h1>
         <p className="mt-0.5 text-sm text-zinc-500">
-          Approve or manage cross-store feature requests
+          Approve and manage cross-store collaborations
         </p>
       </div>
 

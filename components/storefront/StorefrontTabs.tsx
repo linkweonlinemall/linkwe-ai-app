@@ -442,7 +442,7 @@ export default function StorefrontTabs({
     { id: "about", label: "About" },
     { id: "store", label: "Store", count: products.length },
     { id: "services", label: "Services", count: services?.length ?? 0 },
-    { id: "partners", label: "Partners", count: partnerItems.length },
+    { id: "partners", label: "Collab", count: partnerItems.length },
     { id: "reviews", label: "Reviews", count: reviewData?.count ?? 0 },
   ];
 

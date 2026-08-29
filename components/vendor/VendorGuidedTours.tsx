@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { IconArrowLeft, IconArrowRight, IconCheck, IconChevronDown, IconClock, IconHelpCircle, IconPlayerPlay, IconSparkles, IconX } from "@tabler/icons-react";
 import { tutorialCatalog, tutorialCategories, type TutorialName, type TutorialStep } from "@/lib/vendor/tutorial-catalog";
 
@@ -25,6 +25,8 @@ function targetFor(step: TutorialStep) {
 export default function VendorGuidedTours() {
   const pathname = usePathname() ?? "";
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const currentRoute = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
   const [welcome, setWelcome] = useState(false);
   const [library, setLibrary] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(tutorialCategories[0]);
@@ -58,7 +60,7 @@ export default function VendorGuidedTours() {
   useEffect(() => {
     if (!tour || !step) return;
     setRect(null); setMissing(false);
-    if (step.route && pathname !== step.route) {
+    if (step.route && currentRoute !== step.route) {
       router.push(step.route);
       return;
     }
@@ -106,7 +108,7 @@ export default function VendorGuidedTours() {
       cancelled = true; clearTimeout(timer); cancelAnimationFrame(frame);
       removeEventListener("resize", follow); removeEventListener("scroll", follow, true);
     };
-  }, [index, measure, pathname, router, step, tour]);
+  }, [currentRoute, index, measure, pathname, router, step, tour]);
 
   const close = useCallback((complete = false) => {
     if (complete && tour) localStorage.setItem(`linkwe-tour:${VERSION}:${tour}`, "complete");
@@ -131,7 +133,7 @@ export default function VendorGuidedTours() {
   function start(name: TutorialName) {
     const first = tutorialCatalog[name].steps[0];
     setWelcome(false); setLibrary(false); setIndex(0); setRect(null); setTour(name);
-    if (first.route && pathname !== first.route) router.push(first.route);
+    if (first.route && currentRoute !== first.route) router.push(first.route);
   }
   function move(next: number) { setRect(null); setMissing(false); setIndex(next); }
 

@@ -219,7 +219,7 @@ export default function ShippingSettingsClient({
   return (
     <div className="flex flex-col gap-6">
       {/* Mode toggle */}
-      <section className="rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
+      <section data-tour="shipping-methods" className="rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
         <div className="border-b border-zinc-100 px-5 py-4">
           <h2 className="font-bold text-[#1C1C1A]">Delivery method</h2>
           <p className="mt-0.5 text-xs text-[#7c7b77]">
@@ -282,8 +282,8 @@ export default function ShippingSettingsClient({
 
       {/* SELF mode — 16 self-delivery zones */}
       {mode === "SELF" ? (
-        <section className="rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
-          <div className="border-b border-zinc-100 px-5 py-4">
+        <section data-tour="shipping-zones" className="rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60">
+          <div data-tour="shipping-home-zone" className="border-b border-zinc-100 px-5 py-4">
             <h2 className="font-bold text-[#1C1C1A]">Your delivery rates</h2>
             <p className="mt-1 text-xs leading-relaxed text-[#7c7b77]">
               Rates are pre-filled based on your store location ({homeZoneLabel}) — adjust any
@@ -341,7 +341,7 @@ export default function ShippingSettingsClient({
                           </div>
                         </label>
 
-                        <div className="flex items-center gap-2">
+                        <div data-tour="shipping-linkwe-fallback" className="flex items-center gap-2">
                           <Toggle
                             checked={row.active}
                             disabled={isRatesPending}
@@ -364,6 +364,7 @@ export default function ShippingSettingsClient({
 
           <div className="border-t border-zinc-100 px-5 py-4">
             <button
+              data-tour="shipping-save"
               type="button"
               disabled={isRatesPending}
               onClick={handleSaveRates}

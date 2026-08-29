@@ -266,7 +266,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       {/* Store hours */}
-      <section className={`${CARD} p-4 md:p-5`}>
+      <section data-tour="availability-store-hours" className={`${CARD} p-4 md:p-5`}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#FEF0EB] text-[#D4450A]">
@@ -332,7 +332,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
       </section>
 
       {/* Services list */}
-      <section className={CARD}>
+      <section data-tour="availability-services" className={CARD}>
         <div className="border-b border-[#e8e8e8] px-4 py-3.5 md:px-5">
           <div className="flex items-start gap-3">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#FEF0EB] text-[#D4450A]">
@@ -422,6 +422,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
                       <span className="pointer-events-none absolute left-0.5 top-0.5 size-5 rounded-full bg-white transition-transform peer-checked:translate-x-5" />
                     </label>
                     <button
+                      data-tour={index === 0 ? "availability-edit" : undefined}
                       type="button"
                       onClick={() => openEdit(service)}
                       className="flex size-7 items-center justify-center rounded-lg bg-[#F7F5F2] text-[#45443f] hover:bg-[#eceae6]"
@@ -454,7 +455,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
           aria-modal="true"
           aria-labelledby="availability-editor-title"
         >
-          <div className="flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-[14px] bg-white md:max-w-[440px] md:rounded-[14px]">
+          <div data-tour="availability-editor" className="flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-[14px] bg-white md:max-w-[440px] md:rounded-[14px]">
             <div className="flex items-center justify-between border-b border-[#e8e8e8] px-4 py-3">
               <h3 id="availability-editor-title" className="text-[14px] font-semibold text-[#1C1C1A] pr-2">
                 Edit availability — {editing.name}
@@ -677,6 +678,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
                 Cancel
               </button>
               <button
+                data-tour="availability-save"
                 type="button"
                 onClick={() => void handleSave()}
                 disabled={saving}

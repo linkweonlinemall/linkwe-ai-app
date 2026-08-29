@@ -218,12 +218,6 @@ export default async function CustomerDashboardPage() {
     { label: "Browse shop", href: "/shop", Icon: ShoppingBag },
     { label: "Services", href: "/services", Icon: ConciergeBell },
     { label: "My requests", href: "/my-requests", Icon: ClipboardList },
-    { label: "My orders", href: "/orders", Icon: Package },
-    { label: "My tickets", href: "/my-tickets", Icon: Ticket },
-    { label: "Bookings", href: "/bookings", Icon: Calendar },
-    { label: "My subscriptions", href: "/dashboard/customer/subscriptions", Icon: RefreshCw },
-    { label: "Wishlist", href: "/wishlist", Icon: Heart },
-    { label: "Saved stores", href: "/saved-stores", Icon: Bookmark },
     { label: "Settings", href: "/dashboard/customer/settings", Icon: Settings },
   ];
 
@@ -268,7 +262,7 @@ export default async function CustomerDashboardPage() {
         </div>
 
         <nav className="sticky top-2 z-20 mb-6 flex gap-2 overflow-x-auto rounded-2xl border border-white/80 bg-white/90 p-2 shadow-[0_10px_35px_rgba(28,28,26,.10)] backdrop-blur-xl" aria-label="Customer dashboard sections">
-          {[{label:"Overview",href:"#overview"},{label:"Orders",href:"#orders"},{label:"Bookings",href:"#bookings"},{label:"Tickets",href:"#tickets"},{label:"Saved",href:"#saved"},{label:"Messages",href:"#messages"}].map((tab)=><a key={tab.href} href={tab.href} className="shrink-0 rounded-xl px-3.5 py-2 text-xs font-bold text-zinc-600 transition hover:bg-[#FFF0E8] hover:text-[#D4450A]">{tab.label}</a>)}
+          {[{label:"Orders",href:"/orders",Icon:Package},{label:"Messages",href:"/messages",Icon:MessageCircle},{label:"Bookings",href:"/bookings",Icon:Calendar},{label:"Tickets",href:"/my-tickets",Icon:Ticket},{label:"Subscriptions",href:"/dashboard/customer/subscriptions",Icon:RefreshCw},{label:"Wishlist",href:"/wishlist",Icon:Heart},{label:"Saved stores",href:"/saved-stores",Icon:Bookmark},{label:"Event calendar",href:"/event-collections",Icon:Calendar}].map((tab)=><Link key={tab.href} href={tab.href} className="flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold text-zinc-600 transition hover:bg-[#FFF0E8] hover:text-[#D4450A]"><tab.Icon className="size-4"/>{tab.label}</Link>)}
         </nav>
 
         {/* Quick actions */}

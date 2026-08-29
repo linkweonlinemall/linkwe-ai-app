@@ -15,6 +15,7 @@ import {
   IconMessageCircle,
   IconRouteSquare,
   IconPackage,
+  IconQrcode,
   IconRefresh,
   IconSettings,
   IconShoppingBag,
@@ -175,7 +176,8 @@ export default function VendorDashboardSidebar({
 
   const STORE: NavLeaf[] = [
     { href: "/dashboard/vendor/store/edit", label: "Store profile", Icon: IconBuildingStore },
-    { href: "/dashboard/vendor/partners", label: "Partners", Icon: IconLink },
+    { href: "/dashboard/vendor/qr-studio", label: "QR Studio", Icon: IconQrcode },
+    { href: "/dashboard/vendor/partners", label: "Collab", Icon: IconLink },
     { href: "/dashboard/vendor/shipping", label: "Shipping", Icon: IconTruck },
     { href: "/dashboard/vendor/staff", label: "Availability", Icon: IconUsers },
   ];
