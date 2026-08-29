@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { isStoreSellable } from "@/lib/store/sellable-store";
-import { beginWiPaySubscription } from "@/lib/wipay/subscriptions";
+import { beginWiPayManualSubscription } from "@/lib/wipay/subscriptions";
 
 export type MyServiceSubscriptionRow = {
   id: string;
@@ -234,7 +234,7 @@ export async function startServiceSubscriptionCheckout(
   if (priceMinor < 1) return { ok: false, error: "invalid_price" };
 
   try {
-    const checkoutUrl = await beginWiPaySubscription({
+    const checkoutUrl = await beginWiPayManualSubscription({
       userId: session.userId,
       purpose: "SERVICE_SUBSCRIPTION",
       targetId: service.id,
@@ -293,7 +293,7 @@ export async function renewMyServiceSubscription(
   }
 
   try {
-    const checkoutUrl = await beginWiPaySubscription({
+    const checkoutUrl = await beginWiPayManualSubscription({
       userId: session.userId,
       purpose: "SERVICE_SUBSCRIPTION",
       targetId: subscription.productId,
@@ -324,7 +324,6 @@ export async function cancelMyServiceSubscription(
     },
     select: {
       id: true,
-      wipayTrustedCardId: true,
       status: true,
       cancelAtPeriodEnd: true,
       product: { select: { slug: true } },
@@ -332,7 +331,6 @@ export async function cancelMyServiceSubscription(
   });
 
   if (!row) return { ok: false, error: "not_found" };
-  if (!row.wipayTrustedCardId) return { ok: false, error: "no_subscription" };
   if (row.status !== "ACTIVE") return { ok: false, error: "not_active" };
   if (row.cancelAtPeriodEnd) return { ok: true };
 
@@ -362,7 +360,6 @@ export async function resumeMyServiceSubscription(
     },
     select: {
       id: true,
-      wipayTrustedCardId: true,
       status: true,
       cancelAtPeriodEnd: true,
       product: { select: { slug: true } },
@@ -370,7 +367,6 @@ export async function resumeMyServiceSubscription(
   });
 
   if (!row) return { ok: false, error: "not_found" };
-  if (!row.wipayTrustedCardId) return { ok: false, error: "no_subscription" };
   if (row.status !== "ACTIVE") return { ok: false, error: "not_active" };
   if (!row.cancelAtPeriodEnd) return { ok: true };
 

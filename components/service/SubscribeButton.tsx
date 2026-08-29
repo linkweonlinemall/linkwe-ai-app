@@ -211,6 +211,7 @@ export default function SubscribeButton({
       >
         {loading ? "Redirecting to checkout…" : "Subscribe →"}
       </button>
+      <p className="text-center text-[11px] leading-4 text-zinc-500">Secure TTD payment through WiPay. You approve each renewal at the end of the billing period.</p>
       {error ? <p className="text-center text-xs text-red-600">{error}</p> : null}
     </div>
   );

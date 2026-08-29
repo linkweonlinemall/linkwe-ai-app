@@ -3,6 +3,7 @@ import type { PaymentPurpose, Prisma } from "@prisma/client";
 import { BASE_URL } from "@/lib/email/resend";
 import { prisma } from "@/lib/prisma";
 import { chargeTrustedCard, createTrustedCardEnrollment } from "@/lib/wipay/wapi";
+import { createWiPayHostedPayment } from "@/lib/wipay/payments";
 
 type SubscriptionPurpose = Extract<
   PaymentPurpose,
@@ -44,6 +45,37 @@ export async function beginWiPaySubscription(input: SubscriptionContext): Promis
     data: { providerTransactionId: result.transaction_id },
   });
   return result.url;
+}
+
+/**
+ * Service subscriptions renew with customer approval, so they use WiPay's normal
+ * TTD checkout. This avoids the trusted-card USD micro-charge that many local
+ * debit cards reject while preserving a complete paid-period subscription.
+ */
+export async function beginWiPayManualSubscription(input: SubscriptionContext): Promise<string> {
+  const attempt = await prisma.paymentAttempt.create({
+    data: {
+      purpose: input.purpose,
+      merchantOrderId: `ssub-${crypto.randomUUID()}`,
+      amountMinor: input.amountMinor,
+      userId: input.userId,
+      targetId: input.targetId,
+      providerData: input.metadata,
+    },
+  });
+  try {
+    const result = await createWiPayHostedPayment({
+      merchantOrderId: attempt.merchantOrderId,
+      amountMinor: input.amountMinor,
+      responseUrl: `${BASE_URL}/api/payments/wipay/return`,
+      data: { purpose: input.purpose, targetId: input.targetId },
+    });
+    await prisma.paymentAttempt.update({ where: { id: attempt.id }, data: { providerTransactionId: result.transactionId } });
+    return result.url;
+  } catch (error) {
+    await prisma.paymentAttempt.update({ where: { id: attempt.id }, data: { status: "ERROR", failureMessage: error instanceof Error ? error.message : "WiPay payment setup failed" } });
+    throw error;
+  }
 }
 
 export async function startSubscriptionCharge(

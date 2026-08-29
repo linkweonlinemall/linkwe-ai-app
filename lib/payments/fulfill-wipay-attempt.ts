@@ -96,7 +96,7 @@ export async function fulfillWiPayAttempt(attempt: PaymentAttempt): Promise<void
       interval?: string;
       subscriptionId?: string;
     } | null;
-    if (!data?.storeId || !data.interval || !attempt.trustedCardId) {
+    if (!data?.storeId || !data.interval) {
       throw new Error("Service subscription payment metadata is incomplete");
     }
     const existing = data.subscriptionId
@@ -123,7 +123,7 @@ export async function fulfillWiPayAttempt(attempt: PaymentAttempt): Promise<void
           interval: data.interval,
           cancelAtPeriodEnd: false,
           canceledAt: null,
-          wipayTrustedCardId: attempt.trustedCardId,
+          wipayTrustedCardId: attempt.trustedCardId ?? existing.wipayTrustedCardId,
           stripeSubscriptionId: null,
         },
       });
