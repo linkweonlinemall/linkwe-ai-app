@@ -14,7 +14,7 @@ type Props = {
 const SLIDES = [
   {
     image: "/morning-front.png",
-    badge: "TRINIDAD & TOBAGO'S MARKETPLACE",
+    badge: "WE PEOPLE. WE BUSINESS. WE MARKETPLACE.",
     heading: ["Shop local.", "Support local.", "Powered by AI."],
     headingHighlight: 2,
     sub: "LinkWe connects you with vendors across Trinidad and Tobago. Search naturally, discover local stores, and shop with confidence.",

@@ -313,7 +313,7 @@ export default async function CartPage() {
           <Link href="/" className={`font-semibold ${tw.textScarlet} hover:underline`}>
             LinkWe
           </Link>{" "}
-          — Trinidad &amp; Tobago&apos;s Marketplace
+          — We People. We Business. We Marketplace.
         </p>
       </footer>
     </div>

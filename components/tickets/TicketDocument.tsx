@@ -259,7 +259,7 @@ export function TicketDocument({ ticket, qrCodeDataUrl, logoDataUrl }: Props) {
                 LinkWe
               </Text>
             )}
-            <Text style={styles.brandTagline}>Trinidad & Tobago Marketplace</Text>
+            <Text style={styles.brandTagline}>We People. We Business. We Marketplace.</Text>
           </View>
           <View style={styles.heroRight}>
             <Text style={styles.ticketTitle}>EVENT TICKET</Text>

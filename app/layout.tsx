@@ -18,11 +18,11 @@ const sora = Sora({
 
 export const metadata: Metadata = {
   title: {
-    default: "LinkWe Online Mall — Shop Local Trinidad & Tobago",
+    default: "LinkWe — We People. We Business. We Marketplace.",
     template: "%s · LinkWe",
   },
   description:
-    "Trinidad & Tobago's multi-vendor marketplace. Shop local vendors, book services, discover stores across T&T.",
+    "We People. We Business. We Marketplace. Shop local vendors, book services, and discover stores and events across Trinidad & Tobago on LinkWe.",
   keywords: ["Trinidad", "Tobago", "marketplace", "shop local", "vendors", "services"],
   authors: [{ name: "LinkWe Online Directory" }],
   creator: "LinkWe Online Directory",
@@ -47,9 +47,9 @@ export const metadata: Metadata = {
     locale: "en_TT",
     url: "https://www.linkweonlinemall.com",
     siteName: "LinkWe Online Mall",
-    title: "LinkWe Online Mall — Shop Local Trinidad & Tobago",
+    title: "LinkWe — We People. We Business. We Marketplace.",
     description:
-      "Trinidad & Tobago's multi-vendor marketplace. Shop local vendors, book services, discover stores across T&T.",
+      "We People. We Business. We Marketplace. Shop local vendors, services, stores and events across Trinidad & Tobago.",
     images: [
       {
         url: "/linkwe-social-share.png",
@@ -61,8 +61,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "LinkWe Online Mall — Shop Local Trinidad & Tobago",
-    description: "Trinidad & Tobago's multi-vendor marketplace.",
+    title: "LinkWe — We People. We Business. We Marketplace.",
+    description: "We People. We Business. We Marketplace. Discover local products, services, stores and events across Trinidad & Tobago.",
     images: ["/linkwe-social-share.png"],
   },
 };
@@ -88,6 +88,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col">
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "Organization", name: "LinkWe", url: "https://www.linkweonlinemall.com", logo: "https://www.linkweonlinemall.com/linkwe-logo-mark-on-light.png", slogan: "We People. We Business. We Marketplace.", description: "Trinidad & Tobago's marketplace for local products, services, stores and events." }) }} />
         <ServiceWorkerRegistration />
         <InstallPrompt />
         <CartProvider>

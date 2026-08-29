@@ -25,7 +25,7 @@ export default function SiteFooter() {
             />
             <div>
               <p className="mt-1 text-[11px] leading-snug text-[rgba(255,255,255,0.4)]">
-                Trinidad & Tobago&apos;s local marketplace
+                We People. We Business. We Marketplace.
               </p>
             </div>
           </div>

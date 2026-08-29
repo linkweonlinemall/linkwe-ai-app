@@ -411,7 +411,7 @@ export default async function MyTicketsPage() {
           <a href="/" style={{ color: "var(--scarlet)" }}>
             LinkWe
           </a>{" "}
-          — Trinidad & Tobago&apos;s Marketplace
+          — We People. We Business. We Marketplace.
         </p>
       </footer>
     </div>

@@ -42,9 +42,9 @@ import { sellableStoreWhere } from "@/lib/store/sellable-store";
 import { colors, css, radius, shadow, spacing, typography, tw } from "@/lib/design-system";
 
 export const metadata: Metadata = {
-  title: "LinkWe Online Mall — Shop Local Trinidad & Tobago",
+  title: "LinkWe — We People. We Business. We Marketplace.",
   description:
-    "Discover local vendors, book services, and shop products across Trinidad & Tobago. LinkWe connects you with the best local businesses.",
+    "We People. We Business. We Marketplace. Discover local vendors, book services, shop products and find events across Trinidad & Tobago.",
 };
 
 const SERVICE_CATEGORY_LINKS: {
@@ -809,7 +809,7 @@ export default async function Home() {
             <div className="col-span-2 sm:col-span-4 lg:col-span-2">
               <img src="/linkwe-logo-on-dark.png" alt="LinkWe" className="mb-5 h-10 w-auto object-contain" />
               <p className={`max-w-xs ${typography.bodySmall} leading-7 text-zinc-500`}>
-                Trinidad and Tobago&apos;s local marketplace. Shop local, support local, powered by AI.
+                We People. We Business. We Marketplace. Shop local and support local across Trinidad &amp; Tobago.
               </p>
               <div className="mt-6 flex flex-wrap gap-2">
                 {[
@@ -872,7 +872,7 @@ export default async function Home() {
           </div>
           <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-zinc-800/60 pt-8 sm:flex-row">
             <p className="text-xs text-zinc-600">
-              © {new Date().getFullYear()} LinkWe. Trinidad & Tobago&apos;s Marketplace.
+              © {new Date().getFullYear()} LinkWe. We People. We Business. We Marketplace.
             </p>
             <div className="flex gap-6">
               <Link href="/privacy" className="text-xs text-zinc-600 transition-colors hover:text-white">

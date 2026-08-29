@@ -480,7 +480,7 @@ export function InvoiceDocument({ order, qrCodeDataUrl, logoDataUrl, waveDataUrl
               ) : (
                 <Text style={styles.brandTagline}>LinkWe</Text>
               )}
-              <Text style={styles.brandTagline}>Trinidad & Tobago Marketplace</Text>
+              <Text style={styles.brandTagline}>We People. We Business. We Marketplace.</Text>
             </View>
             <View style={styles.heroRight}>
               <Text style={styles.invoiceTitle}>INVOICE</Text>

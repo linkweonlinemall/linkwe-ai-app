@@ -805,7 +805,7 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
           <Link href="/" style={{ color: "var(--scarlet)" }}>
             LinkWe
           </Link>{" "}
-          — Trinidad & Tobago&apos;s Marketplace
+          — We People. We Business. We Marketplace.
         </p>
       </footer>
     </div>

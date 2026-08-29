@@ -305,7 +305,7 @@ export default async function PublicStorePage({ params }: Props) {
           <Link href="/" className={`font-semibold ${tw.textScarlet} hover:underline`}>
             LinkWe
           </Link>{" "}
-          — Trinidad & Tobago&apos;s Marketplace
+          — We People. We Business. We Marketplace.
         </p>
       </footer>
     </div>

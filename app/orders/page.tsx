@@ -102,7 +102,7 @@ export default async function OrdersPage() {
           <a href="/" style={{ color: "var(--scarlet)" }}>
             LinkWe
           </a>{" "}
-          — Trinidad & Tobago&apos;s Marketplace
+          — We People. We Business. We Marketplace.
         </p>
       </footer>
     </div>
