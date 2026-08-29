@@ -183,7 +183,7 @@ export default function VendorDashboardOverview(props: {
       ) : null}
 
       {/* Stats */}
-      <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-4 md:gap-3">
+      <div data-tour="vendor-metrics" className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-4 md:gap-3">
         <div className={`rounded-[12px] bg-white dash-card-pad p-4 ${CARD_BORDER}`}>
           <div className="flex items-start justify-between gap-2">
             <div>
@@ -235,7 +235,7 @@ export default function VendorDashboardOverview(props: {
         {/* Left column */}
         <div className="min-w-0 space-y-4">
           {/* Sales bars */}
-          <div className={`min-w-0 overflow-hidden rounded-[12px] bg-white p-4 ${CARD_BORDER} dash-card-pad`}>
+          <div data-tour="vendor-sales-chart" className={`min-w-0 overflow-hidden rounded-[12px] bg-white p-4 ${CARD_BORDER} dash-card-pad`}>
             <div className="mb-3 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 text-[14px] font-semibold text-[#1C1C1A]">
                 <IconChartBar className="size-[18px] text-[#7c7b77]" stroke={1.5} aria-hidden />
@@ -276,7 +276,7 @@ export default function VendorDashboardOverview(props: {
           </div>
 
           {/* Recent orders */}
-          <div className={`min-w-0 rounded-[12px] bg-white ${CARD_BORDER} overflow-hidden`}>
+          <div data-tour="vendor-recent-orders" className={`min-w-0 rounded-[12px] bg-white ${CARD_BORDER} overflow-hidden`}>
             <div className="flex items-center justify-between border-b border-[rgba(28,28,26,0.08)] px-4 py-3 dash-card-pad">
               <div className="flex items-center gap-2 text-[14px] font-semibold text-[#1C1C1A]">
                 <IconShoppingBag className="size-[18px] text-[#7c7b77]" stroke={1.5} aria-hidden />
@@ -333,7 +333,7 @@ export default function VendorDashboardOverview(props: {
         {/* Right column */}
         <div className="min-w-0 space-y-4">
           {/* Store profile */}
-          <div className={`overflow-hidden rounded-[12px] bg-white ${CARD_BORDER}`}>
+          <div data-tour="vendor-profile-strength" className={`overflow-hidden rounded-[12px] bg-white ${CARD_BORDER}`}>
             <div
               className="relative h-[60px] bg-[#1C1C1A]"
               style={{
@@ -442,7 +442,7 @@ export default function VendorDashboardOverview(props: {
           ) : null}
 
           {/* Quick actions */}
-          <div className={`rounded-[12px] bg-white p-3.5 ${CARD_BORDER} dash-card-pad`}>
+          <div data-tour="vendor-shortcuts" className={`rounded-[12px] bg-white p-3.5 ${CARD_BORDER} dash-card-pad`}>
             <div className="grid grid-cols-2 gap-2">
               <Link
                 href="/dashboard/vendor/products/new"

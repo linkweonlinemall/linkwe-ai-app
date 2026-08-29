@@ -128,6 +128,7 @@ export default function NewServicePage() {
               <button
                 key={type.value}
                 type="button"
+                data-service-type={type.value}
                 onClick={() => setServiceType(type.value)}
                 className={`flex items-start gap-3 rounded-xl border-2 p-3 text-left transition-all ${
                   serviceType === type.value
@@ -784,7 +785,7 @@ export default function NewServicePage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <div data-tour="service-media" className="rounded-2xl border border-zinc-200 bg-white p-5">
           <p className="mb-3 text-sm font-bold text-zinc-900">Service images</p>
           <p className="mb-3 text-xs text-zinc-500">
             Add up to 10 photos — the first image will be shown as the cover.
@@ -866,7 +867,7 @@ export default function NewServicePage() {
         </div>
 
         {/* Publish */}
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <div data-tour="service-publish" className="rounded-2xl border border-zinc-200 bg-white p-5">
           <p className="mb-3 text-sm font-bold text-zinc-900">Visibility</p>
           <div className="flex flex-col gap-2">
             {[

@@ -179,6 +179,7 @@ export function ProductForm() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <button
               type="button"
+              data-product-type="simple"
               onClick={() => setProductType("simple")}
               className={`flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all ${
                 productType === "simple"
@@ -198,6 +199,7 @@ export function ProductForm() {
             </button>
             <button
               type="button"
+              data-product-type="variable"
               onClick={() => setProductType("variable")}
               className={`flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all ${
                 productType === "variable"
@@ -217,6 +219,7 @@ export function ProductForm() {
             </button>
             <button
               type="button"
+              data-product-type="digital"
               onClick={() => setProductType("digital")}
               className={`flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all ${
                 productType === "digital"
@@ -371,6 +374,7 @@ export function ProductForm() {
 
         {productType === "digital" ? (
           <div
+            data-tour="digital-file"
             className="rounded-xl bg-white p-5 sm:p-6"
             style={{ border: "1px solid var(--card-border)" }}
           >
@@ -507,6 +511,7 @@ export function ProductForm() {
 
         {productType === "variable" ? (
           <div
+            data-tour="product-variants"
             className="rounded-xl bg-white p-5 sm:p-6"
             style={{ border: "1px solid var(--card-border)" }}
           >
