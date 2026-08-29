@@ -140,7 +140,7 @@ export default function VendorRequestsClient({ initialRequests }: { initialReque
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-2">
+      <div data-tour="request-filters" className="flex flex-wrap gap-2">
         {[
           { value: "all", label: "All" },
           { value: "PENDING", label: "Pending" },
@@ -179,7 +179,7 @@ export default function VendorRequestsClient({ initialRequests }: { initialReque
           <p className="mt-1 text-xs text-zinc-400">On-demand requests from customers will appear here</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div data-tour="request-list" className="flex flex-col gap-3">
           {filtered.map((request) => {
             const expanded = expandedId === request.id;
             const status = STATUS_CONFIG[request.status] ?? STATUS_CONFIG.PENDING;
@@ -188,10 +188,12 @@ export default function VendorRequestsClient({ initialRequests }: { initialReque
             return (
               <div
                 key={request.id}
+                data-tour="request-card"
                 className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm"
               >
                 <button
                   type="button"
+                  data-tour="request-expand"
                   onClick={() => setExpandedId(expanded ? null : request.id)}
                   className="flex w-full items-start gap-4 p-4 text-left transition-colors hover:bg-zinc-50"
                 >

@@ -74,7 +74,7 @@ export default async function VendorSubscribersPage() {
       </div>
 
       {subscribers.length > 0 ? (
-        <div className="mb-8 grid gap-4 sm:grid-cols-2">
+        <div data-tour="subscriber-summary" className="mb-8 grid gap-4 sm:grid-cols-2">
           <div className={CARD_CLASS}>
             <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">
               Active subscribers
@@ -114,7 +114,7 @@ export default async function VendorSubscribersPage() {
       ) : (
         <div className="max-w-5xl space-y-8">
           {active.length > 0 ? (
-            <section>
+            <section data-tour="subscriber-active">
               <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-zinc-400">
                 Active ({active.length})
               </h2>
@@ -184,7 +184,7 @@ export default async function VendorSubscribersPage() {
           ) : null}
 
           {past.length > 0 ? (
-            <section>
+            <section data-tour="subscriber-past">
               <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-zinc-400">
                 Past ({past.length})
               </h2>

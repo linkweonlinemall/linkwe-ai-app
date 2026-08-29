@@ -299,6 +299,7 @@ export const tutorialCatalog = {
       routeStep("/dashboard/vendor/requests", "Custom requests", "Requests are customer enquiries requiring a vendor decision, custom amount or operational response."),
       { route: "/dashboard/vendor/requests", selector: '[data-tour="request-filters"]', title: "Request filters", body: "Separate pending, accepted, declined, cancelled and completed work so new requests are not missed." },
       { route: "/dashboard/vendor/requests", selector: '[data-tour="request-list"]', title: "Read the request", body: "Review service, customer description, location, timing, attachments and budget before deciding." },
+      { route: "/dashboard/vendor/requests", selector: '[data-tour="request-card"]', activateSelector: '[data-tour="request-expand"]', title: "Open the request details", body: "Expand the request to inspect its full scope and available response controls. The tour will never accept, decline, quote or complete it for you." },
       field("/dashboard/vendor/requests", "amount", "Your quoted amount", "Enter the agreed TTD amount based on the actual scope. Explain what is included before sending."),
       field("/dashboard/vendor/requests", "paymentMethod", "Payment method", "Choose the permitted payment flow. Online payment is recorded by LinkWe; pay-on-arrival amounts do not become payout funds."),
       field("/dashboard/vendor/requests", "vendorNote", "Response note", "Give clear next steps, timing and any conditions the customer must accept."),
