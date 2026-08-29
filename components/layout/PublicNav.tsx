@@ -336,6 +336,7 @@ export default function PublicNav({
                     { href: "/orders", label: "My orders", Icon: IconPackage },
                     { href: "/wishlist", label: "My wishlist", Icon: IconHeart },
                     { href: "/saved-stores", label: "Saved stores", Icon: IconBookmark },
+                    { href: "/event-collections", label: "Event collections", Icon: IconCalendarEvent },
                     { href: "/my-requests", label: "My requests", Icon: IconClipboardList },
                     { href: `${user.href}/settings`, label: "Settings", Icon: IconSettings },
                   ] as const
@@ -670,6 +671,7 @@ function PublicMoreSheet({
     { href: "/orders", label: "My Orders", Icon: IconPackage, authOnly: true },
     { href: "/wishlist", label: "My Wishlist", Icon: IconHeart, authOnly: true },
     { href: "/saved-stores", label: "Saved Stores", Icon: IconBookmark, authOnly: true },
+    { href: "/event-collections", label: "Event Collections", Icon: IconCalendarEvent, authOnly: true },
     { href: "/get-app", label: "Get App", Icon: IconDownload },
   ];
 

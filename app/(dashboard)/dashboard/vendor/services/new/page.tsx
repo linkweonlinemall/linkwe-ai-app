@@ -87,7 +87,9 @@ export default function NewServicePage() {
     const formData = new FormData(e.currentTarget);
     formData.set("serviceType", serviceType);
     formData.set("serviceLocation", serviceLocation);
-    formData.set("requiresDeposit", requiresDeposit ? "true" : "false");
+    const supportsDeposit = serviceType === "BOOKABLE" || serviceType === "VIRTUAL";
+    formData.set("requiresDeposit", supportsDeposit && requiresDeposit ? "true" : "false");
+    if (!supportsDeposit) formData.delete("depositAmount");
     formData.set("bookingPaymentMode", paymentMode);
     const result = await createService(formData);
     if (result?.error) {
@@ -129,7 +131,10 @@ export default function NewServicePage() {
                 key={type.value}
                 type="button"
                 data-service-type={type.value}
-                onClick={() => setServiceType(type.value)}
+                onClick={() => {
+                  setServiceType(type.value);
+                  if (type.value !== "BOOKABLE" && type.value !== "VIRTUAL") setRequiresDeposit(false);
+                }}
                 className={`flex items-start gap-3 rounded-xl border-2 p-3 text-left transition-all ${
                   serviceType === type.value
                     ? "border-[#D4450A] bg-[#D4450A]/5"
@@ -658,6 +663,7 @@ export default function NewServicePage() {
         {serviceType === "ON_DEMAND" ? (
           <div className="rounded-2xl border border-zinc-200 bg-white p-5">
             <p className="mb-4 text-sm font-bold text-zinc-900">On-demand details</p>
+            <p className="mb-4 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs leading-5 text-blue-800">On-demand requests use the accepted service price rather than a booking deposit. Deposit controls are available for Bookable and Virtual services.</p>
             <div className="flex flex-col gap-4">
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
