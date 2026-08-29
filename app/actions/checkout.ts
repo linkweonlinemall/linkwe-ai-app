@@ -81,8 +81,12 @@ export async function createPaymentIntent(
 
   const cartRequiresDelivery =
     useDelivery && cartItems.some((item) => !item.product.isDigital);
+  const trimmedAddress = deliveryAddress.trim();
 
   if (cartRequiresDelivery) {
+    if (!trimmedAddress) {
+      return { ok: false, error: "Please enter or select the delivery address before checkout." };
+    }
     const region = deliveryRegion.trim();
     if (!region || !isValidRegion(region)) {
       return { ok: false, error: "Please select a valid delivery region." };
@@ -124,8 +128,7 @@ export async function createPaymentIntent(
   }
 
   let shippingAddressId: string | undefined;
-  const trimmedAddress = deliveryAddress.trim();
-  if (useDelivery && trimmedAddress) {
+  if (cartRequiresDelivery) {
     const savedAddress = await prisma.address.create({
       data: {
         userId: session.userId,
