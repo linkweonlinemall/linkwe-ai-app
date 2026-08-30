@@ -47,7 +47,6 @@ const PLAN_TIER: Record<VendorPlanId, number> = {
   PRO: 2,
 };
 
-const FINANCE_HREF = "/dashboard/vendor/finance";
 
 function registerPlanParam(planId: VendorPlanId): string {
   return planId.toLowerCase();
@@ -77,7 +76,7 @@ function computePlanCta(plan: PricingPlan, viewerPlan: VendorPlanId | null): Pla
       ? `Upgrade to ${plan.name}`
       : `Switch to ${plan.name}`;
 
-  return { label, href: FINANCE_HREF };
+  return { label, href: `/dashboard/vendor/finance?upgrade=${plan.planId}` };
 }
 
 const PLANS: PricingPlan[] = [
@@ -91,10 +90,11 @@ const PLANS: PricingPlan[] = [
     cta: "Start free",
     features: [
       { text: "Up to 30 products", included: true },
+      { text: "Up to 3 services (maximum TTD 100 each)", included: true },
       { text: "Your own storefront", included: true },
       { text: "Orders, payouts & delivery tools", included: true },
       { text: "Sell events & tickets (6%)", included: true },
-      { text: "AI store assistant", included: false },
+      { text: "5 complimentary Rex prompts — lifetime", included: true },
       { text: "Featured placement", included: false },
       { text: "Priority support", included: false },
     ],
@@ -103,9 +103,9 @@ const PLANS: PricingPlan[] = [
     planId: "GROWTH",
     name: "Growth",
     tagline: "For shops ready to scale and sell smarter.",
-    price: "TTD 200",
+    price: "TTD 300",
     priceNote: "per month",
-    commission: "12% products · 5% services",
+    commission: "5% products · No service commission",
     cta: "Upgrade to Growth",
     featured: true,
     features: [
@@ -122,9 +122,9 @@ const PLANS: PricingPlan[] = [
     planId: "PRO",
     name: "Pro",
     tagline: "Maximum reach, lowest fees, full power.",
-    price: "TTD 450",
+    price: "TTD 500",
     priceNote: "per month",
-    commission: "8% products · 3% services",
+    commission: "No commission on products or services",
     cta: "Upgrade to Pro",
     features: [
       { text: "Unlimited products", included: true },

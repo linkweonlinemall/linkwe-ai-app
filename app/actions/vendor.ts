@@ -8,7 +8,8 @@ import { chargeSubscriptionFromBalance } from "@/lib/finance/subscription-billin
 import { PLAN_PRICE_MINOR } from "@/lib/finance/plan-limits";
 import { isVendorBalanceDebit } from "@/lib/finance/vendor-balance";
 import { prisma } from "@/lib/prisma";
-import { beginWiPaySubscription } from "@/lib/wipay/subscriptions";
+import { beginWiPayManualSubscription, beginWiPaySubscription } from "@/lib/wipay/subscriptions";
+import { alertAdmins } from "@/lib/admin/alerts";
 
 export async function saveVendorBankDetails(formData: FormData): Promise<void> {
   const session = await getSession();
@@ -103,7 +104,7 @@ export async function requestPayout(formData: FormData): Promise<{
     return { ok: false, error: "Minimum payout amount is TTD 50.00" };
   }
 
-  await prisma.payoutRequest.create({
+  const payout = await prisma.payoutRequest.create({
     data: {
       storeId: store.id,
       beneficiaryId: session.userId,
@@ -111,6 +112,12 @@ export async function requestPayout(formData: FormData): Promise<{
       currency: "TTD",
       status: "PENDING",
     },
+  });
+
+  await alertAdmins({
+    title: "New payout request",
+    body: `A vendor requested a TTD ${(payout.amountMinor / 100).toFixed(2)} payout. Verify the balance and bank details before processing it.`,
+    linkUrl: "/dashboard/admin/payouts",
   });
 
   revalidatePath("/dashboard/vendor");
@@ -130,14 +137,9 @@ export async function payMySubscriptionFromBalance(): Promise<
       id: true,
       subscriptionPlan: true,
       planRenewsAt: true,
-      wipayTrustedCardId: true,
     },
   });
   if (!store) return { ok: false, error: "No store found" };
-
-  if (store.wipayTrustedCardId) {
-    return { ok: false, error: "card_subscription_active" };
-  }
 
   const result = await chargeSubscriptionFromBalance(
     store.id,
@@ -179,7 +181,7 @@ export async function startSubscriptionCheckout(
   }
 
   try {
-    const checkoutUrl = await beginWiPaySubscription({
+    const checkoutUrl = await beginWiPayManualSubscription({
       userId: session.userId,
       purpose: "VENDOR_SUBSCRIPTION",
       targetId: store.id,

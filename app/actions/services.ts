@@ -16,6 +16,7 @@ import {
   findVendorServicesForAvailability,
 } from "@/lib/vendor/vendor-service-query";
 import { canVendorUsePayOnArrival } from "@/lib/services/payment-policy";
+import { getStorePlan } from "@/lib/finance/store-plan";
 
 function normalizeSubscriptionInterval(
   serviceType: string,
@@ -120,6 +121,16 @@ export async function createService(formData: FormData) {
     serviceType === "QUOTE" && quotePriceType === "FREE_QUOTE"
       ? 0
       : parseFloat(priceRaw) || 0;
+  const { limits } = getStorePlan(store);
+  if (limits.serviceMaxPriceMinor !== null && Math.round(price * 100) > limits.serviceMaxPriceMinor) {
+    return { error: "Starter services are limited to TTD 100. Upgrade to Growth or Pro for higher-priced services." };
+  }
+  if (limits.serviceCap !== null) {
+    const serviceCount = await prisma.product.count({ where: { storeId: store.id, isService: true } });
+    if (serviceCount >= limits.serviceCap) {
+      return { error: `Starter includes up to ${limits.serviceCap} services. Upgrade to create more.` };
+    }
+  }
   const serviceDuration = formData.get("serviceDuration")
     ? parseInt(formData.get("serviceDuration") as string, 10)
     : null;
@@ -318,6 +329,10 @@ export async function updateService(id: string, formData: FormData) {
     serviceType === "QUOTE" && quotePriceType === "FREE_QUOTE"
       ? 0
       : parseFloat(priceRaw) || 0;
+  const { limits } = getStorePlan(store);
+  if (limits.serviceMaxPriceMinor !== null && Math.round(price * 100) > limits.serviceMaxPriceMinor) {
+    return { error: "Starter services are limited to TTD 100. Upgrade to Growth or Pro for higher-priced services." };
+  }
   const serviceDuration = formData.get("serviceDuration")
     ? parseInt(formData.get("serviceDuration") as string, 10)
     : null;

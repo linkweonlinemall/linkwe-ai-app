@@ -8,6 +8,7 @@ import { getSession } from "@/lib/auth/session";
 import { saveKycDocumentUpload } from "@/lib/onboarding/save-kyc-upload";
 import { prisma } from "@/lib/prisma";
 import { getVendorReadiness } from "@/lib/vendor/readiness";
+import { alertAdmins } from "@/lib/admin/alerts";
 
 export async function uploadIdDocument(formData: FormData) {
   const session = await getSession();
@@ -46,6 +47,12 @@ export async function uploadIdDocument(formData: FormData) {
       data: { status: "PENDING_APPROVAL" },
     });
   }
+
+  await alertAdmins({
+    title: "Vendor verification ready for review",
+    body: "A vendor uploaded their ID and selfie. Review the evidence and approve or reject it.",
+    linkUrl: "/dashboard/admin/vendors?filter=pending-verification",
+  });
 
   return { ok: true as const };
 }

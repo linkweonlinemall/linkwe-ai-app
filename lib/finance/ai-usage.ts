@@ -11,6 +11,20 @@ export type AIUsageStoreInput = {
   aiTopupCreditsRemaining: number;
 };
 
+function usagePolicy(store: AIUsageStoreInput) {
+  const { plan, limits } = getStorePlan({
+    subscriptionPlan: store.subscriptionPlan,
+    subscriptionStatus: store.subscriptionStatus,
+  });
+  if (plan === "STARTER") {
+    return { allowance: limits.aiLifetimeGiftAllowance, periodKey: "starter-lifetime" };
+  }
+  return {
+    allowance: limits.aiMonthlyAllowance,
+    periodKey: getCurrentPeriodKey(store.planRenewsAt),
+  };
+}
+
 export async function getAIUsageState(
   store: AIUsageStoreInput,
 ): Promise<{
@@ -20,12 +34,7 @@ export async function getAIUsageState(
   periodKey: string;
   topupRemaining: number;
 }> {
-  const allowance = getStorePlan({
-    subscriptionPlan: store.subscriptionPlan,
-    subscriptionStatus: store.subscriptionStatus,
-  }).limits.aiMonthlyAllowance;
-
-  const periodKey = getCurrentPeriodKey(store.planRenewsAt);
+  const { allowance, periodKey } = usagePolicy(store);
 
   const row = await prisma.aIUsage.findUnique({
     where: {
@@ -51,12 +60,7 @@ export async function consumeAIUse(
   | { ok: true; remaining: number; usedTopup?: true }
   | { ok: false; reason: string; allowance: number; used: number }
 > {
-  const allowance = getStorePlan({
-    subscriptionPlan: store.subscriptionPlan,
-    subscriptionStatus: store.subscriptionStatus,
-  }).limits.aiMonthlyAllowance;
-
-  const periodKey = getCurrentPeriodKey(store.planRenewsAt);
+  const { allowance, periodKey } = usagePolicy(store);
 
   if (allowance > 0) {
     // Keep the limit check and increment in the same database statement. Without

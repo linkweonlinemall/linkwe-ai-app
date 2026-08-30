@@ -56,7 +56,7 @@ export async function beginWiPayManualSubscription(input: SubscriptionContext): 
   const attempt = await prisma.paymentAttempt.create({
     data: {
       purpose: input.purpose,
-      merchantOrderId: `ssub-${crypto.randomUUID()}`,
+      merchantOrderId: `${input.purpose === "VENDOR_SUBSCRIPTION" ? "vsub" : "ssub"}-${crypto.randomUUID()}`,
       amountMinor: input.amountMinor,
       userId: input.userId,
       targetId: input.targetId,

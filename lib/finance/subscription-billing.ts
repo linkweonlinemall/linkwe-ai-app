@@ -1,6 +1,6 @@
 import { getCurrentPeriodKey } from "@/lib/finance/ai-usage-period";
 import { PLAN_PRICE_MINOR } from "@/lib/finance/plan-limits";
-import { getVendorAvailableBalanceMinor } from "@/lib/finance/release-earnings";
+import { isVendorBalanceDebit } from "@/lib/finance/vendor-balance";
 import { resolveVendorPlan } from "@/lib/finance/vendor-plan";
 import { prisma } from "@/lib/prisma";
 
@@ -28,30 +28,42 @@ export async function chargeSubscriptionFromBalance(
   const periodKey = getCurrentPeriodKey(planRenewsAt);
   const idempotencyKey = `subscription:${storeId}:${periodKey}`;
 
-  const existing = await prisma.vendorLedgerEntry.findUnique({
-    where: { idempotencyKey },
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.vendorLedgerEntry.findUnique({ where: { idempotencyKey } });
+    if (existing) return { ok: true as const, charged: false, reason: "already_charged_this_period" };
+
+    const entries = await tx.vendorLedgerEntry.findMany({
+      where: { storeId },
+      select: { amountMinor: true, entryType: true },
+    });
+    const balanceMinor = entries.reduce((balance, entry) => {
+      if (entry.entryType === "CREDIT_ORDER_SETTLEMENT") return balance + entry.amountMinor;
+      if (isVendorBalanceDebit(entry.entryType)) return balance - entry.amountMinor;
+      return balance;
+    }, 0);
+    if (balanceMinor < priceMinor) {
+      return { ok: false as const, reason: "insufficient_balance", balanceMinor, priceMinor };
+    }
+
+    const renewalBase = planRenewsAt && planRenewsAt > new Date() ? planRenewsAt : new Date();
+    const nextRenewal = new Date(renewalBase);
+    nextRenewal.setUTCMonth(nextRenewal.getUTCMonth() + 1);
+    await tx.vendorLedgerEntry.create({
+      data: {
+        storeId,
+        currency: "TTD",
+        entryType: "DEBIT_SUBSCRIPTION",
+        ledgerEntryType: "SUBSCRIPTION",
+        amountMinor: priceMinor,
+        idempotencyKey,
+        description: `${plan.charAt(0) + plan.slice(1).toLowerCase()} plan subscription — paid from balance`,
+        releasedAt: new Date(),
+      },
+    });
+    await tx.store.update({
+      where: { id: storeId },
+      data: { subscriptionStatus: "ACTIVE", planRenewsAt: nextRenewal, pastDueSince: null },
+    });
+    return { ok: true as const, charged: true };
   });
-  if (existing) {
-    return { ok: true, charged: false, reason: "already_charged_this_period" };
-  }
-
-  const balanceMinor = await getVendorAvailableBalanceMinor(storeId);
-  if (balanceMinor < priceMinor) {
-    return { ok: false, reason: "insufficient_balance", balanceMinor, priceMinor };
-  }
-
-  await prisma.vendorLedgerEntry.create({
-    data: {
-      storeId,
-      currency: "TTD",
-      entryType: "DEBIT_SUBSCRIPTION",
-      ledgerEntryType: "SUBSCRIPTION",
-      amountMinor: priceMinor,
-      idempotencyKey,
-      description: `${plan.charAt(0) + plan.slice(1).toLowerCase()} plan subscription — paid from balance`,
-      releasedAt: new Date(),
-    },
-  });
-
-  return { ok: true, charged: true };
 }

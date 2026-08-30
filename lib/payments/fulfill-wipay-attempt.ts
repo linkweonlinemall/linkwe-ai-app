@@ -3,6 +3,8 @@ import type { PaymentAttempt } from "@prisma/client";
 import { handleBookingPaymentSucceeded } from "@/lib/finance/booking-payment";
 import { fulfillPaidTicketOrder } from "@/lib/payments/fulfill-ticket-order";
 import { fulfillProductOrder } from "@/lib/payments/fulfill-product-order";
+import { createVendorEarningsLedgerPair } from "@/lib/finance/release-earnings";
+import { resolveVendorPlan } from "@/lib/finance/vendor-plan";
 import { prisma } from "@/lib/prisma";
 
 function addInterval(from: Date, interval: string): Date {
@@ -99,20 +101,28 @@ export async function fulfillWiPayAttempt(attempt: PaymentAttempt): Promise<void
     if (!data?.storeId || !data.interval) {
       throw new Error("Service subscription payment metadata is incomplete");
     }
+    const storeId = data.storeId;
+    const interval = data.interval;
+    await prisma.$transaction(async (tx) => {
+    const store = await tx.store.findUnique({
+      where: { id: storeId },
+      select: { subscriptionPlan: true },
+    });
+    if (!store) throw new Error("Service subscription store was not found");
     const existing = data.subscriptionId
-      ? await prisma.customerServiceSubscription.findFirst({
+      ? await tx.customerServiceSubscription.findFirst({
           where: { id: data.subscriptionId, customerId: attempt.userId },
         })
-      : await prisma.customerServiceSubscription.findFirst({
+      : await tx.customerServiceSubscription.findFirst({
           where: { customerId: attempt.userId, productId: attempt.targetId },
           orderBy: { createdAt: "desc" },
         });
     const renewalBase = existing?.currentPeriodEnd && existing.currentPeriodEnd > new Date()
       ? existing.currentPeriodEnd
       : new Date();
-    const periodEnd = addInterval(renewalBase, data.interval);
+    const periodEnd = addInterval(renewalBase, interval);
     if (existing) {
-      await prisma.customerServiceSubscription.update({
+      await tx.customerServiceSubscription.update({
         where: { id: existing.id },
         data: {
           status: "ACTIVE",
@@ -120,7 +130,7 @@ export async function fulfillWiPayAttempt(attempt: PaymentAttempt): Promise<void
           nextChargeAt: periodEnd,
           lastChargeAt: new Date(),
           priceMinor: attempt.amountMinor,
-          interval: data.interval,
+          interval,
           cancelAtPeriodEnd: false,
           canceledAt: null,
           wipayTrustedCardId: attempt.trustedCardId ?? existing.wipayTrustedCardId,
@@ -128,13 +138,13 @@ export async function fulfillWiPayAttempt(attempt: PaymentAttempt): Promise<void
         },
       });
     } else {
-      await prisma.customerServiceSubscription.create({
+      await tx.customerServiceSubscription.create({
         data: {
           customerId: attempt.userId,
           productId: attempt.targetId,
-          storeId: data.storeId,
+          storeId,
           priceMinor: attempt.amountMinor,
-          interval: data.interval,
+          interval,
           currentPeriodEnd: periodEnd,
           nextChargeAt: periodEnd,
           lastChargeAt: new Date(),
@@ -142,5 +152,16 @@ export async function fulfillWiPayAttempt(attempt: PaymentAttempt): Promise<void
         },
       });
     }
+    await createVendorEarningsLedgerPair(tx, {
+      storeId,
+      ledgerEntryType: "SERVICE_SUBSCRIPTION_RENEWAL",
+      grossTTD: attempt.amountMinor / 100,
+      itemType: "service",
+      plan: resolveVendorPlan(store.subscriptionPlan),
+      idempotencyKey: `service-subscription:${attempt.id}`,
+      description: "Customer service subscription payment",
+      metadata: { paymentAttemptId: attempt.id, productId: attempt.targetId },
+    });
+    });
   }
 }

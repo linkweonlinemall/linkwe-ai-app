@@ -274,7 +274,7 @@ export default function FinanceTab({
       }
     } else if (result.error === "insufficient_balance") {
       setSubPayError(
-        "Your balance is too low to cover the subscription. (Card payment coming soon.)",
+        "Your balance is too low to cover the subscription. You can continue with WiPay instead.",
       );
     } else if (result.error === "card_subscription_active") {
       setSubPayError("Your WiPay renewal is handled separately — no balance payment is needed.");
@@ -435,21 +435,9 @@ export default function FinanceTab({
           {plan === "STARTER" ? (
             <>
               <p className="mt-2 text-[11px] text-zinc-500">
-                Upgrade to Growth plan for TTD 200/month to reduce your commission from 15% to 12% and
-                unlock 300 AI uses per month.
+                Upgrade to Growth for TTD 300/month: 5% product commission, no service commission, and 300 Rex uses per month.
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:opacity-90"
-                  style={{ backgroundColor: "#D4450A" }}
-                  onClick={() => {
-                    window.location.href =
-                      "mailto:admin@linkwemall.com?subject=Subscription Upgrade Enquiry";
-                  }}
-                >
-                  Upgrade Plan
-                </button>
                 <button
                   type="button"
                   className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
@@ -457,7 +445,7 @@ export default function FinanceTab({
                   disabled={subscribing}
                   onClick={() => void handleSubscribeByCard("GROWTH")}
                 >
-                  {subscribing ? "Redirecting…" : "Upgrade to Growth — TTD 200/mo"}
+                  {subscribing ? "Redirecting…" : "Upgrade to Growth — TTD 300/mo"}
                 </button>
                 <button
                   type="button"
@@ -465,7 +453,7 @@ export default function FinanceTab({
                   disabled={subscribing}
                   onClick={() => void handleSubscribeByCard("PRO")}
                 >
-                  Go Pro — TTD 450/mo
+                  Go Pro — TTD 500/mo
                 </button>
               </div>
             </>

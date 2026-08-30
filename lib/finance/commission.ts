@@ -13,8 +13,8 @@ export function getCommissionRate(
   plan: CommissionPlan,
 ): number {
   const rates = {
-    product: { STARTER: 0.15, GROWTH: 0.12, PRO: 0.08 },
-    service: { STARTER: 0.08, GROWTH: 0.05, PRO: 0.03 },
+    product: { STARTER: 0.15, GROWTH: 0.05, PRO: 0 },
+    service: { STARTER: 0.08, GROWTH: 0, PRO: 0 },
   };
   return rates[type][plan];
 }
