@@ -37,8 +37,10 @@ export async function bulkDelete(
   if (!session || session.role !== "VENDOR") return { ok: false }
   const storeId = await getVendorStoreId(session.userId)
   if (!storeId) return { ok: false }
-  await prisma.product.deleteMany({
-    where: { id: { in: productIds }, storeId }
+  // Archive rather than physically deleting so paid order history remains intact.
+  await prisma.product.updateMany({
+    where: { id: { in: productIds }, storeId, isService: false },
+    data: { isPublished: false, isArchived: true },
   })
   revalidatePath(PRODUCTS_PATH)
   return { ok: true }

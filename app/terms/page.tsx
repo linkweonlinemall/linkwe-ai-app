@@ -26,13 +26,13 @@ export default async function TermsOfServicePage() {
         unreadCount={unreadCount}
       />
       <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
-        <div className="mb-10">
+        <div className="mb-10 overflow-hidden rounded-[28px] bg-gradient-to-br from-[#1C1C1A] via-[#292724] to-[#6b260d] p-7 text-white shadow-xl sm:p-10">
           <p className="text-xs font-bold uppercase tracking-widest text-[#D4450A]">Legal</p>
-          <h1 className="font-display mt-2 text-4xl font-bold text-zinc-900">
+          <h1 className="font-display mt-2 text-4xl font-bold text-white">
             Terms of Service
           </h1>
-          <p className="mt-3 text-sm text-zinc-500">
-            Last updated: May 2026 · LinkWe Online Directory
+          <p className="mt-3 text-sm text-white/65">
+            Effective 30 August 2026 · LinkWe Online Directory
           </p>
         </div>
 
@@ -95,7 +95,8 @@ export default async function TermsOfServicePage() {
                   </li>
                 ))}
               </ul>
-              <p><strong className="text-zinc-900">Payouts:</strong> Vendor earnings are held by LinkWe and paid out according to the payout schedule. LinkWe deducts a platform commission from each transaction. Commission rates are communicated separately and may be updated with notice.</p>
+              <p><strong className="text-zinc-900">Plans and commissions:</strong> Starter has no monthly fee and currently charges 15% on products and 8% on services. Growth is TTD 300 monthly with 5% on products and no service commission. Pro is TTD 500 monthly with no product or service commission. Event tickets carry a 6% platform commission on all plans. Current pricing shown on the Pricing page controls if a conflict arises.</p>
+              <p><strong className="text-zinc-900">Payouts:</strong> Eligible vendor earnings become available in the LinkWe balance after the applicable fulfilment rules are met. Vendors request payout to their verified bank details, subject to the displayed minimum, fraud review, refunds, disputes and lawful holds.</p>
             </div>
           </section>
 

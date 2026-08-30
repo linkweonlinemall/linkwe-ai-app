@@ -8,6 +8,7 @@ import AddToCartButton from "@/components/product/AddToCartButton";
 import ProductTrustSignals from "@/components/product/ProductTrustSignals";
 import VariantSelector, { type VariantAttribute } from "@/components/product/VariantSelector";
 import WishlistButton from "@/components/ui/WishlistButton";
+import { formatTTDPrice } from "@/lib/format/price";
 
 type Variant = {
   id: string;
@@ -103,7 +104,7 @@ export default function ProductBuyBox({
       {/* 1 Price — duplicated in mobile sticky bar when enabled */}
       <div className={`mb-3 ${mobileStickyBar ? "max-md:hidden" : ""}`}>
         <p className="text-[36px] font-semibold leading-none tracking-tight text-[#D4450A]">
-          TTD {price.toFixed(2)}
+          {formatTTDPrice(price)}
         </p>
         {compareAtPrice && compareAtPrice > price ? (
           <p className="mt-2 font-sans text-sm text-zinc-400 line-through">TTD {compareAtPrice.toFixed(2)}</p>
@@ -207,7 +208,7 @@ export default function ProductBuyBox({
                 <ChevronDown className="size-4" strokeWidth={2} aria-hidden />
               </a>
             ) : (
-              <p className="shrink-0 text-sm font-semibold text-[#D4450A]">TTD {price.toFixed(2)}</p>
+              <p className="shrink-0 text-sm font-semibold text-[#D4450A]">{formatTTDPrice(price)}</p>
             )}
             {allSelected ? <div className="flex h-11 w-[84px] shrink-0 overflow-hidden rounded-xl border border-zinc-200 bg-white">
               <button type="button" aria-label="Decrease quantity" disabled={cap === 0 || effectiveQty <= 1} onClick={() => setQuantity(effectiveQty - 1)} className="flex w-7 items-center justify-center text-zinc-700 disabled:opacity-30"><Minus className="size-3.5" /></button>

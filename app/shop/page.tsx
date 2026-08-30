@@ -23,6 +23,7 @@ import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { sellableStoreWhere } from "@/lib/store/sellable-store";
 import { typography, radius, shadow, tw } from "@/lib/design-system";
 import { COLOUR_OPTIONS } from "@/lib/variant-options";
+import { formatTTDPrice } from "@/lib/format/price";
 
 export const metadata: Metadata = {
   title: "Shop",
@@ -378,7 +379,7 @@ export default async function ShopPage({ searchParams }: Props) {
                             {product.name}
                           </p>
                           <div className="mt-auto pt-1 sm:pt-2">
-                            <p className={`text-xs font-black sm:text-sm ${tw.textScarlet}`}>TTD {product.price.toFixed(2)}</p>
+                            <p className={`text-xs font-black sm:text-sm ${tw.textScarlet}`}>{formatTTDPrice(product.price)}</p>
                             {product.compareAtPrice != null && product.compareAtPrice > product.price ? (
                               <p className="text-xs text-zinc-400 line-through">
                                 TTD {product.compareAtPrice.toFixed(2)}

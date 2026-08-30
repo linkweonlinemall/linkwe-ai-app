@@ -151,8 +151,10 @@ export default function FinanceTab({
       ? "Free"
       : `TTD ${(priceMinor / 100).toLocaleString("en-TT", { maximumFractionDigits: 0 })}/mo`;
   const aiLine =
-    limits.aiMonthlyAllowance === 0
-      ? "No monthly AI allowance"
+    plan === "STARTER"
+      ? `${aiUsed} of ${aiAllowance} complimentary lifetime Rex prompts used · ${aiRemaining} left`
+      : limits.aiMonthlyAllowance === 0
+      ? "No monthly Rex allowance"
       : `${aiUsed} of ${aiAllowance} AI uses used · ${aiRemaining} left this period`;
   const topupLine =
     topupRemaining > 0 ? ` · ${topupRemaining} top-up use${topupRemaining !== 1 ? "s" : ""} remaining` : "";

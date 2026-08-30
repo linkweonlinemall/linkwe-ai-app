@@ -124,7 +124,7 @@ function VendorMoreSheet({
     <>
       <button
         type="button"
-        className="fixed inset-0 z-[110] bg-[rgba(0,0,0,0.5)] md:hidden"
+        className="fixed inset-0 z-[210] bg-[rgba(0,0,0,0.5)] md:hidden"
         aria-label="Close menu"
         onClick={onClose}
       />
@@ -132,7 +132,7 @@ function VendorMoreSheet({
         role="dialog"
         aria-modal="true"
         aria-label="Menu"
-        className="fixed inset-x-0 bottom-0 z-[111] max-h-[min(88vh,620px)] overflow-y-auto rounded-t-[28px] border-t border-white bg-gradient-to-b from-white to-[#F7F5F2] pb-[calc(env(safe-area-inset-bottom,0px)+18px)] shadow-[0_-20px_60px_rgba(28,28,26,0.24)] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-[211] max-h-[min(88vh,620px)] overflow-y-auto rounded-t-[28px] border-t border-white bg-gradient-to-b from-white to-[#F7F5F2] pb-[calc(env(safe-area-inset-bottom,0px)+18px)] shadow-[0_-20px_60px_rgba(28,28,26,0.24)] md:hidden"
       >
         <div className="flex justify-center pt-3 pb-1">
           <span className="h-1 w-10 rounded-full bg-[rgba(28,28,26,0.15)]" aria-hidden />

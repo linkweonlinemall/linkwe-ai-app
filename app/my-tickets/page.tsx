@@ -10,6 +10,7 @@ import { icn } from "@/lib/iconography";
 import { generateTicketQRCodeDataURL } from "@/lib/tickets/qr-code";
 import { ticketPaidMinor } from "@/lib/tickets/ticket-paid-minor";
 import PublicNav from "@/components/layout/PublicNav";
+import { formatTTDMinor } from "@/lib/format/price";
 import {
   formatEventDateShort,
   formatEventTime,
@@ -28,7 +29,7 @@ const STATUS_STYLES: Record<string, { label: string; bg: string; text: string }>
 };
 
 function formatMinor(minor: number): string {
-  return `TTD ${(minor / 100).toFixed(2)}`;
+  return formatTTDMinor(minor);
 }
 
 export default async function MyTicketsPage() {

@@ -7,6 +7,7 @@ import { getCart, removeFromCart, updateCartQuantity } from "@/app/actions/cart"
 import type { CartItem } from "@/lib/cart/cart-store";
 import { useCartStore } from "@/lib/cart/cart-store";
 import { toastRemovedFromCart } from "@/lib/feedback/toasts";
+import { formatTTDPrice } from "@/lib/format/price";
 
 function mapRows(rows: Awaited<ReturnType<typeof getCart>>): CartItem[] {
   return rows.map((row) => ({
@@ -179,7 +180,7 @@ export default function CartDrawer() {
                         </p>
                       ) : null}
                       <p className="mt-1 text-sm font-semibold text-zinc-900">
-                        TTD {(item.variant?.price ?? item.product.price).toFixed(2)}
+                        {formatTTDPrice(item.variant?.price ?? item.product.price)}
                       </p>
                       <div className="mt-1 flex items-center gap-2">
                         <button

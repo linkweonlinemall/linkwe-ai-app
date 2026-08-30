@@ -7,6 +7,7 @@ import SiteFooter from "@/components/layout/SiteFooter";
 import InstallPrompt from "@/components/pwa/InstallPrompt";
 import LinkWeToaster from "@/components/providers/LinkWeToaster";
 import ServiceWorkerRegistration from "@/components/pwa/ServiceWorkerRegistration";
+import RouteScrollManager from "@/components/layout/RouteScrollManager";
 
 import "./globals.css";
 
@@ -90,6 +91,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "Organization", name: "LinkWe", url: "https://www.linkweonlinemall.com", logo: "https://www.linkweonlinemall.com/linkwe-logo-mark-on-light.png", slogan: "We People. We Business. We Marketplace.", description: "Trinidad & Tobago's marketplace for local products, services, stores and events." }) }} />
         <ServiceWorkerRegistration />
+        <RouteScrollManager />
         <InstallPrompt />
         <CartProvider>
           <LinkWeToaster />

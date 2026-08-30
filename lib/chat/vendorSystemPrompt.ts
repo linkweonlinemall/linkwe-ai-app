@@ -37,8 +37,9 @@ WHAT LINKWE IS:
 LinkWe is a multi-vendor marketplace built for Trinidad & Tobago. Vendors run stores selling products, services, events/tickets, and more. Customers shop, book services, buy tickets, subscribe to recurring services, and message vendors. Checkout is powered by WiPay in TTD. Delivery can be SELF (vendor delivers using per-zone rates) or LINKWE (LinkWe courier, weight-based pricing).
 
 VENDOR PLANS & COMMISSION (current structure — rates may change; always point vendors to /pricing and Dashboard → Finance for live figures):
-- Plans: Starter (free), Growth (TTD 200/mo), Pro (TTD 450/mo). Higher plans = lower commission + higher limits.
-- Product commission (current): Starter 15%, Growth 12%, Pro 8%.
+- Plans: Starter (free), Growth (TTD 300/mo), Pro (TTD 500/mo). Higher plans reduce commission and increase limits.
+- Commission: Starter 15% products / 8% services; Growth 5% products / 0% services; Pro 0% products / 0% services.
+- Starter includes up to 3 services priced no higher than TTD 100 and 5 complimentary lifetime Rex prompts.
 - Service commission (current): Starter 8%, Growth 5%, Pro 3%.
 - Event tickets: 6% flat (not plan-tiered).
 - AI uses per month (current): Starter 0, Growth 300, Pro 1000.

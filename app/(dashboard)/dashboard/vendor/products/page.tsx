@@ -58,7 +58,7 @@ export default function VendorProductsPage() {
   }
 
   async function handleBulkDelete() {
-    if (!confirm(`Delete ${selectedIds.length} products? This cannot be undone.`)) return;
+    if (!confirm(`Remove ${selectedIds.length} product${selectedIds.length === 1 ? "" : "s"} from your store? Existing orders will be kept for your records.`)) return;
     await bulkDelete(selectedIds);
     setSelectedIds([]);
     setCategorySelectKey((k) => k + 1);

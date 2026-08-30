@@ -13,9 +13,9 @@ export default function SettingsTab() {
         <div className="grid grid-cols-2 gap-4">
           {[
             {
-              label: "Commission Rate",
-              value: "12%",
-              note: "Deducted from vendor earnings on order completion",
+              label: "Commission model",
+              value: "Plan based",
+              note: "Starter 15%/8% · Growth 5%/0% · Pro 0%/0% (products/services)",
             },
             {
               label: "Minimum Payout",
@@ -48,22 +48,22 @@ export default function SettingsTab() {
             {
               name: "Starter",
               price: "Free",
-              commission: "15%",
-              prompts: "50/month",
+              commission: "15% products · 8% services",
+              prompts: "5 lifetime",
               color: "#A1A1AA",
             },
             {
               name: "Growth",
-              price: "TTD 200/month",
-              commission: "12%",
-              prompts: "500/month",
+              price: "TTD 300/month",
+              commission: "5% products · 0% services",
+              prompts: "300/month",
               color: "#D4450A",
             },
             {
               name: "Pro",
-              price: "TTD 349/month",
-              commission: "8%",
-              prompts: "Unlimited",
+              price: "TTD 500/month",
+              commission: "0% products · 0% services",
+              prompts: "1,000/month",
               color: "#1B8C5A",
             },
           ].map((plan) => (
@@ -84,7 +84,7 @@ export default function SettingsTab() {
           ))}
         </div>
         <p className="mt-4 text-xs text-zinc-400">
-          Subscription billing is handled through WiPay recurring card payments.
+          Subscription upgrades and renewals use secure WiPay TTD checkout or the vendor&apos;s available LinkWe balance.
         </p>
       </div>
 

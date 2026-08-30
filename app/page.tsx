@@ -25,6 +25,7 @@ import {
   Zap,
   Check,
 } from "lucide-react";
+import { formatTTDPrice } from "@/lib/format/price";
 
 import { getSavedStoreIds, getWishlistProductIds } from "@/app/actions/wishlist";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
@@ -433,7 +434,7 @@ export default async function Home() {
                     </p>
                     <div className="mt-2 flex items-center gap-2">
                       <p className={`font-black ${tw.textScarlet} ${isHero ? "text-xl" : "text-sm"}`}>
-                        TTD {product.price.toFixed(2)}
+                        {formatTTDPrice(product.price)}
                       </p>
                       {product.compareAtPrice && product.compareAtPrice > product.price && (
                         <p className="text-xs text-zinc-400 line-through">TTD {product.compareAtPrice.toFixed(2)}</p>
@@ -519,7 +520,7 @@ export default async function Home() {
                           ) : (
                             <p className={`text-sm font-black ${tw.textScarlet}`}>
                               {service.serviceType === "QUOTE" && service.quotePriceType === "STARTING_FROM" ? "From " : ""}
-                              TTD {service.price.toFixed(2)}
+                              {formatTTDPrice(service.price)}
                             </p>
                           )}
                           {service.serviceDuration ? (

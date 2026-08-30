@@ -11,6 +11,7 @@ import { getSession } from "@/lib/auth/session";
 import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { icn } from "@/lib/iconography";
 import { prisma } from "@/lib/prisma";
+import { formatTTDPrice } from "@/lib/format/price";
 
 export const metadata: Metadata = {
   title: "My wishlist",
@@ -105,7 +106,7 @@ export default async function WishlistPage() {
                     {item.product.name}
                   </p>
                   <div className="mt-1.5 flex items-center gap-2">
-                    <p className="text-sm font-black text-[#D4450A]">TTD {item.product.price.toFixed(2)}</p>
+                    <p className="text-sm font-black text-[#D4450A]">{formatTTDPrice(item.product.price)}</p>
                     {item.product.compareAtPrice && item.product.compareAtPrice > item.product.price ? (
                       <p className="text-xs text-zinc-400 line-through">TTD {item.product.compareAtPrice.toFixed(2)}</p>
                     ) : null}

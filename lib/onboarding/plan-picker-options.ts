@@ -18,7 +18,7 @@ export type PlanPickerOption = {
 function formatCommission(plan: CommissionPlan): string {
   const productPct = Math.round(getCommissionRate("product", plan) * 100);
   const servicePct = Math.round(getCommissionRate("service", plan) * 100);
-  return `${productPct}% products · ${servicePct}% services`;
+  return `${productPct === 0 ? "No" : `${productPct}%`} product commission · ${servicePct === 0 ? "No" : `${servicePct}%`} service commission`;
 }
 
 function formatPrice(plan: CommissionPlan): { priceLabel: string; priceNote: string } {
@@ -39,7 +39,8 @@ function formatProductCap(plan: CommissionPlan): string {
 
 function formatAiAllowance(plan: CommissionPlan): string {
   const allowance = PLAN_LIMITS[plan].aiMonthlyAllowance;
-  if (allowance <= 0) return "No AI assistant included";
+  if (plan === "STARTER") return "5 complimentary Rex prompts — lifetime";
+  if (allowance <= 0) return "No monthly Rex allowance";
   return `AI assistant — ${allowance} uses/mo`;
 }
 

@@ -6,6 +6,7 @@ import { parse } from "csv-parse/sync"
 import { getSession } from "@/lib/auth/session"
 import { prisma } from "@/lib/prisma"
 import { checkProductCap } from "@/lib/finance/product-cap"
+import { getStorePlan } from "@/lib/finance/store-plan"
 
 type CSVRow = Record<string, string>
 
@@ -142,6 +143,19 @@ export async function bulkUploadFromCSV(
       }
     }
   }
+  const { limits } = getStorePlan(store)
+  if (productType === "service" && limits.serviceCap !== null) {
+    const currentServices = await prisma.product.count({ where: { storeId: store.id, isService: true } })
+    const remaining = Math.max(0, limits.serviceCap - currentServices)
+    if (rows.length > remaining) {
+      return {
+        total: rows.length,
+        created: 0,
+        failed: [{ row: 0, name: "", error: `Starter allows ${limits.serviceCap} services total. You can add ${remaining} more.` }],
+        createdProducts: [],
+      }
+    }
+  }
 
   const result: BulkResult = {
     total: rows.length,
@@ -160,8 +174,12 @@ export async function bulkUploadFromCSV(
     }
 
     const price = parseFloat(row["price"] ?? "")
-    if (!Number.isFinite(price) || price <= 0) {
+    if (!Number.isFinite(price) || price < 0) {
       result.failed.push({ row: rowNum, name, error: "Invalid price" })
+      continue
+    }
+    if (productType === "service" && limits.serviceMaxPriceMinor !== null && Math.round(price * 100) > limits.serviceMaxPriceMinor) {
+      result.failed.push({ row: rowNum, name, error: "Starter services cannot cost more than TTD 100." })
       continue
     }
 

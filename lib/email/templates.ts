@@ -17,10 +17,9 @@ function wrap(content: string, preheader = ""): string {
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
           <!-- Header -->
           <tr>
-            <td style="background:#1C1C1A;border-radius:18px 18px 0 0;padding:26px 32px;text-align:center;">
-              <span style="font-size:22px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">
-                Link<span style="color:#D4450A;">We</span>
-              </span>
+            <td style="background:linear-gradient(135deg,#1C1C1A,#302a27);border-radius:18px 18px 0 0;padding:24px 32px;text-align:center;">
+              <img src="${BASE_URL}/linkwe-logo-on-dark.png" width="150" height="48" alt="LinkWe" style="display:block;margin:0 auto;max-width:150px;max-height:48px;object-fit:contain;" />
+              <p style="margin:9px 0 0;color:#d6d3d1;font-size:10px;letter-spacing:1px;text-transform:uppercase;">We People. We Business. We Marketplace.</p>
             </td>
           </tr>
           <!-- Body -->
@@ -32,7 +31,7 @@ function wrap(content: string, preheader = ""): string {
           <!-- Footer -->
           <tr>
             <td style="background:#f4f4f5;border-radius:0 0 16px 16px;border:1px solid #e4e4e7;border-top:none;padding:20px 32px;text-align:center;">
-              <p style="margin:0;font-size:11px;color:#a1a1aa;">
+              <p style="margin:0;font-size:11px;line-height:1.7;color:#71717a;">
                 LinkWe Online Directory · Trinidad & Tobago<br/>
                 <a href="${BASE_URL}/privacy" style="color:#a1a1aa;">Privacy Policy</a> ·
                 <a href="${BASE_URL}/terms" style="color:#a1a1aa;">Terms of Service</a>
