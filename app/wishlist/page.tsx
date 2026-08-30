@@ -35,18 +35,18 @@ export default async function WishlistPage() {
         unreadCount={unreadCount}
       />
       <div className="mx-auto max-w-screen-xl px-4 py-10 sm:px-6">
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-8 flex items-center justify-between gap-4 overflow-hidden rounded-[26px] bg-gradient-to-br from-[#1C1C1A] via-[#352823] to-[#9f390e] p-6 text-white shadow-xl sm:p-8">
           <div>
-            <h1 className="font-display text-3xl font-bold text-zinc-900">
-              My <span className="italic text-[#D4450A]">wishlist</span>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-orange-300">Saved for later</p><h1 className="font-display mt-2 text-3xl font-bold text-white">
+              My <span className="italic text-orange-300">wishlist</span>
             </h1>
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className="mt-1 text-sm text-white/60">
               {items.length} item{items.length !== 1 ? "s" : ""} saved
             </p>
           </div>
           <Link
             href="/shop"
-            className="rounded-xl border-2 border-zinc-900 px-5 py-2.5 text-xs font-black uppercase tracking-wide text-zinc-900 transition-all hover:bg-zinc-900 hover:text-white"
+            className="shrink-0 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-xs font-black uppercase tracking-wide text-white transition-all hover:bg-white/15"
           >
             Browse shop
           </Link>

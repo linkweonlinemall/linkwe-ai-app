@@ -12,6 +12,7 @@ import {
 
 import { createTicketPaymentIntent } from "@/app/actions/ticket-checkout";
 import { validatePromoCode } from "@/app/actions/promo-codes";
+import { formatTTDPrice } from "@/lib/format/price";
 import {
   formatEventDateCard,
   formatEventSaleDate,
@@ -487,7 +488,7 @@ export function TicketPurchaseCard({
                   <span>
                     {item.qty} × {item.name}
                   </span>
-                  <span>TTD {(item.qty * item.price).toFixed(2)}</span>
+                  <span>{formatTTDPrice(item.qty * item.price)}</span>
                 </div>
               ))}
             </div>

@@ -19,6 +19,7 @@ import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { COLOUR_OPTIONS } from "@/lib/variant-options";
 import RelatedContentCards from "@/components/storefront/RelatedContentCards";
 import WishlistButton from "@/components/ui/WishlistButton";
+import { formatTTDPrice } from "@/lib/format/price";
 
 const PLACEHOLDER_COLORS = ["#E8820C", "#1A7FB5", "#D4450A", "#15803D", "#7C3AED"] as const;
 
@@ -197,7 +198,7 @@ function StoreTabProductCard({ product, wishlisted }: { product: StoreTabProduct
           <div className="mt-auto flex items-center justify-between border-t border-zinc-100 pt-2">
             <div>
               <p className="text-base font-black" style={{ color: "var(--scarlet)" }}>
-                TTD {(product.price ?? 0).toFixed(2)}
+                {formatTTDPrice(product.price ?? 0)}
               </p>
               {compareAt && compareAt > product.price ? (
                 <p className="-mt-0.5 text-xs text-zinc-400 line-through">TTD {compareAt.toFixed(2)}</p>
@@ -764,7 +765,7 @@ export default function StorefrontTabs({
                           <div className="mt-auto flex items-center justify-between border-t border-zinc-100 pt-2">
                             <div>
                               <p className="text-sm font-black text-[#D4450A]">
-                                TTD {(service.price ?? 0).toFixed(2)}
+                                {formatTTDPrice(service.price ?? 0)}
                               </p>
                               {service.serviceDuration ? (
                                 <p className="text-[10px] text-zinc-400">

@@ -15,6 +15,7 @@ import {
 } from "@/lib/orders/split-weight";
 import { generateOrderQRCodeDataURL, getOrderUrl } from "@/lib/orders/qr-code";
 import { prisma } from "@/lib/prisma";
+import { formatTTDMinor } from "@/lib/format/price";
 
 const DIGITAL_PROGRESS_STEPS = [
   "Order Placed",
@@ -556,7 +557,7 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
                                   <p className="break-words text-sm font-medium text-zinc-900">{item.titleSnapshot}</p>
                                   <p className="mt-0.5 text-xs text-zinc-400">{splitOrder.store.name}</p>
                                   <p className="mt-1 text-xs text-zinc-600">
-                                    {item.quantity} × TTD {(item.unitPriceMinor / 100).toFixed(2)}
+                                    {item.quantity} × {formatTTDMinor(item.unitPriceMinor)}
                                   </p>
                                   {isDigitalItem && paid && orderItem?.product?.digitalFileUrl ? (
                                     <a
@@ -659,7 +660,7 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
                           <p className="font-medium text-zinc-900">{item.titleSnapshot}</p>
                           <p className="text-xs text-zinc-400">{item.product?.store?.name ?? "Store"}</p>
                           <p className="mt-1 text-sm text-zinc-600">
-                            {item.quantity} × TTD {(item.priceMinor / 100).toFixed(2)}
+                            {item.quantity} × {formatTTDMinor(item.priceMinor)}
                           </p>
                           <p className="text-sm font-medium text-zinc-900">TTD {lineTotal.toFixed(2)}</p>
                         </div>

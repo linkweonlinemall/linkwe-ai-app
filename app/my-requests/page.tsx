@@ -31,12 +31,12 @@ export default async function MyRequestsPage() {
         dashboardHref={continueHref ?? undefined}
         unreadCount={unreadCount}
       />
-      <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
-        <div className="mb-8">
-          <h1 className="font-display text-3xl font-bold text-zinc-900">
-            My <span className="italic text-[#D4450A]">requests</span>
+      <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <div className="mb-8 overflow-hidden rounded-[26px] bg-gradient-to-br from-[#1C1C1A] via-[#352823] to-[#9f390e] p-6 text-white shadow-xl sm:p-8">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-orange-300">Services on your schedule</p><h1 className="font-display mt-2 text-3xl font-bold text-white">
+            My <span className="italic text-orange-300">requests</span>
           </h1>
-          <p className="mt-1 text-sm text-zinc-500">Track your on-demand service requests</p>
+          <p className="mt-2 text-sm text-white/60">Track quotes, provider responses, payment and completion from one place.</p>
         </div>
         <CustomerRequestsClient initialRequests={requests} />
       </div>

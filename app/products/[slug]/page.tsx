@@ -24,6 +24,7 @@ import { getSession } from "@/lib/auth/session";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { prisma } from "@/lib/prisma";
+import { formatTTDPrice } from "@/lib/format/price";
 import { typography, radius, shadow, spacing, tw } from "@/lib/design-system";
 import { isStoreSellable } from "@/lib/store/sellable-store";
 
@@ -559,7 +560,7 @@ export default async function PublicProductPage({ params }: Props) {
                     <p className="truncate text-sm font-semibold text-zinc-900">{p.name}</p>
                     <div className="mt-1 flex items-center gap-2">
                       <p className={`text-sm font-bold ${tw.textScarlet}`}>
-                        TTD {p.price.toFixed(2)}
+                        {formatTTDPrice(p.price)}
                       </p>
                       {p.compareAtPrice && p.compareAtPrice > p.price ? (
                         <p className="text-xs text-zinc-400 line-through">TTD {p.compareAtPrice.toFixed(2)}</p>
@@ -612,7 +613,7 @@ export default async function PublicProductPage({ params }: Props) {
                     </p>
                     <p className="truncate text-sm font-semibold text-zinc-900">{p.name}</p>
                     <div className="mt-1 flex items-center gap-2">
-                      <p className={`text-sm font-bold ${tw.textScarlet}`}>TTD {p.price.toFixed(2)}</p>
+                      <p className={`text-sm font-bold ${tw.textScarlet}`}>{formatTTDPrice(p.price)}</p>
                       {p.compareAtPrice && p.compareAtPrice > p.price ? (
                         <p className="text-xs text-zinc-400 line-through">
                           TTD {p.compareAtPrice.toFixed(2)}

@@ -99,15 +99,14 @@ export default async function MyTicketsPage() {
         dashboardHref={continueHref ?? undefined}
       />
 
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+        <div className="mb-7 flex items-center justify-between gap-4 overflow-hidden rounded-[26px] bg-gradient-to-br from-[#1C1C1A] via-[#372a24] to-[#A33A0D] p-6 text-white shadow-xl sm:p-8">
+          <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-orange-300">Your event wallet</p><h1 className="mt-2 text-3xl font-black text-white">
             My Tickets
-          </h1>
+          </h1><p className="mt-2 text-sm text-white/65">Your entry passes, QR codes and event details in one place.</p></div>
           <Link
             href="/events"
-            className="text-sm hover:underline"
-            style={{ color: "var(--blue)" }}
+            className="shrink-0 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-bold text-white backdrop-blur hover:bg-white/15"
           >
             Browse events
           </Link>
@@ -148,12 +147,13 @@ export default async function MyTicketsPage() {
               return (
                 <article
                   key={ticket.id}
-                  className="overflow-hidden rounded-2xl bg-white"
+                  className="relative overflow-hidden rounded-[22px] bg-white transition-transform hover:-translate-y-0.5"
                   style={{
-                    border: "1px solid var(--card-border-subtle)",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                    border: `1px solid ${accentColor}33`,
+                    boxShadow: "0 12px 35px -22px rgba(28,28,26,0.45)",
                   }}
                 >
+                  <span className="absolute inset-y-0 left-0 w-1.5" style={{ backgroundColor: accentColor }} aria-hidden />
                   {/* Event cover + details — event page link stays separate */}
                   <div className="flex gap-4 p-4 sm:p-5">
                     {/* Cover image */}

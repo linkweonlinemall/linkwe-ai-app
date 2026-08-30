@@ -1012,9 +1012,9 @@ export async function POST(req: NextRequest) {
           }
 
           const price = Number(raw.price ?? 0)
-          if (!price) {
+          if (!Number.isFinite(price) || price < 0) {
             return {
-              content: JSON.stringify({ ok: false, error: "Price is required." }),
+              content: JSON.stringify({ ok: false, error: "Enter a valid price. Use 0 for a free service." }),
             }
           }
           const { limits: serviceLimits } = getStorePlan(store)

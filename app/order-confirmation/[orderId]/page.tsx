@@ -6,6 +6,7 @@ import OrderConfirmationCelebration from "@/app/order-confirmation/[orderId]/Ord
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { formatTTDMinor } from "@/lib/format/price";
 
 type Props = { params: Promise<{ orderId: string }> };
 
@@ -100,7 +101,7 @@ export default async function OrderConfirmationPage({ params }: Props) {
                 <span className="text-zinc-400"> ×{item.quantity}</span>
               </span>
               <span className="shrink-0 font-medium tabular-nums" style={{ color: "var(--text-primary)" }}>
-                TTD {((item.priceMinor * item.quantity) / 100).toFixed(2)}
+                {formatTTDMinor(item.priceMinor * item.quantity)}
               </span>
             </div>
           ))}

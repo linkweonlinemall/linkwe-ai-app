@@ -15,6 +15,7 @@ import { icn } from "@/lib/iconography";
 import { SERVICE_CATEGORIES } from "@/lib/categories";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import WishlistButton from "@/components/ui/WishlistButton";
+import { formatTTDPrice } from "@/lib/format/price";
 
 const ALL_CATEGORIES = [{ value: "all", label: "All Services" }, ...SERVICE_CATEGORIES];
 
@@ -738,7 +739,7 @@ export default function ServicesClient({ initialServices, wishlistProductIds = [
                             ) : (
                               <p className="text-sm font-black text-[#D4450A]">
                                 {service.serviceType === "QUOTE" && service.quotePriceType === "STARTING_FROM" ? "From " : ""}
-                                TTD {service.price.toFixed(2)}
+                                {formatTTDPrice(service.price)}
                               </p>
                             )}
                             {service.reviewCount > 0 ? (

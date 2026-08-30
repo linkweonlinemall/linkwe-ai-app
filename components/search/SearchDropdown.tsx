@@ -7,6 +7,7 @@ import { IconMapPin, IconSearchOff } from "@tabler/icons-react";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { isServiceCatalogItem } from "@/lib/search/resolve-catalog-item";
 import type { UniversalSearchResponse } from "@/lib/search/types";
+import { formatTTDPrice } from "@/lib/format/price";
 
 const SCARLET = "#D4450A";
 const BLUE = "#1A7FB5";
@@ -144,7 +145,7 @@ export default function SearchDropdown({
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <span className="text-[12px] font-semibold" style={{ color: BLUE }}>
-                      TTD {s.price.toFixed(2)}
+                      {formatTTDPrice(s.price)}
                     </span>
                     <span
                       className="rounded px-1.5 py-0.5 text-[9px] font-bold uppercase"
@@ -235,7 +236,7 @@ export default function SearchDropdown({
                         className="text-[12px] font-semibold"
                         style={{ color: isService ? BLUE : SCARLET }}
                       >
-                        TTD {p.price.toFixed(2)}
+                        {formatTTDPrice(p.price)}
                       </span>
                       <span
                         className="rounded px-1.5 py-0.5 text-[9px] font-bold uppercase"

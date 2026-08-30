@@ -14,6 +14,7 @@ import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { sellableStoreWhere } from "@/lib/store/sellable-store";
 import { typography, radius, shadow, spacing, tw } from "@/lib/design-system";
+import { formatTTDPrice } from "@/lib/format/price";
 
 export const metadata: Metadata = {
   title: "Your cart",
@@ -217,7 +218,7 @@ export default async function CartPage() {
                           <p className={`${typography.bodySmall} font-semibold ${tw.textPrimary} ${tw.hoverTextScarlet}`}>{item.product.name}</p>
                         </Link>
                         <p className={`mt-2 ${typography.body} font-bold ${tw.textScarlet}`}>
-                          TTD {(item.variant?.price ?? item.product.price).toFixed(2)}
+                          {formatTTDPrice(item.variant?.price ?? item.product.price)}
                         </p>
                       </div>
                       <div className="col-span-2 flex min-w-0 flex-row-reverse items-center justify-between gap-3 sm:col-auto sm:flex-col sm:items-end sm:self-stretch">

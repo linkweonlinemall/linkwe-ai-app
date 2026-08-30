@@ -15,6 +15,7 @@ import {
   type ServiceAvailabilityInput,
 } from "@/lib/services/get-available-slots";
 import { parseStoreOpeningHours } from "@/lib/services/opening-hours";
+import { formatTTDPrice } from "@/lib/format/price";
 
 type Props = {
   serviceId: string;
@@ -447,7 +448,7 @@ export default function BookingWidget({
             </p>
           ) : paymentMethod === "arrival" ? (
             <p className="mt-2 text-xs font-semibold text-emerald-800">
-              💵 Pay TTD {price.toFixed(2)} on arrival
+              💵 Pay {formatTTDPrice(price)} on arrival
             </p>
           ) : null}
         </div>
@@ -637,12 +638,12 @@ export default function BookingWidget({
               </div>
               <div className="mt-0.5 flex justify-between border-t border-zinc-200 pt-1.5">
                 <span className="font-semibold text-zinc-700">Service total</span>
-                <span className="font-black text-[#D4450A]">TTD {price.toFixed(2)}</span>
+                <span className="font-black text-[#D4450A]">{formatTTDPrice(price)}</span>
               </div>
               {paymentMethod === "online" ? (
                 <div className="flex justify-between">
                   <span className="font-semibold text-zinc-800">Due now (online)</span>
-                  <span className="font-bold text-[#D4450A]">TTD {price.toFixed(2)}</span>
+                  <span className="font-bold text-[#D4450A]">{formatTTDPrice(price)}</span>
                 </div>
               ) : hasDepositAmount(depositAmount) ? (
                 <>
@@ -655,14 +656,14 @@ export default function BookingWidget({
                   <div className="flex justify-between">
                     <span className="text-zinc-500">Due on arrival</span>
                     <span className="font-semibold text-zinc-700">
-                      TTD {(price - depositAmount!).toFixed(2)}
+                      {formatTTDPrice(price - depositAmount!)}
                     </span>
                   </div>
                 </>
               ) : (
                 <div className="flex justify-between">
                   <span className="font-semibold text-zinc-800">Due on arrival</span>
-                  <span className="font-bold text-zinc-700">TTD {price.toFixed(2)}</span>
+                  <span className="font-bold text-zinc-700">{formatTTDPrice(price)}</span>
                 </div>
               )}
             </div>
