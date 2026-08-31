@@ -29,7 +29,7 @@ function sanitizeSlug(raw: string): string {
 }
 
 async function uniqueSlug(base: string): Promise<string> {
-  let slug = base || "product"
+  const slug = base || "product"
   let suffix = 0
   while (true) {
     const candidate = suffix === 0 ? slug : `${slug}-${suffix}`
@@ -122,6 +122,14 @@ export async function bulkUploadFromCSV(
       total: 0,
       created: 0,
       failed: [{ row: 0, name: "", error: "Invalid file format" }],
+      createdProducts: [],
+    }
+  }
+  if (rows.length > 50) {
+    return {
+      total: rows.length,
+      created: 0,
+      failed: [{ row: 0, name: "", error: "Bulk uploads are limited to 50 listings at a time." }],
       createdProducts: [],
     }
   }

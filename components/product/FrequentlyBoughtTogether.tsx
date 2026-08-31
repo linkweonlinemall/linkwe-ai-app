@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { addToCart, getCart } from "@/app/actions/cart";
 import type { CartItem } from "@/lib/cart/cart-store";
 import { useCartStore } from "@/lib/cart/cart-store";
+import { formatTTDPrice } from "@/lib/format/price";
 
 type Item = {
   id: string;
@@ -114,7 +115,7 @@ function FbtProductCard({
       <Link href={`/products/${item.slug}`} className="mt-2 block w-full min-w-0 px-1">
         <span className="line-clamp-2 text-[12px] leading-snug text-[var(--text-primary)]">{item.name}</span>
       </Link>
-      <p className="mt-1.5 text-[13px] font-medium text-[#D4450A]">TTD {item.price.toFixed(2)}</p>
+      <p className="mt-1.5 text-[13px] font-medium text-[#D4450A]">{formatTTDPrice(item.price)}</p>
     </div>
   );
 }

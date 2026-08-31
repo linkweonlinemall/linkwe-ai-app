@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { formatTTDPrice } from "@/lib/format/price";
 
 export type StorefrontProductRow = {
   id: string;
@@ -235,7 +236,7 @@ export function StorefrontMapAndProducts({ latitude, longitude, address, region,
                             {product.name}
                           </p>
                           <p className="mt-1 text-sm font-medium text-zinc-800">
-                            TTD {product.price.toFixed(2)}
+                            {formatTTDPrice(product.price)}
                           </p>
                         </div>
                       </Link>

@@ -92,6 +92,23 @@ export default function BulkUploadTab() {
     setStage("progress")
     setProgress(10)
 
+    // XLSX is parsed securely on the server. Treating its binary contents as
+    // CSV produced garbled Rex previews and could create incorrect listings.
+    if (file.name.toLowerCase().endsWith(".xlsx")) {
+      const fd = new FormData()
+      fd.append("csv", file)
+      setProgress(55)
+      const res = await bulkUploadFromCSV(fd, selectedType, publishImmediately)
+      setResult(res)
+      if (res.createdProducts?.length > 0) setCreatedProducts(res.createdProducts)
+      setProgress(100)
+      setTimeout(() => {
+        setStage("results")
+        setCsvUploading(false)
+      }, 300)
+      return
+    }
+
     const text = await file.text()
     setProgress(30)
 

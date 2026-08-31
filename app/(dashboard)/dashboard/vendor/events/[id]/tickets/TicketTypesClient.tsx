@@ -8,6 +8,7 @@ import {
   publishEvent,
 } from "@/app/actions/events";
 import { formatEventDateCompact } from "@/lib/events/format-datetime";
+import { formatTTDPrice } from "@/lib/format/price";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -390,7 +391,7 @@ export function TicketTypesClient({
                       className="mt-0.5 text-sm font-bold"
                       style={{ color: "var(--scarlet)" }}
                     >
-                      TTD {tt.price.toFixed(2)}
+                      {formatTTDPrice(tt.price)}
                     </p>
                   </div>
                 </div>

@@ -160,6 +160,27 @@ body {
 }
 
 /* Loading & motion polish */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root) {
+  animation: 160ms ease-out both lw-page-out;
+}
+
+::view-transition-new(root) {
+  animation: 280ms ease-out both lw-page-in;
+}
+
+@keyframes lw-page-out {
+  to { opacity: 0.72; transform: scale(0.997); }
+}
+
+@keyframes lw-page-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @keyframes lw-skeleton-pulse {
   0%,
   100% {
@@ -221,6 +242,8 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root),
   .lw-loader-mark,
   .lw-loader-orbit::after {
     animation: none;

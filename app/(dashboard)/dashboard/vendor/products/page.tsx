@@ -16,6 +16,7 @@ import {
 import { VendorProductRowSkeleton } from "@/components/ui/content-skeletons";
 import Skeleton from "@/components/ui/skeleton";
 import { icn } from "@/lib/iconography";
+import { formatTTDPrice } from "@/lib/format/price";
 
 export default function VendorProductsPage() {
   const router = useRouter();
@@ -374,7 +375,7 @@ export default function VendorProductsPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 mt-1 md:hidden">
-                    <span className="text-sm font-semibold text-zinc-900">TTD {product.price}</span>
+                    <span className="text-sm font-semibold text-zinc-900">{formatTTDPrice(product.price)}</span>
                     <span className="text-xs text-zinc-400">·</span>
                     <span className="text-xs text-zinc-500">
                       {product.stock !== null ? `${product.stock} in stock` : "Unlimited"}
@@ -412,7 +413,7 @@ export default function VendorProductsPage() {
                   className="text-sm font-semibold"
                   style={{ color: "var(--text-primary)" }}
                 >
-                  TTD {product.price.toFixed(2)}
+                  {formatTTDPrice(product.price)}
                 </span>
               </div>
 

@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { NotificationRowSkeleton } from "@/components/ui/content-skeletons";
 import Skeleton from "@/components/ui/skeleton";
+import { formatTTDPrice } from "@/lib/format/price";
 
 type ProductResult = {
   id: string
@@ -185,7 +186,7 @@ export default function ProductSearchBar({ defaultValue = "", category = "" }: P
                 </p>
                 <div className="mt-1.5 flex flex-wrap items-center gap-2">
                   <span className="text-sm font-bold text-[#D4450A]">
-                    TTD {product.price.toFixed(2)}
+                    {formatTTDPrice(product.price)}
                   </span>
                   {product.compareAtPrice != null ? (
                     <span className="text-xs text-zinc-400 line-through">

@@ -11,6 +11,7 @@ import {
   toggleServicePublished,
 } from "@/app/actions/services";
 import { icn } from "@/lib/iconography";
+import { formatTTDPrice } from "@/lib/format/price";
 
 function serviceTypeLabel(type: string | null) {
   switch (type) {
@@ -254,7 +255,7 @@ export default function VendorServicesPage() {
                     )}
                   </div>
                   <p className="mt-0.5 text-xs text-zinc-400">
-                    TTD {service.price.toFixed(2)}
+                    {formatTTDPrice(service.price)}
                     {service.serviceDuration ? ` · ${service.serviceDuration} min` : ""}
                     {service.serviceLocation
                       ? ` · ${service.serviceLocation.replace("_", " ").toLowerCase()}`

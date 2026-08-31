@@ -16,6 +16,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { formatTTDPrice } from "@/lib/format/price";
 
 import { getPopularSearches } from "@/app/actions/search";
 import StarRating from "@/components/ui/StarRating";
@@ -101,7 +102,7 @@ function SearchProductCard({ product: p, wishlisted }: { product: SearchProductR
           {p.name}
         </p>
         <p className="mt-1 text-[14px] font-medium" style={{ color: SCARLET }}>
-          TTD {p.price.toFixed(2)}
+          {formatTTDPrice(p.price)}
         </p>
         {p.reviewCount > 0 ? (
           <div className="mt-auto pt-1">
@@ -149,7 +150,7 @@ function SearchServiceCard({ service: s, wishlisted }: { service: SearchServiceR
         <p className="mt-0.5 line-clamp-2 text-[12px] font-medium leading-snug text-[var(--text-primary)]">
           {s.title}
         </p>
-        <p className="mt-1 text-[14px] font-medium text-[#1A7FB5]">TTD {s.price.toFixed(2)}</p>
+        <p className="mt-1 text-[14px] font-medium text-[#1A7FB5]">{formatTTDPrice(s.price)}</p>
         <p className="mt-1 flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
           <IconClock className="size-3 shrink-0" stroke={1.75} aria-hidden />
           {s.durationMinutes} min

@@ -16,6 +16,7 @@ import {
 } from "@/app/actions/vendor-chat"
 import { parseAssistantMessage } from "@/lib/chat/parseMessage"
 import type { ChatMessage, ChatProduct } from "@/lib/chat/types"
+import { formatTTDPrice } from "@/lib/format/price"
 import type { CartItem } from "@/lib/cart/cart-store"
 import { compressImageFile } from "@/lib/images/compress-image"
 
@@ -445,7 +446,7 @@ function ProductCard({ product }: { product: ChatProduct }) {
           {product.storeName}
         </p>
         <p className="mt-auto text-sm font-bold" style={{ color: "var(--scarlet)" }}>
-          TTD {product.price.toFixed(2)}
+          {formatTTDPrice(product.price)}
         </p>
         {product.hasVariants ? (
           <ProductCardChooseOptionsLink slug={product.slug} />

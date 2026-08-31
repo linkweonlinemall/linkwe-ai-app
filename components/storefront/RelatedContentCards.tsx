@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { minorToTtd } from "@/lib/finance/commission";
 import { radius, shadow, tw } from "@/lib/design-system";
+import { formatTTDPrice } from "@/lib/format/price";
 
 export type RelatedContentCardItem = {
   id: string;
@@ -55,7 +56,7 @@ export default function RelatedContentCards({ items }: { items: RelatedContentCa
               <p
                 className={`mt-auto pt-1 text-[13px] font-bold leading-none sm:mt-1 sm:pt-0 sm:text-sm ${tw.textScarlet}`}
               >
-                TTD {minorToTtd(item.price).toFixed(2)}
+                {formatTTDPrice(minorToTtd(item.price))}
               </p>
             ) : (
               <span className="mt-auto block min-h-[1.125rem] sm:hidden" aria-hidden />

@@ -15,6 +15,7 @@ import {
   IconTools,
   IconX,
 } from "@tabler/icons-react";
+import { formatTTDPrice } from "@/lib/format/price";
 import {
   Check,
   Facebook,
@@ -220,7 +221,7 @@ function ProductRow({ product }: { product: ProductPreview }) {
       </div>
       <div className="flex shrink-0 items-center gap-2" onClick={(e) => e.stopPropagation()}>
         <p className="text-[13px] font-medium" style={{ color: SCARLET }}>
-          TTD {(product.price ?? 0).toFixed(2)}
+          {formatTTDPrice(product.price ?? 0)}
         </p>
         <StoreCompactCartButton
           productId={product.id}
@@ -270,7 +271,7 @@ function ServiceRow({ service }: { service: ServicePreview }) {
       </div>
       <div className="flex shrink-0 items-center gap-2" onClick={(e) => e.stopPropagation()}>
         <p className="text-[13px] font-medium" style={{ color: BLUE }}>
-          TTD {(service.price ?? 0).toFixed(2)}
+          {formatTTDPrice(service.price ?? 0)}
         </p>
         <Link
           href={`/service/${service.slug}`}

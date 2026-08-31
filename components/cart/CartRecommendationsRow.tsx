@@ -7,6 +7,7 @@ import { useState, useTransition } from "react";
 import { addToCart } from "@/app/actions/cart";
 import { icn } from "@/lib/iconography";
 import { Package } from "lucide-react";
+import { formatTTDPrice } from "@/lib/format/price";
 
 export type CartRecommendation = {
   id: string;
@@ -77,7 +78,7 @@ export default function CartRecommendationsRow({ products }: Props) {
               <Link href={`/store/${p.store.slug}`} className="mt-1 line-clamp-1 text-xs text-zinc-500 hover:text-[#D4450A]">
                 {p.store.name}
               </Link>
-              <p className="mt-auto pt-2 text-sm font-bold text-[#D4450A]">TTD {p.price.toFixed(2)}</p>
+              <p className="mt-auto pt-2 text-sm font-bold text-[#D4450A]">{formatTTDPrice(p.price)}</p>
               <button
                 type="button"
                 onClick={() => handleAdd(p.id)}
