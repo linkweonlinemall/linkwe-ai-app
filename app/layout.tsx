@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Sora } from "next/font/google";
 
 import CartProvider from "@/components/cart/CartProvider";
@@ -34,7 +34,6 @@ export const metadata: Metadata = {
     shortcut: "/favicon-48x48.png",
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
-  themeColor: "#D4450A",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -66,6 +65,10 @@ export const metadata: Metadata = {
     description: "We People. We Business. We Marketplace. Discover local products, services, stores and events across Trinidad & Tobago.",
     images: ["/linkwe-social-share.png"],
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#D4450A",
 };
 
 export default function RootLayout({
