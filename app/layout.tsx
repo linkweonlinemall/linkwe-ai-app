@@ -8,6 +8,7 @@ import InstallPrompt from "@/components/pwa/InstallPrompt";
 import LinkWeToaster from "@/components/providers/LinkWeToaster";
 import ServiceWorkerRegistration from "@/components/pwa/ServiceWorkerRegistration";
 import RouteScrollManager from "@/components/layout/RouteScrollManager";
+import AppStartupSplash from "@/components/layout/AppStartupSplash";
 
 import "./globals.css";
 
@@ -79,6 +80,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${sora.variable} h-full antialiased`}>
       <head>
+        <link rel="preload" as="image" href="/linkwe-startup-splash.jpg" fetchPriority="high" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -92,6 +94,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col">
+        <AppStartupSplash />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "Organization", name: "LinkWe", url: "https://www.linkweonlinemall.com", logo: "https://www.linkweonlinemall.com/linkwe-logo-mark-on-light.png", slogan: "We People. We Business. We Marketplace.", description: "Trinidad & Tobago's marketplace for local products, services, stores and events." }) }} />
         <ServiceWorkerRegistration />
         <RouteScrollManager />

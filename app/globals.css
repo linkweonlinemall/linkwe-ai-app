@@ -160,6 +160,43 @@ body {
 }
 
 /* Loading & motion polish */
+@keyframes lw-splash-arrive {
+  from { opacity: 0; transform: scale(1.018); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes lw-splash-progress {
+  0% { width: 5%; filter: saturate(0.85); }
+  24% { width: 31%; }
+  58% { width: 67%; }
+  82% { width: 88%; }
+  100% { width: 100%; filter: saturate(1.1); }
+}
+
+.lw-app-splash {
+  opacity: 1;
+  transition: opacity 650ms cubic-bezier(0.22, 1, 0.36, 1), visibility 650ms;
+}
+
+.lw-app-splash-art {
+  animation: lw-splash-arrive 850ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.lw-app-splash-progress {
+  animation: lw-fade-in 700ms 260ms ease-out both;
+}
+
+.lw-app-splash-bar {
+  width: 5%;
+  animation: lw-splash-progress 2.15s 180ms cubic-bezier(0.3, 0.7, 0.2, 1) forwards;
+}
+
+.lw-app-splash-leaving {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 @view-transition {
   navigation: auto;
 }
@@ -242,6 +279,9 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .lw-app-splash-art,
+  .lw-app-splash-progress,
+  .lw-app-splash-bar,
   ::view-transition-old(root),
   ::view-transition-new(root),
   .lw-loader-mark,
