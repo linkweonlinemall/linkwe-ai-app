@@ -92,7 +92,17 @@ export async function createPaymentIntent(
   }
 
   const stores = new Map<string, ReturnType<typeof parseCheckoutFields>>();
-  for (const item of cartItems) if (!stores.has(item.product.storeId)) stores.set(item.product.storeId, parseCheckoutFields(item.product.store.checkoutFields));
+  for (const item of cartItems) {
+    const previous = stores.get(item.product.storeId) ?? [];
+    const legacyStoreFields = previous.length === 0
+      ? parseCheckoutFields(item.product.store.checkoutFields)
+      : [];
+    stores.set(item.product.storeId, [
+      ...previous,
+      ...legacyStoreFields,
+      ...parseCheckoutFields(item.product.checkoutFields),
+    ]);
+  }
   for (const [storeId, fields] of stores) {
     const responseError = validateCheckoutResponses(fields, checkoutResponses[storeId]);
     if (responseError) return { ok: false, error: responseError };

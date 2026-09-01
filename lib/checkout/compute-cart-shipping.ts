@@ -67,6 +67,7 @@ const checkoutCartInclude = {
       weight: true,
       weightUnit: true,
       isDigital: true,
+      checkoutFields: true,
       store: {
         select: {
           id: true,

@@ -98,6 +98,12 @@ export const vendorSplitOrderDetailSelect = {
       totalMinor: true,
       createdAt: true,
       checkoutResponses: true,
+      items: {
+        select: {
+          storeId: true,
+          product: { select: { name: true, checkoutFields: true } },
+        },
+      },
       shippingAddress: {
         select: {
           line1: true,

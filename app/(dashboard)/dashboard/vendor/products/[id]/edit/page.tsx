@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/prisma";
 import { getStoreByOwnerId } from "@/lib/store/get-vendor-store";
 import { ProductEditForm, type VendorProductEditPayload } from "./product-edit-form";
+import { parseCheckoutFields } from "@/lib/checkout/custom-fields";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -66,6 +67,7 @@ export default async function EditVendorProductPage({ params }: Props) {
       downloadLimit: true,
       downloadExpiryDays: true,
       licenceType: true,
+      checkoutFields: true,
     },
   });
 
@@ -117,6 +119,7 @@ export default async function EditVendorProductPage({ params }: Props) {
     downloadLimit: row.downloadLimit,
     downloadExpiryDays: row.downloadExpiryDays,
     licenceType: row.licenceType,
+    checkoutFields: parseCheckoutFields(row.checkoutFields),
   };
 
   return (

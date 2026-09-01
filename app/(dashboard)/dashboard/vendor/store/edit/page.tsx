@@ -14,10 +14,8 @@ import StoreAmenitiesPicker from "./store-amenities-picker";
 import { StoreEditUploadProvider } from "./store-edit-upload-context";
 import { StoreEditFileInput } from "./store-edit-file-input";
 import { StoreEditSaveButton } from "./store-edit-save-button";
-import CheckoutFieldsEditor from "./checkout-fields-editor";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { parseCheckoutFields } from "@/lib/checkout/custom-fields";
 
 type TimeSlot = { from: string; to: string };
 type DaySchedule = { closed: boolean; allDay: boolean; slots: TimeSlot[] };
@@ -76,7 +74,6 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
       longitude: true,
       address: true,
       socialLinks: true,
-      checkoutFields: true,
       images: {
         select: { id: true, url: true, position: true },
         orderBy: { position: "asc" },
@@ -463,7 +460,6 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
           </div>
         </div>
 
-        <CheckoutFieldsEditor initialFields={parseCheckoutFields(store.checkoutFields)} />
       </form>
 
       <GalleryUploadWrapper images={store.images} slotsAvailable={10 - store.images.length} />

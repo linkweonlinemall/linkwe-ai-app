@@ -2,11 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import type { Prisma, ProductCondition, WeightUnit, LicenceType } from "@prisma/client";
+import { Prisma, type ProductCondition, type WeightUnit, type LicenceType } from "@prisma/client";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { checkProductCap } from "@/lib/finance/product-cap";
 import { uploadFile } from "@/lib/uploads/upload";
+import { parseCheckoutFields } from "@/lib/checkout/custom-fields";
 
 const PRODUCTS_PATH = "/dashboard/vendor/products";
 
@@ -55,6 +56,11 @@ function optionalInt(raw: string): number | null {
   if (!t) return null;
   const n = parseInt(t, 10);
   return Number.isFinite(n) ? n : null;
+}
+
+function checkoutFieldsFromForm(formData: FormData): ReturnType<typeof parseCheckoutFields> {
+  try { return parseCheckoutFields(JSON.parse(String(formData.get("checkoutFields") ?? "[]"))); }
+  catch { return []; }
 }
 
 function validatePhysicalProductFields(data: {
@@ -207,6 +213,7 @@ export async function createProduct(
   const longitude = optionalFloat(lngRaw);
 
   const isPublished = intent === "publish";
+  const checkoutFields = checkoutFieldsFromForm(formData);
 
   if (isDigital && isPublished && !digitalFileUrl) {
     return { ok: false, errors: { _general: "Add a downloadable file before publishing a digital product." } };
@@ -251,6 +258,7 @@ export async function createProduct(
     downloadExpiryDays,
     licenceType,
     isBookable: false,
+    checkoutFields: checkoutFields.length > 0 ? checkoutFields : Prisma.DbNull,
   };
 
   try {
@@ -442,6 +450,7 @@ export async function updateProduct(
 
   const latitude = optionalFloat(latRaw);
   const longitude = optionalFloat(lngRaw);
+  const checkoutFields = checkoutFieldsFromForm(formData);
 
   let isPublished: boolean;
   if (intent === "publish") isPublished = true;
@@ -502,6 +511,7 @@ export async function updateProduct(
         licenceType,
         isBookable: false,
         hasVariants: formData.get("hasVariants") === "true",
+        checkoutFields: checkoutFields.length > 0 ? checkoutFields : Prisma.DbNull,
       },
     });
   } catch (e) {

@@ -192,7 +192,12 @@ export default async function VendorOrderDetailPage({ params }: Props) {
   const deliveryLat = splitOrder.mainOrder.shippingAddress?.latitude ? Number(splitOrder.mainOrder.shippingAddress.latitude) : null;
   const deliveryLng = splitOrder.mainOrder.shippingAddress?.longitude ? Number(splitOrder.mainOrder.shippingAddress.longitude) : null;
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-  const checkoutFields = parseCheckoutFields(splitOrder.store.checkoutFields);
+  const checkoutFields = [
+    ...parseCheckoutFields(splitOrder.store.checkoutFields),
+    ...splitOrder.mainOrder.items
+      .filter((item) => item.storeId === splitOrder.storeId)
+      .flatMap((item) => parseCheckoutFields(item.product?.checkoutFields)),
+  ];
   const checkoutResponses = (splitOrder.mainOrder.checkoutResponses ?? {}) as CheckoutResponses;
   const vendorResponses = checkoutResponses[splitOrder.storeId] ?? {};
 

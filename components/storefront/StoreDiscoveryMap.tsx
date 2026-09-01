@@ -12,7 +12,7 @@ export default function StoreDiscoveryMap({ stores }: { stores: MapStore[] }) {
   const [modules, setModules] = useState<MapModules | null>(null);
   const [region, setRegion] = useState("all");
   const [selected, setSelected] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const mapRef = useRef<MapRef | null>(null);
   const token = (process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "").trim();
 

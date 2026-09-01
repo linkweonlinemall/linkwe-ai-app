@@ -39,6 +39,7 @@ export default async function CheckoutPage() {
           deliveryFee: true,
           storeId: true,
           isDigital: true,
+          checkoutFields: true,
           store: { select: { name: true, slug: true, checkoutFields: true } },
         },
       },
@@ -72,7 +73,7 @@ export default async function CheckoutPage() {
             </div>
           </div>
         </div>
-        <CheckoutClient items={items.map((item) => ({ ...item, product: { ...item.product, store: { ...item.product.store, checkoutFields: parseCheckoutFields(item.product.store.checkoutFields) } } }))} subtotal={subtotal} initialPhone={userRecord?.phone ?? ""} />
+        <CheckoutClient items={items.map((item) => ({ ...item, product: { ...item.product, checkoutFields: parseCheckoutFields(item.product.checkoutFields), store: { ...item.product.store, checkoutFields: parseCheckoutFields(item.product.store.checkoutFields) } } }))} subtotal={subtotal} initialPhone={userRecord?.phone ?? ""} />
       </div>
     </div>
   );

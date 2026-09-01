@@ -34,6 +34,7 @@ export type CheckoutClientItem = {
     deliveryFee: number | null;
     storeId: string;
     isDigital: boolean;
+    checkoutFields: CheckoutField[];
     store: { name: string; slug: string; checkoutFields: CheckoutField[] };
     /** When omitted (e.g. older server queries), weight defaults to 0.5 lb in estimates. */
     weight?: number | null;
@@ -75,11 +76,24 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
   const [checkoutResponses, setCheckoutResponses] = useState<CheckoutResponses>({});
   const [uploadingField, setUploadingField] = useState<string | null>(null);
 
-  const storeQuestions = useMemo(() => {
-    const groups = new Map<string, { storeName: string; fields: CheckoutField[] }>();
-    for (const item of items) if (!groups.has(item.product.storeId) && item.product.store.checkoutFields.length > 0) groups.set(item.product.storeId, { storeName: item.product.store.name, fields: item.product.store.checkoutFields });
-    return [...groups.entries()].map(([storeId, value]) => ({ storeId, ...value }));
+  const productQuestions = useMemo(() => {
+    const groups: { key: string; storeId: string; title: string; fields: CheckoutField[] }[] = [];
+    const legacyStores = new Set<string>();
+    for (const item of items) {
+      if (item.product.checkoutFields.length > 0) groups.push({ key: item.productId, storeId: item.product.storeId, title: item.product.name, fields: item.product.checkoutFields });
+      if (!legacyStores.has(item.product.storeId) && item.product.store.checkoutFields.length > 0) {
+        legacyStores.add(item.product.storeId);
+        groups.push({ key: `store:${item.product.storeId}`, storeId: item.product.storeId, title: item.product.store.name, fields: item.product.store.checkoutFields });
+      }
+    }
+    return groups;
   }, [items]);
+  // Compatibility alias for the renderer while store-level questions phase out.
+  const storeQuestions = productQuestions.map((group) => ({
+    storeId: group.storeId,
+    storeName: group.title,
+    fields: group.fields,
+  }));
 
   function setCheckoutResponse(storeId: string, fieldId: string, value: string | string[]) {
     setCheckoutResponses((current) => ({ ...current, [storeId]: { ...(current[storeId] ?? {}), [fieldId]: value } }));

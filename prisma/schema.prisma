@@ -1680,6 +1680,7 @@ model Product {
   viewCount       Int     @default(0)
   metaTitle       String?
   metaDescription String?
+  checkoutFields  Json?             @map("checkout_fields")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

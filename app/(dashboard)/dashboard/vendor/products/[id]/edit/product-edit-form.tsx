@@ -17,6 +17,8 @@ import Input from "@/components/ui/Input";
 import RichTextEditor from "@/components/ui/RichTextEditor";
 import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
+import CheckoutFieldsBuilder from "@/components/vendor/CheckoutFieldsBuilder";
+import type { CheckoutField } from "@/lib/checkout/custom-fields";
 
 const PRODUCT_CATEGORY_OPTIONS = [
   { value: "clothing_apparel", label: "Clothing & Apparel" },
@@ -90,6 +92,7 @@ export type VendorProductEditPayload = {
   downloadLimit: number | null;
   downloadExpiryDays: number | null;
   licenceType: LicenceType | null;
+  checkoutFields: CheckoutField[];
 };
 
 export type VendorProductInitialVariant = {
@@ -724,6 +727,8 @@ export function ProductEditForm({
             </div>
           </div>
         ) : null}
+
+        <CheckoutFieldsBuilder initialFields={product.checkoutFields} />
 
         <div
           className="rounded-xl bg-white p-5 sm:p-6"

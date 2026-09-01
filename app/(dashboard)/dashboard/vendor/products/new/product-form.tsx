@@ -12,6 +12,7 @@ import Input from "@/components/ui/Input";
 import RichTextEditor from "@/components/ui/RichTextEditor";
 import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
+import CheckoutFieldsBuilder from "@/components/vendor/CheckoutFieldsBuilder";
 
 const PRODUCT_CATEGORY_OPTIONS = [
   { value: "clothing_apparel", label: "Clothing & Apparel" },
@@ -624,6 +625,8 @@ export function ProductForm() {
             </div>
           </div>
         ) : null}
+
+        <CheckoutFieldsBuilder />
 
         <div
           className="rounded-xl bg-white p-5 sm:p-6"
