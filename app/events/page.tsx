@@ -79,14 +79,16 @@ export default async function EventsPage({
   const q = searchParams.q?.trim() ?? "";
   const category = searchParams.category ?? "";
   const region = searchParams.region ?? "";
-  const sort = searchParams.sort ?? "soonest";
+  const sort = searchParams.sort ?? "recommended";
   const dateRange = buildDateRange(searchParams.date);
   const dateWhere = dateRange ? { startDate: dateRange } : {};
 
   const orderBy =
     sort === "latest"
-      ? { startDate: "desc" as const }
-      : { startDate: "asc" as const };
+      ? [{ startDate: "desc" as const }]
+      : sort === "recommended"
+        ? [{ isFeatured: "desc" as const }, { startDate: "asc" as const }]
+        : [{ startDate: "asc" as const }];
 
   // Only apply full-text search when q is a non-empty string.
   // An empty string passed to Prisma `contains` matches every row in Postgres.
@@ -151,6 +153,13 @@ export default async function EventsPage({
     if (sort === "price_asc") return eventPrice(a) - eventPrice(b);
     if (sort === "price_desc") return eventPrice(b) - eventPrice(a);
     if (sort === "name") return a.title.localeCompare(b.title);
+    if (sort === "recommended") {
+      if (a.isFeatured !== b.isFeatured) return Number(b.isFeatured) - Number(a.isFeatured);
+      const aSold = a.ticketTypes.reduce((total, ticket) => total + ticket.quantitySold, 0);
+      const bSold = b.ticketTypes.reduce((total, ticket) => total + ticket.quantitySold, 0);
+      if (aSold !== bSold) return bSold - aSold;
+      return a.startDate.getTime() - b.startDate.getTime();
+    }
     return 0;
   });
 

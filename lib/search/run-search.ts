@@ -217,6 +217,7 @@ export async function runUniversalSearch(
               name: true,
               slug: true,
               price: true,
+              isFeatured: true,
               images: true,
               category: true,
               store: { select: { name: true, slug: true, region: true } },
@@ -234,6 +235,7 @@ export async function runUniversalSearch(
               name: true,
               slug: true,
               price: true,
+              isFeatured: true,
               images: true,
               category: true,
               durationMinutes: true,
@@ -254,6 +256,7 @@ export async function runUniversalSearch(
               slug: true,
               logoUrl: true,
               coverPhotoUrl: true,
+              description: true,
               categoryId: true,
               region: true,
               tags: true,
@@ -301,6 +304,13 @@ export async function runUniversalSearch(
     );
   }
 
+  storeResults.sort((a, b) => {
+    const aConfidence = (a.averageRating ?? 0) * Math.min(a.reviewCount, 10) + Math.log1p(a.reviewCount);
+    const bConfidence = (b.averageRating ?? 0) * Math.min(b.reviewCount, 10) + Math.log1p(b.reviewCount);
+    if (aConfidence !== bConfidence) return bConfidence - aConfidence;
+    return b.productCount - a.productCount;
+  });
+
   const mapProduct = (p: (typeof products)[0]): SearchProductResult => {
     const rev = productReviews.get(p.id);
     return {
@@ -318,8 +328,16 @@ export async function runUniversalSearch(
     };
   };
 
-  const productResults = products.map(mapProduct);
-  const serviceResults: SearchServiceResult[] = services.map((s) => {
+  const qualitySort = <T extends { id: string; isFeatured: boolean }>(a: T, b: T) => {
+    if (a.isFeatured !== b.isFeatured) return Number(b.isFeatured) - Number(a.isFeatured);
+    const aReviews = productReviews.get(a.id) ?? { average: 0, count: 0 };
+    const bReviews = productReviews.get(b.id) ?? { average: 0, count: 0 };
+    const aConfidence = aReviews.average * Math.min(aReviews.count, 10) + Math.log1p(aReviews.count);
+    const bConfidence = bReviews.average * Math.min(bReviews.count, 10) + Math.log1p(bReviews.count);
+    return bConfidence - aConfidence;
+  };
+  const productResults = [...products].sort(qualitySort).map(mapProduct);
+  const serviceResults: SearchServiceResult[] = [...services].sort(qualitySort).map((s) => {
     const rev = productReviews.get(s.id);
     return {
       type: "service",

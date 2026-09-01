@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { LocateFixed } from "lucide-react";
 
 import type { PublicStoreSort } from "@/app/actions/public-stores";
 import { STORE_CATEGORIES } from "@/lib/categories";
@@ -26,6 +27,8 @@ type Props = {
   lngRaw: string;
   tags: string[];
   hasFilters: boolean;
+  showMobile?: boolean;
+  showDesktop?: boolean;
 };
 
 export default function StoreFiltersDrawer({
@@ -38,8 +41,36 @@ export default function StoreFiltersDrawer({
   lngRaw,
   tags,
   hasFilters,
+  showMobile = true,
+  showDesktop = true,
 }: Props) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [latitude, setLatitude] = useState(latRaw);
+  const [longitude, setLongitude] = useState(lngRaw);
+  const [locating, setLocating] = useState(false);
+  const [locationMessage, setLocationMessage] = useState("");
+
+  function useMyLocation() {
+    if (!navigator.geolocation) {
+      setLocationMessage("Location is not available in this browser.");
+      return;
+    }
+    setLocating(true);
+    setLocationMessage("");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLatitude(position.coords.latitude.toFixed(6));
+        setLongitude(position.coords.longitude.toFixed(6));
+        setLocationMessage("Location ready. Choose Nearest to you and apply filters.");
+        setLocating(false);
+      },
+      () => {
+        setLocationMessage("We could not access your location. Check your browser permission.");
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
+    );
+  }
 
   const filterForm = (
     <form method="GET" action="/stores" className="space-y-5">
@@ -90,30 +121,14 @@ export default function StoreFiltersDrawer({
           ))}
         </select>
       </div>
-      <details className="rounded-xl bg-zinc-50 p-3 text-xs text-zinc-600">
-        <summary className="cursor-pointer select-none font-semibold text-zinc-700">
-          📍 Location for &quot;nearest&quot;
-        </summary>
-        <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
-          Enter coordinates to sort stores by distance from you.
-        </p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <input
-            name="lat"
-            defaultValue={latRaw}
-            inputMode="decimal"
-            placeholder="Latitude (e.g. 10.65)"
-            className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-xs focus:border-[#D4450A] focus:outline-none"
-          />
-          <input
-            name="lng"
-            defaultValue={lngRaw}
-            inputMode="decimal"
-            placeholder="Longitude (e.g. -61.52)"
-            className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-xs focus:border-[#D4450A] focus:outline-none"
-          />
-        </div>
-      </details>
+      <div className="rounded-2xl border border-blue-100 bg-blue-50 p-3 text-xs text-blue-950">
+        <input type="hidden" name="lat" value={latitude} />
+        <input type="hidden" name="lng" value={longitude} />
+        <p className="font-bold">Distance and nearby stores</p>
+        <p className="mt-1 text-[11px] leading-relaxed text-blue-800/75">Use your current position to sort stores by proximity and display approximate distance.</p>
+        <button type="button" onClick={useMyLocation} disabled={locating} className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-blue-700 px-3 font-bold text-white shadow-sm disabled:opacity-60"><LocateFixed className="size-4" />{locating ? "Finding you…" : latitude && longitude ? "Update my location" : "Use my location"}</button>
+        {locationMessage ? <p className="mt-2 text-[11px] leading-4">{locationMessage}</p> : null}
+      </div>
       <button
         type="submit"
         className="w-full rounded-xl py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
@@ -133,11 +148,11 @@ export default function StoreFiltersDrawer({
   return (
     <>
       {/* Mobile filter trigger */}
-      <div className="mb-6 flex items-center gap-2 lg:hidden">
+      {showMobile ? <div className="flex items-center gap-2 lg:hidden">
         <button
           type="button"
           onClick={() => setDrawerOpen(true)}
-          className="flex items-center gap-2 rounded-xl border-2 border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 shadow-sm transition-all hover:border-[#D4450A] hover:text-[#D4450A]"
+          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/95 px-4 py-3 text-sm font-bold text-zinc-800 shadow-lg transition-all hover:-translate-y-0.5 hover:bg-white"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="4" y1="6" x2="20" y2="6" />
@@ -156,10 +171,10 @@ export default function StoreFiltersDrawer({
             Clear all
           </a>
         ) : null}
-      </div>
+      </div> : null}
 
       {/* Mobile drawer */}
-      {drawerOpen ? (
+      {showMobile && drawerOpen ? (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -184,12 +199,12 @@ export default function StoreFiltersDrawer({
       ) : null}
 
       {/* Desktop sidebar */}
-      <aside className="hidden w-full shrink-0 lg:block lg:w-64">
+      {showDesktop ? <aside className="hidden w-full shrink-0 lg:block lg:w-64">
         <div className="sticky top-4 overflow-hidden rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
           <p className="mb-5 text-xs font-bold uppercase tracking-widest text-zinc-400">Filters</p>
           {filterForm}
         </div>
-      </aside>
+      </aside> : null}
     </>
   );
 }

@@ -183,6 +183,18 @@ export default async function ShopPage({ searchParams }: Props) {
   const reviewMap = new Map(
     reviewAggs.map((r) => [r.productId!, { avg: r._avg.rating ?? 0, count: r._count.rating }]),
   );
+  const rankedProducts =
+    sort === "featured"
+      ? [...products].sort((a, b) => {
+          if (a.isFeatured !== b.isFeatured) return Number(b.isFeatured) - Number(a.isFeatured);
+          const aReviews = reviewMap.get(a.id) ?? { avg: 0, count: 0 };
+          const bReviews = reviewMap.get(b.id) ?? { avg: 0, count: 0 };
+          // Confidence-weight ratings so one perfect review does not outrank sustained quality.
+          const aQuality = aReviews.avg * Math.min(aReviews.count, 10) + Math.log1p(aReviews.count);
+          const bQuality = bReviews.avg * Math.min(bReviews.count, 10) + Math.log1p(bReviews.count);
+          return bQuality - aQuality;
+        })
+      : products;
 
   const wishlistIds = await getWishlistProductIds();
   const filterInventory = await prisma.product.findMany({
@@ -257,7 +269,7 @@ export default async function ShopPage({ searchParams }: Props) {
                   : "All Products"}
             </h1>
             <p className="mt-0.5 text-base text-zinc-500 md:text-sm">
-              {products.length} product{products.length !== 1 ? "s" : ""} from local vendors across Trinidad & Tobago
+              {rankedProducts.length} product{rankedProducts.length !== 1 ? "s" : ""} from local vendors across Trinidad & Tobago
             </p>
           </div>
           {(category || q) && (
@@ -289,7 +301,7 @@ export default async function ShopPage({ searchParams }: Props) {
                 key={shopFiltersKey}
                 defaultCategory={category ?? "all"}
                 defaultSort={sort}
-                productCount={products.length}
+                productCount={rankedProducts.length}
                 availableBrands={availableBrands}
                 availableCategories={availableCategories}
                 availableColours={availableColours}
@@ -300,7 +312,7 @@ export default async function ShopPage({ searchParams }: Props) {
 
           {/* Product grid */}
           <div className="min-w-0 flex-1">
-            {products.length === 0 ? (
+            {rankedProducts.length === 0 ? (
               <div className={`overflow-hidden ${radius.card} border border-dashed border-zinc-300 bg-white`}>
                 <EmptyState
                   icon={<PackageSearch strokeWidth={1.25} className="text-current" />}
@@ -312,7 +324,7 @@ export default async function ShopPage({ searchParams }: Props) {
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-2 md:grid-cols-3 md:gap-3 lg:grid-cols-4 xl:grid-cols-5">
-                {products.map((product) => {
+                {rankedProducts.map((product) => {
                   const discount =
                     product.compareAtPrice && product.compareAtPrice > product.price
                       ? Math.round((1 - product.price / product.compareAtPrice) * 100)

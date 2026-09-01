@@ -152,6 +152,20 @@ export default async function StoresDiscoveryPage({
           <div className="mt-6 sm:mt-8">
             <StoreSearchBar />
           </div>
+          <div className="mt-2 lg:hidden">
+            <StoreFiltersDrawer
+              qRaw={qRaw}
+              region={region}
+              category={category}
+              tag={tag}
+              sort={sort}
+              latRaw={latRaw}
+              lngRaw={lngRaw}
+              tags={tags}
+              hasFilters={!!(region || (category && category !== "all") || tag || (sort && sort !== "recommended"))}
+              showDesktop={false}
+            />
+          </div>
         </section>
 
         <StoreDiscoveryMap stores={mapStores} />
@@ -172,6 +186,7 @@ export default async function StoresDiscoveryPage({
               tag ||
               (sort && sort !== "recommended")
             )}
+            showMobile={false}
           />
 
           <div className="min-w-0 flex-1">

@@ -204,9 +204,9 @@ export default function PublicNav({
 
   const glassHeader = [
     headerPosition,
-    "w-full overflow-visible transition-[background-color,backdrop-filter,border-color] duration-200",
+    "w-full overflow-visible transition-[background-color,backdrop-filter,border-color,box-shadow] duration-300",
     navIsLight
-      ? "public-nav-light border-b-[0.5px] border-zinc-200/80 bg-white/95 text-[#1C1C1A] shadow-sm backdrop-blur-[12px] md:backdrop-blur-[16px]"
+      ? "public-nav-light border-b border-zinc-200/70 bg-white/90 text-[#1C1C1A] shadow-[0_12px_35px_rgba(28,28,26,0.08)] backdrop-blur-[18px]"
       : storeNavAtTop
         ? "border-b-0 bg-transparent backdrop-blur-none"
         : "border-b-[0.5px] border-white/10 bg-[rgba(28,28,26,0.95)] backdrop-blur-[12px] md:backdrop-blur-[16px]",
@@ -371,7 +371,7 @@ export default function PublicNav({
 
       <header className={glassHeader}>
         {/* Mobile */}
-        <nav aria-label="Primary mobile" className="flex px-4 py-3 md:hidden">
+        <nav aria-label="Primary mobile" className="flex px-3 py-3 md:hidden sm:px-4">
           <div className="flex w-full min-w-0 items-center justify-between gap-3">
             <Link href="/" className="block shrink-0">
               <LogoMark desktop={false} />
@@ -437,7 +437,7 @@ export default function PublicNav({
         </nav>
 
         {/* Desktop */}
-        <nav aria-label="Primary desktop" className="hidden h-[60px] w-full min-w-0 items-center gap-4 overflow-visible px-8 md:flex">
+        <nav aria-label="Primary desktop" className="hidden h-[68px] w-full min-w-0 items-center gap-4 overflow-visible px-6 md:flex xl:px-8">
           <Link href="/" className="shrink-0">
             <LogoMark desktop />
           </Link>
@@ -561,17 +561,15 @@ export default function PublicNav({
       <div
         role="navigation"
         aria-label="Mobile bottom navigation"
-        className="fixed bottom-0 left-0 right-0 z-[100] border-t-[0.5px] border-[var(--color-border-tertiary)] bg-white lg:hidden"
-        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+        className="fixed bottom-[max(.55rem,env(safe-area-inset-bottom,0px))] left-3 right-3 z-[100] overflow-hidden rounded-[24px] border border-white/90 bg-white/92 shadow-[0_18px_50px_rgba(28,28,26,0.24)] backdrop-blur-xl lg:hidden"
       >
-        <div className="mx-auto grid h-[60px] max-w-lg grid-cols-5">
+        <div className="mx-auto grid h-[66px] max-w-lg grid-cols-5 gap-1 px-1.5">
           {mobileTabs.map((tab) => {
             const active =
               tab.label === "More"
                 ? moreSheetOpen.value
                 : tab.isActive(pathname, hash);
-            const tabClass =
-              "relative flex min-w-0 flex-col items-center justify-center gap-[3px] px-1 transition-colors duration-150";
+            const tabClass = `relative my-1.5 flex min-w-0 flex-col items-center justify-center gap-[3px] rounded-[18px] px-1 transition-all duration-300 ${active ? "bg-gradient-to-b from-orange-50 to-[#fff7f2] shadow-[inset_0_0_0_1px_rgba(212,69,10,0.08)]" : "hover:bg-zinc-50"}`;
 
             const tabInner = (
               <>

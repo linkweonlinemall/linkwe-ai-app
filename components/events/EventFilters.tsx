@@ -160,7 +160,7 @@ export function EventFilters() {
   const category = params.get("category") ?? "";
   const region = params.get("region") ?? "";
   const dateFilter = params.get("date") ?? "";
-  const sort = params.get("sort") ?? "soonest";
+  const sort = params.get("sort") ?? "recommended";
   const q = params.get("q") ?? "";
 
   // Local search state — debounced to URL
@@ -204,7 +204,7 @@ export function EventFilters() {
     category,
     region,
     dateFilter,
-    sort !== "soonest" ? sort : "",
+    sort !== "recommended" ? sort : "",
     inputValue.trim(),
   ].filter(Boolean).length;
 
@@ -223,6 +223,7 @@ export function EventFilters() {
     // Option elements shared between both variants
     const sortOptions = (
       <>
+        <option value="recommended" className="bg-[#1C1C1A] text-white">Recommended</option>
         <option value="soonest" className="bg-[#1C1C1A] text-white">Soonest first</option>
         <option value="latest" className="bg-[#1C1C1A] text-white">Latest first</option>
         <option value="price_asc" className="bg-[#1C1C1A] text-white">Price: low to high</option>
