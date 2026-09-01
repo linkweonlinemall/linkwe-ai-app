@@ -1,4 +1,6 @@
-/** UTC-stable labels for server-rendered lists (avoids locale hydration drift). */
+const TT_TIME_ZONE = "America/Port_of_Spain";
+
+/** Trinidad-local labels with an explicit timezone to avoid server/client drift. */
 export function formatConversationListTime(date: Date, now = new Date()): string {
   const then = date.getTime();
   const diffSec = Math.floor((now.getTime() - then) / 1000);
@@ -9,10 +11,22 @@ export function formatConversationListTime(date: Date, now = new Date()): string
   if (diffHr < 24) return `${diffHr}h ago`;
   const diffDay = Math.floor(diffHr / 24);
   if (diffDay < 7) return `${diffDay}d ago`;
-  return date.toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat("en-TT", {
+    day: "numeric",
+    month: "short",
+    year: date.getFullYear() === now.getFullYear() ? undefined : "numeric",
+    timeZone: TT_TIME_ZONE,
+  }).format(date);
 }
 
 export function formatMessageTimestamp(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())} ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}`;
+  return new Intl.DateTimeFormat("en-TT", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: TT_TIME_ZONE,
+  }).format(date);
 }

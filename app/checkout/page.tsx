@@ -9,6 +9,7 @@ import PublicNav from "@/components/layout/PublicNav";
 import CheckoutClient from "./checkout-client";
 import { typography, tw } from "@/lib/design-system";
 import Image from "next/image";
+import { parseCheckoutFields } from "@/lib/checkout/custom-fields";
 
 export const metadata: Metadata = {
   title: "Checkout",
@@ -38,7 +39,7 @@ export default async function CheckoutPage() {
           deliveryFee: true,
           storeId: true,
           isDigital: true,
-          store: { select: { name: true, slug: true } },
+          store: { select: { name: true, slug: true, checkoutFields: true } },
         },
       },
     },
@@ -71,7 +72,7 @@ export default async function CheckoutPage() {
             </div>
           </div>
         </div>
-        <CheckoutClient items={items} subtotal={subtotal} initialPhone={userRecord?.phone ?? ""} />
+        <CheckoutClient items={items.map((item) => ({ ...item, product: { ...item.product, store: { ...item.product.store, checkoutFields: parseCheckoutFields(item.product.store.checkoutFields) } } }))} subtotal={subtotal} initialPhone={userRecord?.phone ?? ""} />
       </div>
     </div>
   );

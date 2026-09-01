@@ -11,6 +11,7 @@ import { saveGalleryUpload } from "@/lib/uploads/save-gallery-upload";
 import { isValidRegion, normalizeRegion } from "@/lib/regions/tt-regions";
 import { validateStoreSlug } from "@/lib/store/slug";
 import { normalizeOpeningHoursForDb } from "@/lib/store/opening-hours-utils";
+import { parseCheckoutFields } from "@/lib/checkout/custom-fields";
 
 type TimeSlot = { from: string; to: string };
 type DaySchedule = { closed: boolean; allDay: boolean; slots: TimeSlot[] };
@@ -169,6 +170,13 @@ export async function updateStore(formData: FormData): Promise<void> {
     if (val) socialLinks[platform] = val;
   }
 
+  let checkoutFields: ReturnType<typeof parseCheckoutFields> = [];
+  try {
+    checkoutFields = parseCheckoutFields(JSON.parse(String(formData.get("checkoutFields") ?? "[]")));
+  } catch {
+    checkoutFields = [];
+  }
+
   const updateData: Prisma.StoreUpdateInput = {
     name,
     slug,
@@ -184,6 +192,7 @@ export async function updateStore(formData: FormData): Promise<void> {
     latitude: safeLat,
     longitude: safeLng,
     socialLinks: Object.keys(socialLinks).length > 0 ? socialLinks : Prisma.DbNull,
+    checkoutFields: checkoutFields.length > 0 ? checkoutFields : Prisma.DbNull,
   };
   if (newCoverPhotoUrl !== undefined) {
     updateData.coverPhotoUrl = newCoverPhotoUrl;

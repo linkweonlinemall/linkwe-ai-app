@@ -173,6 +173,7 @@ model Store {
   longitude                    Float?
   address                      String?
   socialLinks                  Json?                         @map("social_links")
+  checkoutFields               Json?                         @map("checkout_fields")
   staffMode                    StaffMode                     @default(SOLO)
   shippingMode                 StoreShippingMode             @default(LINKWE) @map("shipping_mode")
   /// Vendor subscription tier — drives platform commission rates.
@@ -586,6 +587,7 @@ model MainOrder {
   receivedAt        DateTime?       @map("received_at")
   /// Optional link to saved shipping address (future checkout / ops).
   shippingAddressId String?         @map("shipping_address_id")
+  checkoutResponses Json?           @map("checkout_responses")
   createdAt         DateTime        @default(now()) @map("created_at")
   updatedAt         DateTime        @updatedAt @map("updated_at")
 

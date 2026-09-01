@@ -1,6 +1,6 @@
 "use client";
 
-import { ConciergeBell, FilterX } from "lucide-react";
+import { Clock3, ConciergeBell, FilterX, MapPin, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -29,7 +29,7 @@ const SERVICE_TYPE_OPTIONS = [
 ];
 
 const SORT_OPTIONS = [
-  { value: "featured", label: "Featured" },
+  { value: "featured", label: "Recommended" },
   { value: "rating", label: "Customer rating" },
   { value: "price_asc", label: "Price: Low to High" },
   { value: "price_desc", label: "Price: High to Low" },
@@ -137,7 +137,11 @@ export default function ServicesClient({ initialServices, wishlistProductIds = [
         if (sort === "name_desc") return b.name.localeCompare(a.name);
         if (sort === "duration") return (a.serviceDuration ?? Number.MAX_SAFE_INTEGER) - (b.serviceDuration ?? Number.MAX_SAFE_INTEGER);
         if (sort === "rating") return b.reviewAvg - a.reviewAvg || b.reviewCount - a.reviewCount;
-        return (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
+        const featuredDifference = (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
+        if (featuredDifference) return featuredDifference;
+        const qualityA = a.reviewAvg * Math.min(a.reviewCount, 12);
+        const qualityB = b.reviewAvg * Math.min(b.reviewCount, 12);
+        return qualityB - qualityA || b.reviewCount - a.reviewCount || a.name.localeCompare(b.name);
       });
   }, [initialServices, search, category, serviceType, sort, priceMin, priceMax, region, location, minimumRating]);
 
@@ -678,7 +682,7 @@ export default function ServicesClient({ initialServices, wishlistProductIds = [
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {filtered.map((service) => {
                   const typeInfo = serviceTypeInfo(service.serviceType);
                   const TypeBadgeIcon = serviceTypeLucideIcon(service.serviceType);
@@ -686,7 +690,7 @@ export default function ServicesClient({ initialServices, wishlistProductIds = [
                     <Link
                       key={service.id}
                       href={`/service/${service.slug}`}
-                      className="group flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60 transition-all hover:-translate-y-0.5 hover:shadow-lg"
+                      className="group flex flex-col overflow-hidden rounded-[24px] border border-white/80 bg-white shadow-[0_14px_36px_rgba(28,28,26,0.10)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(28,28,26,0.16)]"
                     >
                       <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-zinc-100 to-zinc-200">
                         <div className="absolute right-2.5 top-2.5 z-20"><WishlistButton productId={service.id} initialWishlisted={wishlistProductIds.includes(service.id)} /></div>
@@ -722,7 +726,7 @@ export default function ServicesClient({ initialServices, wishlistProductIds = [
                           </div>
                         ) : null}
                       </div>
-                      <div className="flex flex-1 flex-col gap-2 p-4">
+                      <div className="flex flex-1 flex-col gap-3 p-4">
                         <div>
                           <p className="text-xs font-medium text-zinc-400">{service.store.name}</p>
                           {service.store.region ? (
@@ -731,6 +735,11 @@ export default function ServicesClient({ initialServices, wishlistProductIds = [
                           <p className="mt-0.5 text-sm font-bold leading-snug text-zinc-900 transition-colors group-hover:text-[#D4450A]">
                             {service.name}
                           </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-[10px] font-semibold text-zinc-600">
+                          {service.serviceDuration ? <span className="inline-flex items-center gap-1 rounded-xl bg-zinc-50 px-2 py-2"><Clock3 className="size-3.5 text-[#D4450A]" />{service.serviceDuration} min</span> : null}
+                          {service.serviceLocation ? <span className="inline-flex items-center gap-1 rounded-xl bg-zinc-50 px-2 py-2"><MapPin className="size-3.5 text-[#D4450A]" />{service.serviceLocation.replaceAll("_", " ").toLowerCase()}</span> : null}
+                          {service.requiresDeposit ? <span className="col-span-2 inline-flex items-center gap-1 rounded-xl bg-amber-50 px-2 py-2 text-amber-800"><WalletCards className="size-3.5" />Deposit {service.depositAmount ? formatTTDPrice(service.depositAmount) : "required"}</span> : null}
                         </div>
                         <div className="mt-auto flex items-center justify-between border-t border-zinc-100 pt-2">
                           <div>

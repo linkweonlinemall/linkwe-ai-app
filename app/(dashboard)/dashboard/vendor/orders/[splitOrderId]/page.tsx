@@ -18,6 +18,7 @@ import { generateOrderReceiptQRCodeDataURL } from "@/lib/orders/qr-code";
 import { vendorSplitOrderDetailSelect } from "@/lib/vendor/vendor-split-order-query";
 import { StoreMapBox } from "@/components/storefront/StorefrontMapAndProducts";
 import { MessageCustomerButton } from "./message-customer-button";
+import { parseCheckoutFields, type CheckoutResponses } from "@/lib/checkout/custom-fields";
 
 type Props = { params: Promise<{ splitOrderId: string }> };
 
@@ -191,6 +192,9 @@ export default async function VendorOrderDetailPage({ params }: Props) {
   const deliveryLat = splitOrder.mainOrder.shippingAddress?.latitude ? Number(splitOrder.mainOrder.shippingAddress.latitude) : null;
   const deliveryLng = splitOrder.mainOrder.shippingAddress?.longitude ? Number(splitOrder.mainOrder.shippingAddress.longitude) : null;
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  const checkoutFields = parseCheckoutFields(splitOrder.store.checkoutFields);
+  const checkoutResponses = (splitOrder.mainOrder.checkoutResponses ?? {}) as CheckoutResponses;
+  const vendorResponses = checkoutResponses[splitOrder.storeId] ?? {};
 
   return (
     <div className="bg-[#f5f5f5] pb-24 sm:pb-0">
@@ -481,6 +485,8 @@ export default async function VendorOrderDetailPage({ params }: Props) {
               <img src={receiptQrDataUrl} alt="QR code for customer to confirm order receipt" className="mx-auto mt-3 size-44 rounded-xl border border-zinc-100" />
               <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Customer confirmation required</p>
             </div>
+
+            {checkoutFields.length > 0 ? <div className="rounded-xl border border-orange-100 bg-white p-5 shadow-sm sm:p-6"><h2 className="mb-1 text-sm font-semibold text-zinc-900">Customer details for this order</h2><p className="mb-4 text-xs text-zinc-500">Information requested by your store at checkout.</p><dl className="space-y-3 text-sm">{checkoutFields.map((field) => { const value = vendorResponses[field.id]; const values = Array.isArray(value) ? value : typeof value === "string" && value ? [value] : []; return <div key={field.id} className="rounded-xl bg-zinc-50 px-3 py-3"><dt className="text-xs font-semibold text-zinc-500">{field.label}</dt><dd className="mt-1 break-words font-medium text-zinc-900">{values.length ? values.map((entry, index) => entry.startsWith("/") || entry.startsWith("http") ? <a key={entry} href={entry} target="_blank" rel="noreferrer" className="text-[#D4450A] underline">Open uploaded file{values.length > 1 ? ` ${index + 1}` : ""}</a> : <span key={entry}>{index ? ", " : ""}{entry}</span>) : <span className="text-zinc-400">Not provided</span>}</dd></div>; })}</dl></div> : null}
 
             <div
               className="rounded-xl bg-white p-5 sm:p-6"

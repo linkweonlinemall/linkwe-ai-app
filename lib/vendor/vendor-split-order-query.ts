@@ -74,6 +74,7 @@ export const vendorSplitOrderDetailSelect = {
       logoUrl: true,
       shippingMode: true,
       subscriptionPlan: true,
+      checkoutFields: true,
     },
   },
   items: {
@@ -96,6 +97,7 @@ export const vendorSplitOrderDetailSelect = {
       shippingMinor: true,
       totalMinor: true,
       createdAt: true,
+      checkoutResponses: true,
       shippingAddress: {
         select: {
           line1: true,

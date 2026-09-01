@@ -15,6 +15,17 @@ import { isStoreSellable } from "@/lib/store/sellable-store";
 import { isValidRegion } from "@/lib/regions/tt-regions";
 import { failWiPayAttempt } from "@/lib/payments/fail-wipay-attempt";
 import { normalizeTTPhone } from "@/lib/phone";
+import { parseCheckoutFields, validateCheckoutResponses, type CheckoutResponses } from "@/lib/checkout/custom-fields";
+import { saveGalleryUpload } from "@/lib/uploads/save-gallery-upload";
+
+export async function uploadCheckoutResponseFile(formData: FormData): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "Please sign in again." };
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Choose a file to upload." };
+  const saved = await saveGalleryUpload(file);
+  return saved.ok ? { ok: true, url: saved.publicPath } : { ok: false, error: "That file could not be uploaded." };
+}
 
 export type CheckoutItem = {
   productId: string;
@@ -59,6 +70,7 @@ export async function createPaymentIntent(
   deliveryLat?: number | null,
   deliveryLng?: number | null,
   deliveryPhone?: string | null,
+  checkoutResponses: CheckoutResponses = {},
 ): Promise<CreatePaymentIntentResult> {
 
   const session = await getSession();
@@ -77,6 +89,13 @@ export async function createPaymentIntent(
     if (item.product.stock !== null && item.product.stock < item.quantity) {
       return { ok: false, error: `Not enough stock for ${item.product.name}.` };
     }
+  }
+
+  const stores = new Map<string, ReturnType<typeof parseCheckoutFields>>();
+  for (const item of cartItems) if (!stores.has(item.product.storeId)) stores.set(item.product.storeId, parseCheckoutFields(item.product.store.checkoutFields));
+  for (const [storeId, fields] of stores) {
+    const responseError = validateCheckoutResponses(fields, checkoutResponses[storeId]);
+    if (responseError) return { ok: false, error: responseError };
   }
 
   const cartRequiresDelivery =
@@ -156,6 +175,7 @@ export async function createPaymentIntent(
         shippingMinor,
         totalMinor,
         shippingAddressId,
+        checkoutResponses: Object.keys(checkoutResponses).length > 0 ? checkoutResponses : undefined,
         items: {
           create: cartItems.map((item, index) => ({
             listingId: null,

@@ -278,6 +278,26 @@ body {
   animation: lw-loader-ring 0.9s linear infinite;
 }
 
+@keyframes lw-route-loader-float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-7px) scale(1.025); }
+}
+
+@keyframes lw-route-loader-ring {
+  0% { transform: scale(.72); opacity: 0; }
+  35% { opacity: .7; }
+  100% { transform: scale(1.18); opacity: 0; }
+}
+
+@keyframes lw-route-loader-bar {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(210%); }
+}
+
+.lw-route-loader { animation: lw-route-loader-float 1.65s ease-in-out infinite; }
+.lw-route-loader-ring { animation: lw-route-loader-ring 1.45s ease-out infinite; }
+.lw-route-loader-bar { animation: lw-route-loader-bar 1.15s ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   .lw-app-splash-art,
   .lw-app-splash-progress,
@@ -285,7 +305,10 @@ body {
   ::view-transition-old(root),
   ::view-transition-new(root),
   .lw-loader-mark,
-  .lw-loader-orbit::after {
+  .lw-loader-orbit::after,
+  .lw-route-loader,
+  .lw-route-loader-ring,
+  .lw-route-loader-bar {
     animation: none;
   }
 }

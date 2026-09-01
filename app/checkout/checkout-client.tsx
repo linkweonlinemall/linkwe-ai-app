@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   createPaymentIntent,
   getCheckoutShippingBreakdown,
+  uploadCheckoutResponseFile,
   type CheckoutShippingBreakdownResult,
 } from "@/app/actions/checkout";
 import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
@@ -15,6 +16,7 @@ import Select from "@/components/ui/Select";
 import { TRINIDAD_ONBOARDING_REGION_OPTIONS } from "@/lib/onboarding/tt-region-options";
 import { radius, spacing, tw } from "@/lib/design-system";
 import { normalizeTTPhone } from "@/lib/phone";
+import type { CheckoutField, CheckoutResponses } from "@/lib/checkout/custom-fields";
 
 export type CheckoutClientItem = {
   id: string;
@@ -32,7 +34,7 @@ export type CheckoutClientItem = {
     deliveryFee: number | null;
     storeId: string;
     isDigital: boolean;
-    store: { name: string; slug: string };
+    store: { name: string; slug: string; checkoutFields: CheckoutField[] };
     /** When omitted (e.g. older server queries), weight defaults to 0.5 lb in estimates. */
     weight?: number | null;
     weightUnit?: string | null;
@@ -70,6 +72,27 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
   const [deliveryPhone, setDeliveryPhone] = useState(() => localPhoneDisplay(initialPhone));
   const [fulfillmentChoice, setFulfillmentChoice] = useState<"delivery" | "pickup" | null>(() => null);
   const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
+  const [checkoutResponses, setCheckoutResponses] = useState<CheckoutResponses>({});
+  const [uploadingField, setUploadingField] = useState<string | null>(null);
+
+  const storeQuestions = useMemo(() => {
+    const groups = new Map<string, { storeName: string; fields: CheckoutField[] }>();
+    for (const item of items) if (!groups.has(item.product.storeId) && item.product.store.checkoutFields.length > 0) groups.set(item.product.storeId, { storeName: item.product.store.name, fields: item.product.store.checkoutFields });
+    return [...groups.entries()].map(([storeId, value]) => ({ storeId, ...value }));
+  }, [items]);
+
+  function setCheckoutResponse(storeId: string, fieldId: string, value: string | string[]) {
+    setCheckoutResponses((current) => ({ ...current, [storeId]: { ...(current[storeId] ?? {}), [fieldId]: value } }));
+  }
+
+  async function uploadResponse(storeId: string, fieldId: string, file: File | undefined) {
+    if (!file) return;
+    setUploadingField(`${storeId}:${fieldId}`);
+    const body = new FormData(); body.set("file", file);
+    const result = await uploadCheckoutResponseFile(body);
+    if (result.ok) setCheckoutResponse(storeId, fieldId, result.url); else setError(result.error);
+    setUploadingField(null);
+  }
 
   const useDelivery = useMemo(() => {
     if (anyDelivery && !anyPickup) return true;
@@ -227,6 +250,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
       Number.isFinite(deliveryLat) ? deliveryLat : null,
       Number.isFinite(deliveryLng) ? deliveryLng : null,
       deliveryPhone.trim() || null,
+      checkoutResponses,
     );
     if (result.ok) {
       window.location.assign(result.checkoutUrl);
@@ -561,6 +585,8 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
                 </p>
               )}
             </div>
+
+            {storeQuestions.length > 0 ? <div className="mt-6 space-y-4 border-t border-zinc-100 pt-5"><div><h2 className="text-base font-semibold text-zinc-900">Details for your vendors</h2><p className="mt-1 text-xs text-zinc-500">These answers help each vendor prepare your order correctly.</p></div>{storeQuestions.map((group) => <section key={group.storeId} className="rounded-2xl border border-orange-100 bg-orange-50/40 p-4"><h3 className="text-sm font-bold text-zinc-900">{group.storeName}</h3><div className="mt-3 space-y-4">{group.fields.map((field) => { const value = checkoutResponses[group.storeId]?.[field.id]; const inputClass = "min-h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm outline-none focus:border-[#D4450A] focus:ring-4 focus:ring-orange-500/10"; return <label key={field.id} className="block text-xs font-semibold text-zinc-700"><span>{field.label}{field.required ? <span className="text-[#D4450A]"> *</span> : null}</span>{field.type === "text" ? <input value={typeof value === "string" ? value : ""} onChange={(e) => setCheckoutResponse(group.storeId, field.id, e.target.value)} className={`${inputClass} mt-1.5`} /> : null}{field.type === "select" ? <select value={typeof value === "string" ? value : ""} onChange={(e) => setCheckoutResponse(group.storeId, field.id, e.target.value)} className={`${inputClass} mt-1.5`}><option value="">Choose one…</option>{field.options.map((option) => <option key={option}>{option}</option>)}</select> : null}{field.type === "multiselect" || field.type === "checklist" ? <span className="mt-2 grid gap-2 sm:grid-cols-2">{field.options.map((option) => { const values = Array.isArray(value) ? value : []; return <span key={option} className="flex min-h-11 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 font-medium"><input type="checkbox" checked={values.includes(option)} onChange={(e) => setCheckoutResponse(group.storeId, field.id, e.target.checked ? [...values, option] : values.filter((item) => item !== option))} className="size-4 accent-[#D4450A]" />{option}</span>; })}</span> : null}{field.type === "upload" ? <span className="mt-1.5 block"><input type="file" onChange={(e) => void uploadResponse(group.storeId, field.id, e.target.files?.[0])} className={`${inputClass} file:mr-3 file:border-0 file:bg-transparent file:text-xs file:font-bold`} />{uploadingField === `${group.storeId}:${field.id}` ? <span className="mt-1 block text-[11px] text-zinc-500">Uploading…</span> : typeof value === "string" && value ? <span className="mt-1 block text-[11px] text-emerald-700">Uploaded successfully</span> : null}</span> : null}</label>; })}</div></section>)}</div> : null}
 
             {coverageWarning ? <div className="mt-4">{coverageWarning}</div> : null}
 

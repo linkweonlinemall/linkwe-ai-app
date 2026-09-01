@@ -72,6 +72,7 @@ const checkoutCartInclude = {
           id: true,
           name: true,
           status: true,
+          checkoutFields: true,
           owner: { select: { idVerificationStatus: true } },
         },
       },
