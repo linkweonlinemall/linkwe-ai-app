@@ -5,7 +5,7 @@ import type { VendorReview } from "@/app/actions/vendor-reviews";
 import { formatDate } from "@/lib/format/format-display-date-utc";
 
 const CARD =
-  "rounded-[12px] border-[0.5px] border-[rgba(28,28,26,0.12)] bg-white";
+  "rounded-[20px] border border-white/80 bg-white shadow-[0_12px_35px_rgba(28,28,26,0.08)]";
 
 function StarRating({ rating, size = 12 }: { rating: number; size?: number }) {
   return (
@@ -74,27 +74,27 @@ export default function ReviewsTab() {
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       {stats && (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <div className={`${CARD} p-3`}>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className={`${CARD} bg-gradient-to-br from-white to-orange-50 p-4`}>
             <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Total reviews</p>
             <p className="mt-1 text-xl font-bold text-zinc-900">{stats.total}</p>
           </div>
-          <div className={`${CARD} p-3`}>
+          <div className={`${CARD} p-4`}>
             <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Average</p>
             <div className="mt-1 flex items-center gap-2">
               <p className="text-xl font-bold text-zinc-900">{stats.average.toFixed(1)}</p>
               <StarRating rating={Math.round(stats.average)} />
             </div>
           </div>
-          <div className={`${CARD} p-3`}>
+          <div className={`${CARD} p-4`}>
             <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Unanswered</p>
             <p className={`mt-1 text-xl font-bold ${stats.unanswered > 0 ? "text-[#D4450A]" : "text-zinc-900"}`}>
               {stats.unanswered}
             </p>
           </div>
-          <div className={`${CARD} p-3`}>
+          <div className={`${CARD} p-4`}>
             <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">5★ reviews</p>
             <p className="mt-1 text-xl font-bold text-zinc-900">{stats.breakdown[5] ?? 0}</p>
           </div>
@@ -102,7 +102,7 @@ export default function ReviewsTab() {
       )}
 
       {stats && stats.total > 0 && (
-        <div className={`${CARD} p-3`}>
+        <div className={`${CARD} p-4 sm:p-5`}>
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Rating breakdown</p>
           <div className="space-y-1.5">
             {[5, 4, 3, 2, 1].map((star) => {
@@ -111,8 +111,8 @@ export default function ReviewsTab() {
               return (
                 <div key={star} className="flex items-center gap-2">
                   <span className="w-7 text-[10px] text-zinc-500">{star}★</span>
-                  <div className="h-1 flex-1 rounded-full bg-zinc-100">
-                    <div className="h-1 rounded-full bg-[#E8820C]" style={{ width: `${percent}%` }} />
+                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-zinc-100">
+                    <div className="h-2 rounded-full bg-gradient-to-r from-[#D4450A] to-[#E8820C] transition-[width] duration-500" style={{ width: `${percent}%` }} />
                   </div>
                   <span className="w-7 text-right text-[10px] text-zinc-400">{count}</span>
                 </div>
@@ -164,7 +164,7 @@ export default function ReviewsTab() {
       ) : (
         <div className="flex flex-col gap-2">
           {reviews.map((review) => (
-            <div key={review.id} className={`${CARD} px-4 py-3`}>
+            <div key={review.id} className={`${CARD} px-4 py-4 transition hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(28,28,26,0.11)] sm:px-5`}>
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">

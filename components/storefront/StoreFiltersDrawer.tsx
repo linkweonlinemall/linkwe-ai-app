@@ -9,6 +9,7 @@ import RegionSelect from "@/components/ui/RegionSelect";
 
 const CATEGORIES = [{ value: "all", label: "All categories" }, ...STORE_CATEGORIES];
 const SORTS: { value: PublicStoreSort; label: string }[] = [
+  { value: "recommended", label: "Recommended" },
   { value: "newest", label: "Newest" },
   { value: "popular", label: "Most products" },
   { value: "rating", label: "Highest rated" },

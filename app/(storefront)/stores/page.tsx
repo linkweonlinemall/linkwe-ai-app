@@ -36,8 +36,8 @@ function pickString(sp: SearchParams, key: string): string | undefined {
 }
 
 function clampSort(v: string | undefined): PublicStoreSort {
-  if (v === "newest" || v === "popular" || v === "rating" || v === "nearest") return v;
-  return "newest";
+  if (v === "recommended" || v === "newest" || v === "popular" || v === "rating" || v === "nearest") return v;
+  return "recommended";
 }
 
 function buildStoreListUrl(
@@ -60,7 +60,7 @@ function buildStoreListUrl(
   if (next.category && next.category !== "all") p.set("category", next.category);
   if (next.region.trim()) p.set("region", next.region.trim());
   if (next.tag.trim()) p.set("tag", next.tag.trim());
-  if (next.sort && next.sort !== "newest") p.set("sort", next.sort);
+  if (next.sort && next.sort !== "recommended") p.set("sort", next.sort);
   const lat = next.lat.trim();
   const lng = next.lng.trim();
   if (lat) p.set("lat", lat);
@@ -170,7 +170,7 @@ export default async function StoresDiscoveryPage({
               region ||
               (category && category !== "all") ||
               tag ||
-              (sort && sort !== "newest")
+              (sort && sort !== "recommended")
             )}
           />
 

@@ -80,7 +80,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${sora.variable} h-full antialiased`}>
       <head>
-        <link rel="preload" as="image" href="/linkwe-startup-splash.jpg" fetchPriority="high" />
+        <link rel="preload" as="image" href="/linkwe-startup-splash.jpg" media="(max-width: 639px)" fetchPriority="high" />
+        <link rel="preload" as="image" href="/linkwe-startup-splash-desktop.jpg" media="(min-width: 640px)" fetchPriority="high" />
         <script
           dangerouslySetInnerHTML={{
             __html: `

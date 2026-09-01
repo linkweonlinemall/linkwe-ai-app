@@ -9,7 +9,7 @@ import { sellableStoreWhere } from "@/lib/store/sellable-store";
 const STORE_PAGE_SIZE = 12;
 const PRODUCT_PAGE_SIZE_DEFAULT = 24;
 
-export type PublicStoreSort = "newest" | "popular" | "rating" | "nearest";
+export type PublicStoreSort = "recommended" | "newest" | "popular" | "rating" | "nearest";
 
 export type PublicStoresFilters = {
   categoryId?: string | null;
@@ -36,6 +36,8 @@ export type PublicStoreCard = {
   reviewCount: number;
   latitude: number | null;
   longitude: number | null;
+  distanceKm: number | null;
+  productCount: number;
 };
 
 export type PublicStoresPageResult = {
@@ -72,6 +74,9 @@ type StoreCardRow = {
   createdAt: Date;
   latitude: number | null;
   longitude: number | null;
+  address: string | null;
+  openingHours: Prisma.JsonValue | null;
+  productCount: number;
 };
 
 const storeCardSelect = {
@@ -88,7 +93,17 @@ const storeCardSelect = {
   createdAt: true,
   latitude: true,
   longitude: true,
+  address: true,
+  openingHours: true,
+  _count: { select: { products: { where: { isPublished: true } } } },
 } satisfies Prisma.StoreSelect;
+
+type StoreCardQueryRow = Omit<StoreCardRow, "productCount"> & { _count: { products: number } };
+
+function normalizeStoreRow(row: StoreCardQueryRow): StoreCardRow {
+  const { _count, ...store } = row;
+  return { ...store, productCount: _count.products };
+}
 
 function haversineKm(
   lat1: number,
@@ -239,7 +254,9 @@ async function reviewStatsForStores(
 
 function toPublicCard(
   row: StoreCardRow,
-  stats: Map<string, { average: number; count: number }>
+  stats: Map<string, { average: number; count: number }>,
+  userLat?: number | null,
+  userLng?: number | null,
 ): PublicStoreCard {
   const s = stats.get(row.id);
   return {
@@ -257,6 +274,11 @@ function toPublicCard(
     reviewCount: s?.count ?? 0,
     latitude: row.latitude,
     longitude: row.longitude,
+    distanceKm:
+      userLat != null && userLng != null && row.latitude != null && row.longitude != null
+        ? haversineKm(userLat, userLng, row.latitude, row.longitude)
+        : null,
+    productCount: row.productCount,
   };
 }
 
@@ -268,6 +290,19 @@ function orderIdsBySort(
   userLng: number | null | undefined
 ): StoreCardRow[] {
   switch (sort) {
+    case "recommended": {
+      return [...rows].sort((a, b) => {
+        const score = (row: StoreCardRow) => {
+          const review = stats.get(row.id);
+          const confidenceRating = (review?.average ?? 0) * Math.min(review?.count ?? 0, 12);
+          const completion = [row.logoUrl, row.coverPhotoUrl, row.description, row.tagline, row.address, row.openingHours]
+            .filter(Boolean).length;
+          return confidenceRating * 5 + completion * 4 + Math.min(row.productCount, 20);
+        };
+        const difference = score(b) - score(a);
+        return difference || b.createdAt.getTime() - a.createdAt.getTime();
+      });
+    }
     case "rating": {
       return [...rows].sort((a, b) => {
         const sa = stats.get(a.id)?.average ?? 0;
@@ -312,7 +347,7 @@ export async function getPublicStores(
   filters: PublicStoresFilters | undefined,
   page: number
 ): Promise<PublicStoresPageResult> {
-  const sort = filters?.sort ?? "newest";
+  const sort = filters?.sort ?? "recommended";
   const userLat = filters?.userLat ?? null;
   const userLng = filters?.userLng ?? null;
 
@@ -334,7 +369,7 @@ export async function getPublicStores(
     };
   }
 
-  const needsMemorySort = sort === "rating" || sort === "nearest";
+  const needsMemorySort = sort === "recommended" || sort === "rating" || sort === "nearest";
 
   if (!needsMemorySort) {
     const orderBy: Prisma.StoreOrderByWithRelationInput[] =
@@ -351,7 +386,8 @@ export async function getPublicStores(
     });
 
     const stats = await reviewStatsForStores(rows.map((r) => r.id));
-    const items = rows.map((r) => toPublicCard(r as StoreCardRow, stats));
+    const normalizedRows = rows.map((r) => normalizeStoreRow(r as StoreCardQueryRow));
+    const items = normalizedRows.map((r) => toPublicCard(r, stats, userLat, userLng));
 
     return {
       items,
@@ -368,8 +404,9 @@ export async function getPublicStores(
   });
 
   const stats = await reviewStatsForStores(allRows.map((r) => r.id));
+  const normalizedRows = allRows.map((r) => normalizeStoreRow(r as StoreCardQueryRow));
   const sorted = orderIdsBySort(
-    allRows as StoreCardRow[],
+    normalizedRows,
     stats,
     sort,
     userLat,
@@ -377,7 +414,7 @@ export async function getPublicStores(
   );
 
   const pageRows = sorted.slice(skip, skip + STORE_PAGE_SIZE);
-  const items = pageRows.map((r) => toPublicCard(r, stats));
+  const items = pageRows.map((r) => toPublicCard(r, stats, userLat, userLng));
 
   return {
     items,

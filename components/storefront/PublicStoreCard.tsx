@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import type { PublicStoreCard as PublicStoreCardType } from "@/app/actions/public-stores";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
+import { MapPin, PackageCheck, ShieldCheck } from "lucide-react";
 import SaveStoreButton from "@/components/ui/SaveStoreButton";
 
 function formatCategoryLabel(categoryId: string): string {
@@ -40,9 +41,9 @@ export default function PublicStoreCard({ store, initialSaved = false }: { store
     store.reviewCount > 0 && store.averageRating != null && store.averageRating > 0;
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition hover:shadow-md">
+    <article className="group flex flex-col overflow-hidden rounded-[24px] border border-white/80 bg-white shadow-[0_14px_38px_rgba(28,28,26,0.10)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_22px_48px_rgba(28,28,26,0.15)]">
       <Link href={`/store/${store.slug}`} className="relative block shrink-0">
-        <div className="relative aspect-[21/10] overflow-hidden bg-zinc-100">
+        <div className="relative aspect-[16/9] overflow-hidden bg-zinc-100">
           {store.coverPhotoUrl ? (
             <img
               src={store.coverPhotoUrl}
@@ -55,7 +56,7 @@ export default function PublicStoreCard({ store, initialSaved = false }: { store
             </div>
           )}
         </div>
-        <div className="absolute bottom-3 left-3 flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border-2 border-white bg-white shadow-md">
+        <div className="absolute bottom-3 left-4 flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border-2 border-white bg-white shadow-lg">
           {store.logoUrl ? (
             <img src={store.logoUrl} alt="" className="h-full w-full object-cover" />
           ) : (
@@ -65,7 +66,7 @@ export default function PublicStoreCard({ store, initialSaved = false }: { store
         <SaveStoreButton storeId={store.id} initialSaved={initialSaved} variant="iconOverlay" />
       </Link>
 
-      <div className="flex min-h-[10rem] flex-1 flex-col p-4 pt-5">
+      <div className="flex min-h-[12rem] flex-1 flex-col p-4 pt-5 sm:p-5">
         <div className="min-h-[3rem]">
           <Link href={`/store/${store.slug}`}>
             <h2 className="line-clamp-2 text-lg font-semibold leading-snug text-zinc-900 underline-offset-4 hover:text-[#D4450A] hover:underline">
@@ -81,7 +82,7 @@ export default function PublicStoreCard({ store, initialSaved = false }: { store
           )}
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-1">
+        <div className="mt-3 flex flex-wrap gap-1.5">
           <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium capitalize text-zinc-600 ring-1 ring-zinc-200/80">
             {formatCategoryLabel(store.categoryId)}
           </span>
@@ -96,6 +97,12 @@ export default function PublicStoreCard({ store, initialSaved = false }: { store
               {tag}
             </span>
           ))}
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-2 text-[11px] text-zinc-600">
+          <span className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-50 px-2.5 py-2"><PackageCheck className="size-3.5 text-[#D4450A]" />{store.productCount} live item{store.productCount === 1 ? "" : "s"}</span>
+          <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 px-2.5 py-2 text-emerald-800"><ShieldCheck className="size-3.5" />Active store</span>
+          {store.distanceKm != null ? <span className="col-span-2 inline-flex items-center gap-1.5 rounded-xl bg-blue-50 px-2.5 py-2 text-blue-800"><MapPin className="size-3.5" />About {store.distanceKm < 10 ? store.distanceKm.toFixed(1) : Math.round(store.distanceKm)} km away</span> : null}
         </div>
 
         <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 pt-3">
