@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth/session";
 import { assertDashboardRole } from "@/lib/auth/assert-role";
 import { getAIUsageState } from "@/lib/finance/ai-usage";
 import { getCurrentPeriodKey } from "@/lib/finance/ai-usage-period";
+import { resolveVendorPlan } from "@/lib/finance/vendor-plan";
 import { prisma } from "@/lib/prisma";
 
 export default async function VendorFinancePage() {
@@ -70,8 +71,11 @@ export default async function VendorFinancePage() {
 
   const subPeriodKey = getCurrentPeriodKey(store.planRenewsAt);
   const subIdempotencyKey = `subscription:${store.id}:${subPeriodKey}`;
-  const subPaidThisPeriod = !!(await prisma.vendorLedgerEntry.findUnique({
-    where: { idempotencyKey: subIdempotencyKey },
+  const subPaidThisPeriod = !!(await prisma.vendorLedgerEntry.findFirst({
+    where: { storeId: store.id, idempotencyKey: { in: [
+      subIdempotencyKey,
+      `subscription:${store.id}:${resolveVendorPlan(store.subscriptionPlan)}:${subPeriodKey}`,
+    ] } },
     select: { id: true },
   }));
 

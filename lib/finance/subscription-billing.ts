@@ -32,7 +32,18 @@ export async function chargeSubscriptionFromBalance(
   const idempotencyKey = `subscription:${storeId}:${plan}:${periodKey}`;
   const legacyIdempotencyKey = `subscription:${storeId}:${periodKey}`;
 
-  return prisma.$transaction(async (tx) => {
+  try {
+  return await prisma.$transaction(async (tx) => {
+    // Re-read inside the transaction: another tab may already have changed the plan.
+    const store = await tx.store.findUnique({ where: { id: storeId } });
+    if (!store) return { ok: false as const, reason: "Store not found." };
+    if (resolveVendorPlan(store.subscriptionPlan) !== currentPlan ||
+        store.planRenewsAt?.getTime() !== planRenewsAt?.getTime()) {
+      return { ok: false as const, reason: "Your subscription changed. Refresh Finance before trying again." };
+    }
+    if (PLAN_PRICE_MINOR[plan] < PLAN_PRICE_MINOR[currentPlan]) {
+      return { ok: false as const, reason: "Please contact support to downgrade your plan." };
+    }
     const existing = await tx.vendorLedgerEntry.findFirst({
       where: {
         idempotencyKey: {
@@ -43,6 +54,11 @@ export async function chargeSubscriptionFromBalance(
       },
     });
     if (existing) return { ok: true as const, charged: false, reason: "already_charged_this_period" };
+
+    if (plan === currentPlan && planRenewsAt &&
+        planRenewsAt.getTime() > Date.now() + 7 * 24 * 60 * 60 * 1000) {
+      return { ok: false as const, reason: "Renewal opens seven days before your current period ends." };
+    }
 
     const entries = await tx.vendorLedgerEntry.findMany({
       where: { storeId },
@@ -60,7 +76,11 @@ export async function chargeSubscriptionFromBalance(
     const now = new Date();
     const renewalBase = plan === currentPlan && planRenewsAt && planRenewsAt > now ? planRenewsAt : now;
     const nextRenewal = new Date(renewalBase);
+    const renewalDay = nextRenewal.getUTCDate();
+    nextRenewal.setUTCDate(1);
     nextRenewal.setUTCMonth(nextRenewal.getUTCMonth() + 1);
+    const lastDay = new Date(Date.UTC(nextRenewal.getUTCFullYear(), nextRenewal.getUTCMonth() + 1, 0)).getUTCDate();
+    nextRenewal.setUTCDate(Math.min(renewalDay, lastDay));
     await tx.vendorLedgerEntry.create({
       data: {
         storeId,
@@ -84,5 +104,12 @@ export async function chargeSubscriptionFromBalance(
       },
     });
     return { ok: true as const, charged: true };
-  });
+  }, { isolationLevel: "Serializable" });
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error &&
+        (error.code === "P2034" || error.code === "P2002")) {
+      return { ok: false, reason: "Another payment is being processed. Refresh Finance to check its result before trying again." };
+    }
+    throw error;
+  }
 }
