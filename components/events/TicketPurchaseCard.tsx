@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -179,6 +179,18 @@ export function TicketPurchaseCard({
   const [promoInput, setPromoInput] = useState("");
   const [appliedPromo, setAppliedPromo] = useState<AppliedPromo | null>(null);
   const [promoError, setPromoError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (phase !== "success") return;
+
+    // Replacing the purchase form with the shorter confirmation can leave the
+    // browser pinned to the old bottom position, especially on mobile.
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    const frame = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [phase]);
   const [promoApplying, setPromoApplying] = useState(false);
 
   const visibleTypes = ticketTypes.filter((t) => t.isVisible);
