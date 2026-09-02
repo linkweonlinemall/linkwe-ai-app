@@ -56,7 +56,7 @@ export async function getVendorDashboardAnalytics(storeId: string): Promise<Vend
         entryType: "CREDIT_ORDER_SETTLEMENT",
         createdAt: { gte: ledgerFetchSince },
       },
-      select: { amountMinor: true, createdAt: true },
+      select: { amountMinor: true, createdAt: true, ledgerEntryType: true },
     }),
     prisma.splitOrder.findMany({
       where: { storeId, createdAt: { gte: prevMonthStart } },
@@ -97,10 +97,27 @@ export async function getVendorDashboardAnalytics(storeId: string): Promise<Vend
     }, 0);
   }
 
+  function subscriptionPaymentsCount(start: Date, end: Date) {
+    return creditEntries.reduce((count, row) => {
+      if (
+        row.ledgerEntryType === "SERVICE_SUBSCRIPTION_RENEWAL" &&
+        row.createdAt >= start &&
+        row.createdAt < end
+      ) {
+        return count + 1;
+      }
+      return count;
+    }, 0);
+  }
+
   const salesChangePct = pctChangeVsPrior(salesThisMinor, salesPrevMinor);
 
-  const ordersThisMonth = splitsCount(thisMonthStart, nextMonthStart);
-  const ordersPrevMonth = splitsCount(prevMonthStart, thisMonthStart);
+  const ordersThisMonth =
+    splitsCount(thisMonthStart, nextMonthStart) +
+    subscriptionPaymentsCount(thisMonthStart, nextMonthStart);
+  const ordersPrevMonth =
+    splitsCount(prevMonthStart, thisMonthStart) +
+    subscriptionPaymentsCount(prevMonthStart, thisMonthStart);
   const ordersChangePct = pctChangeVsPrior(ordersThisMonth, ordersPrevMonth);
 
   const profileViewsTotal = (sums[0]._sum.viewCount ?? 0) + (sums[1]._sum.viewCount ?? 0);
