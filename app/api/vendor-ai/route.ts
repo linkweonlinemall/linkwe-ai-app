@@ -17,7 +17,7 @@ import {
 import { isTrustedHostedImageUrl } from "@/lib/images/trusted-host"
 import { createProductFromAIRaw } from "@/app/actions/ai-vendor"
 import { checkProductCap } from "@/lib/finance/product-cap"
-import { consumeAIUse, recordAITokens } from "@/lib/finance/ai-usage"
+import { consumeAIUse, getAIUsageState, recordAITokens } from "@/lib/finance/ai-usage"
 import { getStorePlan } from "@/lib/finance/store-plan"
 import {
   getVendorInventoryAlerts,
@@ -754,17 +754,15 @@ export async function POST(req: NextRequest) {
     return new Response("No store found", { status: 400 })
   }
 
-  const planAllowance = getStorePlan({
-    subscriptionPlan: store.subscriptionPlan,
-    subscriptionStatus: store.subscriptionStatus,
-  }).limits.aiMonthlyAllowance
-  const aiEnabled =
-    planAllowance > 0 || store.aiTopupCreditsRemaining > 0
+  const usageState = await getAIUsageState(store)
+  const aiEnabled = usageState.remaining > 0 || usageState.topupRemaining > 0
   if (!aiEnabled) {
     return new Response(
       JSON.stringify({
         error:
-          "AI assistant is not included on your current plan. Upgrade to Growth or Pro to use Rex.",
+          store.subscriptionPlan === "STARTER"
+            ? "You have used all 5 complimentary lifetime Rex prompts. Upgrade to Growth or Pro, or buy a top-up, to continue."
+            : "You're out of Rex uses for this period. Buy a top-up or review your plan to continue.",
       }),
       { status: 403, headers: { "Content-Type": "application/json" } },
     )

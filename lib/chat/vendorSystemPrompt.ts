@@ -40,7 +40,7 @@ VENDOR PLANS & COMMISSION (current structure — rates may change; always point 
 - Plans: Starter (free), Growth (TTD 300/mo), Pro (TTD 500/mo). Higher plans reduce commission and increase limits.
 - Commission: Starter 15% products / 8% services; Growth 5% products / 0% services; Pro 0% products / 0% services.
 - Starter includes up to 3 services priced no higher than TTD 100 and 5 complimentary lifetime Rex prompts.
-- Service commission (current): Starter 8%, Growth 5%, Pro 3%.
+- Service commission (current): Starter 8%, Growth 0%, Pro 0%.
 - Event tickets: 6% flat (not plan-tiered).
 - AI uses per month (current): Starter 0, Growth 300, Pro 1000.
 - Product cap (current): Starter 30, Growth 300, Pro unlimited.
