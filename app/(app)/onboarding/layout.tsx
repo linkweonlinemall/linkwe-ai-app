@@ -7,13 +7,13 @@ export default async function OnboardingLayout({ children }: { children: React.R
 
   return (
     <div className="flex min-h-full flex-1 flex-col bg-[#f5f5f5]">
-      <header className="flex items-center justify-between border-b border-zinc-800 bg-[#1C1C1A] px-6 py-4">
-        <div className="flex items-center gap-6">
-          <Link className="flex items-center" href="/">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 bg-[#1C1C1A] px-4 py-4 sm:px-6">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-6">
+          <Link className="flex min-w-0 items-center" href="/">
             <img
               src="/linkwe-logo-mobile-on-light.png"
               alt="LinkWe"
-              className="h-8 w-auto object-contain"
+              className="h-8 w-auto max-w-32 object-contain"
             />
           </Link>
           {session ? (
@@ -29,7 +29,7 @@ export default async function OnboardingLayout({ children }: { children: React.R
           </button>
         </form>
       </header>
-      <div className="flex min-w-0 flex-1 flex-col items-center px-3 py-5 sm:px-6 sm:py-12">{children}</div>
+      <div className="flex w-full min-w-0 flex-1 flex-col items-center px-3 py-5 sm:px-6 sm:py-10">{children}</div>
     </div>
   );
 }

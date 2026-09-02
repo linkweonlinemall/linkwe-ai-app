@@ -7,6 +7,8 @@ export default function StartupSplashVisual({ label = "Loading…" }: { label?: 
         <img
           src="/linkwe-startup-splash.jpg"
           alt=""
+          loading="eager"
+          fetchPriority="high"
           className="lw-app-splash-art absolute inset-0 h-full w-full object-cover object-center"
           draggable={false}
         />

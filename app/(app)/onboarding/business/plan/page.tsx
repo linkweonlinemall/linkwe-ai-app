@@ -26,16 +26,21 @@ export default async function BusinessOnboardingPlanPage() {
 
   return (
     <div
-      className="min-w-0 rounded-xl bg-white p-4 sm:p-8"
-      style={{ border: "1px solid var(--card-border)" }}
+      data-plan-picker
+      className="min-w-0 overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-xl shadow-zinc-900/5"
     >
-      <h1 className="mb-1 text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+      <div className="bg-gradient-to-br from-[#1C1C1A] via-[#29201B] to-[#66300F] px-5 py-7 text-white sm:px-8 sm:py-9">
+      <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-amber-300">Let’s build your business</p>
+      <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
         Choose your plan
       </h1>
-      <p className="mb-6 text-sm" style={{ color: "var(--text-muted)" }}>
-        Pick the plan that fits your shop. Starter is free — upgrade anytime.
+      <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/75 sm:text-base">
+        Start small or make room to grow. Choose the plan that fits your business today—you can upgrade later.
       </p>
+      </div>
+      <div className="p-4 sm:p-7">
       <BusinessPlanPickerForm options={PLAN_PICKER_OPTIONS} defaultPlan={defaultPlan} />
+      </div>
     </div>
   );
 }

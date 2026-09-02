@@ -4,7 +4,7 @@ import { useEffect } from "react";
 export default function ServiceWorkerRegistration() {
   useEffect(() => {
     if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
+      const register = () => {
         navigator.serviceWorker
           .register("/sw.js")
           .then((registration) => {
@@ -13,7 +13,11 @@ export default function ServiceWorkerRegistration() {
           .catch((error) => {
             console.error("SW registration failed:", error);
           });
-      });
+      };
+      // Hydration can finish after load on mobile. Still register the latest worker.
+      if (document.readyState === "complete") register();
+      else window.addEventListener("load", register, { once: true });
+      return () => window.removeEventListener("load", register);
     }
   }, []);
 

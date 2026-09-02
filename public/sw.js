@@ -1,10 +1,13 @@
-const CACHE_NAME = "linkwe-v5";
+const CACHE_NAME = "linkwe-v6";
 const OFFLINE_URL = "/offline";
 
 const STATIC_ASSETS = [
   "/",
   "/offline",
   "/manifest.json",
+  "/linkwe-logo-mark-on-dark.png",
+  "/linkwe-startup-splash.jpg",
+  "/linkwe-startup-splash-desktop.jpg",
   "/linkwe-pwa-192-v3.png",
   "/linkwe-pwa-512-v3.png",
 ];
