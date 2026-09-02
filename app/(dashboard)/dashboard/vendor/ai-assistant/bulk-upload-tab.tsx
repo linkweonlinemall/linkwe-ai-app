@@ -58,7 +58,6 @@ export default function BulkUploadTab() {
   const [selectedType, setSelectedType] = useState<ProductType>("simple")
   const [publishImmediately, setPublishImmediately] = useState(false)
   const [result, setResult] = useState<BulkResult | null>(null)
-  const [csvUploading, setCsvUploading] = useState(false)
   const [progress, setProgress] = useState(0)
   const fileRef = useRef<HTMLInputElement>(null)
   const [createdProducts, setCreatedProducts] = useState<
@@ -88,7 +87,6 @@ export default function BulkUploadTab() {
   }
 
   async function handleCSVUpload(file: File) {
-    setCsvUploading(true)
     setStage("progress")
     setProgress(10)
 
@@ -104,7 +102,6 @@ export default function BulkUploadTab() {
       setProgress(100)
       setTimeout(() => {
         setStage("results")
-        setCsvUploading(false)
       }, 300)
       return
     }
@@ -152,13 +149,18 @@ Your review must:
 
 Be direct, specific, and helpful. Use Trinidadian tone. Keep it under 200 words. End with a clear recommendation: READY TO UPLOAD or NEEDS WORK.`
 
-      const response = await fetch("/api/chat", {
+      const response = await fetch("/api/vendor-ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: [{ role: "user", content: prompt }],
         }),
       })
+
+      if (!response.ok) {
+        const errorPayload = (await response.json().catch(() => null)) as { error?: string } | null
+        throw new Error(errorPayload?.error ?? "Rex could not review this upload.")
+      }
 
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
@@ -188,28 +190,25 @@ Be direct, specific, and helpful. Use Trinidadian tone. Keep it under 200 words.
       setTimeout(() => {
         setStage("review")
         setReviewLoading(false)
-        setCsvUploading(false)
       }, 300)
     } catch (err) {
       console.error("Rex review error:", err)
       setReviewLoading(false)
-      const fd = new FormData()
-      fd.append("csv", file)
-      const res = await bulkUploadFromCSV(fd, selectedType, publishImmediately)
-      setResult(res)
-      if (res.createdProducts?.length > 0) setCreatedProducts(res.createdProducts)
+      setRexReview(
+        err instanceof Error
+          ? `${err.message} You can still review your file and choose whether to create the listings.`
+          : "Rex could not review this upload. You can still review your file and choose whether to create the listings.",
+      )
       setProgress(100)
       setTimeout(() => {
-        setStage("results")
-        setCsvUploading(false)
-      }, 500)
+        setStage("review")
+      }, 300)
     }
   }
 
   async function handleConfirmUpload() {
     setStage("progress")
     setProgress(20)
-    setCsvUploading(true)
 
     const csv = Papa.unparse(parsedRows)
     const file = new File([csv], "upload.csv", { type: "text/csv" })
@@ -223,7 +222,6 @@ Be direct, specific, and helpful. Use Trinidadian tone. Keep it under 200 words.
     if (res.createdProducts?.length > 0) setCreatedProducts(res.createdProducts)
     setTimeout(() => {
       setStage("results")
-      setCsvUploading(false)
     }, 500)
   }
 
@@ -243,7 +241,7 @@ Be direct, specific, and helpful. Use Trinidadian tone. Keep it under 200 words.
   const selectedTypeInfo = PRODUCT_TYPES.find((t) => t.type === selectedType)!
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col overflow-y-auto p-6">
+    <div className="mx-auto flex min-w-0 w-full max-w-2xl flex-1 flex-col overflow-y-auto px-3 py-4 sm:p-6">
       {stage === "type" && (
         <div className="space-y-6">
           <div>
@@ -467,7 +465,7 @@ Be direct, specific, and helpful. Use Trinidadian tone. Keep it under 200 words.
               </div>
             </div>
             <div
-              className="rounded-xl p-4 text-sm leading-relaxed text-zinc-300 whitespace-pre-wrap"
+              className="max-h-[45vh] min-w-0 overflow-y-auto whitespace-pre-wrap break-words rounded-xl p-4 text-sm leading-relaxed text-zinc-300 sm:max-h-[55vh]"
               style={{
                 backgroundColor: "rgba(255,255,255,0.04)",
                 border: "1px solid rgba(255,255,255,0.08)",
@@ -478,11 +476,11 @@ Be direct, specific, and helpful. Use Trinidadian tone. Keep it under 200 words.
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="grid gap-3 sm:flex sm:flex-wrap">
             <button
               type="button"
               onClick={() => void handleConfirmUpload()}
-              className="rounded-lg px-5 py-2.5 text-sm font-bold text-white hover:opacity-90"
+              className="w-full rounded-lg px-5 py-2.5 text-sm font-bold text-white hover:opacity-90 sm:w-auto"
               style={{ backgroundColor: selectedTypeInfo.color }}
             >
               ✅ Looks good — create products
@@ -490,14 +488,14 @@ Be direct, specific, and helpful. Use Trinidadian tone. Keep it under 200 words.
             <button
               type="button"
               onClick={() => setStage("upload")}
-              className="rounded-lg border border-zinc-600 px-5 py-2.5 text-sm text-zinc-400 hover:border-zinc-400 hover:text-white"
+              className="w-full rounded-lg border border-zinc-600 px-5 py-2.5 text-sm text-zinc-400 hover:border-zinc-400 hover:text-white sm:w-auto"
             >
               ← Fix and re-upload
             </button>
             <button
               type="button"
               onClick={reset}
-              className="rounded-lg border border-zinc-600 px-5 py-2.5 text-sm text-zinc-400 hover:border-zinc-400 hover:text-white"
+              className="w-full rounded-lg border border-zinc-600 px-5 py-2.5 text-sm text-zinc-400 hover:border-zinc-400 hover:text-white sm:w-auto"
             >
               Start over
             </button>
