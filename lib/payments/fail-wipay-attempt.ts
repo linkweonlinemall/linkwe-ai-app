@@ -29,6 +29,19 @@ export async function failWiPayAttempt(
         where: { id: attempt.targetId, status: "PENDING_PAYMENT" },
       });
     }
+    if (attempt?.purpose === "TICKET_ORDER") {
+      await tx.ticket.updateMany({
+        where: {
+          orderId: attempt.targetId,
+          ticketOrder: { status: "PENDING_PAYMENT" },
+        },
+        data: { status: "CANCELLED" },
+      });
+      await tx.ticketOrder.updateMany({
+        where: { id: attempt.targetId, status: "PENDING_PAYMENT" },
+        data: { status: "CANCELLED", promoReservationExpiresAt: null },
+      });
+    }
     return true;
   });
 }
