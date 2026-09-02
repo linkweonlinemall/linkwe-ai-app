@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { alertAdmins } from "@/lib/admin/alerts";
 
 export async function getCourierFinanceData() {
   const session = await getSession();
@@ -96,13 +97,19 @@ export async function requestCourierPayout(
     return { ok: false, error: "Amount exceeds available balance" };
   }
 
-  await prisma.courierPayoutRequest.create({
+  const payout = await prisma.courierPayoutRequest.create({
     data: {
       courierId: session.userId,
       amountMinor,
       currency: "TTD",
       status: "PENDING",
     },
+  });
+
+  await alertAdmins({
+    title: "New courier payout request",
+    body: `A courier requested a TTD ${(payout.amountMinor / 100).toFixed(2)} payout. Verify the available balance and bank details before approval.`,
+    linkUrl: "/dashboard/admin?tab=payouts",
   });
 
   revalidatePath("/dashboard/courier");

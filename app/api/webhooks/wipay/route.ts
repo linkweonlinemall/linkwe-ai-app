@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getWiPayConfig } from "@/lib/wipay/config";
 import { fulfillWiPayAttempt } from "@/lib/payments/fulfill-wipay-attempt";
 import { failWiPayAttempt } from "@/lib/payments/fail-wipay-attempt";
+import { alertAdmins } from "@/lib/admin/alerts";
 
 export const runtime = "nodejs";
 
@@ -48,6 +49,15 @@ export async function POST(request: Request) {
   }
 
   const transactionId = event.data?.transaction_id;
+  const riskStatus =
+    event.event === "payment.refund_requested" ? "REFUND_REQUESTED"
+    : event.event === "payment.refunded" ? "REFUNDED"
+    : event.event === "payment.chargeback_pending" ? "CHARGEBACK_PENDING"
+    : event.event === "payment.chargeback_processed" ? "CHARGEBACK_PROCESSED"
+    : event.event === "payment.chargeback_released" ? "CHARGEBACK_RELEASED"
+    : event.event === "payment.fraud_confirmed" ? "FRAUD_CONFIRMED"
+    : null;
+  let eventRecorded = false;
   try {
     if (event.event === "payment.success" && transactionId) {
       const attempt = await prisma.paymentAttempt.findFirst({
@@ -81,22 +91,34 @@ export async function POST(request: Request) {
       await tx.paymentWebhookEvent.create({
         data: { id: event.id, eventType: event.event, payload: event as object },
       });
+      eventRecorded = true;
       if (!transactionId) return;
-      const status =
-        event.event === "payment.refund_requested" ? "REFUND_REQUESTED"
-        : event.event === "payment.refunded" ? "REFUNDED"
-        : event.event === "payment.chargeback_pending" ? "CHARGEBACK_PENDING"
-        : event.event === "payment.chargeback_processed" ? "CHARGEBACK_PROCESSED"
-        : event.event === "payment.chargeback_released" ? "CHARGEBACK_RELEASED"
-        : event.event === "payment.fraud_confirmed" ? "FRAUD_CONFIRMED"
-        : null;
-      if (status) {
+      if (riskStatus) {
         await tx.paymentAttempt.updateMany({
           where: { providerTransactionId: transactionId },
-          data: { status },
+          data: { status: riskStatus },
         });
       }
     });
+
+    if (eventRecorded && riskStatus) {
+      const title =
+        riskStatus === "FRAUD_CONFIRMED" ? "WiPay confirmed payment fraud"
+        : riskStatus.startsWith("CHARGEBACK") ? "WiPay chargeback update"
+        : riskStatus === "REFUND_REQUESTED" ? "New WiPay refund request"
+        : "WiPay refund completed";
+      await alertAdmins({
+        title,
+        body: `WiPay reported ${riskStatus.toLowerCase().replaceAll("_", " ")} for transaction ${transactionId ?? "unknown"}. Review the related order and vendor balance immediately.`,
+        linkUrl: "/dashboard/admin?tab=orders",
+      });
+    } else if (eventRecorded && event.event === "payment.error") {
+      await alertAdmins({
+        title: "WiPay payment processing error",
+        body: `WiPay reported a processing error for transaction ${transactionId ?? "unknown"}. Review the payment attempt before taking action.`,
+        linkUrl: "/dashboard/admin?tab=orders",
+      });
+    }
   } catch (error) {
     const duplicate = error instanceof Error && /Unique constraint/i.test(error.message);
     if (!duplicate) throw error;
