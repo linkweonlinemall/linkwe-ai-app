@@ -43,7 +43,7 @@ export default async function PrivacyPolicyPage() {
               <h2 className="mb-3 text-lg font-bold text-zinc-900">1. Who we are</h2>
               <p className="text-sm leading-7 text-zinc-600">
                 LinkWe is an online multi-vendor marketplace operated by <strong>LinkWe Online Directory</strong>,
-                a company registered in Trinidad and Tobago. We connect local vendors with customers
+                a business based in Trinidad and Tobago. We connect local vendors with customers
                 across Trinidad and Tobago.
               </p>
               <p className="mt-3 text-sm leading-7 text-zinc-600">
@@ -59,7 +59,9 @@ export default async function PrivacyPolicyPage() {
               <div className="flex flex-col gap-3 text-sm leading-7 text-zinc-600">
                 <p><strong className="text-zinc-900">Account information:</strong> When you register, we collect your full name, email address, phone number, and role (customer, vendor, or courier).</p>
                 <p><strong className="text-zinc-900">Profile information:</strong> Vendors provide business details including store name, address, region, and bank account information for payouts. Couriers provide vehicle type and operating region.</p>
+                <p><strong className="text-zinc-900">Verification information:</strong> Vendors may provide identification documents, a selfie with identification, and payout information so LinkWe can review their identity and selling eligibility.</p>
                 <p><strong className="text-zinc-900">Transaction data:</strong> We collect order details, payment records, booking information, and delivery data to process and fulfill your transactions.</p>
+                <p><strong className="text-zinc-900">Checkout responses:</strong> A vendor may request information needed to personalise or fulfil a product or service. The question, purpose, and required status are shown before you submit an answer or upload.</p>
                 <p><strong className="text-zinc-900">Communications:</strong> Messages sent through our platform, reviews you submit, and support requests you send to us.</p>
                 <p><strong className="text-zinc-900">Usage data:</strong> We collect information about how you use LinkWe, including pages visited, searches performed, and features used, to improve our service.</p>
                 <p><strong className="text-zinc-900">Location data:</strong> When you use on-demand services, we may collect your approximate location with your permission to connect you with nearby providers.</p>
@@ -104,8 +106,10 @@ export default async function PrivacyPolicyPage() {
             <section className="rounded-2xl border border-zinc-200 bg-white p-6">
               <h2 className="mb-3 text-lg font-bold text-zinc-900">5. Data retention</h2>
               <p className="text-sm leading-7 text-zinc-600">
-                We retain your account information for as long as your account is active. Transaction records are
-                kept for a minimum of seven years to comply with financial regulations in Trinidad and Tobago.
+                We retain account information while an account is active and for a reasonable period afterward when
+                needed for security, fraud prevention, dispute resolution, accounting, or legal compliance. Transaction
+                and payout records are retained for the period reasonably required by applicable law and our legitimate
+                business needs; different records may have different retention periods.
                 You may request deletion of your account and personal data by contacting us at{" "}
                 <a href="mailto:admin@linkwemall.com" className="font-semibold text-[#D4450A] hover:underline">
                   admin@linkwemall.com
@@ -163,7 +167,16 @@ export default async function PrivacyPolicyPage() {
             </section>
 
             <section className="rounded-2xl border border-zinc-200 bg-white p-6">
-              <h2 className="mb-3 text-lg font-bold text-zinc-900">9. Changes to this policy</h2>
+              <h2 className="mb-3 text-lg font-bold text-zinc-900">9. Children&apos;s privacy</h2>
+              <p className="text-sm leading-7 text-zinc-600">
+                LinkWe accounts and vendor services are intended for people aged 18 or older. We do not knowingly
+                collect personal information from children through account registration. If you believe a child has
+                provided personal information, contact us so we can review and take appropriate action.
+              </p>
+            </section>
+
+            <section className="rounded-2xl border border-zinc-200 bg-white p-6">
+              <h2 className="mb-3 text-lg font-bold text-zinc-900">10. Changes to this policy</h2>
               <p className="text-sm leading-7 text-zinc-600">
                 We may update this Privacy Policy from time to time. We will notify registered users
                 of significant changes by email. Continued use of LinkWe after changes are posted
@@ -172,7 +185,7 @@ export default async function PrivacyPolicyPage() {
             </section>
 
             <section className="rounded-2xl border border-zinc-200 bg-white p-6">
-              <h2 className="mb-3 text-lg font-bold text-zinc-900">10. Contact us</h2>
+              <h2 className="mb-3 text-lg font-bold text-zinc-900">11. Contact us</h2>
               <p className="text-sm leading-7 text-zinc-600">
                 For any privacy concerns or questions about this policy, contact LinkWe Online Directory at{" "}
                 <a href="mailto:admin@linkwemall.com" className="font-semibold text-[#D4450A] hover:underline">

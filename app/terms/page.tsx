@@ -172,18 +172,22 @@ export default async function TermsOfServicePage() {
 
           <section className="rounded-2xl border border-zinc-200 bg-white p-6">
             <h2 className="mb-3 text-lg font-bold text-zinc-900">8. Payments</h2>
-            <p className="text-sm leading-7 text-zinc-600">
+            <div className="flex flex-col gap-3 text-sm leading-7 text-zinc-600">
+            <p>
               Online payments on LinkWe are processed securely through WiPay. By making a payment,
               you agree to WiPay&apos;s terms of service. LinkWe does not store card details.
               Prices on LinkWe are displayed in Trinidad and Tobago Dollars (TTD) unless otherwise stated.
               International card payments may be subject to currency conversion by your card issuer.
             </p>
+            <p><strong className="text-zinc-900">Subscriptions:</strong> Subscription price and billing interval are shown before payment. WiPay may require the customer or vendor to approve each renewal rather than charging automatically. A subscription can be cancelled for future periods from the relevant dashboard; cancellation does not automatically refund a period already purchased.</p>
+            <p><strong className="text-zinc-900">Payment failures:</strong> An order, ticket, booking, or subscription is not confirmed until LinkWe receives successful payment confirmation. A failed or abandoned payment does not create a right to fulfilment.</p>
+            </div>
           </section>
 
           <section className="rounded-2xl border border-zinc-200 bg-white p-6">
             <h2 className="mb-3 text-lg font-bold text-zinc-900">9. Limitation of liability</h2>
             <p className="text-sm leading-7 text-zinc-600">
-              LinkWe Online Directory provides the platform on an "as is" basis. We are not liable for
+              LinkWe Online Directory provides the platform on an &quot;as is&quot; basis. We are not liable for
               the quality, safety, or legality of items listed by vendors; the accuracy of vendor listings;
               the ability of vendors to complete transactions; or any losses arising from transactions
               between users. Our total liability to any user shall not exceed the amount paid by that user

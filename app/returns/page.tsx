@@ -47,21 +47,21 @@ export default function ReturnsPage() {
       </section>
 
       <section className="rounded-2xl border border-zinc-200 bg-white p-6">
-        <h2 className="mb-3 text-lg font-bold text-zinc-900">What can&apos;t be returned</h2>
+        <h2 className="mb-3 text-lg font-bold text-zinc-900">Items with special refund rules</h2>
         <div className="flex flex-col gap-3 text-sm leading-7 text-zinc-600">
-          <p>Some items can&apos;t be returned for health, safety, or practical reasons:</p>
+          <p>Some purchases have special rules because they cannot be physically returned or resold:</p>
           <ul className="ml-4 flex flex-col gap-2">
             <li className="flex items-start gap-2">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D4450A]" />
-              Digital products and downloads
+              Digital products and downloads are generally final once delivered, except where required by law or where the file is defective or materially not as described.
             </li>
             <li className="flex items-start gap-2">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D4450A]" />
-              Event tickets (these have their own transfer option — see your tickets)
+              Event tickets follow the event&apos;s displayed refund policy and WiPay&apos;s full-transaction refund rules. Ticket transfer may also be available from My Tickets.
             </li>
             <li className="flex items-start gap-2">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D4450A]" />
-              Perishable items, including food and fresh goods
+              Perishable items, including food and fresh goods, are generally not returnable unless damaged, unsafe, incorrect, or materially not as described.
             </li>
           </ul>
         </div>
