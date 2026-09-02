@@ -70,15 +70,14 @@ export async function refundTicket(
     return { error: "Order must be paid before refunding" };
   }
 
-  const ticketPriceMinor = ticketPaidMinor(ticket);
   if (
     !Number.isFinite(amountMinor) ||
     !Number.isInteger(amountMinor) ||
     amountMinor <= 0 ||
-    amountMinor > ticketPriceMinor
+    amountMinor > order.total
   ) {
     return {
-      error: `Refund amount must be a whole number from 1 to ${ticketPriceMinor} (ticket price in cents)`,
+      error: `Refund amount must be a whole number from 1 to ${order.total} (complete order total in cents)`,
     };
   }
 
