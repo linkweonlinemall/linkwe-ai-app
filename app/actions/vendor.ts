@@ -117,14 +117,14 @@ export async function requestPayout(formData: FormData): Promise<{
   await alertAdmins({
     title: "New payout request",
     body: `A vendor requested a TTD ${(payout.amountMinor / 100).toFixed(2)} payout. Verify the balance and bank details before processing it.`,
-    linkUrl: "/dashboard/admin/payouts",
+    linkUrl: "/dashboard/admin?tab=payouts",
   });
 
   revalidatePath("/dashboard/vendor");
   return { ok: true };
 }
 
-export async function payMySubscriptionFromBalance(): Promise<
+export async function payMySubscriptionFromBalance(targetPlanRaw?: string): Promise<
   | { ok: true; charged: boolean; reason?: string }
   | { ok: false; error: string }
 > {
@@ -141,10 +141,17 @@ export async function payMySubscriptionFromBalance(): Promise<
   });
   if (!store) return { ok: false, error: "No store found" };
 
+  const targetPlan =
+    targetPlanRaw === "GROWTH" || targetPlanRaw === "PRO"
+      ? targetPlanRaw
+      : undefined;
+  if (targetPlanRaw && !targetPlan) return { ok: false, error: "Invalid plan" };
+
   const result = await chargeSubscriptionFromBalance(
     store.id,
     store.subscriptionPlan,
     store.planRenewsAt,
+    targetPlan,
   );
 
   revalidatePath("/dashboard/vendor/finance");

@@ -1,4 +1,5 @@
 import { getCurrentPeriodKey } from "@/lib/finance/ai-usage-period";
+import type { CommissionPlan } from "@/lib/finance/commission";
 import { PLAN_PRICE_MINOR } from "@/lib/finance/plan-limits";
 import { isVendorBalanceDebit } from "@/lib/finance/vendor-balance";
 import { resolveVendorPlan } from "@/lib/finance/vendor-plan";
@@ -15,21 +16,32 @@ export async function chargeSubscriptionFromBalance(
   storeId: string,
   subscriptionPlan: string | null,
   planRenewsAt: Date | null,
+  targetPlan?: CommissionPlan,
 ): Promise<
   | { ok: true; charged: boolean; reason?: string }
   | { ok: false; reason: string; balanceMinor?: number; priceMinor?: number }
 > {
-  const plan = resolveVendorPlan(subscriptionPlan);
+  const currentPlan = resolveVendorPlan(subscriptionPlan);
+  const plan = targetPlan ?? currentPlan;
   const priceMinor = PLAN_PRICE_MINOR[plan];
   if (priceMinor <= 0) {
     return { ok: true, charged: false, reason: "free_plan" };
   }
 
   const periodKey = getCurrentPeriodKey(planRenewsAt);
-  const idempotencyKey = `subscription:${storeId}:${periodKey}`;
+  const idempotencyKey = `subscription:${storeId}:${plan}:${periodKey}`;
+  const legacyIdempotencyKey = `subscription:${storeId}:${periodKey}`;
 
   return prisma.$transaction(async (tx) => {
-    const existing = await tx.vendorLedgerEntry.findUnique({ where: { idempotencyKey } });
+    const existing = await tx.vendorLedgerEntry.findFirst({
+      where: {
+        idempotencyKey: {
+          in: plan === currentPlan
+            ? [idempotencyKey, legacyIdempotencyKey]
+            : [idempotencyKey],
+        },
+      },
+    });
     if (existing) return { ok: true as const, charged: false, reason: "already_charged_this_period" };
 
     const entries = await tx.vendorLedgerEntry.findMany({
@@ -45,7 +57,8 @@ export async function chargeSubscriptionFromBalance(
       return { ok: false as const, reason: "insufficient_balance", balanceMinor, priceMinor };
     }
 
-    const renewalBase = planRenewsAt && planRenewsAt > new Date() ? planRenewsAt : new Date();
+    const now = new Date();
+    const renewalBase = plan === currentPlan && planRenewsAt && planRenewsAt > now ? planRenewsAt : now;
     const nextRenewal = new Date(renewalBase);
     nextRenewal.setUTCMonth(nextRenewal.getUTCMonth() + 1);
     await tx.vendorLedgerEntry.create({
@@ -62,7 +75,13 @@ export async function chargeSubscriptionFromBalance(
     });
     await tx.store.update({
       where: { id: storeId },
-      data: { subscriptionStatus: "ACTIVE", planRenewsAt: nextRenewal, pastDueSince: null },
+      data: {
+        subscriptionPlan: plan,
+        subscriptionStatus: "ACTIVE",
+        planRenewsAt: nextRenewal,
+        pastDueSince: null,
+        wipayTrustedCardId: null,
+      },
     });
     return { ok: true as const, charged: true };
   });

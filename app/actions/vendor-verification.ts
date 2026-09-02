@@ -51,7 +51,7 @@ export async function uploadIdDocument(formData: FormData) {
   await alertAdmins({
     title: "Vendor verification ready for review",
     body: "A vendor uploaded their ID and selfie. Review the evidence and approve or reject it.",
-    linkUrl: "/dashboard/admin/vendors?filter=pending-verification",
+    linkUrl: "/dashboard/admin/verification",
   });
 
   return { ok: true as const };

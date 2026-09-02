@@ -258,15 +258,18 @@ export default function FinanceTab({
     setRequesting(false);
   }
 
-  async function handlePaySubscription() {
+  async function handlePaySubscription(targetPlan?: "GROWTH" | "PRO") {
     setSubPayMessage(null);
     setSubPayError(null);
     setPayingSubscription(true);
-    const result = await payMySubscriptionFromBalance();
+    const result = await payMySubscriptionFromBalance(targetPlan);
     setPayingSubscription(false);
     if (result.ok) {
       if (result.charged) {
-        setSubPayMessage("Subscription paid from your balance");
+        const paidPlan = targetPlan
+          ? `${targetPlan.charAt(0)}${targetPlan.slice(1).toLowerCase()} plan`
+          : "Subscription";
+        setSubPayMessage(`${paidPlan} paid from your balance`);
         router.refresh();
       } else if (result.reason === "already_charged_this_period") {
         setSubPayMessage("Already paid this period.");
@@ -458,6 +461,24 @@ export default function FinanceTab({
                   Go Pro — TTD 500/mo
                 </button>
               </div>
+              <div className="mt-2 flex flex-wrap gap-3 text-[11px]">
+                <button
+                  type="button"
+                  disabled={payingSubscription || subscribing}
+                  onClick={() => void handlePaySubscription("GROWTH")}
+                  className="font-semibold text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline disabled:opacity-50"
+                >
+                  {payingSubscription ? "Processing…" : "Pay Growth from balance"}
+                </button>
+                <button
+                  type="button"
+                  disabled={payingSubscription || subscribing}
+                  onClick={() => void handlePaySubscription("PRO")}
+                  className="font-semibold text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline disabled:opacity-50"
+                >
+                  {payingSubscription ? "Processing…" : "Pay Pro from balance"}
+                </button>
+              </div>
             </>
           ) : (
             <>
@@ -566,6 +587,26 @@ export default function FinanceTab({
                       </Link>
                       .
                     </p>
+                  ) : null}
+                  {plan === "GROWTH" ? (
+                    <div className="mt-3 flex flex-wrap gap-3 border-t border-zinc-100 pt-3 text-[11px]">
+                      <button
+                        type="button"
+                        disabled={subscribing || payingSubscription}
+                        onClick={() => void handleSubscribeByCard("PRO")}
+                        className="font-semibold text-[#D4450A] disabled:opacity-50"
+                      >
+                        Upgrade to Pro with WiPay
+                      </button>
+                      <button
+                        type="button"
+                        disabled={subscribing || payingSubscription}
+                        onClick={() => void handlePaySubscription("PRO")}
+                        className="font-semibold text-zinc-600 disabled:opacity-50"
+                      >
+                        Upgrade to Pro from balance
+                      </button>
+                    </div>
                   ) : null}
                 </>
               ) : null}
