@@ -104,6 +104,13 @@ export async function fulfillWiPayAttempt(attempt: PaymentAttempt): Promise<void
     const storeId = data.storeId;
     const interval = data.interval;
     await prisma.$transaction(async (tx) => {
+    // A provider return can be replayed before the payment attempt is marked
+    // succeeded. Keep the service period and its earnings exactly-once together.
+    const settled = await tx.vendorLedgerEntry.findUnique({
+      where: { idempotencyKey: `service-subscription:${attempt.id}` },
+      select: { id: true },
+    });
+    if (settled) return;
     const store = await tx.store.findUnique({
       where: { id: storeId },
       select: { subscriptionPlan: true },
@@ -162,6 +169,6 @@ export async function fulfillWiPayAttempt(attempt: PaymentAttempt): Promise<void
       description: "Customer service subscription payment",
       metadata: { paymentAttemptId: attempt.id, productId: attempt.targetId },
     });
-    });
+    }, { isolationLevel: "Serializable" });
   }
 }
