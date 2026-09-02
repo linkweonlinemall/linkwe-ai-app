@@ -47,7 +47,7 @@ export async function getVendorServices() {
   const store = await prisma.store.findFirst({ where: { ownerId: session.userId } });
   if (!store) return [];
   return prisma.product.findMany({
-    where: { storeId: store.id, isService: true },
+    where: { storeId: store.id, isService: true, isArchived: false },
     select: {
       id: true,
       name: true,
@@ -126,7 +126,9 @@ export async function createService(formData: FormData) {
     return { error: "Starter services are limited to TTD 100. Upgrade to Growth or Pro for higher-priced services." };
   }
   if (limits.serviceCap !== null) {
-    const serviceCount = await prisma.product.count({ where: { storeId: store.id, isService: true } });
+    const serviceCount = await prisma.product.count({
+      where: { storeId: store.id, isService: true, isArchived: false },
+    });
     if (serviceCount >= limits.serviceCap) {
       return { error: `Starter includes up to ${limits.serviceCap} services. Upgrade to create more.` };
     }
@@ -565,7 +567,13 @@ export async function permanentlyDeleteService(serviceId: string): Promise<{ ok:
   });
   if (!service) return { error: "Service not found" };
 
-  await prisma.product.delete({ where: { id: serviceId } });
+  // Preserve bookings, subscriptions, requests, reviews, messages, and finance
+  // records. Vendors may remove a service from sale, but business history is
+  // never physically deleted from this workflow.
+  await prisma.product.update({
+    where: { id: serviceId },
+    data: { isPublished: false, isArchived: true },
+  });
 
   revalidatePath("/dashboard/vendor/services");
   return { ok: true };

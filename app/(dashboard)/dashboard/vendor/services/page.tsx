@@ -66,7 +66,7 @@ export default function VendorServicesPage() {
     }
   }
 
-  async function handleTogglePublish(serviceId: string, _currentlyPublished: boolean) {
+  async function handleTogglePublish(serviceId: string) {
     setTogglingId(serviceId);
     const result = await toggleServicePublished(serviceId);
     if ("ok" in result) {
@@ -78,7 +78,7 @@ export default function VendorServicesPage() {
   }
 
   async function handleDelete(serviceId: string, serviceName: string) {
-    if (!confirm(`Permanently delete "${serviceName}"? This cannot be undone.`)) return;
+    if (!confirm(`Remove "${serviceName}" from your store? It will no longer be available to customers. Existing bookings, subscriptions, requests, reviews, and financial records will be kept.`)) return;
     setDeletingId(serviceId);
     await permanentlyDeleteService(serviceId);
     setServices((prev) => prev.filter((s) => s.id !== serviceId));
@@ -105,7 +105,7 @@ export default function VendorServicesPage() {
     if (selectedIds.size === 0) return;
     if (
       !confirm(
-        `Permanently delete ${selectedIds.size} service${selectedIds.size > 1 ? "s" : ""}? This cannot be undone.`,
+        `Remove ${selectedIds.size} service${selectedIds.size > 1 ? "s" : ""} from your store? Existing bookings, subscriptions, requests, reviews, and financial records will be kept.`,
       )
     )
       return;
@@ -267,7 +267,7 @@ export default function VendorServicesPage() {
                   <button
                     type="button"
                     disabled={togglingId === service.id}
-                    onClick={() => void handleTogglePublish(service.id, service.isPublished)}
+                    onClick={() => void handleTogglePublish(service.id)}
                     className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition-all disabled:opacity-50 ${
                       service.isPublished
                         ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"

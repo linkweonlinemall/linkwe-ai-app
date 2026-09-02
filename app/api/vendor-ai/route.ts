@@ -1023,7 +1023,9 @@ export async function POST(req: NextRequest) {
             return { content: JSON.stringify({ ok: false, error: "Starter services are limited to TTD 100. Upgrade to create higher-priced services." }) }
           }
           if (serviceLimits.serviceCap !== null) {
-            const serviceCount = await prisma.product.count({ where: { storeId: store.id, isService: true } })
+            const serviceCount = await prisma.product.count({
+              where: { storeId: store.id, isService: true, isArchived: false },
+            })
             if (serviceCount >= serviceLimits.serviceCap) {
               return { content: JSON.stringify({ ok: false, error: `Starter includes up to ${serviceLimits.serviceCap} services. Upgrade to create more.` }) }
             }

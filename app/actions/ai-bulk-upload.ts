@@ -153,7 +153,9 @@ export async function bulkUploadFromCSV(
   }
   const { limits } = getStorePlan(store)
   if (productType === "service" && limits.serviceCap !== null) {
-    const currentServices = await prisma.product.count({ where: { storeId: store.id, isService: true } })
+    const currentServices = await prisma.product.count({
+      where: { storeId: store.id, isService: true, isArchived: false },
+    })
     const remaining = Math.max(0, limits.serviceCap - currentServices)
     if (rows.length > remaining) {
       return {
