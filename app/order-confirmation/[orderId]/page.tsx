@@ -33,6 +33,7 @@ export default async function OrderConfirmationPage({ params }: Props) {
       items: {
         select: {
           id: true,
+          productId: true,
           titleSnapshot: true,
           priceMinor: true,
           quantity: true,
@@ -47,7 +48,18 @@ export default async function OrderConfirmationPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
-      <OrderConfirmationCelebration orderReference={order.referenceNumber} />
+      <OrderConfirmationCelebration
+        orderId={order.id}
+        orderReference={order.referenceNumber}
+        totalMinor={order.totalMinor}
+        shippingMinor={order.shippingMinor}
+        items={order.items.map((item) => ({
+          id: item.productId ?? item.id,
+          name: item.titleSnapshot,
+          priceMinor: item.priceMinor,
+          quantity: item.quantity,
+        }))}
+      />
       <PublicNav
         user={session ? { name: session.fullName ?? "Account", href: dashboardHref! } : null}
         dashboardHref={dashboardHref ?? undefined}

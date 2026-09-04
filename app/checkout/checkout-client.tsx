@@ -10,6 +10,7 @@ import {
   type CheckoutShippingBreakdownResult,
 } from "@/app/actions/checkout";
 import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
+import { trackGoogleAnalyticsEvent } from "@/components/analytics/GoogleAnalytics";
 import Button from "@/components/ui/Button";
 import InlineSpinner from "@/components/ui/InlineSpinner";
 import Select from "@/components/ui/Select";
@@ -257,6 +258,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
 
     setLoading(true);
     setError(null);
+    trackGoogleAnalyticsEvent("begin_checkout", { currency: "TTD", value: displayTotal, items: items.map((item) => ({ item_id: item.productId, item_name: item.product.name, price: item.product.price, quantity: item.quantity })) });
     const result = await createPaymentIntent(
       address,
       allDigital ? "" : deliveryRegion,

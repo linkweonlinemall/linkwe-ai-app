@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Sora } from "next/font/google";
 
 import CartProvider from "@/components/cart/CartProvider";
@@ -9,6 +10,7 @@ import LinkWeToaster from "@/components/providers/LinkWeToaster";
 import ServiceWorkerRegistration from "@/components/pwa/ServiceWorkerRegistration";
 import RouteScrollManager from "@/components/layout/RouteScrollManager";
 import AppStartupSplash from "@/components/layout/AppStartupSplash";
+import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
 
 import "./globals.css";
 
@@ -99,6 +101,7 @@ export default function RootLayout({
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "Organization", name: "LinkWe", url: "https://www.linkweonlinemall.com", logo: "https://www.linkweonlinemall.com/linkwe-logo-mark-on-light.png", slogan: "We People. We Business. We Marketplace.", description: "Trinidad & Tobago's marketplace for local products, services, stores and events." }) }} />
         <ServiceWorkerRegistration />
         <RouteScrollManager />
+        <Suspense fallback={null}><GoogleAnalytics /></Suspense>
         <InstallPrompt />
         <CartProvider>
           <LinkWeToaster />
