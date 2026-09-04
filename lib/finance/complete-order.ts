@@ -65,7 +65,7 @@ export async function releaseSplitOrderEarnings(
 
   const plan = resolveVendorPlan(split.store.subscriptionPlan);
   const earnings = calculateEarningsMinor(split.subtotalMinor, "product", plan);
-  // CSF/LinkWe fulfils every delivered order. Shipping is not vendor revenue;
+  // LinkWe fulfils every delivered order. Shipping is not vendor revenue;
   // vendors can only offer free customer pickup.
   const selfDeliveryMinor = 0;
   const now = new Date();

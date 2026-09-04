@@ -390,22 +390,27 @@ export default function UserDetailPanel({ userId, onClose, onAction }: Props) {
               )}
               {user.role !== "ADMIN" && (
                 confirmDelete ? (
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      disabled={isPending}
-                      onClick={handleDelete}
-                      className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
-                    >
-                      Yes, delete
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmDelete(false)}
-                      className="flex-1 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-600 hover:bg-zinc-50"
-                    >
-                      Cancel
-                    </button>
+                  <div className="space-y-2">
+                    <p className="rounded-xl bg-red-50 px-3 py-2 text-xs font-medium leading-5 text-red-700">
+                      Delete {user.fullName}? Their access will be removed and their account details anonymized. Order and payment records will be preserved.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={isPending}
+                        onClick={handleDelete}
+                        className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                      >
+                        Yes, delete
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDelete(false)}
+                        className="flex-1 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-600 hover:bg-zinc-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <button

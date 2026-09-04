@@ -57,7 +57,7 @@ const TAB_CONFIG: { id: TabId; label: string; icon: ReactNode }[] = [
   },
   {
     id: "linkwe-delivery",
-    label: "CSF Delivery",
+    label: "Managed Delivery",
     icon: (
       <svg className="h-4 w-4 shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <rect x="1" y="3" width="15" height="13" />

@@ -343,14 +343,6 @@ export const tutorialCatalog = {
       { route: "/dashboard/vendor/partners", selector: '[data-tour="collab-outgoing"]', title: "Requests you sent", body: "Track pending, approved and rejected requests. Cancel pending requests when plans change and remove collaborations that are no longer useful." },
       { title: "Start a collaboration", body: "Open an eligible product, service or event from another vendor and use its collaboration request control. Review the public item before requesting it." }],
   },
-  shipping: {
-    label: "CSF delivery & pickup", description: "Learn the managed courier flow, distance pricing and local pickup.", category: "Business operations", duration: "5 min",
-    steps: [routeStep("/dashboard/vendor/shipping", "Delivery setup", "CSF Couriers handles all delivered product orders through LinkWe. Vendors prepare parcels; customers may also choose pickup where offered."),
-      { route: "/dashboard/vendor/shipping", selector: '[data-tour="shipping-methods"]', title: "How CSF delivery works", body: "Pack the paid order, mark it ready, and hand it to the CSF courier arranged by LinkWe. You do not set or collect a separate vendor delivery charge." },
-      { route: "/dashboard/vendor/shipping", selector: '[data-tour="shipping-zones"]', title: "Distance-based customer price", body: "LinkWe calculates the customer price from your saved store pin to their checkout pin. Accurate store coordinates and packaged weight prevent incorrect quotes." },
-      { route: "/dashboard/vendor/shipping", selector: '[data-tour="shipping-pickup"]', title: "Offer local pickup", body: "Pickup is controlled on each product. A pickup order uses Ready for pickup and Picked up—not courier statuses—and has no delivery fee." },
-      { title: "Before publishing products", body: "Confirm your store pin, enter the full packaged weight, and enable delivery and/or pickup on every physical product." }],
-  },
   staff: {
     label: "Staff & availability", description: "Build schedules and prevent appointment conflicts.", category: "Business operations", duration: "6 min",
     steps: [routeStep("/dashboard/vendor/staff", "Availability centre", "Availability controls when customers can book each service and prevents unrealistic schedules."),

@@ -125,7 +125,7 @@ export async function getVendorShippingSettings(): Promise<
 export async function updateShippingMode(
   mode: "SELF" | "LINKWE",
 ): Promise<ActionOk | ActionError> {
-  if (mode !== "LINKWE") return { ok: false, error: "All delivered orders are handled by CSF Couriers through LinkWe." };
+  if (mode !== "LINKWE") return { ok: false, error: "All delivered orders are managed by LinkWe." };
 
   const storeResult = await requireCallerStore();
   if (!storeResult.ok) return storeResult;

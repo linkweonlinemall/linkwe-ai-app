@@ -261,7 +261,9 @@ export default function AdminUsersClient({
             </button>
             {confirmBulkDelete ? (
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-red-700 font-medium">Sure?</span>
+                <span className="max-w-xs text-xs font-medium text-red-700">
+                  Remove access for {selected.size} selected user{selected.size !== 1 ? "s" : ""}? Their accounts will be deactivated and anonymized.
+                </span>
                 <button
                   type="button"
                   disabled={isPending}
@@ -371,7 +373,9 @@ export default function AdminUsersClient({
                   </button>
                   {confirmDelete === u.id ? (
                     <>
-                      <span className="text-xs font-medium text-red-600">Sure?</span>
+                      <span className="max-w-[14rem] text-xs font-medium text-red-600">
+                        Delete {u.fullName}? Their access will be removed and their account anonymized.
+                      </span>
                       <button
                         type="button"
                         disabled={isPending}
@@ -514,8 +518,10 @@ export default function AdminUsersClient({
                     )}
                     {u.role !== "ADMIN" && (
                       confirmDelete === u.id ? (
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs text-red-600">Sure?</span>
+                        <div className="flex max-w-sm items-center gap-1">
+                          <span className="text-xs font-medium text-red-600">
+                            Delete {u.fullName}? Access will be removed and the account anonymized.
+                          </span>
                           <button
                             type="button"
                             disabled={isPending}
