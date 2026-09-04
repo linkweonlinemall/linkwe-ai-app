@@ -30,6 +30,7 @@ export async function getAdminUsers({
   const skip = (page - 1) * PAGE_SIZE;
 
   const where = {
+    isActive: true,
     ...(search.trim()
       ? {
           OR: [
@@ -90,7 +91,7 @@ export async function getAdminUserDetail(userId: string) {
 
   let vendorStats = null;
   let customerStats = null;
-  let courierStats = null;
+  const courierStats = null;
 
   if (user.role === "VENDOR" && user.storesOwned[0]) {
     const store = user.storesOwned[0];
@@ -179,9 +180,20 @@ export async function deleteUser(userId: string): Promise<{ ok: boolean; error?:
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { role: true, _count: { select: { mainOrders: true } } },
+    select: {
+      role: true,
+      isActive: true,
+      _count: { select: { mainOrders: true } },
+      storesOwned: {
+        select: {
+          subscriptionStatus: true,
+          _count: { select: { splitOrders: true } },
+        },
+      },
+    },
   });
   if (!user) return { ok: false, error: "User not found." };
+  if (!user.isActive) return { ok: false, error: "This user has already been deleted." };
   if (user.role === "ADMIN") return { ok: false, error: "Cannot delete an admin account." };
   if (user._count.mainOrders > 0) {
     return {
@@ -190,9 +202,57 @@ export async function deleteUser(userId: string): Promise<{ ok: boolean; error?:
     };
   }
 
-  await prisma.user.delete({ where: { id: userId } });
+  const vendorOrders = user.storesOwned.reduce((count, store) => count + store._count.splitOrders, 0);
+  if (vendorOrders > 0) {
+    return {
+      ok: false,
+      error: `This vendor has ${vendorOrders} store order(s). Preserve the account for order records or suspend it instead.`,
+    };
+  }
+  if (user.storesOwned.some((store) => store.subscriptionStatus === "ACTIVE" || store.subscriptionStatus === "PAST_DUE")) {
+    return { ok: false, error: "Cancel the vendor’s active billing plan before deleting this account." };
+  }
+
+  try {
+    await prisma.$transaction([
+      prisma.store.updateMany({
+        where: { ownerId: userId },
+        data: { status: "DRAFT" },
+      }),
+      prisma.user.update({
+        where: { id: userId },
+        data: deletedUserData(userId),
+      }),
+    ]);
+  } catch (error) {
+    console.error("deleteUser", error);
+    return { ok: false, error: "Could not delete this user. Please try again." };
+  }
   revalidatePath(ADMIN_USERS_PATH);
   return { ok: true };
+}
+
+function deletedUserData(userId: string) {
+  return {
+    email: `deleted-${userId}@deleted.invalid`,
+    phone: null,
+    passwordHash: null,
+    resetToken: null,
+    resetTokenExpiry: null,
+    emailVerifyToken: null,
+    emailVerifyTokenExpiry: null,
+    fullName: "Deleted user",
+    region: null,
+    idDocumentUrl: null,
+    selfieWithIdUrl: null,
+    vehicleType: null,
+    courierBio: null,
+    bankName: null,
+    accountName: null,
+    accountNumber: null,
+    isActive: false,
+    suspended: true,
+  } as const;
 }
 
 // ─── Bulk mutations ───────────────────────────────────────────────────────────
@@ -218,8 +278,18 @@ export async function bulkDeleteUsers(userIds: string[]): Promise<{
   await assertAdmin();
 
   const users = await prisma.user.findMany({
-    where: { id: { in: userIds }, role: { not: "ADMIN" } },
-    select: { id: true, fullName: true, _count: { select: { mainOrders: true } } },
+    where: { id: { in: userIds }, role: { not: "ADMIN" }, isActive: true },
+    select: {
+      id: true,
+      fullName: true,
+      _count: { select: { mainOrders: true } },
+      storesOwned: {
+        select: {
+          subscriptionStatus: true,
+          _count: { select: { splitOrders: true } },
+        },
+      },
+    },
   });
 
   const toDelete: string[] = [];
@@ -228,13 +298,35 @@ export async function bulkDeleteUsers(userIds: string[]): Promise<{
   for (const u of users) {
     if (u._count.mainOrders > 0) {
       skipped.push({ id: u.id, name: u.fullName, reason: `${u._count.mainOrders} order(s)` });
+    } else if (u.storesOwned.some((store) => store._count.splitOrders > 0)) {
+      skipped.push({ id: u.id, name: u.fullName, reason: "store order history" });
+    } else if (u.storesOwned.some((store) => store.subscriptionStatus === "ACTIVE" || store.subscriptionStatus === "PAST_DUE")) {
+      skipped.push({ id: u.id, name: u.fullName, reason: "active billing plan" });
     } else {
       toDelete.push(u.id);
     }
   }
 
   if (toDelete.length > 0) {
-    await prisma.user.deleteMany({ where: { id: { in: toDelete } } });
+    try {
+      await prisma.$transaction([
+        prisma.store.updateMany({
+          where: { ownerId: { in: toDelete } },
+          data: { status: "DRAFT" },
+        }),
+        ...toDelete.map((id) => prisma.user.update({ where: { id }, data: deletedUserData(id) })),
+      ]);
+    } catch (error) {
+      console.error("bulkDeleteUsers", error);
+      return {
+        deleted: [],
+        skipped: users.map((user) => ({
+          id: user.id,
+          name: user.fullName,
+          reason: "delete failed; please retry",
+        })),
+      };
+    }
   }
 
   revalidatePath(ADMIN_USERS_PATH);
