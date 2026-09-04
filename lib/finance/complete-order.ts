@@ -49,7 +49,6 @@ export async function releaseSplitOrderEarnings(
         select: {
           ownerId: true,
           subscriptionPlan: true,
-          shippingMode: true,
           owner: { select: { email: true, fullName: true } },
         },
       },
@@ -66,8 +65,9 @@ export async function releaseSplitOrderEarnings(
 
   const plan = resolveVendorPlan(split.store.subscriptionPlan);
   const earnings = calculateEarningsMinor(split.subtotalMinor, "product", plan);
-  const selfDeliveryMinor =
-    split.store.shippingMode === "SELF" ? split.shippingMinor : 0;
+  // CSF/LinkWe fulfils every delivered order. Shipping is not vendor revenue;
+  // vendors can only offer free customer pickup.
+  const selfDeliveryMinor = 0;
   const now = new Date();
 
   await prisma.$transaction(async (tx) => {
@@ -96,33 +96,6 @@ export async function releaseSplitOrderEarnings(
       markedByUserId: markedCompleteBy === "SYSTEM" ? undefined : markedCompleteBy,
     });
 
-    if (split.store.shippingMode === "SELF" && split.shippingMinor > 0) {
-      const shippingIdempotencyKey = `split:${split.id}:${ledgerType}:shipping`;
-      const existingShipping = await tx.vendorLedgerEntry.findFirst({
-        where: { idempotencyKey: shippingIdempotencyKey },
-      });
-      if (!existingShipping) {
-        await tx.vendorLedgerEntry.create({
-          data: {
-            storeId: split.storeId,
-            currency: "TTD",
-            entryType: "CREDIT_ORDER_SETTLEMENT",
-            ledgerEntryType: "SHIPPING",
-            amountMinor: split.shippingMinor,
-            grossMinor: split.shippingMinor,
-            commissionMinor: 0,
-            netMinor: split.shippingMinor,
-            splitOrderId: split.id,
-            splitOrderRef: split.id,
-            mainOrderId: split.mainOrderId,
-            idempotencyKey: shippingIdempotencyKey,
-            description: "Delivery fee — self-delivered",
-            releasedAt: now,
-            createdByUserId: markedCompleteBy === "SYSTEM" ? undefined : markedCompleteBy,
-          },
-        });
-      }
-    }
   });
 
   if (split.store.ownerId) {

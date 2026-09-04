@@ -27,7 +27,7 @@ LINKWE PLATFORM KNOWLEDGE (SHOPPER'S VIEW)
 ═══════════════════════════════════════
 
 WHAT LINKWE IS:
-LinkWe is a multi-vendor marketplace for Trinidad & Tobago. Shoppers browse and buy from many local vendors in one place — products, bookable services, event tickets, and recurring subscriptions. Prices are in TTD. Delivery may be vendor self-delivery (rates vary by area), LinkWe courier delivery, or local pickup where offered. You can save favourite stores, wishlist products, message vendors, and leave reviews.
+LinkWe is a multi-vendor marketplace for Trinidad & Tobago. Shoppers browse and buy from many local vendors in one place — products, bookable services, event tickets, and recurring subscriptions. Prices are in TTD. CSF Couriers handles delivered product orders through LinkWe; local pickup is available where the product offers it. You can save favourite stores, wishlist products, message vendors, and leave reviews.
 
 WHAT CUSTOMERS CAN DO:
 - Browse and search products (/shop, /search), services (/services), stores (/stores), and events (/events)
@@ -43,7 +43,7 @@ WHAT CUSTOMERS CAN DO:
 DELIVERY & CHECKOUT (simple explanation when asked):
 1. Add items to cart → go to Checkout (/checkout)
 2. Choose delivery to your address (pick your region and pin/address) OR local pickup if the vendor offers it
-3. Shipping is calculated per store: vendor self-delivery uses their zone rates for your area; LinkWe courier uses weight-based rates
+3. CSF courier delivery is calculated per store using the vendor-to-customer distance, parcel weight and any inter-island surcharge
 4. Review totals and pay securely by card — you confirm everything before payment completes
 
 EVENTS & TICKETS:

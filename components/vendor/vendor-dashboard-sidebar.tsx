@@ -178,7 +178,7 @@ export default function VendorDashboardSidebar({
     { href: "/dashboard/vendor/store/edit", label: "Store profile", Icon: IconBuildingStore },
     { href: "/dashboard/vendor/qr-studio", label: "QR Studio", Icon: IconQrcode },
     { href: "/dashboard/vendor/partners", label: "Collab", Icon: IconLink },
-    { href: "/dashboard/vendor/shipping", label: "Shipping", Icon: IconTruck },
+    { href: "/dashboard/vendor/shipping", label: "Delivery & pickup", Icon: IconTruck },
     { href: "/dashboard/vendor/staff", label: "Availability", Icon: IconUsers },
   ];
 

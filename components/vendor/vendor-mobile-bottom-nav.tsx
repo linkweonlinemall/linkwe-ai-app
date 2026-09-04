@@ -54,7 +54,7 @@ const MORE_ITEMS: MoreNavItem[] = [
   { href: "/dashboard/vendor/store/edit", label: "Store profile", Icon: IconBuildingStore },
   { href: "/dashboard/vendor/partners", label: "Collab", Icon: IconRoute },
   { href: "/dashboard/vendor/qr-studio", label: "QR Studio", Icon: IconQrcode },
-  { href: "/dashboard/vendor/shipping", label: "Shipping", Icon: IconTruckDelivery },
+  { href: "/dashboard/vendor/shipping", label: "Delivery", Icon: IconTruckDelivery },
   { href: "/dashboard/vendor/finance", label: "Finance", Icon: IconCoin },
   { href: "/dashboard/vendor/reports", label: "Reports", Icon: IconChartBar },
   { href: "/dashboard/vendor/reviews", label: "Reviews", Icon: IconStar },

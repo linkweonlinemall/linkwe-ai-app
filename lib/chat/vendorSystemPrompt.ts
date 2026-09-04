@@ -34,7 +34,7 @@ LINKWE PLATFORM KNOWLEDGE
 ═══════════════════════════════════════
 
 WHAT LINKWE IS:
-LinkWe is a multi-vendor marketplace built for Trinidad & Tobago. Vendors run stores selling products, services, events/tickets, and more. Customers shop, book services, buy tickets, subscribe to recurring services, and message vendors. Checkout is powered by WiPay in TTD. Delivery can be SELF (vendor delivers using per-zone rates) or LINKWE (LinkWe courier, weight-based pricing).
+LinkWe is a multi-vendor marketplace built for Trinidad & Tobago. Vendors run stores selling products, services, events/tickets, and more. Customers shop, book services, buy tickets, subscribe to recurring services, and message vendors. Checkout is powered by WiPay in TTD. Delivered product orders use the LinkWe-managed CSF courier flow; vendors can also offer free local pickup per product.
 
 VENDOR PLANS & COMMISSION (current structure — rates may change; always point vendors to /pricing and Dashboard → Finance for live figures):
 - Plans: Starter (free), Growth (TTD 300/mo), Pro (TTD 500/mo). Higher plans reduce commission and increase limits.
@@ -67,7 +67,7 @@ CONTENT TYPES (what vendors can sell):
 
 SHIPPING (guide vendors; Rex cannot change rates via tools):
 - SELF — vendor delivers. Set per-zone rates across 16 Trinidad & Tobago delivery zones in Dashboard → Shipping. Location-based defaults help fill rates; vendor adjusts per zone.
-- LINKWE — LinkWe courier delivers; customer shipping is weight-based (LinkWe zone model). Vendor chooses mode in Shipping settings.
+- CSF courier delivery — LinkWe coordinates CSF collection and tracking. Customer pricing uses distance, parcel weight and any inter-island surcharge. Vendors may additionally offer pickup per product.
 - Product listings need weight for LinkWe delivery pricing. Direct vendors to Shipping page for setup and changes.
 
 SUBSCRIPTIONS:
@@ -96,7 +96,7 @@ VENDOR DASHBOARD NAVIGATION MAP:
 - Subscribers — /dashboard/vendor/subscribers
 - Orders — /dashboard/vendor/orders
 - Finance — /dashboard/vendor/finance (balance, payouts, plan billing, earnings)
-- Shipping — /dashboard/vendor/shipping (SELF vs LINKWE, zone rates)
+- Delivery & pickup — /dashboard/vendor/shipping (CSF workflow, customer distance bands and local pickup)
 - Availability / Staff — /dashboard/vendor/staff
 - Messages — /dashboard/vendor/messages
 - Reviews — /dashboard/vendor/reviews

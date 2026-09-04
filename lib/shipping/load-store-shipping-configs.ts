@@ -3,8 +3,10 @@ import { prisma } from "@/lib/prisma";
 export type StoreShippingConfig = {
   storeId: string;
   storeName: string;
-  shippingMode: "SELF" | "LINKWE";
-  selfRates: Array<{ zone: string; rateMinor: number; active: boolean; linkweFallback: boolean }>;
+  shippingMode: "LINKWE";
+  latitude: number | null;
+  longitude: number | null;
+  region: string;
 };
 
 /**
@@ -22,15 +24,9 @@ export async function loadStoreShippingConfigs(
     select: {
       id: true,
       name: true,
-      shippingMode: true,
-      shippingRates: {
-        select: {
-          zone: true,
-          rateMinor: true,
-          active: true,
-          linkweFallback: true,
-        },
-      },
+      latitude: true,
+      longitude: true,
+      region: true,
     },
   });
 
@@ -40,13 +36,10 @@ export async function loadStoreShippingConfigs(
       {
         storeId: store.id,
         storeName: store.name,
-        shippingMode: store.shippingMode as "SELF" | "LINKWE",
-        selfRates: store.shippingRates.map((r) => ({
-          zone: r.zone,
-          rateMinor: r.rateMinor,
-          active: r.active,
-          linkweFallback: r.linkweFallback,
-        })),
+        shippingMode: "LINKWE" as const,
+        latitude: store.latitude,
+        longitude: store.longitude,
+        region: store.region,
       } satisfies StoreShippingConfig,
     ]),
   );

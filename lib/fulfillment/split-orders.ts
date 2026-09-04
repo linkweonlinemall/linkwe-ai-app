@@ -130,6 +130,7 @@ export async function createSplitOrdersFromMainOrder(mainOrderId: string): Promi
       shippingMinor: true,
       shippingZone: true,
       region: true,
+      shippingAddress: { select: { latitude: true, longitude: true } },
       items: {
         include: {
           store: { select: { name: true } },
@@ -176,6 +177,12 @@ export async function createSplitOrdersFromMainOrder(mainOrderId: string): Promi
 
     const shippingResult = computePerStoreShipping({
       region: mainOrder.region,
+      destinationLatitude: mainOrder.shippingAddress?.latitude == null
+        ? null
+        : Number(mainOrder.shippingAddress.latitude),
+      destinationLongitude: mainOrder.shippingAddress?.longitude == null
+        ? null
+        : Number(mainOrder.shippingAddress.longitude),
       stores: storeIds.map((storeId) => {
         const storeItems = itemsByStore.get(storeId) ?? [];
         const config = configByStoreId.get(storeId);
@@ -192,7 +199,9 @@ export async function createSplitOrdersFromMainOrder(mainOrderId: string): Promi
           storeId,
           storeName,
           shippingMode: config?.shippingMode ?? "LINKWE",
-          selfRates: config?.selfRates ?? [],
+          latitude: config?.latitude ?? null,
+          longitude: config?.longitude ?? null,
+          region: config?.region ?? "unknown",
           totalWeightLbs,
           allItemsDigitalOrPickup,
           isDigitalOnly: allItemsDigitalOrPickup,

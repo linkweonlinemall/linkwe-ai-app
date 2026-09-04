@@ -47,11 +47,13 @@ export type CheckoutShippingBreakdownResult =
 export async function getCheckoutShippingBreakdown(
   deliveryRegion: string,
   useDelivery: boolean,
+  deliveryLat?: number | null,
+  deliveryLng?: number | null,
 ): Promise<CheckoutShippingBreakdownResult> {
   const session = await getSession();
   if (!session) return { ok: false, error: "not_logged_in" };
 
-  const result = await computeCartShipping(session.userId, deliveryRegion, useDelivery);
+  const result = await computeCartShipping(session.userId, deliveryRegion, useDelivery, deliveryLat, deliveryLng);
   if (!result.ok) return { ok: false, error: result.error };
 
   return {
@@ -129,6 +131,8 @@ export async function createPaymentIntent(
     cartItems,
     deliveryRegion,
     useDelivery,
+    deliveryLat,
+    deliveryLng,
   );
 
   if (shipping.hasCoverageFailure) {

@@ -3,7 +3,6 @@ import { getCartSubtotal } from "@/lib/checkout/pricing";
 import { prisma } from "@/lib/prisma";
 import { loadStoreShippingConfigs } from "@/lib/shipping/load-store-shipping-configs";
 import { computePerStoreShipping } from "@/lib/shipping/per-store-shipping";
-import { getSelfDeliveryZone } from "@/lib/shipping/self-delivery-zones";
 import { getShippingZone } from "@/lib/shipping/trinidad-zoning";
 
 export type CheckoutCartItem = Awaited<ReturnType<typeof loadCheckoutCart>>[number];
@@ -14,6 +13,7 @@ export type CheckoutShippingBreakdown = {
     storeName: string;
     mode: "SELF" | "LINKWE";
     shippingMinor: number;
+    distanceKm: number | null;
     deliversToZone: boolean;
     isDigitalOnly: boolean;
   }>;
@@ -43,12 +43,7 @@ function itemWeightLbs(weight: number | null, weightUnit: string | null): number
 /** Order-level shippingZone for MainOrder (metadata; split pricing re-resolves per store from region). */
 function resolveOrderShippingZone(
   region: string,
-  stores: Array<{ shippingMode: "SELF" | "LINKWE"; allItemsDigitalOrPickup: boolean }>,
 ): string {
-  const deliverable = stores.filter((s) => !s.allItemsDigitalOrPickup);
-  if (deliverable.length > 0 && deliverable.every((s) => s.shippingMode === "SELF")) {
-    return getSelfDeliveryZone(region);
-  }
   return getShippingZone(region);
 }
 
@@ -72,6 +67,7 @@ const checkoutCartInclude = {
         select: {
           id: true,
           name: true,
+          region: true,
           status: true,
           checkoutFields: true,
           owner: { select: { idVerificationStatus: true } },
@@ -94,6 +90,8 @@ export async function computeCartShippingFromItems(
   cartItems: CheckoutCartItem[],
   deliveryRegion: string,
   useDelivery: boolean,
+  destinationLatitude?: number | null,
+  destinationLongitude?: number | null,
 ): Promise<Omit<ComputeCartShippingSuccess, "ok">> {
   const pricingLines: CheckoutPricingLine[] = cartItems.map((item) => ({
     priceMinor: Math.round(item.product.price * 100),
@@ -132,7 +130,9 @@ export async function computeCartShippingFromItems(
       storeId,
       storeName,
       shippingMode: config?.shippingMode ?? "LINKWE",
-      selfRates: config?.selfRates ?? [],
+      latitude: config?.latitude ?? null,
+      longitude: config?.longitude ?? null,
+      region: config?.region ?? storeItems[0]?.product.store.region ?? "unknown",
       totalWeightLbs,
       allItemsDigitalOrPickup,
       isDigitalOnly,
@@ -141,10 +141,12 @@ export async function computeCartShippingFromItems(
 
   const shippingResult = computePerStoreShipping({
     region: deliveryRegion,
+    destinationLatitude,
+    destinationLongitude,
     stores: storeInputs,
   });
 
-  const orderShippingZone = resolveOrderShippingZone(deliveryRegion, storeInputs);
+  const orderShippingZone = resolveOrderShippingZone(deliveryRegion);
 
   return {
     perStore: shippingResult.perStore,
@@ -166,13 +168,15 @@ export async function computeCartShipping(
   userId: string,
   deliveryRegion: string,
   useDelivery: boolean,
+  destinationLatitude?: number | null,
+  destinationLongitude?: number | null,
 ): Promise<ComputeCartShippingResult> {
   const cartItems = await loadCheckoutCart(userId);
   if (cartItems.length === 0) {
     return { ok: false, error: "cart_empty" };
   }
 
-  const result = await computeCartShippingFromItems(cartItems, deliveryRegion, useDelivery);
+  const result = await computeCartShippingFromItems(cartItems, deliveryRegion, useDelivery, destinationLatitude, destinationLongitude);
   return { ok: true, ...result };
 }
 

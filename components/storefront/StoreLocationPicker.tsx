@@ -151,6 +151,7 @@ type Props = {
   initialLat: number | null;
   initialLng: number | null;
   onRegionDetected?: (region: string | null) => void;
+  onCoordinatesChange?: (latitude: number | null, longitude: number | null) => void;
 };
 
 function LocationPickerShared({
@@ -164,6 +165,7 @@ function LocationPickerShared({
   mapboxToken,
   fromAutocomplete,
   onRegionDetected,
+  onCoordinatesChange,
 }: {
   address: string;
   setAddress: (v: string) => void;
@@ -175,6 +177,7 @@ function LocationPickerShared({
   mapboxToken: string;
   fromAutocomplete: RefObject<boolean>;
   onRegionDetected?: (region: string | null) => void;
+  onCoordinatesChange?: (latitude: number | null, longitude: number | null) => void;
 }) {
   const [mapKey, setMapKey] = useState(0);
   const [geoLoading, setGeoLoading] = useState(false);
@@ -183,7 +186,16 @@ function LocationPickerShared({
   const [addressDetectionNote, setAddressDetectionNote] = useState<string | null>(null);
   const [addressValue, setAddressValue] = useState("");
   const onRegionDetectedRef = useRef(onRegionDetected);
-  onRegionDetectedRef.current = onRegionDetected;
+  const onCoordinatesChangeRef = useRef(onCoordinatesChange);
+
+  useEffect(() => {
+    onRegionDetectedRef.current = onRegionDetected;
+    onCoordinatesChangeRef.current = onCoordinatesChange;
+  }, [onCoordinatesChange, onRegionDetected]);
+
+  useEffect(() => {
+    onCoordinatesChangeRef.current?.(lat, lng);
+  }, [lat, lng]);
 
   useEffect(() => {
     setGeoSupported(typeof navigator !== "undefined" && !!navigator.geolocation);
@@ -411,6 +423,7 @@ function StoreLocationPickerManual(props: Props) {
       lng={lng}
       mapboxToken={mapboxToken}
       onRegionDetected={props.onRegionDetected}
+      onCoordinatesChange={props.onCoordinatesChange}
       setAddress={setAddress}
       setLat={setLat}
       setLng={setLng}
@@ -431,7 +444,10 @@ function StoreLocationPickerWithGoogle({ googleMapsApiKey, ...props }: Props & {
   });
 
   const onRegionDetectedRef = useRef(props.onRegionDetected);
-  onRegionDetectedRef.current = props.onRegionDetected;
+
+  useEffect(() => {
+    onRegionDetectedRef.current = props.onRegionDetected;
+  }, [props.onRegionDetected]);
 
   useEffect(() => {
     if (!isLoaded || !inputRef.current || !window.google) return;
@@ -492,6 +508,7 @@ function StoreLocationPickerWithGoogle({ googleMapsApiKey, ...props }: Props & {
       lng={lng}
       mapboxToken={mapboxToken}
       onRegionDetected={props.onRegionDetected}
+      onCoordinatesChange={props.onCoordinatesChange}
       setAddress={setAddress}
       setLat={setLat}
       setLng={setLng}

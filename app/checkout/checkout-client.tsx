@@ -126,6 +126,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
   const [shippingBreakdown, setShippingBreakdown] =
     useState<CheckoutShippingBreakdownResult | null>(null);
   const [shippingLoading, setShippingLoading] = useState(false);
+  const [deliveryCoordinates, setDeliveryCoordinates] = useState<{ latitude: number | null; longitude: number | null }>({ latitude: null, longitude: null });
 
   const regionLabel = deliveryRegion.replace(/_/g, " ");
 
@@ -195,7 +196,12 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
     let cancelled = false;
     setShippingLoading(true);
 
-    void getCheckoutShippingBreakdown(deliveryRegion, useDelivery).then((result) => {
+    void getCheckoutShippingBreakdown(
+      deliveryRegion,
+      useDelivery,
+      deliveryCoordinates.latitude,
+      deliveryCoordinates.longitude,
+    ).then((result) => {
       if (cancelled) return;
       setShippingBreakdown(result);
       setShippingLoading(false);
@@ -204,7 +210,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
     return () => {
       cancelled = true;
     };
-  }, [needsShippingQuote, deliveryRegion, useDelivery]);
+  }, [needsShippingQuote, deliveryRegion, useDelivery, deliveryCoordinates.latitude, deliveryCoordinates.longitude]);
 
   const totalShippingMinor = needsShippingQuote && shippingBreakdown?.ok
     ? shippingBreakdown.totalShippingMinor
@@ -518,6 +524,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
                             initialLat={null}
                             initialLng={null}
                             onRegionDetected={handlePinRegionDetected}
+                            onCoordinatesChange={(latitude, longitude) => setDeliveryCoordinates({ latitude, longitude })}
                           />
 
                           {suggestedRegion && suggestedRegion === deliveryRegion ? (

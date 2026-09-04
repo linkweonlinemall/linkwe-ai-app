@@ -111,7 +111,7 @@ export async function getVendorShippingSettings(): Promise<
 
     return {
       ok: true,
-      shippingMode: store.shippingMode,
+      shippingMode: "LINKWE",
       rates: store.shippingRates,
       ...selfDelivery,
       linkweRates: getAllLinkWeDisplayRates(),
@@ -125,9 +125,7 @@ export async function getVendorShippingSettings(): Promise<
 export async function updateShippingMode(
   mode: "SELF" | "LINKWE",
 ): Promise<ActionOk | ActionError> {
-  if (mode !== "SELF" && mode !== "LINKWE") {
-    return { ok: false, error: "Invalid shipping mode." };
-  }
+  if (mode !== "LINKWE") return { ok: false, error: "All delivered orders are handled by CSF Couriers through LinkWe." };
 
   const storeResult = await requireCallerStore();
   if (!storeResult.ok) return storeResult;
