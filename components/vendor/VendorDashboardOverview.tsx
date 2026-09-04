@@ -101,12 +101,6 @@ function DeltaLine({ pct }: { pct: number | null }) {
 
 const CARD_BORDER = "border-[0.5px] border-[rgba(28,28,26,0.12)]";
 
-function StatComingSoon() {
-  return (
-    <p className="mt-3 text-sm font-medium text-[#a09f9b]">Coming soon</p>
-  );
-}
-
 export default function VendorDashboardOverview(props: {
   analytics: VendorDashboardAnalytics;
   recentOrders: VendorSplitOrder[];
@@ -211,13 +205,13 @@ export default function VendorDashboardOverview(props: {
         </div>
         <div className={`rounded-[12px] bg-white dash-card-pad p-4 ${CARD_BORDER}`}>
           <div className="flex items-start justify-between gap-2">
-            <span className="text-[11px] text-[#7c7b77]">Profile views</span>
+            <span className="text-[11px] text-[#7c7b77]">Profile views this month</span>
             <span className="flex size-[26px] items-center justify-center rounded-lg bg-[#FAEEDA] text-[#BA7517]">
               <IconEye className="size-4" stroke={1.75} aria-hidden />
             </span>
           </div>
-          <StatComingSoon />
-          <p className="mt-1 text-[10px] text-[#a09f9b]">Not yet tracked</p>
+          <p className="mt-3 text-[22px] font-medium tabular-nums text-[#1C1C1A]">{analytics.profileViewsThisMonth}</p>
+          <DeltaLine pct={analytics.profileViewsChangePct} />
         </div>
         <div className={`rounded-[12px] bg-white dash-card-pad p-4 ${CARD_BORDER}`}>
           <div className="flex items-start justify-between gap-2">
@@ -226,8 +220,10 @@ export default function VendorDashboardOverview(props: {
               <IconPercentage className="size-4" stroke={1.75} aria-hidden />
             </span>
           </div>
-          <StatComingSoon />
-          <p className="mt-1 text-[10px] text-[#a09f9b]">Not yet tracked</p>
+          <p className="mt-3 text-[22px] font-medium tabular-nums text-[#1C1C1A]">
+            {analytics.conversionRatePct.toFixed(1)}%
+          </p>
+          <DeltaLine pct={analytics.conversionChangePct} />
         </div>
       </div>
 

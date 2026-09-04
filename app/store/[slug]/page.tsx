@@ -11,6 +11,7 @@ import PublicNav from "@/components/layout/PublicNav";
 import StorefrontTabs from "@/components/storefront/StorefrontTabs";
 import StorePageHero from "@/components/storefront/StorePageHero";
 import StoreStatsBar from "@/components/storefront/StoreStatsBar";
+import StorefrontViewTracker from "@/components/analytics/StorefrontViewTracker";
 import { getApprovedPartnerContent } from "@/app/actions/cross-store";
 import { getSavedStoreIds, getWishlistProductIds } from "@/app/actions/wishlist";
 import { getStoreReviewsNew, getUserStoreReview } from "@/app/actions/reviews";
@@ -235,6 +236,7 @@ export default async function PublicStorePage({ params }: Props) {
 
   return (
     <div className={`min-h-screen pb-mobile-public lg:pb-0 ${tw.fontSans} ${tw.bgPage}`}>
+      {!canEditStore ? <StorefrontViewTracker storeId={store.id} /> : null}
       <PublicNav
         transparent
         user={

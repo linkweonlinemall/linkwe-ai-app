@@ -218,9 +218,25 @@ model Store {
   contentLinks                 ContentLink[]
   shippingRates                VendorShippingRate[]
   customerServiceSubscriptions CustomerServiceSubscription[]
+  dailyViews                   StoreDailyView[]
 
   @@index([slug])
   @@map("stores")
+}
+
+/// Daily storefront visits used for vendor-facing analytics.
+model StoreDailyView {
+  id        String   @id @default(cuid())
+  storeId   String   @map("store_id")
+  date      DateTime @db.Date
+  viewCount Int      @default(0) @map("view_count")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, date])
+  @@index([date])
+  @@map("store_daily_views")
 }
 
 model VendorShippingRate {

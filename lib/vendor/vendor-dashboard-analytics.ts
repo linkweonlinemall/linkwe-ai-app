@@ -9,11 +9,8 @@ export type VendorDashboardAnalytics = {
   ordersThisMonth: number;
   ordersPrevMonth: number;
   ordersChangePct: number | null;
-  profileViewsTotal: number;
-  /**
-   * Baseline storefront interest month-over-month: new Saves (SavedStore creations).
-   * The headline number stays cumulative listing views (`profileViewsTotal`).
-   */
+  profileViewsThisMonth: number;
+  profileViewsPrevMonth: number;
   profileViewsChangePct: number | null;
   conversionRatePct: number;
   conversionChangePct: number | null;
@@ -49,7 +46,7 @@ export async function getVendorDashboardAnalytics(storeId: string): Promise<Vend
 
   const ledgerFetchSince = new Date(Math.min(thirtyDaysAgo.getTime(), prevMonthStart.getTime()));
 
-  const [creditEntries, splitDates, sums, savesThisMonth, savesPrevMonth] = await Promise.all([
+  const [creditEntries, splitDates, viewTotals] = await Promise.all([
     prisma.vendorLedgerEntry.findMany({
       where: {
         storeId,
@@ -63,21 +60,15 @@ export async function getVendorDashboardAnalytics(storeId: string): Promise<Vend
       select: { createdAt: true },
     }),
     Promise.all([
-      prisma.product.aggregate({
-        where: { storeId, isService: false },
+      prisma.storeDailyView.aggregate({
+        where: { storeId, date: { gte: thisMonthStart, lt: nextMonthStart } },
         _sum: { viewCount: true },
       }),
-      prisma.product.aggregate({
-        where: { storeId, isService: true },
+      prisma.storeDailyView.aggregate({
+        where: { storeId, date: { gte: prevMonthStart, lt: thisMonthStart } },
         _sum: { viewCount: true },
       }),
     ]),
-    prisma.savedStore.count({
-      where: { storeId, createdAt: { gte: thisMonthStart, lt: nextMonthStart } },
-    }),
-    prisma.savedStore.count({
-      where: { storeId, createdAt: { gte: prevMonthStart, lt: thisMonthStart } },
-    }),
   ]);
 
   function creditsSum(start: Date, end: Date) {
@@ -120,13 +111,14 @@ export async function getVendorDashboardAnalytics(storeId: string): Promise<Vend
     subscriptionPaymentsCount(prevMonthStart, thisMonthStart);
   const ordersChangePct = pctChangeVsPrior(ordersThisMonth, ordersPrevMonth);
 
-  const profileViewsTotal = (sums[0]._sum.viewCount ?? 0) + (sums[1]._sum.viewCount ?? 0);
-  const profileViewsChangePct = pctChangeVsPrior(savesThisMonth, savesPrevMonth);
+  const profileViewsThisMonth = viewTotals[0]._sum.viewCount ?? 0;
+  const profileViewsPrevMonth = viewTotals[1]._sum.viewCount ?? 0;
+  const profileViewsChangePct = pctChangeVsPrior(profileViewsThisMonth, profileViewsPrevMonth);
 
   const conversionRatePct =
-    profileViewsTotal > 0 ? (ordersThisMonth / profileViewsTotal) * 100 : ordersThisMonth > 0 ? 100 : 0;
+    profileViewsThisMonth > 0 ? (ordersThisMonth / profileViewsThisMonth) * 100 : 0;
   const conversionPrevPct =
-    profileViewsTotal > 0 ? (ordersPrevMonth / profileViewsTotal) * 100 : ordersPrevMonth > 0 ? 100 : 0;
+    profileViewsPrevMonth > 0 ? (ordersPrevMonth / profileViewsPrevMonth) * 100 : 0;
   const conversionChangePct = pctChangeVsPrior(conversionRatePct, conversionPrevPct);
 
   const dailyMap = new Map<string, number>();
@@ -152,7 +144,8 @@ export async function getVendorDashboardAnalytics(storeId: string): Promise<Vend
     ordersThisMonth,
     ordersPrevMonth,
     ordersChangePct,
-    profileViewsTotal,
+    profileViewsThisMonth,
+    profileViewsPrevMonth,
     profileViewsChangePct,
     conversionRatePct,
     conversionChangePct,
