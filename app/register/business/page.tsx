@@ -6,7 +6,7 @@ import { resolveAuthLandingPath } from "@/lib/auth/landing";
 import { parseIntendedPlanParam } from "@/lib/onboarding/intended-plan";
 
 type Props = {
-  searchParams: Promise<{ plan?: string }>;
+  searchParams: Promise<{ plan?: string; error?: string }>;
 };
 
 export default async function RegisterBusinessPage({ searchParams }: Props) {
@@ -33,7 +33,7 @@ export default async function RegisterBusinessPage({ searchParams }: Props) {
           <h1 className="text-center text-xl font-bold text-zinc-900">Create your vendor account</h1>
           <p className="mb-6 mt-1 text-center text-sm text-zinc-500">Set up your business on LinkWe</p>
 
-          <RegisterForm embedded signupKind="BUSINESS" intendedPlan={intendedPlan} />
+          <RegisterForm embedded signupKind="BUSINESS" intendedPlan={intendedPlan} oauthError={sp.error} />
         </div>
       </div>
     </div>

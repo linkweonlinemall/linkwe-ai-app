@@ -5,9 +5,10 @@ import { useActionState } from "react";
 
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import { loginAction, type AuthFormState } from "../auth-actions";
 
-export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
+export function LoginForm({ callbackUrl, oauthError }: { callbackUrl?: string; oauthError?: string }) {
   const [state, formAction, pending] = useActionState(loginAction, {} as AuthFormState);
 
   return (
@@ -38,15 +39,16 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
         </Link>
       </div>
 
-      {state.error ? (
+      {state.error || oauthError ? (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
-          {state.error}
+          {state.error ?? oauthError}
         </p>
       ) : null}
 
       <Button disabled={pending} fullWidth loading={pending} size="lg" type="submit" variant="primary">
         Sign In
       </Button>
+      <GoogleAuthButton mode="login" callbackUrl={callbackUrl} />
     </form>
   );
 }

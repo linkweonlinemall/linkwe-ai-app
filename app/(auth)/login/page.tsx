@@ -12,14 +12,14 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ callbackUrl?: string }>;
+  searchParams: Promise<{ callbackUrl?: string; error?: string }>;
 }) {
   const user = await getCurrentUser();
   if (user) {
     redirect(await resolveAuthLandingPath(user));
   }
 
-  const { callbackUrl } = await searchParams;
+  const { callbackUrl, error } = await searchParams;
   return (
     <div className="mx-auto w-full max-w-md">
       <div className="mx-auto w-full rounded-xl border border-zinc-200/60 bg-white p-8 shadow-sm">
@@ -34,7 +34,7 @@ export default async function LoginPage({
         <h1 className="text-center text-xl font-bold text-zinc-900">Welcome back</h1>
         <p className="mb-6 mt-1 text-center text-sm text-zinc-500">Sign in to your LinkWe account</p>
 
-        <LoginForm callbackUrl={callbackUrl} />
+        <LoginForm callbackUrl={callbackUrl} oauthError={error} />
 
         <p className="mt-6 text-center text-sm text-zinc-500">
           Don&apos;t have an account?{" "}

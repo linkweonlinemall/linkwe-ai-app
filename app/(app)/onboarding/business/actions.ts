@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import { getStoreByOwnerId } from "@/lib/store/get-vendor-store";
 import { saveKycDocumentUpload } from "@/lib/onboarding/save-kyc-upload";
 import {
   clearIntendedPlanCookie,
@@ -118,13 +117,15 @@ export async function saveBusinessOnboardingStep2(
   if (gate) return { error: gate };
 
   const file = formData.get("document");
-  if (!(file instanceof File) || file.size === 0) {
-    return { error: "Upload a photo or PDF of your ID." };
-  }
-
   const selfie = formData.get("selfieWithId");
-  if (!(selfie instanceof File) || selfie.size === 0) {
-    return { error: "Upload a clear selfie holding the same ID." };
+  const hasDocument = file instanceof File && file.size > 0;
+  const hasSelfie = selfie instanceof File && selfie.size > 0;
+
+  if (!hasDocument && !hasSelfie) {
+    redirect("/onboarding/business/step-3");
+  }
+  if (!hasDocument || !hasSelfie) {
+    return { error: "Upload both files together, or leave both blank and verify your store later." };
   }
   if (!selfie.type.startsWith("image/")) {
     return { error: "The selfie must be a JPEG, PNG, or WebP image." };

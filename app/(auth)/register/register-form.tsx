@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import { registerAction, type AuthFormState } from "../auth-actions";
 import type { IntendedPlan } from "@/lib/onboarding/intended-plan";
 
@@ -41,10 +42,12 @@ export function RegisterForm({
   signupKind,
   embedded = false,
   intendedPlan = null,
+  oauthError,
 }: {
   signupKind: SignupKind;
   embedded?: boolean;
   intendedPlan?: IntendedPlan | null;
+  oauthError?: string;
 }) {
   const [state, formAction, pending] = useActionState(registerAction, {} as AuthFormState);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -104,9 +107,9 @@ export function RegisterForm({
           type="password"
         />
 
-        {state.error ? (
+        {state.error || oauthError ? (
           <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
-            {state.error}
+            {state.error ?? oauthError}
           </p>
         ) : null}
 
@@ -143,6 +146,16 @@ export function RegisterForm({
           {c.submitLabel}
         </Button>
       </form>
+
+      <GoogleAuthButton
+        mode="signup"
+        signupKind={signupKind}
+        intendedPlan={intendedPlan}
+        disabled={!termsAccepted}
+      />
+      {!termsAccepted ? (
+        <p className="mt-2 text-center text-xs text-zinc-400">Accept the terms above to continue with Google.</p>
+      ) : null}
 
       {embedded ? (
         <p className="mt-4 text-center text-sm text-zinc-500">

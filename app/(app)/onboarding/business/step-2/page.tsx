@@ -66,7 +66,6 @@ export default async function BusinessOnboardingStep2Page() {
   const next = getNextBusinessOnboardingStep(user, store);
   if (next === null) redirect("/dashboard/vendor");
   if (next < 2) redirect("/onboarding/business/step-1");
-  if (next > 2) redirect(`/onboarding/business/step-${next}`);
 
   return (
     <>
@@ -79,7 +78,7 @@ export default async function BusinessOnboardingStep2Page() {
           Verification
         </h1>
         <p className="mb-6 text-sm" style={{ color: "var(--text-muted)" }}>
-          Upload your business documents
+          Upload now or verify your store later
         </p>
         <BusinessStep2Form />
       </div>

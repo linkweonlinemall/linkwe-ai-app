@@ -58,23 +58,21 @@ export function BusinessStep2Form() {
   return (
     <form className="flex flex-col gap-4" action={formAction}>
       <Input
-        required
         accept="image/jpeg,image/png,image/webp,application/pdf"
         className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5"
-        label="ID document"
+        label="ID document (optional)"
         name="document"
         type="file"
       />
       <Input
-        required
         accept="image/jpeg,image/png,image/webp"
         className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5"
-        label="Selfie holding your ID"
+        label="Selfie holding your ID (optional)"
         name="selfieWithId"
         type="file"
       />
       <p className="-mt-2 text-xs text-zinc-500">
-        Hold the same ID beside your face. Make sure your face and the document are clear and unobstructed.
+        You can skip both files now and upload them from your vendor dashboard when you are ready to verify your store. If uploading now, provide both files together.
       </p>
 
       {state.error ? (
@@ -89,7 +87,7 @@ export function BusinessStep2Form() {
         backHref="/onboarding/business/step-1"
         isLastStep={false}
         pending={pending}
-        pendingLabel="Uploading…"
+        pendingLabel="Continuing…"
       />
     </form>
   );
