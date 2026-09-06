@@ -8,6 +8,7 @@ import InlineSpinner from "@/components/ui/InlineSpinner";
 import type { CartItem } from "@/lib/cart/cart-store";
 import { useCartStore } from "@/lib/cart/cart-store";
 import { toastAddedToCart } from "@/lib/feedback/toasts";
+import { trackGoogleAnalyticsEvent } from "@/components/analytics/GoogleAnalytics";
 
 type Props = {
   productId: string;
@@ -74,6 +75,10 @@ export default function AddToCartButton({
     const result = await addToCart(productId, quantity, variantId);
 
     if (result.ok) {
+      trackGoogleAnalyticsEvent("add_to_cart", {
+        currency: "TTD",
+        items: [{ item_id: productId, item_name: productName, quantity }],
+      });
       const rows = await getCart();
       setItems(mapRows(rows));
       setAdded(true);

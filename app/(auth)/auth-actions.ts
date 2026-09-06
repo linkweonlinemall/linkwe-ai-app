@@ -139,7 +139,9 @@ export async function registerAction(
     }
   }
 
-  redirect(await resolveAuthLandingPath(user));
+  const landing = new URL(await resolveAuthLandingPath(user), "https://linkwe.local");
+  landing.searchParams.set("signup_success", signupKind === "BUSINESS" ? "business" : "customer");
+  redirect(`${landing.pathname}${landing.search}`);
 }
 
 export async function loginAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {

@@ -62,6 +62,7 @@ export async function GET(request: NextRequest) {
     if (!email || payload.email_verified !== true) throw new Error("Google email is not verified");
 
     let user = await prisma.user.findUnique({ where: { email } });
+    const createdAccount = !user;
     if (!user) {
       if (flow.mode !== "signup") {
         return errorRedirect(request, "/login", "No LinkWe account uses that Google email. Create an account first.");
@@ -85,7 +86,12 @@ export async function GET(request: NextRequest) {
     await createSessionFromUser(user);
     if (flow.signupKind === "BUSINESS" && flow.intendedPlan) await setIntendedPlanCookie(flow.intendedPlan);
     const landing = await resolveAuthLandingPath(user);
-    return NextResponse.redirect(new URL(safeInternalPath(flow.callbackUrl, landing), request.url));
+    const destination = new URL(safeInternalPath(flow.callbackUrl, landing), request.url);
+    if (createdAccount) {
+      destination.searchParams.set("signup_success", flow.signupKind === "BUSINESS" ? "business" : "customer");
+      destination.searchParams.set("signup_method", "google");
+    }
+    return NextResponse.redirect(destination);
   } catch (error) {
     console.error("Google OAuth callback failed", error);
     return errorRedirect(request, fallbackPath, "Google sign-in could not be completed. Please try again.");

@@ -306,7 +306,7 @@ export async function createProduct(
   }
 
   revalidatePath(PRODUCTS_PATH);
-  redirect(PRODUCTS_PATH);
+  redirect(isPublished ? `${PRODUCTS_PATH}?product_published=1` : PRODUCTS_PATH);
 }
 
 export async function updateProduct(
