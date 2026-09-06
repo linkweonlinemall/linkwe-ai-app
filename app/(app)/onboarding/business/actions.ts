@@ -260,5 +260,5 @@ export async function saveBusinessOnboardingStep3(
     redirect("/dashboard/vendor?upgrade=failed");
   }
 
-  redirect("/dashboard/vendor");
+  redirect("/dashboard/vendor?store_created=1");
 }
