@@ -8,6 +8,7 @@ import InlineSpinner from "@/components/ui/InlineSpinner";
 import type { CartItem } from "@/lib/cart/cart-store";
 import { useCartStore } from "@/lib/cart/cart-store";
 import { toastAddedToCart } from "@/lib/feedback/toasts";
+import { trackGoogleAnalyticsEvent } from "@/components/analytics/GoogleAnalytics";
 
 function mapRows(rows: Awaited<ReturnType<typeof getCart>>): CartItem[] {
   return rows.map((row) => ({
@@ -49,6 +50,10 @@ export default function AddToCartButtonSimple({ productId, productName }: { prod
     setLoading(true);
     const result = await addToCart(productId, 1);
     if (result.ok) {
+      trackGoogleAnalyticsEvent("add_to_cart", {
+        currency: "TTD",
+        items: [{ item_id: productId, item_name: productName, quantity: 1 }],
+      });
       const rows = await getCart();
       setItems(mapRows(rows));
       setAdded(true);
