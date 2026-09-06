@@ -37,6 +37,31 @@ function AnalyticsSignals() {
       page_location: window.location.href,
       page_path: pagePath,
     });
+
+    const signup = searchParams.get("signup_success");
+    if (signup === "customer" || signup === "business") {
+      trackGoogleAnalyticsEvent("sign_up", {
+        method: searchParams.get("signup_method") === "google" ? "google" : "email",
+        account_type: signup,
+      });
+    }
+
+    if (searchParams.get("store_created") === "1") {
+      trackGoogleAnalyticsEvent("vendor_onboarding_complete");
+    }
+
+    if (searchParams.get("product_published") === "1") {
+      trackGoogleAnalyticsEvent("product_published");
+    }
+
+    if (signup || searchParams.has("store_created") || searchParams.has("product_published")) {
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete("signup_success");
+      cleanUrl.searchParams.delete("signup_method");
+      cleanUrl.searchParams.delete("store_created");
+      cleanUrl.searchParams.delete("product_published");
+      window.history.replaceState(window.history.state, "", `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
+    }
   }, [pathname, searchParams]);
 
   useReportWebVitals((metric) => trackGoogleAnalyticsEvent(metric.name, {
