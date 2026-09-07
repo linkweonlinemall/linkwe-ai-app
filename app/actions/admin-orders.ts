@@ -147,9 +147,15 @@ export async function confirmPendingPayment(orderId: string, note: string): Prom
     await prisma.$transaction(async (tx) => {
       const changed = await tx.mainOrder.updateMany({ where: { id: orderId, status: "PENDING_PAYMENT" }, data: { status: "PAID", updatedAt: new Date() } });
       if (!changed.count) throw new Error("This order is no longer pending payment.");
+      const order = await tx.mainOrder.findUniqueOrThrow({ where: { id: orderId }, select: { referenceNumber: true, splitOrders: { select: { store: { select: { ownerId: true, name: true } } } } } });
       await tx.orderDocument.create({ data: { mainOrderId: orderId, documentType: "OTHER", metadata: { kind: "admin_payment_confirmation", actorId: session.userId, actorName: session.fullName, note: reason } } });
+      const ownerIds = [...new Set(order.splitOrders.map((split) => split.store.ownerId))];
+      for (const ownerId of ownerIds) {
+        await tx.notification.create({ data: { userId: ownerId, type: "ORDER_STATUS_UPDATED", title: "Paid order ready for fulfilment", body: `${order.referenceNumber ?? orderId}: payment confirmed. Review your vendor order and choose the delivery method.`, linkUrl: "/dashboard/vendor/orders" } });
+      }
     });
     revalidatePath("/dashboard/admin", "layout");
+    revalidatePath("/dashboard/vendor/orders", "page");
     revalidatePath(`/orders/${orderId}`);
     return { ok: true };
   } catch (error) {
