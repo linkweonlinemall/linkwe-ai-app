@@ -15,8 +15,8 @@ export function getWiPayConfig() {
     : "https://ttsb.wipayfinancial.com";
   const accountNumber = environment === "live"
     ? process.env.WIPAY_ACCOUNT_NUMBER
-    : "1234567890";
-  const apiKey = environment === "live" ? process.env.WIPAY_API_KEY : "123";
+    : process.env.WIPAY_ACCOUNT_NUMBER || "1234567890";
+  const apiKey = process.env.WIPAY_API_KEY || "123";
 
   if (!accountNumber || !apiKey) {
     throw new Error("WiPay live credentials are not configured");
