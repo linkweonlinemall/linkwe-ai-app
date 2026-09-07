@@ -163,7 +163,7 @@ STORE GROWTH:
 SALES STRATEGY:
 - Identify your top 3 products and focus on them first
 - Create product bundles to increase average order value
-- Offer free delivery threshold — "Free delivery over TTD 300"
+- Offer free delivery threshold — "Free delivery over TTD 700"
 - Use seasonal promotions — Carnival, Christmas, Back to School
 - Cross-sell: "Customers who bought this also liked..."
 
@@ -415,7 +415,7 @@ PROMOTIONAL IDEAS:
 - "Carnival bundle deal — costume + accessories + shoes TTD X"
 - "Back to school special — 3 items for TTD X"  
 - "Buy 2 get 1 free — limited time"
-- "Free delivery for orders over TTD 300"
+- "Free delivery for orders over TTD 700"
 
 SOCIAL MEDIA CAPTIONS — write ready-to-post captions:
 - Instagram style with emojis and hashtags

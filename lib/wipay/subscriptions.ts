@@ -53,6 +53,8 @@ export async function beginWiPaySubscription(input: SubscriptionContext): Promis
  * debit cards reject while preserving a complete paid-period subscription.
  */
 export async function beginWiPayManualSubscription(input: SubscriptionContext): Promise<string> {
+  const user = await prisma.user.findUnique({ where: { id: input.userId }, select: { email: true } });
+  if (!user?.email) throw new Error("A customer email is required for WiPay checkout");
   const attempt = await prisma.paymentAttempt.create({
     data: {
       purpose: input.purpose,
@@ -67,6 +69,7 @@ export async function beginWiPayManualSubscription(input: SubscriptionContext): 
     const result = await createWiPayHostedPayment({
       merchantOrderId: attempt.merchantOrderId,
       amountMinor: input.amountMinor,
+      email: user.email,
       responseUrl: `${BASE_URL}/api/payments/wipay/return`,
       data: { purpose: input.purpose, targetId: input.targetId },
     });

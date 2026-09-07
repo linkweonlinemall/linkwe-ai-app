@@ -55,6 +55,7 @@ export async function startAITopupCheckout(
     const payment = await createWiPayHostedPayment({
       merchantOrderId,
       amountMinor: bundle.priceMinor,
+      email: session.email,
       responseUrl: `${BASE_URL}/api/payments/wipay/return`,
       data: { purpose: "AI_TOPUP", targetId: purchase.id },
     });

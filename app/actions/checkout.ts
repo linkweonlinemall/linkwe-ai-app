@@ -221,6 +221,7 @@ export async function createPaymentIntent(
       purpose: "PRODUCT_ORDER",
       merchantOrderId,
       amountMinor: totalMinor,
+      email: session.email,
       userId: session.userId,
       targetId: order.id,
       mainOrderId: order.id,
@@ -232,6 +233,7 @@ export async function createPaymentIntent(
     payment = await createWiPayHostedPayment({
       merchantOrderId,
       amountMinor: totalMinor,
+      email: session.email,
       responseUrl: `${BASE_URL}/api/payments/wipay/return`,
       data: { purpose: "PRODUCT_ORDER", targetId: order.id },
     });

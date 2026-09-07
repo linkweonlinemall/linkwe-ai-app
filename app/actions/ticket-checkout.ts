@@ -438,6 +438,7 @@ export async function createTicketPaymentIntent(
     const payment = await createWiPayHostedPayment({
       merchantOrderId,
       amountMinor: orderTotalMinor,
+      email: buyer.email,
       responseUrl: `${BASE_URL}/api/payments/wipay/return`,
       data: { purpose: "TICKET_ORDER", targetId: order.id },
     });

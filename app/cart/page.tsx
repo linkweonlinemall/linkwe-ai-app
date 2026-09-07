@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   description: "Review your cart and proceed to checkout.",
 };
 
-const FREE_DELIVERY_THRESHOLD_TTD = 200;
+const FREE_DELIVERY_THRESHOLD_TTD = 700;
 
 const PRODUCT_REC_SELECT = {
   id: true,

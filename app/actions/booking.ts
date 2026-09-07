@@ -413,6 +413,7 @@ export async function createBookingPaymentIntent(
     const payment = await createWiPayHostedPayment({
       merchantOrderId,
       amountMinor,
+      email: session.email,
       responseUrl: `${BASE_URL}/api/payments/wipay/return`,
       data: { purpose: "PRODUCT_BOOKING", targetId: bookingId, paymentType },
     });

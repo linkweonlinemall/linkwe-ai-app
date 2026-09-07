@@ -5,6 +5,7 @@ import { getWiPayConfig } from "@/lib/wipay/config";
 type CreateHostedPaymentInput = {
   merchantOrderId: string;
   amountMinor: number;
+  email: string;
   responseUrl: string;
   data?: Record<string, string>;
 };
@@ -25,28 +26,29 @@ export async function createWiPayHostedPayment(
   input: CreateHostedPaymentInput,
 ): Promise<CreateHostedPaymentResponse> {
   const config = getWiPayConfig();
-  const body = new URLSearchParams({
+  const body = {
     account_number: config.accountNumber,
     country_code: "TT",
     currency: "TTD",
     environment: config.environment,
-    fee_structure: "merchant_absorb",
-    method: "credit_card",
+    fee_structure: "customer_pay",
+    method: "credit_card_co",
     order_id: input.merchantOrderId,
     origin: "LinkWe",
     response_url: input.responseUrl,
     total: formatWiPayAmount(input.amountMinor),
+    email: input.email,
     avs: "0",
-  });
-  if (input.data) body.set("data", JSON.stringify(input.data));
+    ...(input.data ? { data: JSON.stringify(input.data) } : {}),
+  };
 
   const response = await fetch(`${config.baseUrl}/plugins/payments/request`, {
     method: "POST",
     headers: {
       Accept: "application/json",
-      "Content-Type": "application/x-www-form-urlencoded",
+      "Content-Type": "application/json",
     },
-    body,
+    body: JSON.stringify(body),
     cache: "no-store",
   });
   const payload = (await response.json().catch(() => null)) as

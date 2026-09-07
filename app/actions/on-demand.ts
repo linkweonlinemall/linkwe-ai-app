@@ -593,6 +593,7 @@ export async function confirmOnDemandRequest(
       const payment = await createWiPayHostedPayment({
         merchantOrderId,
         amountMinor,
+        email: session.email,
         responseUrl: `${BASE_URL}/api/payments/wipay/return`,
         data: { purpose: "ON_DEMAND_SERVICE", targetId: request.id },
       });
