@@ -32,6 +32,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Operations",
     items: [
       { label: "Overview",  href: "/dashboard/admin?tab=overview",  tab: "overview",  icon: icon("M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z") },
+      { label: "Verification", href: "/dashboard/admin/verification", badgeKey: "verification", icon: icon("M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9 12l2 2 4-4") },
       { label: "Orders",    href: "/dashboard/admin?tab=orders",    tab: "orders", badgeKey: "orders", icon: icon("M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8") },
       { label: "Managed Delivery", href: "/dashboard/admin?tab=linkwe-delivery", tab: "linkwe-delivery", icon: icon("M1 3h15v13H1zM16 8h4l3 3v5h-7V8zM5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z") },
       { label: "Payouts", href: "/dashboard/admin?tab=payouts", tab: "payouts", badgeKey: "payouts", icon: icon("M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6") },
@@ -50,7 +51,6 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Customers",    href: "/dashboard/admin?tab=customers", tab: "customers", icon: icon("M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z") },
       { label: "Vendors",      href: "/dashboard/admin?tab=vendors",   tab: "vendors",   icon: icon("M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM9 22V12h6v10") },
-      { label: "Verification", href: "/dashboard/admin/verification", badgeKey: "verification", icon: icon("M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z") },
       { label: "Messages",     href: "/dashboard/admin/messages",      icon: icon("M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z") },
       { label: "Users",        href: "/dashboard/admin/users",         icon: icon("M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z") },
     ],
@@ -103,6 +103,7 @@ function SidebarNavLinks({
                     ? "bg-[#D4450A]/8 text-[#D4450A]"
                     : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800"
                 }`}
+                aria-current={active ? "page" : undefined}
               >
                 <span className={active ? "text-[#D4450A]" : "text-zinc-400"}>
                   {item.icon}
@@ -114,6 +115,47 @@ function SidebarNavLinks({
           })}
         </div>
       ))}
+    </nav>
+  );
+}
+
+function MobileOperationsBar({
+  pathname,
+  activeTab,
+  attentionCounts,
+  openDrawer,
+}: {
+  pathname: string;
+  activeTab: string;
+  attentionCounts: Record<"verification" | "payouts" | "orders", number>;
+  openDrawer: () => void;
+}) {
+  const items = [
+    NAV_GROUPS[0]!.items[0]!,
+    NAV_GROUPS[0]!.items[2]!,
+    NAV_GROUPS[0]!.items[1]!,
+    NAV_GROUPS[0]!.items[4]!,
+  ];
+
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-zinc-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_rgba(28,28,26,0.08)] backdrop-blur md:hidden" aria-label="Primary admin operations">
+      {items.map((item) => {
+        const active = isItemActive(item, pathname, activeTab);
+        const count = item.badgeKey ? attentionCounts[item.badgeKey] : 0;
+        return (
+          <Link key={item.href + (item.tab ?? "")} href={item.href} aria-current={active ? "page" : undefined} className={`relative flex min-h-16 flex-col items-center justify-center gap-1 px-1 text-[9px] font-bold ${active ? "text-[#D4450A]" : "text-zinc-500"}`}>
+            <span className="relative [&_svg]:h-[18px] [&_svg]:w-[18px]">
+              {item.icon}
+              {count > 0 ? <span className="absolute -right-2.5 -top-2 min-w-4 rounded-full bg-[#D4450A] px-1 text-center text-[8px] leading-4 text-white">{count > 9 ? "9+" : count}</span> : null}
+            </span>
+            {item.label === "Verification" ? "Verify" : item.label}
+          </Link>
+        );
+      })}
+      <button type="button" onClick={openDrawer} className="flex min-h-16 flex-col items-center justify-center gap-1 px-1 text-[9px] font-bold text-zinc-500" aria-label="Open all admin tools">
+        <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></svg>
+        More
+      </button>
     </nav>
   );
 }
@@ -329,10 +371,12 @@ export default function AdminShell({ adminName, unreadCount, attentionCounts, ch
         </aside>
 
         {/* ── Main content — full-width on mobile, offset on desktop ── */}
-        <main className="flex-1 overflow-y-auto md:ml-[220px]">
+        <main className="flex-1 overflow-y-auto pb-20 md:ml-[220px] md:pb-0">
           {children}
         </main>
       </div>
+
+      <MobileOperationsBar pathname={pathname} activeTab={activeTab} attentionCounts={attentionCounts} openDrawer={openDrawer} />
     </div>
   );
 }

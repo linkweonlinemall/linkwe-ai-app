@@ -35,6 +35,11 @@ export async function getAdminOverviewMetrics() {
     totalOrders,
     activeVendors,
     totalCustomers,
+    pendingVerification,
+    pendingStoreApprovals,
+    suspendedUsers,
+    publishedProducts,
+    courierPayoutPending,
   ] = await Promise.all([
     prisma.mainOrder.count({
       where: { createdAt: { gte: startOfToday }, status: { not: "PENDING_PAYMENT" } },
@@ -82,6 +87,15 @@ export async function getAdminOverviewMetrics() {
     prisma.mainOrder.count({ where: { status: { not: "PENDING_PAYMENT" } } }),
     prisma.store.count({ where: { status: "ACTIVE" } }),
     prisma.user.count({ where: { role: "CUSTOMER" } }),
+    prisma.user.count({
+      where: { role: "VENDOR", idVerificationStatus: "PENDING" },
+    }),
+    prisma.store.count({ where: { status: "PENDING_APPROVAL" } }),
+    prisma.user.count({ where: { suspended: true } }),
+    prisma.product.count({ where: { isPublished: true } }),
+    prisma.courierPayoutRequest.count({
+      where: { status: "PENDING", requestedAt: { lte: fortyEightHoursAgo } },
+    }),
   ]);
 
   return {
@@ -90,13 +104,21 @@ export async function getAdminOverviewMetrics() {
     activeCouriers,
     pendingPayouts: pendingVendorPayouts + pendingCourierPayouts,
     pipeline: { awaitingVendor, inTransit, atWarehouse, readyToShip },
-    alerts: { vendorDelays, courierStale, payoutPending },
+    alerts: {
+      vendorDelays,
+      courierStale,
+      payoutPending: payoutPending + courierPayoutPending,
+      pendingVerification,
+      pendingStoreApprovals,
+    },
     recentOrders,
     totals: {
       lifetimeRevenueMinor: lifetimeRevenueResult._sum.totalMinor ?? 0,
       totalOrders,
       activeVendors,
       totalCustomers,
+      suspendedUsers,
+      publishedProducts,
     },
   };
 }

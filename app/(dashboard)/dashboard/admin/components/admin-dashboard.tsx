@@ -137,7 +137,7 @@ export default function AdminDashboard({ adminName: _adminName }: Props) {
   const placeholderIcon = TAB_CONFIG.find((t) => t.id === activeTab)?.icon ?? null;
 
   return (
-    <div className="p-6" style={{ backgroundColor: "var(--surface)" }}>
+    <div className="min-h-full px-3 py-4 sm:px-5 sm:py-6 xl:px-8" style={{ backgroundColor: "var(--surface)" }}>
         {activeTab === "overview" && <OverviewTab />}
         {activeTab === "orders" && <OrdersTab />}
         {activeTab === "linkwe-delivery" && <LinkWeDeliveryTab />}
