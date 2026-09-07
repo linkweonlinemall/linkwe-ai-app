@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { logoutAction } from "@/app/(auth)/auth-actions";
 import NotificationBell from "@/components/ui/NotificationBell";
 
@@ -230,12 +230,15 @@ type Props = {
 };
 
 export default function AdminShell({ adminName, unreadCount, attentionCounts, children }: Props) {
+  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") ?? "overview";
 
   // ── Mobile drawer state ────────────────────────────────────────────
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [commandQuery, setCommandQuery] = useState("");
   const openDrawer  = useCallback(() => setDrawerOpen(true),  []);
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
@@ -249,11 +252,35 @@ export default function AdminShell({ adminName, unreadCount, attentionCounts, ch
     return () => window.removeEventListener("keydown", onKey);
   }, [drawerOpen, closeDrawer]);
 
-  // Lock body scroll while drawer is open
   useEffect(() => {
-    document.body.style.overflow = drawerOpen ? "hidden" : "";
+    function onCommandKey(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommandOpen((open) => !open);
+      }
+      if (event.key === "Escape") setCommandOpen(false);
+    }
+    window.addEventListener("keydown", onCommandKey);
+    return () => window.removeEventListener("keydown", onCommandKey);
+  }, []);
+
+  // Lock body scroll while navigation or command search is open.
+  useEffect(() => {
+    document.body.style.overflow = drawerOpen || commandOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
-  }, [drawerOpen]);
+  }, [drawerOpen, commandOpen]);
+
+  const commandItems = NAV_GROUPS.flatMap((group) =>
+    group.items.map((item) => ({ ...item, group: group.label })),
+  ).filter((item) =>
+    `${item.label} ${item.group}`.toLowerCase().includes(commandQuery.trim().toLowerCase()),
+  );
+
+  function runCommand(href: string) {
+    setCommandOpen(false);
+    setCommandQuery("");
+    router.push(href);
+  }
 
   return (
     <div className="h-full bg-[#F5F5F5]" style={{ fontFamily: "var(--font-sora, sans-serif)" }}>
@@ -291,6 +318,17 @@ export default function AdminShell({ adminName, unreadCount, attentionCounts, ch
           </span>
         </div>
 
+        <button
+          type="button"
+          onClick={() => setCommandOpen(true)}
+          className="absolute left-1/2 hidden h-9 w-[min(34rem,38vw)] -translate-x-1/2 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.07] px-3 text-left text-xs text-white/45 transition hover:bg-white/10 hover:text-white/70 lg:flex"
+          aria-label="Search admin tools"
+        >
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+          <span>Search operations and controls</span>
+          <kbd className="ml-auto rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-white/35">⌘ K</kbd>
+        </button>
+
         {/* Right: bell + account menu */}
         <div className="flex items-center gap-1 sm:gap-2">
           <NotificationBell compactToolbar initialUnreadCount={unreadCount} variant="dark" />
@@ -298,6 +336,38 @@ export default function AdminShell({ adminName, unreadCount, attentionCounts, ch
           <AccountMenu adminName={adminName} />
         </div>
       </header>
+
+      {commandOpen ? (
+        <div className="fixed inset-0 z-[1400] flex items-start justify-center bg-black/60 px-3 pt-[10vh] backdrop-blur-sm" role="presentation" onMouseDown={() => setCommandOpen(false)}>
+          <section className="w-full max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-white shadow-2xl" role="dialog" aria-modal="true" aria-label="Search admin tools" onMouseDown={(event) => event.stopPropagation()}>
+            <div className="flex items-center gap-3 border-b border-zinc-100 px-4">
+              <svg className="h-5 w-5 shrink-0 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+              <input
+                autoFocus
+                value={commandQuery}
+                onChange={(event) => setCommandQuery(event.target.value)}
+                placeholder="Find orders, verification, users, payouts…"
+                className="h-14 min-w-0 flex-1 border-0 bg-transparent text-base text-zinc-900 outline-none placeholder:text-zinc-400"
+              />
+              <button type="button" onClick={() => setCommandOpen(false)} className="rounded-lg border border-zinc-200 px-2 py-1 text-[10px] font-bold text-zinc-400">ESC</button>
+            </div>
+            <div className="max-h-[55vh] overflow-y-auto p-2">
+              {commandItems.length === 0 ? (
+                <p className="px-4 py-10 text-center text-sm text-zinc-400">No admin tool matches that search.</p>
+              ) : commandItems.map((item) => (
+                <button key={item.href + (item.tab ?? "")} type="button" onClick={() => runCommand(item.href)} className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-zinc-100">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500">{item.icon}</span>
+                  <span>
+                    <span className="block text-sm font-semibold text-zinc-900">{item.label}</span>
+                    <span className="block text-[10px] font-medium uppercase tracking-wide text-zinc-400">{item.group}</span>
+                  </span>
+                  {item.badgeKey && attentionCounts[item.badgeKey] > 0 ? <span className="ml-auto rounded-full bg-[#D4450A] px-2 py-0.5 text-[10px] font-bold text-white">{attentionCounts[item.badgeKey]}</span> : null}
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       {/* ── Mobile drawer backdrop ── */}
       <div
