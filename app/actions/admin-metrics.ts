@@ -42,19 +42,19 @@ export async function getAdminOverviewMetrics() {
     courierPayoutPending,
   ] = await Promise.all([
     prisma.mainOrder.count({
-      where: { createdAt: { gte: startOfToday }, status: { not: "PENDING_PAYMENT" } },
+      where: { createdAt: { gte: startOfToday }, status: { notIn: ["DRAFT", "PENDING_PAYMENT", "CANCELLED", "REFUNDED"] } },
     }),
     prisma.mainOrder.aggregate({
       _sum: { totalMinor: true },
-      where: { createdAt: { gte: startOfToday }, status: { not: "PENDING_PAYMENT" } },
+      where: { createdAt: { gte: startOfToday }, status: { notIn: ["DRAFT", "PENDING_PAYMENT", "CANCELLED", "REFUNDED"] } },
     }),
     prisma.courierLocation.count({ where: { isActive: true } }),
     prisma.payoutRequest.count({ where: { status: "PENDING" } }),
     prisma.courierPayoutRequest.count({ where: { status: "PENDING" } }),
     prisma.splitOrder.count({ where: { status: "AWAITING_VENDOR_ACTION" } }),
-    prisma.splitOrder.count({ where: { status: "COURIER_PICKED_UP" } }),
+    prisma.splitOrder.count({ where: { status: { in: ["COURIER_ASSIGNED", "COURIER_PICKED_UP"] } } }),
     prisma.splitOrder.count({ where: { status: "AT_WAREHOUSE" } }),
-    prisma.mainOrder.count({ where: { status: "READY_TO_SHIP" } }),
+    prisma.mainOrder.count({ where: { status: { in: ["READY_TO_SHIP", "PACKING_COMPLETE"] } } }),
     prisma.splitOrder.count({
       where: {
         status: "AWAITING_VENDOR_ACTION",
@@ -68,7 +68,7 @@ export async function getAdminOverviewMetrics() {
       where: { status: "PENDING", requestedAt: { lte: fortyEightHoursAgo } },
     }),
     prisma.mainOrder.findMany({
-      where: { status: { not: "PENDING_PAYMENT" } },
+      where: { status: { notIn: ["DRAFT", "PENDING_PAYMENT", "CANCELLED", "REFUNDED"] } },
       orderBy: { createdAt: "desc" },
       take: 5,
       select: {
@@ -82,9 +82,9 @@ export async function getAdminOverviewMetrics() {
     }),
     prisma.mainOrder.aggregate({
       _sum: { totalMinor: true },
-      where: { status: { not: "PENDING_PAYMENT" } },
+      where: { status: { notIn: ["DRAFT", "PENDING_PAYMENT", "CANCELLED", "REFUNDED"] } },
     }),
-    prisma.mainOrder.count({ where: { status: { not: "PENDING_PAYMENT" } } }),
+    prisma.mainOrder.count({ where: { status: { notIn: ["DRAFT", "PENDING_PAYMENT", "CANCELLED", "REFUNDED"] } } }),
     prisma.store.count({ where: { status: "ACTIVE" } }),
     prisma.user.count({ where: { role: "CUSTOMER" } }),
     prisma.user.count({

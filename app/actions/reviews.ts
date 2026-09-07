@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { NotificationType } from "@prisma/client";
 
-import { createNotification } from "@/app/actions/notifications";
+import { createNotification } from "@/lib/notifications/create";
 import { getSession } from "@/lib/auth/session";
 import { BASE_URL } from "@/lib/email/resend";
 import { prisma } from "@/lib/prisma";

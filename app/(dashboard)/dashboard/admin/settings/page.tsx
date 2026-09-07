@@ -5,6 +5,8 @@ import PasswordForm from "@/components/settings/PasswordForm";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
+import WarehouseSettings from "./warehouse-settings";
+
 import AdminPasswordManager from "./AdminPasswordManager";
 
 export default async function AdminSettingsPage() {
@@ -18,6 +20,8 @@ export default async function AdminSettingsPage() {
   });
 
   if (!user) redirect("/login");
+
+  const warehouse = await prisma.warehouse.findUnique({ where: { code: "LINKWE_MAIN" }, include: { address: true } });
 
   const users = await prisma.user.findMany({
     select: {
@@ -41,6 +45,7 @@ export default async function AdminSettingsPage() {
         </div>
 
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+          <WarehouseSettings initial={{ name: warehouse?.name ?? "LinkWe warehouse", line1: warehouse?.address?.line1 ?? "", city: warehouse?.address?.city ?? "", region: warehouse?.address?.region ?? "", phone: warehouse?.address?.phone ?? "", latitude: warehouse?.address?.latitude?.toString() ?? "", longitude: warehouse?.address?.longitude?.toString() ?? "" }}/>
           {/* Admin profile */}
           <div className="rounded-2xl border border-zinc-200 bg-white p-6">
             <h2 className="mb-4 text-sm font-bold text-zinc-900">Your account</h2>

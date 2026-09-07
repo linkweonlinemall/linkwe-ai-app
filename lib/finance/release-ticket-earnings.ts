@@ -1,6 +1,6 @@
 import { NotificationType } from "@prisma/client";
 
-import { createNotification } from "@/app/actions/notifications";
+import { createNotification } from "@/lib/notifications/create";
 import { getTicketCommissionRate, minorToTtd } from "@/lib/finance/commission";
 import { createTicketOrderEarningsLedger } from "@/lib/finance/release-earnings";
 import { prisma } from "@/lib/prisma";

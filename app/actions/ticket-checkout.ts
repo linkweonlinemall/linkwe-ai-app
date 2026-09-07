@@ -10,7 +10,7 @@ import { createWiPayHostedPayment } from "@/lib/wipay/payments";
 import { BASE_URL } from "@/lib/email/resend";
 import { sendEmail } from "@/lib/email/send";
 import { ticketConfirmationEmail } from "@/lib/email/templates";
-import { createNotification } from "@/app/actions/notifications";
+import { createNotification } from "@/lib/notifications/create";
 import {
   assertAvailableSeatsForCheckout,
   InsufficientSeatsError,

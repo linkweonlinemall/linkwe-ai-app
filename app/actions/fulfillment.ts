@@ -4,44 +4,41 @@ import { NotificationType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { createNotification } from "@/app/actions/notifications";
-import { calculateBatchWeightLbs, getCourierPickupFeeMinor } from "@/lib/fulfillment/courier-pickup-rates";
+import { createNotification } from "@/lib/notifications/create";
+import { alertOperations } from "@/lib/fulfillment/admin-alerts";
 import { getSession } from "@/lib/auth/session";
 import { recalculateMainOrderStatus } from "@/lib/fulfillment/order-status";
 import { prisma } from "@/lib/prisma";
 
-export async function chooseVendorDropoff(formData: FormData): Promise<void> {
+async function chooseInbound(formData: FormData, method: "VENDOR_DROPOFF" | "PICKUP_REQUESTED"): Promise<void> {
   const session = await getSession();
   if (!session || session.role !== "VENDOR") redirect("/");
-
-  const splitOrderId = String(formData.get("splitOrderId") ?? "").trim();
-  if (!splitOrderId) redirect("/dashboard/vendor");
-
-  const splitOrder = await prisma.splitOrder.findFirst({
-    where: {
-      id: splitOrderId,
-      store: { ownerId: session.userId },
-      status: "AWAITING_VENDOR_ACTION",
-    },
-    select: { id: true, mainOrderId: true },
+  const id = String(formData.get("splitOrderId") ?? "").trim();
+  const mainOrderId = await prisma.$transaction(async (tx) => {
+    const split = await tx.splitOrder.findFirst({ where: { id, store: { ownerId: session.userId }, status: { in: ["AWAITING_VENDOR_ACTION", "PREPARING"] } }, select: { mainOrderId: true, store: { select: { name: true, address: true, region: true } } } });
+    if (!split) return null;
+    const physical = await tx.orderItem.count({ where: { mainOrderId: split.mainOrderId, store: { ownerId: session.userId }, OR: [{ productId: null }, { product: { isDigital: false } }] } });
+    if (!physical) throw new Error("Digital orders do not require warehouse handover.");
+    const claimed = await tx.splitOrder.updateMany({ where: { id, status: { in: ["AWAITING_VENDOR_ACTION", "PREPARING"] }, vendorInboundMethod: null }, data: {
+      vendorInboundMethod: method, vendorActionAt: new Date(), status: method === "PICKUP_REQUESTED" ? "AWAITING_COURIER_PICKUP" : "VENDOR_PREPARING",
+      pickupRequestedAt: method === "PICKUP_REQUESTED" ? new Date() : null,
+    } });
+    if (!claimed.count) return null;
+    if (method === "PICKUP_REQUESTED") {
+      const shipment = await tx.shipment.create({ data: { type: "INBOUND_COURIER_PICKUP", carrier: "CSF Couriers", shipmentStatus: "PENDING", pickupFeeMinor: 4000, region: split.store.region, inboundForSplitOrderId: id, splitOrderId: id } });
+      await tx.splitOrder.update({ where: { id }, data: { inboundShipmentId: shipment.id } });
+    }
+    await alertOperations(tx, method === "PICKUP_REQUESTED" ? "Book a CSF vendor collection" : "Vendor preparing warehouse drop-off", `${split.store.name} · ${id}. ${method === "PICKUP_REQUESTED" ? "TTD 40 deducted from order earnings. Book collection in CSF." : "No vendor collection charge."}`);
+    return split.mainOrderId;
   });
-
-  if (!splitOrder) redirect("/dashboard/vendor");
-
-  await prisma.splitOrder.update({
-    where: { id: splitOrderId },
-    data: {
-      status: "VENDOR_PREPARING",
-      vendorInboundMethod: "VENDOR_DROPOFF",
-      vendorActionAt: new Date(),
-    },
-  });
-
-  await recalculateMainOrderStatus(splitOrder.mainOrderId);
-  revalidatePath(`/orders/${splitOrder.mainOrderId}`, "page");
-  revalidatePath("/dashboard/vendor");
-  redirect(`/dashboard/vendor/orders/${splitOrderId}`);
+  if (mainOrderId) await recalculateMainOrderStatus(mainOrderId);
+  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/vendor", "layout");
+  redirect(`/dashboard/vendor/orders/${id}`);
 }
+
+export async function chooseVendorDropoff(formData: FormData): Promise<void> { return chooseInbound(formData, "VENDOR_DROPOFF"); }
+export async function chooseCourierPickup(formData: FormData): Promise<void> { return chooseInbound(formData, "PICKUP_REQUESTED"); }
 
 export async function startPreparing(formData: FormData): Promise<void> {
   const session = await getSession();
@@ -76,228 +73,26 @@ export async function startPreparing(formData: FormData): Promise<void> {
   redirect(`/dashboard/vendor/orders/${splitOrderId}`);
 }
 
-export async function markShipped(formData: FormData): Promise<void> {
-  const session = await getSession();
-  if (!session || session.role !== "VENDOR") redirect("/");
-
-  const splitOrderId = String(formData.get("splitOrderId") ?? "").trim();
-  if (!splitOrderId) redirect("/dashboard/vendor");
-
-  const splitOrder = await prisma.splitOrder.findFirst({
-    where: {
-      id: splitOrderId,
-      store: { ownerId: session.userId, shippingMode: "SELF" },
-      status: "PREPARING",
-    },
-    select: {
-      id: true,
-      mainOrderId: true,
-      store: { select: { name: true } },
-      mainOrder: { select: { buyerId: true, referenceNumber: true } },
-    },
-  });
-
-  if (!splitOrder) redirect("/dashboard/vendor");
-
-  await prisma.splitOrder.update({
-    where: { id: splitOrderId },
-    data: { status: "SHIPPED" },
-  });
-
-  await recalculateMainOrderStatus(splitOrder.mainOrderId);
-
-  await createNotification({
-    userId: splitOrder.mainOrder.buyerId,
-    type: NotificationType.ORDER_STATUS_UPDATED,
-    title: "Your order is on its way",
-    body: `Your items from ${splitOrder.store.name} are out for delivery.`,
-    linkUrl: `/orders/${splitOrder.mainOrderId}`,
-  });
-
-  revalidatePath(`/orders/${splitOrder.mainOrderId}`, "page");
-  revalidatePath("/dashboard/vendor");
-  revalidatePath(`/dashboard/vendor/orders/${splitOrderId}`, "page");
-  redirect(`/dashboard/vendor/orders/${splitOrderId}`);
+export async function markShipped(_formData: FormData): Promise<void> {
+  throw new Error("Vendor delivery has been retired. All physical orders must go through the LinkWe warehouse.");
 }
 
-export async function markReadyForCustomerPickup(formData: FormData): Promise<void> {
-  const session = await getSession();
-  if (!session || session.role !== "VENDOR") redirect("/");
-
-  const splitOrderId = String(formData.get("splitOrderId") ?? "").trim();
-  if (!splitOrderId) redirect("/dashboard/vendor");
-
-  const splitOrder = await prisma.splitOrder.findFirst({
-    where: {
-      id: splitOrderId,
-      store: { ownerId: session.userId },
-      mainOrder: { shippingAddressId: null },
-      status: "PREPARING",
-    },
-    select: {
-      id: true,
-      mainOrderId: true,
-      store: { select: { name: true } },
-      mainOrder: { select: { buyerId: true } },
-    },
-  });
-  if (!splitOrder) redirect("/dashboard/vendor");
-
-  await prisma.splitOrder.update({ where: { id: splitOrderId }, data: { status: "READY_FOR_CUSTOMER_PICKUP" } });
-  await recalculateMainOrderStatus(splitOrder.mainOrderId);
-  await createNotification({
-    userId: splitOrder.mainOrder.buyerId,
-    type: NotificationType.ORDER_STATUS_UPDATED,
-    title: "Your order is ready for pickup",
-    body: `Your items from ${splitOrder.store.name} are ready to collect.`,
-    linkUrl: `/orders/${splitOrder.mainOrderId}`,
-  });
-  revalidatePath(`/orders/${splitOrder.mainOrderId}`, "page");
-  revalidatePath("/dashboard/vendor");
-  revalidatePath(`/dashboard/vendor/orders/${splitOrderId}`, "page");
-  redirect(`/dashboard/vendor/orders/${splitOrderId}`);
+export async function markReadyForCustomerPickup(_formData: FormData): Promise<void> {
+  throw new Error("Warehouse staff confirm customer pickup readiness after consolidation.");
 }
-
-export async function markReadyForLinkWe(formData: FormData): Promise<void> {
-  const session = await getSession();
-  if (!session || session.role !== "VENDOR") redirect("/");
-
-  const splitOrderId = String(formData.get("splitOrderId") ?? "").trim();
-  if (!splitOrderId) redirect("/dashboard/vendor");
-
-  const splitOrder = await prisma.splitOrder.findFirst({
-    where: {
-      id: splitOrderId,
-      store: { ownerId: session.userId, shippingMode: "LINKWE" },
-      status: "PREPARING",
-    },
-    select: { id: true, mainOrderId: true },
-  });
-
-  if (!splitOrder) redirect("/dashboard/vendor");
-
-  await prisma.splitOrder.update({
-    where: { id: splitOrderId },
-    data: { status: "READY_FOR_LINKWE" },
-  });
-
-  await recalculateMainOrderStatus(splitOrder.mainOrderId);
-  revalidatePath(`/orders/${splitOrder.mainOrderId}`, "page");
-  revalidatePath("/dashboard/vendor");
-  revalidatePath(`/dashboard/vendor/orders/${splitOrderId}`, "page");
-  redirect(`/dashboard/vendor/orders/${splitOrderId}`);
+export async function markReadyForLinkWe(_formData: FormData): Promise<void> {
+  throw new Error("Choose free warehouse drop-off or TTD 40 collection from your order page.");
 }
-
-export async function chooseCourierPickup(formData: FormData): Promise<void> {
+export async function markDigitalFulfilled(formData: FormData): Promise<void> {
   const session = await getSession();
   if (!session || session.role !== "VENDOR") redirect("/");
-
-  const splitOrderId = String(formData.get("splitOrderId") ?? "").trim();
-  if (!splitOrderId) redirect("/dashboard/vendor");
-
-  const splitOrder = await prisma.splitOrder.findFirst({
-    where: {
-      id: splitOrderId,
-      store: { ownerId: session.userId },
-      status: "AWAITING_VENDOR_ACTION",
-    },
-    select: {
-      id: true,
-      mainOrderId: true,
-      storeId: true,
-      pickupRegion: true,
-      store: { select: { region: true, address: true } },
-    },
-  });
-
-  if (!splitOrder) redirect("/dashboard/vendor");
-
-  const batchableSplitOrders = await prisma.splitOrder.findMany({
-    where: {
-      storeId: splitOrder.storeId,
-      status: "AWAITING_VENDOR_ACTION",
-      inboundShipmentId: null,
-    },
-    select: {
-      id: true,
-      mainOrderId: true,
-      items: {
-        select: {
-          quantity: true,
-          listingId: true,
-        },
-      },
-    },
-  });
-
-  const mainOrderIds = [...new Set(batchableSplitOrders.map((s) => s.mainOrderId))];
-  const listingIds = [
-    ...new Set(batchableSplitOrders.flatMap((s) => s.items.map((i) => i.listingId))),
-  ];
-
-  const orderItems =
-    mainOrderIds.length && listingIds.length
-      ? await prisma.orderItem.findMany({
-          where: {
-            mainOrderId: { in: mainOrderIds },
-            listingId: { in: listingIds },
-          },
-          select: {
-            mainOrderId: true,
-            listingId: true,
-            weightLbs: true,
-          },
-        })
-      : [];
-
-  const weightInputs = batchableSplitOrders.flatMap((so) =>
-    so.items.map((it) => {
-      const oi = orderItems.find(
-        (o) => o.mainOrderId === so.mainOrderId && o.listingId === it.listingId,
-      );
-      const unitLbs = oi && oi.weightLbs > 0 ? oi.weightLbs : 1;
-      return {
-        quantity: it.quantity,
-        product: { weight: unitLbs, weightUnit: "LB" as const },
-      };
-    }),
-  );
-
-  const rawWeightLbs = calculateBatchWeightLbs(weightInputs);
-  const totalWeightLbs = rawWeightLbs > 0 ? rawWeightLbs : 1;
-
-  const region = splitOrder.pickupRegion ?? splitOrder.store.region ?? "unknown";
-  const pickupFeeMinor = getCourierPickupFeeMinor(region, totalWeightLbs);
-
-  await prisma.$transaction(async (tx) => {
-    const shipment = await tx.shipment.create({
-      data: {
-        type: "INBOUND_COURIER_PICKUP",
-        shipmentStatus: "AWAITING_COURIER_CLAIM",
-        region,
-        totalWeightLbs,
-        pickupFeeMinor,
-        inboundForSplitOrderId: splitOrderId,
-        splitOrderId: splitOrderId,
-      },
-    });
-
-    await tx.splitOrder.updateMany({
-      where: { id: { in: batchableSplitOrders.map((s) => s.id) } },
-      data: {
-        status: "AWAITING_COURIER_PICKUP",
-        vendorInboundMethod: "PICKUP_REQUESTED",
-        vendorActionAt: new Date(),
-        inboundShipmentId: shipment.id,
-      },
-    });
-  });
-
-  const uniqueMainOrderIds = [...new Set(batchableSplitOrders.map((s) => s.mainOrderId))];
-  for (const mid of uniqueMainOrderIds) {
-    await recalculateMainOrderStatus(mid);
-    revalidatePath(`/orders/${mid}`, "page");
-  }
-  revalidatePath("/dashboard/vendor");
-  redirect(`/dashboard/vendor/orders/${splitOrderId}`);
+  const id = String(formData.get("splitOrderId") ?? "");
+  const split = await prisma.splitOrder.findFirst({ where: { id, store: { ownerId: session.userId }, status: { in: ["AWAITING_VENDOR_ACTION", "PREPARING"] } }, select: { mainOrderId: true, storeId: true, mainOrder: { select: { buyerId: true } } } });
+  if (!split) return;
+  const items = await prisma.orderItem.findMany({ where: { mainOrderId: split.mainOrderId, storeId: split.storeId }, select: { product: { select: { isDigital: true } } } });
+  if (!items.length || items.some((item) => !item.product?.isDigital)) throw new Error("Physical orders must go through the warehouse.");
+  await prisma.splitOrder.updateMany({ where: { id, status: { in: ["AWAITING_VENDOR_ACTION", "PREPARING"] } }, data: { status: "DELIVERED", deliveredAt: new Date() } });
+  await recalculateMainOrderStatus(split.mainOrderId);
+  revalidatePath("/dashboard/vendor", "layout");
+  revalidatePath(`/orders/${split.mainOrderId}`);
 }

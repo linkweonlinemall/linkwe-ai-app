@@ -2,7 +2,7 @@ import { BookingStatus, NotificationType } from "@prisma/client";
 
 import { revalidatePath } from "next/cache";
 
-import { createNotification } from "@/app/actions/notifications";
+import { createNotification } from "@/lib/notifications/create";
 import { sendBookingConfirmationEmails } from "@/app/actions/booking-emails";
 import { getBookingAutoCompleteAt } from "@/lib/finance/booking-schedule";
 import { createVendorEarningsLedgerPair } from "@/lib/finance/release-earnings";

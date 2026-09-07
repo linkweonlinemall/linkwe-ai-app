@@ -101,7 +101,7 @@ export const vendorSplitOrderDetailSelect = {
       items: {
         select: {
           storeId: true,
-          product: { select: { name: true, checkoutFields: true } },
+          product: { select: { name: true, checkoutFields: true, isDigital: true } },
         },
       },
       shippingAddress: {

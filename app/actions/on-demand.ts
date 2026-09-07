@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import type { OnDemandRequestStatus } from "@prisma/client";
 import { NotificationType } from "@prisma/client";
 
-import { createNotification } from "@/app/actions/notifications";
+import { createNotification } from "@/lib/notifications/create";
 import { getSession } from "@/lib/auth/session";
 import { calculateEarnings } from "@/lib/finance/commission";
 import { cancelOnDemandCore } from "@/lib/finance/cancel-ondemand";

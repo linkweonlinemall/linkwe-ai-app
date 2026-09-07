@@ -1,7 +1,7 @@
 import { NotificationType, OnDemandRequestStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
-import { createNotification } from "@/app/actions/notifications";
+import { createNotification } from "@/lib/notifications/create";
 import { prisma } from "@/lib/prisma";
 import { requestWiPayRefund } from "@/lib/wipay/wapi";
 

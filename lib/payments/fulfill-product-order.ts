@@ -1,7 +1,8 @@
 import { NotificationType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
-import { createNotification } from "@/app/actions/notifications";
+import { alertAdmins } from "@/lib/admin/alerts";
+import { createNotification } from "@/lib/notifications/create";
 import { BASE_URL } from "@/lib/email/resend";
 import { sendEmail } from "@/lib/email/send";
 import { newOrderVendorEmail, orderConfirmedCustomerEmail } from "@/lib/email/templates";
@@ -36,6 +37,7 @@ export async function fulfillProductOrder(orderId: string, buyerId: string): Pro
     },
   });
   if (!order?.referenceNumber) return;
+  await alertAdmins({ title: `New paid order ${order.referenceNumber}`, body: "Track vendor handovers and consolidate the customer order in the warehouse.", linkUrl: "/dashboard/admin?tab=linkwe-delivery" });
 
   const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
   const customerTemplate = orderConfirmedCustomerEmail({

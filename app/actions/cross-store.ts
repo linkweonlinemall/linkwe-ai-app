@@ -2,7 +2,7 @@
 
 import type { RelationshipStatus } from "@prisma/client";
 
-import { createNotification } from "@/app/actions/notifications";
+import { createNotification } from "@/lib/notifications/create";
 import { getSession } from "@/lib/auth/session";
 import { ttdToMinor } from "@/lib/finance/commission";
 import {

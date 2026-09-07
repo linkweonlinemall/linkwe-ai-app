@@ -370,11 +370,11 @@ export default function AdminStoresClient({
                 {/* Desktop-only: actions right column */}
                 <div className="hidden shrink-0 flex-wrap items-center gap-2 md:flex">
                   <Link
-                    href={`/store/${store.slug}`}
+                    href={`/dashboard/admin/records/store/${store.id}`}
                     target="_blank"
                     className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs text-zinc-600 transition-colors hover:bg-zinc-50"
                   >
-                    View store
+                    Edit store
                   </Link>
                   <select
                     title="Plan"
@@ -463,11 +463,11 @@ export default function AdminStoresClient({
                 {/* Actions row — full-width, delete visually separated */}
                 <div className="mt-3 flex items-center gap-2 border-t border-zinc-100 pt-3">
                   <Link
-                    href={`/store/${store.slug}`}
+                    href={`/dashboard/admin/records/store/${store.id}`}
                     target="_blank"
                     className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-center text-xs text-zinc-600 transition-colors hover:bg-zinc-50"
                   >
-                    View store
+                    Edit store
                   </Link>
                   <select
                     title="Plan"

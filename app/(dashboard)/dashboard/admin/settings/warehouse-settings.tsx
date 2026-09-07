@@ -1,0 +1,8 @@
+"use client";
+import { useState } from "react";
+import { saveWarehouseSettings } from "@/app/actions/warehouse-settings";
+import { toast } from "sonner";
+export default function WarehouseSettings({ initial }: { initial: { name: string; line1: string; city: string; region: string; phone: string; latitude: string; longitude: string } }) {
+  const [values, setValues] = useState(initial); const [busy, setBusy] = useState(false);
+  return <form className="rounded-2xl border border-zinc-200 bg-white p-6" onSubmit={async (e) => { e.preventDefault(); setBusy(true); try { const result = await saveWarehouseSettings(values); result.error ? toast.error(result.error) : toast.success("Warehouse saved"); } catch { toast.error("Unable to save warehouse"); } finally { setBusy(false); } }}><h2 className="font-semibold">LinkWe warehouse</h2><p className="mb-5 mt-2 text-sm text-zinc-500">Used for vendor drop-off, CSF booking details and the origin of combined customer shipping quotes.</p><div className="grid gap-4 sm:grid-cols-2">{(Object.keys(values) as (keyof typeof values)[]).map((key) => <label key={key} className="text-xs font-semibold capitalize">{key === "line1" ? "Street address" : key}<input required={!["latitude", "longitude"].includes(key)} maxLength={300} value={values[key]} onChange={(e) => setValues({ ...values, [key]: e.target.value })} className="mt-1 min-h-11 w-full rounded-xl border border-zinc-200 px-3 text-sm font-normal"/></label>)}</div><button disabled={busy} className="mt-5 min-h-11 rounded-xl bg-[#D4450A] px-5 text-sm font-semibold text-white disabled:opacity-50">{busy ? "Saving…" : "Save warehouse"}</button></form>;
+}

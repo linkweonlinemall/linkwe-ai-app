@@ -596,10 +596,8 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
                               {!splitHasPhysicalItems
                                 ? "Digital delivery"
                                 : order.shippingAddressId == null
-                                  ? `Pickup from ${splitOrder.store.name}`
-                                  : splitOrder.store.shippingMode === "SELF"
-                                  ? `Delivered by ${splitOrder.store.name}`
-                                  : "LinkWe delivery"}
+                                  ? "Pickup from LinkWe warehouse"
+                                  : "Combined delivery via LinkWe warehouse & CSF"}
                             </p>
                             {splitWeight.totalLbs > 0 ? (
                               <p className="mt-0.5 text-xs text-zinc-400">

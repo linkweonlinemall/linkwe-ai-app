@@ -4,7 +4,7 @@ import { NotificationType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { createNotification } from "@/app/actions/notifications";
+import { createNotification } from "@/lib/notifications/create";
 import { getSession } from "@/lib/auth/session";
 import { escapeCsvCell } from "@/lib/csv/escape-cell";
 import { BASE_URL } from "@/lib/email/resend";
@@ -75,68 +75,10 @@ export async function getLinkWeDeliveryQueue() {
   });
 }
 
-export async function markOutForLinkWeDelivery(
-  splitOrderId: string,
-): Promise<{ ok: true } | { error: string }> {
+export async function markOutForLinkWeDelivery(_splitOrderId: string): Promise<{ ok: true } | { error: string }> {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/");
-
-  const id = splitOrderId.trim();
-  if (!id) return { error: "Order is required" };
-
-  const splitOrder = await prisma.splitOrder.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      mainOrderId: true,
-      status: true,
-      store: { select: { name: true } },
-      mainOrder: {
-        select: {
-          buyerId: true,
-          referenceNumber: true,
-          buyer: { select: { email: true, fullName: true } },
-        },
-      },
-    },
-  });
-
-  if (!splitOrder) return { error: "Order not found" };
-  if (splitOrder.status === "OUT_FOR_DELIVERY") return { ok: true };
-  if (splitOrder.status !== "READY_FOR_LINKWE") {
-    return { error: "Order is not ready for LinkWe delivery" };
-  }
-
-  await prisma.splitOrder.update({
-    where: { id },
-    data: { status: "OUT_FOR_DELIVERY" },
-  });
-
-  await recalculateMainOrderStatus(splitOrder.mainOrderId);
-
-  await createNotification({
-    userId: splitOrder.mainOrder.buyerId,
-    type: NotificationType.ORDER_STATUS_UPDATED,
-    title: "Your order is out for delivery",
-    body: `Your items from ${splitOrder.store.name} are on the way with LinkWe delivery.`,
-    linkUrl: `/orders/${splitOrder.mainOrderId}`,
-  });
-
-  const deliveryTemplate = orderOutForDeliveryCustomerEmail({
-    customerName: splitOrder.mainOrder.buyer.fullName ?? "Customer",
-    orderRef: splitOrder.mainOrder.referenceNumber ?? splitOrder.mainOrderId,
-    storeName: splitOrder.store.name,
-    orderUrl: `${BASE_URL}/orders/${splitOrder.mainOrderId}`,
-  });
-  await sendEmail({
-    to: splitOrder.mainOrder.buyer.email,
-    ...deliveryTemplate,
-  });
-
-  revalidatePath("/dashboard/admin");
-  revalidatePath(`/orders/${splitOrder.mainOrderId}`, "page");
-
-  return { ok: true };
+  return { error: "Use Warehouse & CSF to receive all vendor parcels, combine and dispatch the customer order." };
 }
 
 export async function exportLinkWeManifestCSV(splitIds: string[]): Promise<string> {

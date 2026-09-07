@@ -2,7 +2,7 @@
 
 import { NotificationType } from "@prisma/client";
 
-import { createNotification } from "@/app/actions/notifications";
+import { createNotification } from "@/lib/notifications/create";
 import { BASE_URL } from "@/lib/email/resend";
 import { sendEmail } from "@/lib/email/send";
 import { bookingConfirmedCustomerEmail, newBookingVendorEmail } from "@/lib/email/templates";

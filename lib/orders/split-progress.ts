@@ -9,7 +9,7 @@ const CUSTOMER_SELF_STEPS = ["Placed", "Preparing", "Out for delivery", "Receive
 const CUSTOMER_LINKWE_STEPS = [
   "Placed",
   "Preparing",
-  "Ready",
+  "At warehouse",
   "Out for delivery",
   "Received",
 ] as const;
@@ -19,7 +19,7 @@ const VENDOR_SELF_STEPS = ["Action", "Preparing", "Shipped", "Delivered"] as con
 const VENDOR_LINKWE_STEPS = [
   "Action",
   "Preparing",
-  "Ready for LinkWe",
+  "At warehouse",
   "Out for delivery",
   "Delivered",
 ] as const;
@@ -32,9 +32,9 @@ export function getSplitProgressSteps(
   if (audience === "customer" && fulfillment === "pickup") return CUSTOMER_PICKUP_STEPS;
   if (audience === "vendor" && fulfillment === "pickup") return VENDOR_PICKUP_STEPS;
   if (audience === "vendor") {
-    return shippingMode === "SELF" ? VENDOR_SELF_STEPS : VENDOR_LINKWE_STEPS;
+    return VENDOR_LINKWE_STEPS;
   }
-  return shippingMode === "SELF" ? CUSTOMER_SELF_STEPS : CUSTOMER_LINKWE_STEPS;
+  return CUSTOMER_LINKWE_STEPS;
 }
 
 export function getSplitStepIndex(

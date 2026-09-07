@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { NotificationType } from "@prisma/client";
 
-import { createNotification } from "@/app/actions/notifications";
+import { createNotification } from "@/lib/notifications/create";
 import { getSession } from "@/lib/auth/session";
 import { VENDOR_BALANCE_DEBIT_TYPES } from "@/lib/finance/vendor-balance";
 import { prisma } from "@/lib/prisma";

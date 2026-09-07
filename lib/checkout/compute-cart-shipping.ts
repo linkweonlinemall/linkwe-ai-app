@@ -139,7 +139,16 @@ export async function computeCartShippingFromItems(
     };
   });
 
+  const warehouse = await prisma.warehouse.findFirst({
+    where: { isActive: true, code: "LINKWE_MAIN" },
+    select: { address: { select: { latitude: true, longitude: true, region: true } } },
+  });
   const shippingResult = computePerStoreShipping({
+    warehouse: warehouse?.address ? {
+      latitude: warehouse.address.latitude == null ? null : Number(warehouse.address.latitude),
+      longitude: warehouse.address.longitude == null ? null : Number(warehouse.address.longitude),
+      region: warehouse.address.region ?? "chaguanas",
+    } : undefined,
     region: deliveryRegion,
     destinationLatitude,
     destinationLongitude,

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 
 import {
   getNotifications,
+  getUnreadCount,
   markAllNotificationsRead,
   markNotificationRead,
 } from "@/app/actions/notifications";
@@ -109,8 +110,7 @@ export default function NotificationBell({
   // Poll for new notifications every 30 seconds
   useEffect(() => {
     const interval = setInterval(async () => {
-      const data = await getNotifications();
-      const unread = data.filter((n) => !n.isRead).length;
+      const [data, unread] = await Promise.all([getNotifications(), getUnreadCount()]);
       setNotifications(data as Notification[]);
       setUnreadCount(unread);
     }, 30000);
@@ -120,9 +120,9 @@ export default function NotificationBell({
   async function handleOpen() {
     setOpen((prev) => !prev);
     if (!loaded) {
-      const data = await getNotifications();
+      const [data, count] = await Promise.all([getNotifications(), getUnreadCount()]);
       setNotifications(data as Notification[]);
-      setUnreadCount(data.filter((n) => !n.isRead).length);
+      setUnreadCount(count);
       setLoaded(true);
     }
   }

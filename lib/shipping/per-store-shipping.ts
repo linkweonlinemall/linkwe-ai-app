@@ -4,6 +4,7 @@ import { getShippingZone } from "@/lib/shipping/trinidad-zoning";
 export type PerStoreShippingInput = {
   /** Customer delivery region (checkout dropdown slug). Each store resolves its own zone by mode. */
   region: string;
+  warehouse?: { latitude: number | null; longitude: number | null; region: string };
   destinationLatitude?: number | null;
   destinationLongitude?: number | null;
   stores: Array<{
@@ -99,7 +100,19 @@ function validCoordinates(
  * Pure per-store shipping calculator. No DB or session — safe on server and client.
  */
 export function computePerStoreShipping(input: PerStoreShippingInput): PerStoreShippingResult {
-  const perStore = input.stores.map((store) => computeStoreShipping(input, store));
+  const physical = input.stores.filter((store) => !store.allItemsDigitalOrPickup);
+  const origin = input.warehouse ?? { latitude: null, longitude: null, region: "chaguanas" };
+  const consolidated = physical.length ? computeStoreShipping(input, {
+    ...physical[0], ...origin,
+    totalWeightLbs: physical.reduce((sum, store) => sum + store.totalWeightLbs, 0),
+  }) : null;
+  // Allocate the single customer charge for accounting; never charge once per vendor.
+  const perStore = input.stores.map((store) => ({
+    storeId: store.storeId, storeName: store.storeName, mode: "LINKWE" as const,
+    shippingMinor: store.storeId === physical[0]?.storeId ? consolidated!.shippingMinor : 0,
+    distanceKm: consolidated?.distanceKm ?? null, deliversToZone: true,
+    isDigitalOnly: store.isDigitalOnly,
+  }));
 
   const blockedStores = perStore
     .filter((row) => !row.deliversToZone)

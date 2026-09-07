@@ -108,6 +108,20 @@ export async function createProductOrderEarningsLedger(
   });
   if (existing) return;
 
+  const split = await tx.splitOrder.findUnique({ where: { id: input.splitOrderId }, select: { vendorInboundMethod: true, inboundShipmentId: true, inboundShipment: { select: { pickupFeeMinor: true } } } });
+  if (split?.vendorInboundMethod === "PICKUP_REQUESTED") {
+    const key = split.inboundShipmentId ? `collection:${split.inboundShipmentId}` : `collection:split:${input.splitOrderId}`;
+    await tx.vendorLedgerEntry.upsert({
+      where: { idempotencyKey: key }, update: {},
+      create: {
+        storeId: input.storeId, currency: "TTD", entryType: "DEBIT_ADJUSTMENT",
+        ledgerEntryType: "COURIER_PICKUP_FEE", amountMinor: split.inboundShipment?.pickupFeeMinor ?? 4000,
+        splitOrderId: input.splitOrderId, mainOrderId: input.mainOrderId,
+        idempotencyKey: key, description: "Collection to LinkWe warehouse", releasedAt: new Date(),
+      },
+    });
+  }
+
   const { grossMinor, commissionMinor, netMinor } = calculateEarningsMinor(
     input.subtotalMinor,
     "product",

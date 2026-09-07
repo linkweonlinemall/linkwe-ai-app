@@ -16,6 +16,9 @@ const AT_WAREHOUSE_OR_BEYOND: string[] = [
   "BUNDLED_FOR_DISPATCH",
   "DISPATCHED",
   "DELIVERED",
+  "COMPLETED",
+  "OUT_FOR_DELIVERY",
+  "READY_FOR_CUSTOMER_PICKUP",
 ];
 
 const DISPATCHED_OR_BEYOND: string[] = [
@@ -31,6 +34,9 @@ const PACKAGED_OR_BEYOND: string[] = [
   "BUNDLED_FOR_DISPATCH",
   "DISPATCHED",
   "DELIVERED",
+  "COMPLETED",
+  "OUT_FOR_DELIVERY",
+  "READY_FOR_CUSTOMER_PICKUP",
 ];
 
 export async function recalculateMainOrderStatus(mainOrderId: string): Promise<void> {

@@ -1,6 +1,6 @@
 import { BookingStatus, NotificationType } from "@prisma/client";
 
-import { createNotification } from "@/app/actions/notifications";
+import { createNotification } from "@/lib/notifications/create";
 import { calculateEarnings } from "@/lib/finance/commission";
 import { isBookingServiceEnded } from "@/lib/finance/booking-schedule";
 import { createVendorEarningsLedgerPair } from "@/lib/finance/release-earnings";

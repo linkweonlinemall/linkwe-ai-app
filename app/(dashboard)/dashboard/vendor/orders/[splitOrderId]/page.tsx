@@ -3,10 +3,9 @@ import type { StoreShippingMode } from "@prisma/client";
 import { redirect } from "next/navigation";
 
 import {
-  markReadyForCustomerPickup,
-  markReadyForLinkWe,
-  markShipped,
-  startPreparing,
+  markDigitalFulfilled,
+  chooseVendorDropoff,
+  chooseCourierPickup,
 } from "@/app/actions/fulfillment";
 import { getSession } from "@/lib/auth/session";
 import { calculateEarningsMinor, getCommissionRate } from "@/lib/finance/commission";
@@ -159,7 +158,7 @@ export default async function VendorOrderDetailPage({ params }: Props) {
 
   if (!splitOrder) redirect("/dashboard/vendor");
 
-  const shippingMode = splitOrder.store.shippingMode;
+  const shippingMode = "LINKWE" as StoreShippingMode;
   const fulfillment = splitOrder.mainOrder.shippingAddress ? "delivery" : "pickup";
   const badge = getStatusBadge(splitOrder.status);
   const splitRef = `SP-${splitOrder.id.slice(-8).toUpperCase()}`;
@@ -179,10 +178,8 @@ export default async function VendorOrderDetailPage({ params }: Props) {
       : 0;
   const netEarningsMinor = netAfterCommission - pickupFeeMinor;
 
-  const showStartPreparing = splitOrder.status === "AWAITING_VENDOR_ACTION";
-  const showMarkPickupReady = splitOrder.status === "PREPARING" && fulfillment === "pickup";
-  const showMarkShipped = splitOrder.status === "PREPARING" && shippingMode === "SELF" && fulfillment === "delivery";
-  const showMarkReadyForLinkWe = splitOrder.status === "PREPARING" && shippingMode === "LINKWE" && fulfillment === "delivery";
+  const digitalOnly = splitOrder.mainOrder.items.filter((i) => i.storeId === splitOrder.storeId).every((i) => i.product?.isDigital);
+  const showInboundChoice = !digitalOnly && ["AWAITING_VENDOR_ACTION", "PREPARING"].includes(splitOrder.status) && !splitOrder.vendorInboundMethod;
   const showPickupReadyPanel = splitOrder.status === "READY_FOR_CUSTOMER_PICKUP";
   const showShippedPanel = splitOrder.status === "SHIPPED";
   const showReadyForLinkWePanel = splitOrder.status === "READY_FOR_LINKWE";
@@ -229,7 +226,7 @@ export default async function VendorOrderDetailPage({ params }: Props) {
                   borderColor: fulfillment === "pickup" ? "#A7F3D0" : shippingMode === "SELF" ? "#FED7AA" : "#BFDBFE",
                 }}
               >
-                {fulfillment === "pickup" ? "Customer pickup" : shippingMode === "SELF" ? "You deliver this order" : "LinkWe delivers this order"}
+                {fulfillment === "pickup" ? "Customer pickup" : "Via LinkWe warehouse"}
               </span>
             </div>
           </div>
@@ -242,6 +239,17 @@ export default async function VendorOrderDetailPage({ params }: Props) {
             </a>
           </div>
         </div>
+
+        {digitalOnly && ["AWAITING_VENDOR_ACTION", "PREPARING"].includes(splitOrder.status) ? <form action={markDigitalFulfilled} className="mt-6 rounded-xl bg-white p-5"><input type="hidden" name="splitOrderId" value={splitOrder.id}/><p className="mb-3 text-sm">Digital order: provide the purchased content to the customer, then confirm fulfilment. No warehouse or collection fee applies.</p><button className="rounded-xl bg-[#D4450A] px-4 py-3 text-sm font-semibold text-white">Confirm digital order fulfilled</button></form> : null}
+        {showInboundChoice ? <section className="mt-6 rounded-2xl border border-orange-200 bg-orange-50 p-5">
+          <p className="text-xs font-bold uppercase tracking-widest text-orange-700">Warehouse handover</p>
+          <h2 className="mt-2 text-xl font-semibold">How will this order reach LinkWe?</h2>
+          <p className="mt-2 text-sm text-zinc-600">All physical orders come to our warehouse. We combine the customer’s items and arrange delivery with CSF Couriers.</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <form action={chooseVendorDropoff}><input type="hidden" name="splitOrderId" value={splitOrder.id}/><button className="min-h-20 w-full rounded-xl border border-zinc-200 bg-white p-4 text-left font-semibold">I’ll drop it off · Free<span className="mt-1 block text-xs font-normal text-zinc-500">Bring your labelled order to the LinkWe warehouse.</span></button></form>
+            <form action={chooseCourierPickup}><input type="hidden" name="splitOrderId" value={splitOrder.id}/><button className="min-h-20 w-full rounded-xl bg-[#D4450A] p-4 text-left font-semibold text-white">Collect my order · TTD 40<span className="mt-1 block text-xs font-normal text-white/80">Pack it first. TTD 40 will be deducted from this order’s earnings.</span></button></form>
+          </div>
+        </section> : splitOrder.vendorInboundMethod ? <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm">{splitOrder.vendorInboundMethod === "PICKUP_REQUESTED" ? "Collection requested. Staff will arrange CSF collection to our warehouse. TTD 40 is deducted from your earnings." : "Drop-off selected. Bring the labelled order to our warehouse; staff will confirm receipt. No collection fee."}</div> : null}
 
         <div
           data-tour="order-progress"
@@ -323,96 +331,10 @@ export default async function VendorOrderDetailPage({ params }: Props) {
               </div>
             </div>
 
-            {showStartPreparing ? (
-              <div
-                data-tour="order-fulfilment-action"
-                className="rounded-xl bg-white p-5 sm:p-6"
-                style={{ border: "1px solid var(--card-border)" }}
-              >
-                <h2 className="mb-2 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                  Fulfillment
-                </h2>
-                <p className="mb-4 text-sm text-zinc-600">
-                  Confirm you&apos;ve received this order and are packing it.
-                </p>
-                <form action={startPreparing}>
-                  <input type="hidden" name="splitOrderId" value={splitOrder.id} />
-                  <button
-                    type="submit"
-                    className="inline-flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 sm:w-auto"
-                    style={{ backgroundColor: SCARLET }}
-                  >
-                    Start preparing
-                  </button>
-                </form>
-              </div>
-            ) : null}
-
-            {showMarkShipped ? (
-              <div
-                data-tour="order-fulfilment-action"
-                className="rounded-xl bg-white p-5 sm:p-6"
-                style={{ border: "1px solid var(--card-border)" }}
-              >
-                <h2 className="mb-2 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                  Fulfillment
-                </h2>
-                <p className="mb-4 text-sm text-zinc-600">
-                  Mark when the order is out for delivery to the customer.
-                </p>
-                <form action={markShipped}>
-                  <input type="hidden" name="splitOrderId" value={splitOrder.id} />
-                  <button
-                    type="submit"
-                    className="inline-flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 sm:w-auto"
-                    style={{ backgroundColor: SCARLET }}
-                  >
-                    Mark as shipped
-                  </button>
-                </form>
-              </div>
-            ) : null}
-
-            {showMarkPickupReady ? (
-              <div data-tour="order-fulfilment-action" className="rounded-xl bg-white p-5 sm:p-6" style={{ border: "1px solid var(--card-border)" }}>
-                <h2 className="mb-2 text-sm font-semibold text-zinc-900">Local pickup</h2>
-                <p className="mb-4 text-sm text-zinc-600">Use this only after the order is packed and ready at your collection location.</p>
-                <form action={markReadyForCustomerPickup}>
-                  <input type="hidden" name="splitOrderId" value={splitOrder.id} />
-                  <button type="submit" className="inline-flex w-full items-center justify-center rounded-xl bg-[#D4450A] px-4 py-3 text-sm font-semibold text-white hover:opacity-90 sm:w-auto">Mark ready for customer pickup</button>
-                </form>
-              </div>
-            ) : null}
-
             {showPickupReadyPanel ? (
               <div data-tour="order-pickup-ready" className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
                 <h2 className="mb-2 text-sm font-semibold text-emerald-900">Ready for customer pickup</h2>
                 <p className="text-sm text-emerald-800">Keep the order secure until the customer collects it and confirms receipt using their LinkWe order page or the QR code.</p>
-              </div>
-            ) : null}
-
-            {showMarkReadyForLinkWe ? (
-              <div
-                data-tour="order-fulfilment-action"
-                className="rounded-xl bg-white p-5 sm:p-6"
-                style={{ border: "1px solid var(--card-border)" }}
-              >
-                <h2 className="mb-2 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                  Fulfillment
-                </h2>
-                <p className="mb-4 text-sm text-zinc-600">
-                  LinkWe will collect this order and handle delivery.
-                </p>
-                <form action={markReadyForLinkWe}>
-                  <input type="hidden" name="splitOrderId" value={splitOrder.id} />
-                  <button
-                    type="submit"
-                    className="inline-flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 sm:w-auto"
-                    style={{ backgroundColor: SCARLET }}
-                  >
-                    Mark ready for LinkWe pickup
-                  </button>
-                </form>
               </div>
             ) : null}
 

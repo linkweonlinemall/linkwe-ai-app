@@ -4,10 +4,6 @@ import type { MainOrderStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import {
-  getCourierPickupFeeLabel,
-  getCourierPickupFeeMinor,
-} from "@/lib/fulfillment/courier-pickup-rates";
 import { getSession } from "@/lib/auth/session";
 import { releaseSplitOrderEarnings } from "@/lib/finance/complete-order";
 import { createProductOrderEarningsLedger } from "@/lib/finance/release-earnings";
@@ -48,10 +44,12 @@ export async function completeOrders(orderIds: string[]): Promise<void> {
         data: { status: "COMPLETED" },
       });
 
-      const debitedPickupShipments = new Set<string>();
+
 
       for (const splitOrder of order.splitOrders) {
         if (splitOrder.earningsReleased) continue;
+        const claimed = await tx.splitOrder.updateMany({ where: { id: splitOrder.id, earningsReleased: false }, data: { earningsReleased: true, status: "COMPLETED", completedAt: new Date() } });
+        if (!claimed.count) continue;
 
         const plan = resolveVendorPlan(splitOrder.store.subscriptionPlan);
 
@@ -71,46 +69,7 @@ export async function completeOrders(orderIds: string[]): Promise<void> {
           data: { earningsReleased: true, status: "COMPLETED", completedAt: new Date() },
         });
 
-        if (splitOrder.vendorInboundMethod === "PICKUP_REQUESTED") {
-          let feeMinor = 0;
-          let description = "";
-          let shouldRecordPickup = true;
 
-          if (splitOrder.inboundShipmentId) {
-            if (debitedPickupShipments.has(splitOrder.inboundShipmentId)) {
-              shouldRecordPickup = false;
-            } else {
-              debitedPickupShipments.add(splitOrder.inboundShipmentId);
-              const ship = await tx.shipment.findUnique({
-                where: { id: splitOrder.inboundShipmentId },
-                select: { pickupFeeMinor: true, totalWeightLbs: true, region: true },
-              });
-              const region = splitOrder.store.region ?? ship?.region ?? "";
-              const w = ship?.totalWeightLbs ?? 1;
-              feeMinor = ship?.pickupFeeMinor ?? getCourierPickupFeeMinor(region, w);
-              description = getCourierPickupFeeLabel(region, w);
-            }
-          } else {
-            feeMinor = getCourierPickupFeeMinor(splitOrder.store.region ?? "", 1);
-            description = "Courier pickup fee deducted";
-          }
-
-          if (shouldRecordPickup && feeMinor > 0) {
-            await tx.vendorLedgerEntry.create({
-              data: {
-                storeId: splitOrder.storeId,
-                currency: "TTD",
-                entryType: "DEBIT_PLATFORM_FEE",
-                ledgerEntryType: "COURIER_PICKUP_FEE",
-                amountMinor: feeMinor,
-                splitOrderId: splitOrder.id,
-                splitOrderRef: splitOrder.id,
-                mainOrderId: orderId,
-                description,
-              },
-            });
-          }
-        }
       }
     });
   }
@@ -263,10 +222,9 @@ export async function updateOrderStatus(orderIds: string[], status: string): Pro
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/");
 
-  await prisma.mainOrder.updateMany({
-    where: { id: { in: orderIds } },
-    data: { status: status as MainOrderStatus },
-  });
+  if (status === "CANCELLED") { await cancelOrders(orderIds); return; }
+  if (status === "COMPLETED") { await completeOrders(orderIds); return; }
+  throw new Error("Use Warehouse & CSF to change fulfilment status. Cancellation and completion have their own checks.");
 
   revalidatePath("/dashboard/admin");
 }

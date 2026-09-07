@@ -1,6 +1,6 @@
 import { NotificationType } from "@prisma/client";
 
-import { createNotification } from "@/app/actions/notifications";
+import { createNotification } from "@/lib/notifications/create";
 import { BASE_URL } from "@/lib/email/resend";
 import { sendEmail } from "@/lib/email/send";
 import { earningsReleasedVendorEmail } from "@/lib/email/templates";
@@ -42,6 +42,7 @@ export async function releaseSplitOrderEarnings(
       storeId: true,
       subtotalMinor: true,
       shippingMinor: true,
+      vendorInboundMethod: true,
       earningsReleased: true,
       status: true,
       mainOrder: { select: { referenceNumber: true } },
@@ -67,12 +68,12 @@ export async function releaseSplitOrderEarnings(
   const earnings = calculateEarningsMinor(split.subtotalMinor, "product", plan);
   // LinkWe fulfils every delivered order. Shipping is not vendor revenue;
   // vendors can only offer free customer pickup.
-  const selfDeliveryMinor = 0;
+  const selfDeliveryMinor = split.vendorInboundMethod === "PICKUP_REQUESTED" ? -4000 : 0;
   const now = new Date();
 
-  await prisma.$transaction(async (tx) => {
-    await tx.splitOrder.update({
-      where: { id: splitOrderId },
+  const released = await prisma.$transaction(async (tx) => {
+    const claimed = await tx.splitOrder.updateMany({
+      where: { id: splitOrderId, earningsReleased: false, status: { in: ["DELIVERED", "COMPLETED"] } },
       data: {
         status: "COMPLETED",
         completedAt: now,
@@ -81,6 +82,7 @@ export async function releaseSplitOrderEarnings(
       },
     });
 
+    if (!claimed.count) return false;
     await createProductOrderEarningsLedger(tx, {
       storeId: split.storeId,
       splitOrderId: split.id,
@@ -96,7 +98,9 @@ export async function releaseSplitOrderEarnings(
       markedByUserId: markedCompleteBy === "SYSTEM" ? undefined : markedCompleteBy,
     });
 
+    return true;
   });
+  if (!released) return { ok: true as const };
 
   if (split.store.ownerId) {
     await createNotification({

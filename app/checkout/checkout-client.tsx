@@ -332,43 +332,11 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
       );
     }
 
-    const { perStore } = shippingBreakdown;
-    const deliveringStores = perStore.filter((row) => row.deliversToZone);
-
-    if (deliveringStores.length <= 1) {
-      const store = deliveringStores[0];
-      const amountMinor = store?.shippingMinor ?? 0;
-      return (
-        <div className="flex justify-between py-2 text-sm" style={{ color: "var(--text-secondary)" }}>
-          <span>{store?.isDigitalOnly ? "Digital delivery" : "Delivery"}</span>
-          <span className={store?.isDigitalOnly ? "font-semibold text-emerald-600" : undefined}>
-            {store?.isDigitalOnly ? "Free" : `TTD ${(amountMinor / 100).toFixed(2)}`}
-          </span>
-        </div>
-      );
-    }
-
     return (
-      <>
-        {deliveringStores.map((row) => (
-          <div
-            key={row.storeId}
-            className="flex justify-between py-1.5 text-sm"
-            style={{ color: "var(--text-secondary)" }}
-          >
-            <span className="min-w-0 pr-2">
-              {row.isDigitalOnly ? "Digital delivery" : `${row.storeName} delivery`}
-            </span>
-            <span
-              className={
-                row.isDigitalOnly ? "shrink-0 font-semibold text-emerald-600" : "shrink-0"
-              }
-            >
-              {row.isDigitalOnly ? "Free" : `TTD ${(row.shippingMinor / 100).toFixed(2)}`}
-            </span>
-          </div>
-        ))}
-      </>
+      <div className="flex justify-between gap-3 py-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+        <span>Combined delivery · all stores</span>
+        <span className="shrink-0">TTD {(shippingBreakdown.totalShippingMinor / 100).toFixed(2)}</span>
+      </div>
     );
   }
 
@@ -461,7 +429,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
                           onChange={() => setFulfillmentChoice("pickup")}
                           className="h-5 w-5 shrink-0 border-zinc-300"
                         />
-                        <span className="text-base font-medium text-zinc-800">Local pickup</span>
+                        <span className="text-base font-medium text-zinc-800">Warehouse pickup</span>
                       </label>
                     </div>
                   ) : null}
@@ -471,7 +439,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
                   ) : null}
 
                   {!anyDelivery && anyPickup ? (
-                    <p className="mt-4 text-base text-zinc-600">Local pickup at the vendor location</p>
+                    <p className="mt-4 text-base text-zinc-600">Pickup from the LinkWe warehouse after all vendor items arrive</p>
                   ) : null}
 
                   {!anyDelivery && !anyPickup ? (

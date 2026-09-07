@@ -31,12 +31,11 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Operations",
     items: [
-      { label: "Overview",  href: "/dashboard/admin?tab=overview",  tab: "overview",  icon: icon("M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z") },
+      { label: "Command centre",  href: "/dashboard/admin?tab=overview",  tab: "overview",  icon: icon("M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z") },
       { label: "Verification", href: "/dashboard/admin/verification", badgeKey: "verification", icon: icon("M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9 12l2 2 4-4") },
       { label: "Orders",    href: "/dashboard/admin?tab=orders",    tab: "orders", badgeKey: "orders", icon: icon("M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8") },
-      { label: "Managed Delivery", href: "/dashboard/admin?tab=linkwe-delivery", tab: "linkwe-delivery", icon: icon("M1 3h15v13H1zM16 8h4l3 3v5h-7V8zM5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z") },
-      { label: "Payouts", href: "/dashboard/admin?tab=payouts", tab: "payouts", badgeKey: "payouts", icon: icon("M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6") },
-      { label: "Tickets",   href: "/dashboard/admin?tab=tickets",   tab: "tickets",   icon: icon("M2 9a3 3 0 0 1 3-3h14a3 3 0 0 1 3 3v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V9zM6 12h.01M10 12h.01M2 14v3a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-3") },
+      { label: "Warehouse & CSF", href: "/dashboard/admin?tab=linkwe-delivery", tab: "linkwe-delivery", icon: icon("M1 3h15v13H1zM16 8h4l3 3v5h-7V8zM5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z") },
+      { label: "Finance", href: "/dashboard/admin?tab=payouts", tab: "payouts", badgeKey: "payouts", icon: icon("M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6") },
     ],
   },
   {
@@ -49,10 +48,8 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "People",
     items: [
-      { label: "Customers",    href: "/dashboard/admin?tab=customers", tab: "customers", icon: icon("M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z") },
-      { label: "Vendors",      href: "/dashboard/admin?tab=vendors",   tab: "vendors",   icon: icon("M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM9 22V12h6v10") },
       { label: "Messages",     href: "/dashboard/admin/messages",      icon: icon("M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z") },
-      { label: "Users",        href: "/dashboard/admin/users",         icon: icon("M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z") },
+      { label: "People & access",        href: "/dashboard/admin/users",         icon: icon("M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z") },
     ],
   },
   {
@@ -148,7 +145,7 @@ function MobileOperationsBar({
               {item.icon}
               {count > 0 ? <span className="absolute -right-2.5 -top-2 min-w-4 rounded-full bg-[#D4450A] px-1 text-center text-[8px] leading-4 text-white">{count > 9 ? "9+" : count}</span> : null}
             </span>
-            {item.label === "Verification" ? "Verify" : item.label}
+            {item.label === "Verification" ? "Verify" : item.label === "Command centre" ? "Home" : item.label}
           </Link>
         );
       })}
@@ -314,7 +311,7 @@ export default function AdminShell({ adminName, unreadCount, attentionCounts, ch
             />
           </Link>
           <span className="rounded-md bg-[#D4450A] px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white">
-            Admin
+            Operations
           </span>
         </div>
 
@@ -402,7 +399,7 @@ export default function AdminShell({ adminName, unreadCount, attentionCounts, ch
               LinkWe
             </Link>
             <span className="rounded-md bg-[#D4450A] px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white">
-              Admin
+              Operations
             </span>
           </div>
           <button

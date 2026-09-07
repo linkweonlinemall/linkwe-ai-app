@@ -211,6 +211,7 @@ export default function UserDetailPanel({ userId, onClose, onAction }: Props) {
                 </div>
               </div>
 
+              <a className="mb-4 inline-flex min-h-11 items-center rounded-xl bg-zinc-900 px-4 text-sm font-semibold text-white" href={`/dashboard/admin/records/user/${user.id}`}>Edit account details</a>
               {/* Account */}
               <Section title="Account">
                 <Row

@@ -6,7 +6,7 @@ import {
 } from "@prisma/client";
 import { NextResponse } from "next/server";
 
-import { createNotification } from "@/app/actions/notifications";
+import { createNotification } from "@/lib/notifications/create";
 import { releaseBookingEarnings } from "@/lib/finance/complete-booking";
 import { releaseSplitOrderEarnings } from "@/lib/finance/complete-order";
 import { releaseTicketOrderEarnings } from "@/lib/finance/release-ticket-earnings";

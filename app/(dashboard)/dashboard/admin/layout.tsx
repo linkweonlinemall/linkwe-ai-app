@@ -16,7 +16,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     prisma.user.findMany({ where: { role: "VENDOR", idVerificationStatus: "PENDING" }, select: { idDocumentUrl: true, selfieWithIdUrl: true, phone: true, bankDetails: { select: { bankName: true, accountName: true, accountNumber: true } }, storesOwned: { take: 1, select: { logoUrl: true, description: true } } } }),
     prisma.payoutRequest.count({ where: { status: "PENDING" } }),
     prisma.courierPayoutRequest.count({ where: { status: "PENDING" } }),
-    prisma.splitOrder.count({ where: { status: { in: ["AWAITING_VENDOR_ACTION", "READY_FOR_LINKWE", "AWAITING_COURIER_PICKUP"] } } }),
+    prisma.splitOrder.count({ where: { status: { in: ["AWAITING_VENDOR_ACTION", "READY_FOR_LINKWE", "AWAITING_COURIER_PICKUP", "VENDOR_PREPARING", "AT_WAREHOUSE", "PACKAGED"] } } }),
   ]);
   const payoutCount = vendorPayoutCount + courierPayoutCount;
   const verificationCount = verificationCandidates.filter((vendor) => getVendorReadiness({ idDocumentUrl: vendor.idDocumentUrl, selfieWithIdUrl: vendor.selfieWithIdUrl, phone: vendor.phone, bankDetails: vendor.bankDetails, store: vendor.storesOwned[0] ?? null }).ready).length;

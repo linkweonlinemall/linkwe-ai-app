@@ -391,7 +391,7 @@ export default function AdminProductsClient({
                           <option value="draft">draft</option>
                         </select>
                         <Link
-                          href={`/dashboard/vendor/products/${row.id}/edit`}
+                          href={`/dashboard/admin/records/product/${row.id}`}
                           target="_blank"
                           rel="noreferrer"
                           className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-700 hover:bg-zinc-50"
@@ -510,12 +510,12 @@ export default function AdminProductsClient({
                 Close
               </button>
               <Link
-                href={`/dashboard/vendor/products/${detail.id}/edit`}
+                href={`/dashboard/admin/records/product/${detail.id}`}
                 target="_blank"
                 rel="noreferrer"
                 className="rounded-lg bg-[#D4450A] px-4 py-2 text-sm font-medium text-white"
               >
-                Open in vendor editor
+                Edit product
               </Link>
             </div>
           </div>
