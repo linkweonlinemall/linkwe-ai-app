@@ -462,12 +462,19 @@ export default function OrdersTab() {
   const closedGroup = filtered
     .filter((o) => CLOSED_STATUSES.has(o.status))
     .sort((a, b) => sortOldest(a, b));
+  const pendingPaymentGroup = filtered
+    .filter((o) => o.status === "PENDING_PAYMENT")
+    .sort((a, b) => sortOldest(a, b, true));
 
   type TableItem =
     | { kind: "header"; label: string; sublabel?: string; color: string; bg: string; count: number }
     | RowMeta;
 
   const tableItems: TableItem[] = [];
+  if (pendingPaymentGroup.length > 0) {
+    tableItems.push({ kind: "header", label: "Pending payment — review required", color: "#B45309", bg: "#FFFBEB", count: pendingPaymentGroup.length });
+    pendingPaymentGroup.forEach((o) => tableItems.push(makeRowItem(o, false)));
+  }
   if (awaitingGroup.length > 0) {
     tableItems.push({
       kind: "header",
