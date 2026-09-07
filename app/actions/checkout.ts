@@ -221,7 +221,6 @@ export async function createPaymentIntent(
       purpose: "PRODUCT_ORDER",
       merchantOrderId,
       amountMinor: totalMinor,
-      email: session.email,
       userId: session.userId,
       targetId: order.id,
       mainOrderId: order.id,
