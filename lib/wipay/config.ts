@@ -1,7 +1,11 @@
 export type WiPayEnvironment = "sandbox" | "live";
 
 export function getWiPayEnvironment(): WiPayEnvironment {
-  return process.env.WIPAY_ENVIRONMENT === "live" ? "live" : "sandbox";
+  // Live charging requires an explicit second opt-in. This keeps a copied or
+  // stale production environment variable from accidentally charging cards.
+  return process.env.WIPAY_ENVIRONMENT === "live" && process.env.WIPAY_LIVE_ENABLED === "true"
+    ? "live"
+    : "sandbox";
 }
 
 export function getWiPayConfig() {
