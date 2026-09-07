@@ -2,21 +2,22 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { updateWarehouseOrder, getOperationsWorkspace } from "@/app/actions/admin-operations";
-import { completeAllDeliveredSplits, cancelOrders } from "@/app/actions/admin-orders";
-type Operation = Parameters<typeof updateWarehouseOrder>[0]["action"] | "complete" | "cancel";
+import { completeAllDeliveredSplits, cancelOrders, confirmPendingPayment } from "@/app/actions/admin-orders";
+type Operation = Parameters<typeof updateWarehouseOrder>[0]["action"] | "complete" | "cancel" | "confirm_payment";
 export default function OrderControls({ orderId, status, splits, onRefresh }: { orderId: string; status: string; splits: { id: string; referenceNumber: string | null; status: string; store: { name: string } }[]; onRefresh: () => void }) {
   const [action,setAction] = useState<Operation>("note"); const [splitId,setSplitId] = useState(splits[0]?.id ?? "");
   const [note,setNote] = useState(""); const [reference,setReference] = useState(""); const [bay,setBay] = useState(""); const [busy,setBusy] = useState(false);
   const [warehouses,setWarehouses] = useState<{ id: string; name: string }[]>([]); const [warehouseId,setWarehouseId] = useState("");
   useEffect(() => { if (action === "pack") getOperationsWorkspace().then(d => setWarehouses(d.warehouses)).catch(() => toast.error("Could not load warehouses")); },[action]);
   const input = "min-h-11 min-w-0 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm";
-  const actions: [Operation,string][] = [["note","Add staff note"],["prepare","Vendor preparing"],["receive","Receive vendor parcel → at warehouse"],["move_bay","Move parcel to another bay"],["book_collection","Record CSF collection booking"],["pack","Combine parcels → packed"],["pickup_ready","Ready for customer pickup"],["dispatch","Dispatch → shipped"],["deliver","Confirm delivery / customer pickup"],["complete","Complete delivered parcels & release earnings"],["cancel","Cancel order"]];
+  const actions: [Operation,string][] = [["note","Add staff note"],["confirm_payment","Confirm sandbox payment → paid"],["prepare","Vendor preparing"],["receive","Receive vendor parcel → at warehouse"],["move_bay","Move parcel to another bay"],["book_collection","Record CSF collection booking"],["pack","Combine parcels → packed"],["pickup_ready","Ready for customer pickup"],["dispatch","Dispatch → shipped"],["deliver","Confirm delivery / customer pickup"],["complete","Complete delivered parcels & release earnings"],["cancel","Cancel order"]];
   return <section className="my-4 rounded-2xl border border-orange-200 bg-orange-50/50 p-4"><h3 className="font-semibold">Manage order</h3><p className="my-2 text-xs text-zinc-500">Current status: {status.replaceAll("_"," ")}. Changes update the vendor parcels and customer order together.</p><form className="grid gap-3 sm:grid-cols-2" onSubmit={async e => {
     e.preventDefault();
     if (!window.confirm(`${actions.find(a => a[0] === action)?.[1]}?\n${note}\n${action === "complete" ? "This releases vendor earnings and cannot be undone here." : action === "cancel" ? "Refunds must be handled separately. Confirm the order should stop." : "This changes order records and may notify customers or vendors."}`)) return;
     setBusy(true); try {
       if (action === "cancel") { const r = await cancelOrders([orderId], note); if (!r.cancelled) throw new Error("This order cannot be cancelled after dispatch, delivery or payout. Review its current state."); }
       else if (action === "complete") { const r = await completeAllDeliveredSplits(orderId); if (!r.ok) throw new Error(r.error); if (!r.completed) throw new Error("No delivered parcels are awaiting completion."); }
+      else if (action === "confirm_payment") { const r = await confirmPendingPayment(orderId, note); if (!r.ok) throw new Error(r.error); }
       else { const r = await updateWarehouseOrder({ orderId, action, splitId, note, reference, bay: bay ? Number(bay) : undefined, warehouseId: warehouseId || warehouses[0]?.id }); if (!r.ok) throw new Error(r.error); }
       toast.success("Order updated"); setNote(""); onRefresh();
     } catch(e) { toast.error(e instanceof Error ? e.message : "Could not update order"); } finally { setBusy(false); }

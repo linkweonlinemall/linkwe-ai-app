@@ -7,6 +7,7 @@ import { cleanupAbandonedOrders, deleteAllOrders } from "@/app/actions/admin-del
 import UndoDeleteToast from "./undo-delete-toast";
 import {
   cancelOrders,
+  confirmPendingPayment,
   completeAllDeliveredSplits,
   completeSplitOrder,
   exportOrdersCSV,
@@ -19,6 +20,7 @@ type Order = Awaited<ReturnType<typeof getAdminOrders>>[number];
 type Stats = Awaited<ReturnType<typeof getAdminOrderStats>>;
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  PENDING_PAYMENT: { label: "Pending payment", color: "#B45309", bg: "#FFFBEB" },
   PAID: { label: "Order placed", color: "#1A7FB5", bg: "#EFF8FF" },
   PROCESSING: { label: "Processing", color: "#E8820C", bg: "#FFF7ED" },
   SHIPPED: { label: "Shipped", color: "#1A7FB5", bg: "#EFF8FF" },

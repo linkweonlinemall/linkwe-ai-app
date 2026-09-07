@@ -138,6 +138,25 @@ export async function updateOrderStatus(orderIds: string[], status: string): Pro
   throw new Error("Open Manage order for preparation, receipt, packing, dispatch and delivery. Those actions update the parcel records together.");
 }
 
+export async function confirmPendingPayment(orderId: string, note: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") redirect("/");
+  const reason = note.trim();
+  if (!reason) return { ok: false, error: "Enter a reason for confirming this payment." };
+  try {
+    await prisma.$transaction(async (tx) => {
+      const changed = await tx.mainOrder.updateMany({ where: { id: orderId, status: "PENDING_PAYMENT" }, data: { status: "PAID", updatedAt: new Date() } });
+      if (!changed.count) throw new Error("This order is no longer pending payment.");
+      await tx.orderDocument.create({ data: { mainOrderId: orderId, documentType: "OTHER", metadata: { kind: "admin_payment_confirmation", actorId: session.userId, actorName: session.fullName, note: reason } } });
+    });
+    revalidatePath("/dashboard/admin", "layout");
+    revalidatePath(`/orders/${orderId}`);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Could not confirm this payment." };
+  }
+}
+
 export async function exportOrdersCSV(orderIds: string[]): Promise<string> {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/");
@@ -198,7 +217,7 @@ export async function getAdminOrders(filters?: {
     where: {
       ...(filters?.status
         ? { status: filters.status }
-        : { status: { notIn: ["DRAFT", "PENDING_PAYMENT"] as MainOrderStatus[] } }),
+        : { status: { not: "DRAFT" } }),
       ...(filters?.search
         ? {
             OR: [
@@ -253,6 +272,7 @@ export async function getAdminOrderStats() {
   if (!session || session.role !== "ADMIN") redirect("/");
 
   const statuses: MainOrderStatus[] = [
+    "PENDING_PAYMENT",
     "PAID",
     "PROCESSING",
     "PARTIALLY_IN_HOUSE",
