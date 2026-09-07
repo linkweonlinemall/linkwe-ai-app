@@ -8,7 +8,8 @@ export async function getCurrentUser() {
 
   if (!session.userId) return null;
 
-  return prisma.user.findUnique({
+  const user = await prisma.user.findUnique({
     where: { id: session.userId },
   });
+  return user ? { ...user, role: session.role } : null;
 }

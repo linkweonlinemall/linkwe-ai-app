@@ -7,6 +7,7 @@ import { getAllConversations } from "@/app/actions/messages";
 import { assertDashboardRole } from "@/lib/auth/assert-role";
 import { getSession } from "@/lib/auth/session";
 import { formatConversationListTime } from "@/lib/messages/format-time";
+import MessageExport from "./message-export";
 
 export const metadata: Metadata = {
   title: "Messages · Admin",
@@ -41,13 +42,17 @@ export default async function AdminMessagesInboxPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mb-5">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div>
         <h1 className="text-xl font-semibold text-[#1C1C1A]">Messages</h1>
         <p className="mt-0.5 text-[13px] text-[#7c7b77]">
           All customer ↔ store conversations — {conversations.length} total
         </p>
+        </div>
+        <a href="/api/admin/messages/export" className="inline-flex min-h-10 items-center rounded-xl bg-[#D4450A] px-4 py-2 text-sm font-semibold text-white hover:opacity-90">Export messages CSV</a>
       </div>
 
+      <MessageExport/>
       {conversations.length === 0 ? (
         <div className={`rounded-[12px] bg-white px-6 py-10 text-center ${CARD_BORDER}`}>
           <IconMessage

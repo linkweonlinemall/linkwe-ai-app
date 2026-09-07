@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import type { UserRole } from "@prisma/client";
+import { hashPassword } from "@/lib/auth/password";
 
 const ADMIN_USERS_PATH = "/dashboard/admin/users";
 
@@ -39,7 +40,7 @@ export async function getAdminUsers({
           ],
         }
       : {}),
-    ...(role && role !== "all" ? { role: role.toUpperCase() as UserRole } : {}),
+    ...(role && role !== "all" ? { role: { in: role.toUpperCase() === "CUSTOMER" ? ["CUSTOMER", "COURIER"] as UserRole[] : [role.toUpperCase() as UserRole] } } : {}),
   };
 
   const [users, total] = await Promise.all([
@@ -48,7 +49,8 @@ export async function getAdminUsers({
       skip,
       take: PAGE_SIZE,
       orderBy: { createdAt: "desc" },
-      include: {
+      select: {
+        id: true, fullName: true, email: true, role: true, createdAt: true, suspended: true,
         storesOwned: {
           select: {
             id: true,
@@ -64,7 +66,7 @@ export async function getAdminUsers({
   ]);
 
   return {
-    users,
+    users: users.map(u => ({ ...u, role: u.role === "COURIER" ? "CUSTOMER" as const : u.role })),
     total,
     totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
   };
@@ -77,7 +79,9 @@ export async function getAdminUserDetail(userId: string) {
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    include: {
+    select: {
+      id: true, fullName: true, email: true, phone: true, role: true, region: true, vehicleType: true,
+      createdAt: true, updatedAt: true, suspended: true, idVerificationStatus: true, idDocumentUrl: true,
       storesOwned: {
         include: {
           _count: { select: { products: true, splitOrders: true } },
@@ -151,7 +155,28 @@ export async function getAdminUserDetail(userId: string) {
     };
   }
 
-  return { user, vendorStats, customerStats, courierStats };
+  return { user: { ...user, role: user.role === "COURIER" ? "CUSTOMER" as const : user.role }, vendorStats, customerStats, courierStats };
+}
+
+export async function createAdminUser(input: { fullName: string; email: string; phone?: string; password: string; role: string }) {
+  const actor = await assertAdmin();
+  const fullName = input.fullName?.trim();
+  const email = input.email?.trim().toLowerCase();
+  if (!fullName || fullName.length > 150 || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) return { error: "Enter a name and valid email address." };
+  if (!["CUSTOMER", "VENDOR", "ADMIN"].includes(input.role)) return { error: "Choose Customer, Vendor or Admin." };
+  if (typeof input.password !== "string" || input.password.length < 12 || Buffer.byteLength(input.password, "utf8") > 72) return { error: "Use a password of at least 12 characters and no more than 72 bytes." };
+  const phone = input.phone?.trim() || null;
+  if (phone && !/^[+\d\s()-]{7,30}$/.test(phone)) return { error: "Enter a valid phone number." };
+  try {
+    const passwordHash = await hashPassword(input.password);
+    const user = await prisma.$transaction(async tx => {
+      const created = await tx.user.create({ data: { fullName, email, phone, passwordHash, role: input.role as UserRole }, select: { id: true } });
+      await tx.notification.create({ data: { userId: actor.userId, type: "GENERAL", title: "Account created", body: `${actor.fullName} created ${fullName} (${input.role}).`, linkUrl: `/dashboard/admin/records/user/${created.id}` } });
+      return created;
+    });
+    revalidatePath(ADMIN_USERS_PATH);
+    return { id: user.id };
+  } catch { return { error: "Could not create this account. Check whether the email or phone is already registered." }; }
 }
 
 // ─── Single mutations ─────────────────────────────────────────────────────────

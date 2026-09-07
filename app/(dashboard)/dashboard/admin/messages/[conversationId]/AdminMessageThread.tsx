@@ -7,6 +7,7 @@ import { IconArrowLeft } from "@tabler/icons-react";
 
 import { adminSendMessage } from "@/app/actions/messages";
 import { toastFormError } from "@/lib/feedback/toasts";
+import MessageExport from "../message-export";
 
 export type AdminThreadMessage = {
   id: string;
@@ -68,6 +69,7 @@ export default function AdminMessageThread({
       </header>
 
       <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-2 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4">
+        <MessageExport conversationId={conversationId}/>
         {initialMessages.length === 0 ? (
           <p className="py-10 text-center text-[13px] text-[#7c7b77]">
             No messages in this conversation yet.

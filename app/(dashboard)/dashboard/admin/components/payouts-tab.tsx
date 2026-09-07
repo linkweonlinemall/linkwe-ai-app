@@ -67,6 +67,7 @@ function PayoutCard({
   const [error, setError] = useState<string | null>(null);
 
   async function handleComplete() {
+    if (!window.confirm("Complete this delivered parcel and release vendor earnings? This cannot be undone here.")) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -236,6 +237,7 @@ export default function PayoutsTab() {
   }
 
   async function handleBulkComplete() {
+    if (!window.confirm("Complete the selected delivered parcels and release vendor earnings? This cannot be undone here.")) return;
     setBulkProcessing(true);
     setBulkSummary(null);
     let released = 0;

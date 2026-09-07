@@ -64,6 +64,7 @@ const ledger = load(path.resolve('lib/finance/release-earnings.ts'), { '@/lib/pr
     orderDocument: { create: async () => ({}) },
     shippingBundle: { create: async ({ data }) => { const b = { id: 'bundle', ...data }; state.shippingBundles.push(b); return b; }, update: async ({ where, data }) => Object.assign(state.shippingBundles.find(b => b.id === where.id), data) },
     shipment: { create: async ({ data }) => ({ id: 'shipment', ...data }), updateMany: async () => ({ count: 1 }) },
+    dockBay: { updateMany: async () => ({ count: 1 }) },
   };
   const ops = load(path.resolve('app/actions/admin-operations.ts'), {
     '@/lib/auth/session': { getSession: async () => ({ role, userId: 'admin', fullName: 'Staff' }) },

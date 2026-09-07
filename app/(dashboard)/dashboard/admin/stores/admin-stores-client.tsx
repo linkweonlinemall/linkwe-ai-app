@@ -73,6 +73,7 @@ export default function AdminStoresClient({
 
   async function handleBulkStatus(status: string) {
     if (selected.length === 0) return;
+    if (!window.confirm(`Change ${selected.length} stores to ${status}? This affects their storefront access.`)) return;
     setLoading("bulk");
     for (const id of selected) {
       await updateStoreStatus(id, status);
@@ -106,6 +107,7 @@ export default function AdminStoresClient({
   }
 
   async function handleStatusChange(id: string, status: string) {
+    if (!window.confirm(`Change this store to ${status}? This affects storefront access.`)) return;
     if (loading === "bulk") return;
     setLoading(id);
     await updateStoreStatus(id, status);
@@ -114,6 +116,7 @@ export default function AdminStoresClient({
   }
 
   async function handlePlanChange(id: string, plan: string) {
+    if (!window.confirm(`Change this vendor’s package to ${plan}? This can change fees and plan access.`)) return;
     if (loading === "bulk") return;
     setLoading(id);
     await setVendorPlan(id, plan);
@@ -122,6 +125,7 @@ export default function AdminStoresClient({
   }
 
   async function handleChargeSubscription(id: string) {
+    if (!window.confirm("Charge the vendor’s subscription from their earnings balance? This deducts money if eligible.")) return;
     if (loading === "bulk") return;
     setLoading(id);
     const result = await chargeVendorSubscriptionFromBalance(id);

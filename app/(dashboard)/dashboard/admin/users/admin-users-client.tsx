@@ -129,6 +129,7 @@ export default function AdminUsersClient({
   // ── Single row actions ───────────────────────────────────────────────────────
 
   function handleSuspend(userId: string, isSuspended: boolean) {
+    if (!window.confirm(`${isSuspended ? "Restore" : "Suspend"} this user’s access?`)) return;
     setActionError(null);
     startTransition(async () => {
       const res = isSuspended ? await unsuspendUser(userId) : await suspendUser(userId);
@@ -153,6 +154,7 @@ export default function AdminUsersClient({
   const selectedIds = Array.from(selected);
 
   function handleBulkSuspend() {
+    if (!window.confirm("Suspend the selected users? They will lose access to their accounts.")) return;
     startTransition(async () => {
       await bulkSuspendUsers(selectedIds);
       setSelected(new Set());
@@ -175,7 +177,6 @@ export default function AdminUsersClient({
     { value: "all",      label: "All" },
     { value: "CUSTOMER", label: "Customers" },
     { value: "VENDOR",   label: "Vendors" },
-    { value: "COURIER",  label: "Couriers" },
     { value: "ADMIN",    label: "Admins" },
   ];
 

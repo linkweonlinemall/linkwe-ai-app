@@ -7,6 +7,7 @@ export function getRoleDashboardPath(role?: string | null) {
     return "/dashboard/admin";
   }
 
+  if (role === "COURIER") return "/dashboard/customer";
   return `/dashboard/${role.toLowerCase()}`;
 }
 

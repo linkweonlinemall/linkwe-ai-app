@@ -1,4 +1,5 @@
 "use client";
+import OrderControls from "./order-controls";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 
@@ -227,7 +228,9 @@ function VendorFulfillmentCards({
           key={split.id}
           split={split}
           onComplete={async () => {
-            await completeSplitOrder(split.id);
+            if (!window.confirm("Complete this delivered vendor order and release its earnings?")) return;
+            const result = await completeSplitOrder(split.id);
+            if (!result.ok) { window.alert(result.error); return; }
             onRefresh();
           }}
         />
@@ -548,6 +551,7 @@ export default function OrdersTab() {
           <button
             type="button"
             onClick={async () => {
+              if (!window.confirm("Delete abandoned unpaid checkouts older than one hour? This also clears their customers’ saved carts.")) return;
               setCleaning(true);
               const result = await cleanupAbandonedOrders();
               setCleanedCount(result.deleted);
@@ -565,7 +569,7 @@ export default function OrdersTab() {
           ) : null}
           <button
             type="button"
-            onClick={() => setPendingDelete(true)}
+            onClick={() => { if (window.prompt("This deletes ALL orders, vendor/courier ledgers, payouts, reviews and carts. Type DELETE ALL to continue.") === "DELETE ALL") setPendingDelete(true); }}
             className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50"
           >
             Delete all
@@ -642,7 +646,9 @@ export default function OrdersTab() {
                 setBulkProcessing(true);
                 try {
                   for (const order of filtered.filter((o) => selectedRows.has(o.id))) {
-                    await completeAllDeliveredSplits(order.id);
+                    if (!window.confirm("Complete delivered parcels and release vendor earnings?")) return;
+                    const result = await completeAllDeliveredSplits(order.id);
+                    if (!result.ok) { window.alert(result.error); return; }
                   }
                   setRefreshKey((k) => k + 1);
                 } finally {
@@ -897,6 +903,7 @@ export default function OrdersTab() {
                       {/* Vendor fulfillment */}
                       <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Vendor fulfillment</p>
                       <div className="mb-4">
+                        <OrderControls orderId={row.id} status={row.status} splits={row.splitOrders} onRefresh={() => setRefreshKey(k => k + 1)}/>
                         <VendorFulfillmentCards
                           splits={row.splitOrders}
                           onRefresh={() => setRefreshKey((k) => k + 1)}
@@ -1138,7 +1145,8 @@ export default function OrdersTab() {
                                 <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
                                   Vendor fulfillment
                                 </p>
-                                <VendorFulfillmentCards
+                                <OrderControls orderId={row.id} status={row.status} splits={row.splitOrders} onRefresh={() => setRefreshKey(k => k + 1)}/>
+                        <VendorFulfillmentCards
                                   splits={row.splitOrders}
                                   onRefresh={() => setRefreshKey((k) => k + 1)}
                                 />

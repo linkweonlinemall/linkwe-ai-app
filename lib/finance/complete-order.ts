@@ -97,6 +97,7 @@ export async function releaseSplitOrderEarnings(
           : "Order completed",
       markedByUserId: markedCompleteBy === "SYSTEM" ? undefined : markedCompleteBy,
     });
+    await tx.orderDocument.create({ data: { mainOrderId: split.mainOrderId, documentType: "OTHER", metadata: { kind: "warehouse_audit", action: "complete_and_release_earnings", actorId: markedCompleteBy, actorName: markedCompleteBy === "SYSTEM" ? "Automatic completion" : "Staff", splitId: split.id, note: "Delivered vendor order completed; earnings released." } } });
 
     return true;
   });

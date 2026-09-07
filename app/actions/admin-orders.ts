@@ -6,76 +6,16 @@ import { redirect } from "next/navigation";
 
 import { getSession } from "@/lib/auth/session";
 import { releaseSplitOrderEarnings } from "@/lib/finance/complete-order";
-import { createProductOrderEarningsLedger } from "@/lib/finance/release-earnings";
-import { resolveVendorPlan } from "@/lib/finance/vendor-plan";
 import { recalculateMainOrderStatus } from "@/lib/fulfillment/order-status";
 import { prisma } from "@/lib/prisma";
+import { releaseBays } from "@/lib/fulfillment/bays";
+import { escapeCsvCell } from "@/lib/csv/escape-cell";
 
 export async function completeOrders(orderIds: string[]): Promise<void> {
-  const session = await getSession();
-  if (!session || session.role !== "ADMIN") redirect("/");
-
-  for (const orderId of orderIds) {
-    const order = await prisma.mainOrder.findUnique({
-      where: { id: orderId },
-      select: {
-        id: true,
-        status: true,
-        splitOrders: {
-          select: {
-            id: true,
-            storeId: true,
-            subtotalMinor: true,
-            vendorInboundMethod: true,
-            inboundShipmentId: true,
-            store: { select: { region: true, subscriptionPlan: true } },
-            earningsReleased: true,
-          },
-        },
-      },
-    });
-
-    if (!order) continue;
-    if (order.status !== "CUSTOMER_RECEIVED") continue;
-
-    await prisma.$transaction(async (tx) => {
-      await tx.mainOrder.update({
-        where: { id: orderId },
-        data: { status: "COMPLETED" },
-      });
-
-
-
-      for (const splitOrder of order.splitOrders) {
-        if (splitOrder.earningsReleased) continue;
-        const claimed = await tx.splitOrder.updateMany({ where: { id: splitOrder.id, earningsReleased: false }, data: { earningsReleased: true, status: "COMPLETED", completedAt: new Date() } });
-        if (!claimed.count) continue;
-
-        const plan = resolveVendorPlan(splitOrder.store.subscriptionPlan);
-
-        await createProductOrderEarningsLedger(tx, {
-          storeId: splitOrder.storeId,
-          splitOrderId: splitOrder.id,
-          mainOrderId: orderId,
-          subtotalMinor: splitOrder.subtotalMinor,
-          plan,
-          ledgerEntryType: "ORDER_REVENUE",
-          idempotencyKey: `split:${splitOrder.id}:ORDER_REVENUE`,
-          description: "Revenue from completed order — customer confirmed receipt",
-        });
-
-        await tx.splitOrder.update({
-          where: { id: splitOrder.id },
-          data: { earningsReleased: true, status: "COMPLETED", completedAt: new Date() },
-        });
-
-
-      }
-    });
-  }
-
-  revalidatePath("/dashboard/admin");
-  revalidatePath("/orders");
+  const session=await getSession();
+  if(session?.role !== "ADMIN") redirect("/");
+  if(orderIds.length>100) throw new Error("Choose no more than 100 orders.");
+  for(const id of orderIds) { const result=await completeAllDeliveredSplits(id); if(!result.ok) throw new Error(result.error); }
 }
 
 export async function completeSplitOrder(
@@ -113,6 +53,7 @@ export async function completeSplitOrder(
   }
 
   await recalculateMainOrderStatus(split.mainOrderId);
+  await prisma.mainOrder.updateMany({ where: { id: split.mainOrderId, status: { in: ["CUSTOMER_RECEIVED", "DELIVERED"] }, splitOrders: { every: { status: "COMPLETED" } } }, data: { status: "COMPLETED" } });
 
   revalidatePath("/dashboard/admin");
   revalidatePath(`/orders/${split.mainOrderId}`);
@@ -150,83 +91,51 @@ export async function completeAllDeliveredSplits(
   return { ok: true, completed: splits.length };
 }
 
-const CANCELLABLE_MAIN_STATUSES: MainOrderStatus[] = ["PAID", "PROCESSING"];
+const CANCELLABLE_MAIN_STATUSES: MainOrderStatus[] = ["PAID", "PROCESSING", "PARTIALLY_IN_HOUSE", "READY_TO_SHIP", "PACKING_COMPLETE"];
 
-const TERMINAL_SPLIT_STATUSES = ["DELIVERED", "COMPLETED", "CANCELLED"] as const;
-
-export async function cancelOrders(
-  orderIds: string[],
-): Promise<{ cancelled: number; skipped: number }> {
+export async function cancelOrders(orderIds: string[], reason = "Cancelled by administrator"): Promise<{ cancelled: number; skipped: number }> {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/");
-
-  const ids = orderIds.map((id) => id.trim()).filter(Boolean);
+  if (!reason.trim() || reason.length > 2000 || orderIds.length > 100) throw new Error("Supply a reason and no more than 100 orders.");
+  const ids = [...new Set(orderIds.map(id => id.trim()).filter(Boolean))];
   let cancelled = 0;
-  let skipped = 0;
-
   for (const id of ids) {
-    const order = await prisma.mainOrder.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        status: true,
-        splitOrders: {
-          select: { id: true, status: true, earningsReleased: true },
-        },
-      },
+    const changed = await prisma.$transaction(async tx => {
+      const claim = await tx.mainOrder.updateMany({ where: { id, status: { in: CANCELLABLE_MAIN_STATUSES } }, data: { updatedAt: new Date() } });
+      if (!claim.count) return false;
+      const order = await tx.mainOrder.findUniqueOrThrow({ where: { id }, include: { splitOrders: true } });
+      if (order.splitOrders.some(s => s.earningsReleased || ["DELIVERED", "COMPLETED", "OUT_FOR_DELIVERY", "DISPATCHED", "SHIPPED"].includes(s.status))) return false;
+      await tx.mainOrder.update({ where: { id }, data: { status: "CANCELLED" } });
+      await tx.splitOrder.updateMany({ where: { mainOrderId: id }, data: { status: "CANCELLED", autoCompleteAt: null } });
+      await releaseBays(tx, order.splitOrders.map(s => s.id));
+      await tx.orderDocument.create({ data: { mainOrderId: id, documentType: "OTHER", metadata: { kind: "warehouse_audit", action: "cancel", actorId: session.userId, actorName: session.fullName, note: reason } } });
+      await tx.notification.create({ data: { userId: order.buyerId, type: "ORDER_STATUS_UPDATED", title: "Order cancelled", body: "Your order has been cancelled. Contact LinkWe for any payment refund arrangements.", linkUrl: `/orders/${id}` } });
+      return true;
     });
-
-    if (!order) {
-      skipped += 1;
-      continue;
-    }
-
-    const isCancellable = CANCELLABLE_MAIN_STATUSES.includes(order.status);
-    const hasReleasedEarnings = order.splitOrders.some((s) => s.earningsReleased);
-
-    if (!isCancellable || hasReleasedEarnings) {
-      skipped += 1;
-      continue;
-    }
-
-    await prisma.$transaction(async (tx) => {
-      await tx.mainOrder.update({
-        where: { id: order.id },
-        data: { status: "CANCELLED" },
-      });
-
-      for (const split of order.splitOrders) {
-        if (
-          !TERMINAL_SPLIT_STATUSES.includes(
-            split.status as (typeof TERMINAL_SPLIT_STATUSES)[number],
-          )
-        ) {
-          await tx.splitOrder.update({
-            where: { id: split.id },
-            data: { status: "CANCELLED" },
-          });
-        }
-      }
-    });
-
-    cancelled += 1;
+    if (changed) cancelled++;
   }
-
-  revalidatePath("/dashboard/admin");
-  revalidatePath("/orders");
-
-  return { cancelled, skipped };
+  revalidatePath("/dashboard/admin", "layout");
+  revalidatePath("/dashboard/vendor", "layout");
+  revalidatePath("/orders", "layout");
+  return { cancelled, skipped: ids.length - cancelled };
 }
 
 export async function updateOrderStatus(orderIds: string[], status: string): Promise<void> {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/");
-
-  if (status === "CANCELLED") { await cancelOrders(orderIds); return; }
-  if (status === "COMPLETED") { await completeOrders(orderIds); return; }
-  throw new Error("Use Warehouse & CSF to change fulfilment status. Cancellation and completion have their own checks.");
-
-  revalidatePath("/dashboard/admin");
+  if (status === "CANCELLED") {
+    const result = await cancelOrders(orderIds);
+    if (result.skipped) throw new Error(`${result.cancelled} cancelled; ${result.skipped} could not be cancelled in their current state.`);
+    return;
+  }
+  if (status === "COMPLETED") {
+    for (const id of orderIds) {
+      const result = await completeAllDeliveredSplits(id);
+      if (!result.ok) throw new Error(result.error);
+    }
+    return;
+  }
+  throw new Error("Open Manage order for preparation, receipt, packing, dispatch and delivery. Those actions update the parcel records together.");
 }
 
 export async function exportOrdersCSV(orderIds: string[]): Promise<string> {
@@ -267,7 +176,7 @@ export async function exportOrdersCSV(orderIds: string[]): Promise<string> {
         o.region ?? "",
         o.items.map((i) => `${i.quantity}x ${i.titleSnapshot}`).join(" | "),
         new Date(o.createdAt).toLocaleDateString("en-TT"),
-      ].join(","),
+      ].map(escapeCsvCell).join(","),
     )
     .join("\n");
 

@@ -125,6 +125,7 @@ export default function UserDetailPanel({ userId, onClose, onAction }: Props) {
 
   function handleSuspend() {
     if (!data) return;
+    if (!window.confirm(`${data.user.suspended ? "Restore" : "Suspend"} this user’s access?`)) return;
     const { user } = data;
     setActionError(null);
     startTransition(async () => {
@@ -319,17 +320,6 @@ export default function UserDetailPanel({ userId, onClose, onAction }: Props) {
                   <Row label="Bookings made" value={customerStats.totalBookings} />
                   <Row label="On-demand requests" value={customerStats.onDemandRequests} />
                   <Row label="Reviews written" value={customerStats.reviewsWritten} />
-                </Section>
-              )}
-
-              {/* ── COURIER: Basic info ── */}
-              {user.role === "COURIER" && (
-                <Section title="Courier Info">
-                  {user.region && <Row label="Region" value={user.region} />}
-                  {user.vehicleType && <Row label="Vehicle type" value={user.vehicleType} />}
-                  <div className="py-3 text-center text-xs text-zinc-400">
-                    Detailed courier stats coming soon.
-                  </div>
                 </Section>
               )}
 

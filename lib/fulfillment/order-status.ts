@@ -67,7 +67,9 @@ export async function recalculateMainOrderStatus(mainOrderId: string): Promise<v
   const allPackagedOrBeyond = statuses.every((s) => PACKAGED_OR_BEYOND.includes(s));
   const allAwaitingVendorAction = statuses.every((s) => s === "AWAITING_VENDOR_ACTION");
 
-  if (allDelivered) {
+  if (statuses.every(s => s === "COMPLETED")) {
+    newStatus = "COMPLETED";
+  } else if (allDelivered) {
     newStatus = "DELIVERED";
   } else if (allDispatchedOrBeyond) {
     newStatus = "SHIPPED";

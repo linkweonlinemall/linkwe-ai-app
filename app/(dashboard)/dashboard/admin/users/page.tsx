@@ -4,6 +4,7 @@ import { getAdminUsers } from "@/app/actions/admin-users";
 import { assertDashboardRole } from "@/lib/auth/assert-role";
 import { getSession } from "@/lib/auth/session";
 import AdminUsersClient from "./admin-users-client";
+import CreateUser from "./create-user";
 
 type Search = Record<string, string | string[] | undefined>;
 
@@ -39,6 +40,7 @@ export default async function AdminUsersPage({
         </p>
       </div>
 
+      <CreateUser/>
       <AdminUsersClient
         users={users}
         total={total}

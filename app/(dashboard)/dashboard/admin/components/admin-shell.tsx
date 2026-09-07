@@ -41,6 +41,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Catalog",
     items: [
+      { label: "Services", href: "/dashboard/admin/services", icon: icon("M12 3v18M3 12h18M5 5l14 14M5 19L19 5") },
       { label: "Products", href: "/dashboard/admin/products", icon: icon("M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0") },
       { label: "Stores",   href: "/dashboard/admin/stores",   icon: icon("M3 21h18M5 21V8l9-6 9 6v13M9 21v-6h6v6") },
     ],
@@ -55,6 +56,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "System",
     items: [
+      { label: "Admin guide", href: "/dashboard/admin/guide", icon: icon("M4 4h16v16H4zM8 8h8M8 12h8M8 16h5") },
       { label: "Settings", href: "/dashboard/admin/settings", icon: icon("M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z") },
     ],
   },

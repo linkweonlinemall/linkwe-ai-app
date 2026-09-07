@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { alertOperations } from "@/lib/fulfillment/admin-alerts";
 import { getOrderAutoCompleteAt } from "@/lib/finance/complete-order";
 import { recalculateMainOrderStatus } from "@/lib/fulfillment/order-status";
+import { assignBay, releaseBays } from "@/lib/fulfillment/bays";
 
 async function requireAdmin() {
   const session = await getSession();
@@ -20,7 +21,7 @@ export async function getOperationsWorkspace() {
       where: { status: { notIn: ["DRAFT", "PENDING_PAYMENT", "CANCELLED", "REFUNDED", "COMPLETED", "CUSTOMER_RECEIVED"] } },
       orderBy: { createdAt: "asc" }, take: 150,
       select: {
-        id: true, referenceNumber: true, status: true, createdAt: true, shippingMinor: true, region: true,
+        id: true, referenceNumber: true, status: true, createdAt: true, updatedAt: true, shippingMinor: true, region: true,
         buyer: { select: { fullName: true, email: true } },
         shippingAddress: { select: { line1: true, line2: true, city: true, phone: true, latitude: true, longitude: true } },
         items: { select: { titleSnapshot: true, quantity: true, weightLbs: true, priceMinor: true, storeId: true, product: { select: { isDigital: true } } } },
@@ -44,7 +45,7 @@ export type OperationsWorkspace = {
   updatedAt: string; verification: number; payouts: number;
   warehouses: { id: string; name: string; address: { line1: string; city: string; phone: string | null; latitude: string | number | null; longitude: string | number | null } | null }[];
   orders: {
-    id: string; referenceNumber: string | null; status: string; createdAt: string; shippingMinor: number; region: string;
+    id: string; referenceNumber: string | null; status: string; createdAt: string; updatedAt: string; shippingMinor: number; region: string;
     buyer: { fullName: string | null; email: string };
     shippingAddress: { line1: string; line2: string | null; city: string; phone: string | null; latitude: string | number | null; longitude: string | number | null } | null;
     items: { titleSnapshot: string; quantity: number; weightLbs: number; priceMinor: number; storeId: string; product: { isDigital: boolean } | null }[];
@@ -57,9 +58,9 @@ export type OperationsWorkspace = {
   }[];
 };
 
-export async function updateWarehouseOrder(input: { orderId: string; action: "receive" | "book_collection" | "pack" | "dispatch" | "deliver" | "pickup_ready" | "note"; splitId?: string; reference?: string; note?: string; warehouseId?: string; bay?: number }) {
+export async function updateWarehouseOrder(input: { orderId: string; action: "prepare" | "receive" | "move_bay" | "book_collection" | "pack" | "dispatch" | "deliver" | "pickup_ready" | "note"; splitId?: string; reference?: string; note?: string; warehouseId?: string; bay?: number; expectedUpdatedAt?: string }) {
   const admin = await requireAdmin();
-  if (!input.orderId || !["receive", "book_collection", "pack", "dispatch", "deliver", "pickup_ready", "note"].includes(input.action)) return { ok: false, error: "Choose a valid operation." };
+  if (!input.orderId || !["prepare", "receive", "move_bay", "book_collection", "pack", "dispatch", "deliver", "pickup_ready", "note"].includes(input.action)) return { ok: false, error: "Choose a valid operation." };
   const reference = (input.reference ?? "").trim();
   const note = (input.note ?? "").trim();
   if (reference.length > 120 || note.length > 2000) return { ok: false, error: "Reference or note is too long." };
@@ -67,19 +68,29 @@ export async function updateWarehouseOrder(input: { orderId: string; action: "re
   try {
     await prisma.$transaction(async (tx) => {
       // Serialize all staff operations for the same customer order.
-      await tx.mainOrder.update({ where: { id: input.orderId }, data: { updatedAt: new Date() } });
+      if (input.expectedUpdatedAt) {
+        const claimed = await tx.mainOrder.updateMany({ where: { id: input.orderId, updatedAt: new Date(input.expectedUpdatedAt) }, data: { updatedAt: new Date() } });
+        if (!claimed.count) throw new Error("This order changed after the preview. Refresh and review the action again.");
+      } else await tx.mainOrder.update({ where: { id: input.orderId }, data: { updatedAt: new Date() } });
       const order = await tx.mainOrder.findUniqueOrThrow({ where: { id: input.orderId }, include: { splitOrders: true, items: { include: { product: { select: { isDigital: true } } } }, shippingBundles: { include: { shipment: true } } } });
       if (["DRAFT", "PENDING_PAYMENT", "CANCELLED", "REFUNDED", "COMPLETED", "CUSTOMER_RECEIVED"].includes(order.status)) throw new Error("This order is not available for warehouse processing.");
       const physical = order.splitOrders.filter((split) => order.items.some((item) => item.storeId === split.storeId && !item.product?.isDigital));
       const split = physical.find((s) => s.id === input.splitId);
-      if (input.action === "book_collection") {
+      if (input.action === "prepare") {
+        if (!split || !["AWAITING_VENDOR_ACTION", "PREPARING"].includes(split.status)) throw new Error("Choose a vendor order awaiting preparation.");
+        await tx.splitOrder.update({ where: { id: split.id }, data: { status: "VENDOR_PREPARING" } });
+      } else if (input.action === "book_collection") {
         if (!split?.inboundShipmentId || split.vendorInboundMethod !== "PICKUP_REQUESTED" || split.status !== "AWAITING_COURIER_PICKUP") throw new Error("This order is not awaiting a collection booking.");
         if (!reference) throw new Error("Enter the CSF reference after placing the collection request in their portal.");
         await tx.shipment.update({ where: { id: split.inboundShipmentId }, data: { trackingNumber: reference, carrier: "CSF Couriers", shipmentStatus: "READY_FOR_PICKUP" } });
         await tx.splitOrder.update({ where: { id: split.id }, data: { status: "COURIER_ASSIGNED" } });
+      } else if (input.action === "move_bay") {
+        if (!split || !["AT_WAREHOUSE", "PACKAGED", "READY_FOR_CUSTOMER_PICKUP"].includes(split.status) || !input.bay) throw new Error("Choose a parcel in the warehouse and a destination bay.");
+        await assignBay(tx, split.id, input.bay);
       } else if (input.action === "receive") {
-        if (!split || !["VENDOR_PREPARING", "AWAITING_COURIER_PICKUP", "COURIER_ASSIGNED", "COURIER_PICKED_UP", "VENDOR_DROPPED_OFF", "READY_FOR_LINKWE"].includes(split.status)) throw new Error("This vendor order is not awaiting warehouse receipt.");
+        if (!split || !["AWAITING_VENDOR_ACTION", "PREPARING", "VENDOR_PREPARING", "AWAITING_COURIER_PICKUP", "COURIER_ASSIGNED", "COURIER_PICKED_UP", "VENDOR_DROPPED_OFF", "READY_FOR_LINKWE"].includes(split.status)) throw new Error("This vendor order is not awaiting warehouse receipt.");
         await tx.splitOrder.update({ where: { id: split.id }, data: { status: "AT_WAREHOUSE", warehouseReceivedAt: new Date(), bayNumber: input.bay ?? null } });
+        if (input.bay) await assignBay(tx, split.id, input.bay);
         if (split.inboundShipmentId) await tx.shipment.update({ where: { id: split.inboundShipmentId }, data: { shipmentStatus: "DELIVERED_TO_WAREHOUSE", deliveredAt: new Date() } });
         await tx.notification.create({ data: { userId: (await tx.store.findUniqueOrThrow({ where: { id: split.storeId }, select: { ownerId: true } })).ownerId, type: "ORDER_STATUS_UPDATED", title: "Order received at LinkWe warehouse", body: split.referenceNumber ?? split.id, linkUrl: `/dashboard/vendor/orders/${split.id}` } });
         if (physical.every((s) => s.id === split.id || s.warehouseReceivedAt)) await alertOperations(tx, "Customer order ready to combine", `${order.referenceNumber ?? order.id}: all vendor parcels have arrived.`);
@@ -103,12 +114,14 @@ export async function updateWarehouseOrder(input: { orderId: string; action: "re
         await tx.shipment.create({ data: { shippingBundleId: bundle.id, carrier: "CSF Couriers", trackingNumber: reference, status: "OUT_FOR_DELIVERY", type: "OUTBOUND_DELIVERY" } });
         await tx.shippingBundle.update({ where: { id: bundle.id }, data: { status: "SHIPPED", releasedAt: new Date() } });
         await tx.splitOrder.updateMany({ where: { id: { in: physical.map((s) => s.id) } }, data: { status: "OUT_FOR_DELIVERY" } });
+        await releaseBays(tx, physical.map((s) => s.id));
         await tx.notification.create({ data: { userId: order.buyerId, type: "ORDER_STATUS_UPDATED", title: "Your combined order is on its way", body: `CSF Couriers reference: ${reference}`, linkUrl: `/orders/${order.id}` } });
       } else if (input.action === "deliver") {
         if (!note) throw new Error("Record delivery confirmation from CSF before marking delivered.");
-        if (!physical.length || !physical.every((s) => s.status === "OUT_FOR_DELIVERY")) throw new Error("Dispatch the combined order first.");
+        if (!physical.length || !physical.every((s) => s.status === "OUT_FOR_DELIVERY" || (!order.shippingAddressId && s.status === "READY_FOR_CUSTOMER_PICKUP"))) throw new Error("Dispatch the combined order or make it ready for warehouse pickup first.");
         const now = new Date();
         await tx.splitOrder.updateMany({ where: { id: { in: physical.map((s) => s.id) } }, data: { status: "DELIVERED", deliveredAt: now, autoCompleteAt: getOrderAutoCompleteAt(now) } });
+        await releaseBays(tx, physical.map(s => s.id));
         await tx.shipment.updateMany({ where: { shippingBundleId: { in: order.shippingBundles.map((b) => b.id) }, type: "OUTBOUND_DELIVERY" }, data: { status: "DELIVERED", deliveredAt: now } });
         await tx.notification.create({ data: { userId: order.buyerId, type: "ORDER_STATUS_UPDATED", title: "Your order has been delivered", body: "Please confirm receipt from your order page.", linkUrl: `/orders/${order.id}` } });
       } else if (!note) throw new Error("Enter a staff note.");

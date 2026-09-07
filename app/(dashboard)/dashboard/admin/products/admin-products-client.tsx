@@ -117,6 +117,7 @@ export default function AdminProductsClient({
   const runBulk = async (status: AdminProductStatus) => {
     const ids = [...selected];
     if (ids.length === 0) return;
+    if (!window.confirm(`Change ${ids.length} products to ${status}? This changes storefront availability.`)) return;
     setError(null);
     startTransition(async () => {
       await bulkUpdateProductStatus(ids, status);
@@ -137,6 +138,7 @@ export default function AdminProductsClient({
   };
 
   const quickStatus = (id: string, next: AdminProductStatus) => {
+    if (!window.confirm(`Change this product to ${next}? This changes storefront availability.`)) return;
     setError(null);
     startTransition(async () => {
       await updateProductStatus(id, next);
@@ -392,7 +394,7 @@ export default function AdminProductsClient({
                         </select>
                         <Link
                           href={`/dashboard/admin/records/product/${row.id}`}
-                          target="_blank"
+                          target="_self"
                           rel="noreferrer"
                           className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-700 hover:bg-zinc-50"
                         >
@@ -511,7 +513,7 @@ export default function AdminProductsClient({
               </button>
               <Link
                 href={`/dashboard/admin/records/product/${detail.id}`}
-                target="_blank"
+                target="_self"
                 rel="noreferrer"
                 className="rounded-lg bg-[#D4450A] px-4 py-2 text-sm font-medium text-white"
               >

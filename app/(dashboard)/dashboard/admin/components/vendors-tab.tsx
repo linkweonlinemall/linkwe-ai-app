@@ -277,7 +277,7 @@ export default function VendorsTab() {
               ) : null}
               <button
                 type="button"
-                onClick={() => setPendingDeletePayouts(true)}
+                onClick={() => { if (window.confirm("Delete all payout records? This permanently removes financial history.")) setPendingDeletePayouts(true); }}
                 className="ml-auto rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50"
               >
                 Clear all payouts
