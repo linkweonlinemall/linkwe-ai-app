@@ -1,6 +1,7 @@
-import type { MainOrderStatus } from "@prisma/client";
+import { NotificationType, type MainOrderStatus } from "@prisma/client";
 
 import { getOrderAutoCompleteAt } from "@/lib/finance/complete-order";
+import { createNotification } from "@/lib/notifications/create";
 import { prisma } from "@/lib/prisma";
 
 const TERMINAL_STATUSES: MainOrderStatus[] = [
@@ -42,7 +43,12 @@ const PACKAGED_OR_BEYOND: string[] = [
 export async function recalculateMainOrderStatus(mainOrderId: string): Promise<void> {
   const mainOrder = await prisma.mainOrder.findUnique({
     where: { id: mainOrderId },
-    select: { status: true },
+    select: {
+      status: true,
+      buyerId: true,
+      referenceNumber: true,
+      shippingAddressId: true,
+    },
   });
 
   if (!mainOrder) return;
@@ -90,6 +96,52 @@ export async function recalculateMainOrderStatus(mainOrderId: string): Promise<v
       where: { id: mainOrderId },
       data: { status: newStatus },
     });
+
+    const trackingCopy: Partial<
+      Record<MainOrderStatus, { title: string; body: string }>
+    > = {
+      PROCESSING: {
+        title: "Your order is being prepared",
+        body: "Your vendors are preparing their portions of the order.",
+      },
+      PARTIALLY_IN_HOUSE: {
+        title: "Part of your order has reached LinkWe",
+        body: "We are still waiting for the remaining vendor parcels.",
+      },
+      READY_TO_SHIP: {
+        title: "All parcels have reached LinkWe",
+        body: "Your vendor parcels are ready to be combined.",
+      },
+      PACKING_COMPLETE: mainOrder.shippingAddressId
+        ? {
+            title: "Your combined order is packed",
+            body: "Your order is ready for dispatch.",
+          }
+        : {
+            title: "Your order is ready for pickup",
+            body: "All vendor parcels are combined and ready at LinkWe.",
+          },
+      SHIPPED: {
+        title: "Your combined order is on its way",
+        body: "Open your order to view the latest delivery status.",
+      },
+      DELIVERED: {
+        title: "Your order has been delivered",
+        body: "Please confirm receipt from your order page.",
+      },
+    };
+    const message = trackingCopy[newStatus];
+    if (message) {
+      await createNotification({
+        userId: mainOrder.buyerId,
+        type: NotificationType.ORDER_STATUS_UPDATED,
+        title: message.title,
+        body: mainOrder.referenceNumber
+          ? `${message.body} Order #${mainOrder.referenceNumber}.`
+          : message.body,
+        linkUrl: `/orders/${mainOrderId}`,
+      });
+    }
   }
 
   if (newStatus === "DELIVERED") {
