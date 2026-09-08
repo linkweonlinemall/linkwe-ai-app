@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyWiPayResponseHash } from "@/lib/wipay/payments";
 import { fulfillWiPayAttempt } from "@/lib/payments/fulfill-wipay-attempt";
 import { failWiPayAttempt } from "@/lib/payments/fail-wipay-attempt";
+import type { WiPayEnvironment } from "@/lib/wipay/config";
 
 export const runtime = "nodejs";
 
@@ -21,10 +22,16 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/checkout?payment=invalid", request.url));
   }
 
+  const providerData = attempt.providerData as { environment?: unknown } | null;
+  const recordedEnvironment: WiPayEnvironment | undefined =
+    providerData?.environment === "sandbox" || providerData?.environment === "live"
+      ? providerData.environment
+      : undefined;
   const hasValidHash = verifyWiPayResponseHash({
     transactionId,
     originalAmountMinor: attempt.amountMinor,
     receivedHash: hash,
+    environment: recordedEnvironment,
   });
   if (!hasValidHash) {
     return NextResponse.redirect(new URL("/checkout?payment=invalid", request.url));

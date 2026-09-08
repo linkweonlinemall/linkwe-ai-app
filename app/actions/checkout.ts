@@ -17,6 +17,7 @@ import { failWiPayAttempt } from "@/lib/payments/fail-wipay-attempt";
 import { normalizeTTPhone } from "@/lib/phone";
 import { parseCheckoutFields, validateCheckoutResponses, type CheckoutResponses } from "@/lib/checkout/custom-fields";
 import { saveGalleryUpload } from "@/lib/uploads/save-gallery-upload";
+import { isAdminPaymentTestMode } from "@/lib/admin/payment-test-mode";
 
 export async function uploadCheckoutResponseFile(formData: FormData): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   const session = await getSession();
@@ -141,6 +142,10 @@ export async function createPaymentIntent(
 
   const { subtotalMinor, totalShippingMinor: shippingMinor, zone, pricingLines } = shipping;
   const totalMinor = subtotalMinor + shippingMinor;
+  const paymentEnvironment =
+    session.role === "ADMIN" && (await isAdminPaymentTestMode(session.userId))
+      ? "sandbox" as const
+      : undefined;
 
   const recentPending = await prisma.mainOrder.findFirst({
     where: {
@@ -224,6 +229,9 @@ export async function createPaymentIntent(
       userId: session.userId,
       targetId: order.id,
       mainOrderId: order.id,
+      providerData: paymentEnvironment
+        ? { environment: paymentEnvironment, adminTest: true }
+        : undefined,
     },
   });
 
@@ -235,7 +243,7 @@ export async function createPaymentIntent(
       email: session.email,
       responseUrl: `${BASE_URL}/api/payments/wipay/return`,
       data: { purpose: "PRODUCT_ORDER", targetId: order.id },
-    });
+    }, paymentEnvironment);
   } catch (e) {
     console.error(e);
     const message = e instanceof Error ? e.message : "Payment setup failed";

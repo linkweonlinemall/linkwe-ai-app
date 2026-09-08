@@ -10,6 +10,7 @@ import { recalculateMainOrderStatus } from "@/lib/fulfillment/order-status";
 import { prisma } from "@/lib/prisma";
 import { releaseBays } from "@/lib/fulfillment/bays";
 import { escapeCsvCell } from "@/lib/csv/escape-cell";
+import { fulfillProductOrder } from "@/lib/payments/fulfill-product-order";
 
 export async function completeOrders(orderIds: string[]): Promise<void> {
   const session=await getSession();
@@ -144,15 +145,46 @@ export async function confirmPendingPayment(orderId: string, note: string): Prom
   const reason = note.trim();
   if (!reason) return { ok: false, error: "Enter a reason for confirming this payment." };
   try {
+    const order = await prisma.mainOrder.findUnique({
+      where: { id: orderId },
+      select: {
+        buyerId: true,
+        status: true,
+        paymentAttempts: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { id: true, providerData: true },
+        },
+      },
+    });
+    if (!order || order.status !== "PENDING_PAYMENT") throw new Error("This order is no longer pending payment.");
+    const providerData = order.paymentAttempts[0]?.providerData as { environment?: unknown } | null;
+    if (providerData?.environment !== "sandbox") {
+      throw new Error("Manual payment confirmation is restricted to Test Lab sandbox orders.");
+    }
+
+    // Use the same fulfilment path as a verified WiPay callback. This creates
+    // vendor split orders, adjusts stock, clears the cart and sends notifications.
+    await fulfillProductOrder(orderId, order.buyerId);
+
     await prisma.$transaction(async (tx) => {
-      const changed = await tx.mainOrder.updateMany({ where: { id: orderId, status: "PENDING_PAYMENT" }, data: { status: "PAID", updatedAt: new Date() } });
-      if (!changed.count) throw new Error("This order is no longer pending payment.");
-      const order = await tx.mainOrder.findUniqueOrThrow({ where: { id: orderId }, select: { referenceNumber: true, splitOrders: { select: { store: { select: { ownerId: true, name: true } } } } } });
-      await tx.orderDocument.create({ data: { mainOrderId: orderId, documentType: "OTHER", metadata: { kind: "admin_payment_confirmation", actorId: session.userId, actorName: session.fullName, note: reason } } });
-      const ownerIds = [...new Set(order.splitOrders.map((split) => split.store.ownerId))];
-      for (const ownerId of ownerIds) {
-        await tx.notification.create({ data: { userId: ownerId, type: "ORDER_STATUS_UPDATED", title: "Paid order ready for fulfilment", body: `${order.referenceNumber ?? orderId}: payment confirmed. Review your vendor order and choose the delivery method.`, linkUrl: "/dashboard/vendor/orders" } });
-      }
+      await tx.paymentAttempt.updateMany({
+        where: { mainOrderId: orderId, status: "PENDING" },
+        data: { status: "SUCCEEDED", paidAt: new Date() },
+      });
+      await tx.orderDocument.create({
+        data: {
+          mainOrderId: orderId,
+          documentType: "OTHER",
+          metadata: {
+            kind: "admin_payment_confirmation",
+            actorId: session.userId,
+            actorName: session.fullName,
+            environment: "sandbox",
+            note: reason,
+          },
+        },
+      });
     });
     revalidatePath("/dashboard/admin", "layout");
     revalidatePath("/dashboard/vendor/orders", "page");
@@ -243,6 +275,12 @@ export async function getAdminOrders(filters?: {
       shippingMinor: true,
       region: true,
       createdAt: true,
+      shippingAddressId: true,
+      paymentAttempts: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { status: true, providerData: true },
+      },
       buyer: {
         select: { fullName: true, email: true },
       },

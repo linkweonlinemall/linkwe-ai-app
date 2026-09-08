@@ -4,8 +4,8 @@ export function getWiPayEnvironment(): WiPayEnvironment {
   return process.env.WIPAY_ENVIRONMENT === "live" ? "live" : "sandbox";
 }
 
-export function getWiPayConfig() {
-  const environment = getWiPayEnvironment();
+export function getWiPayConfig(environmentOverride?: WiPayEnvironment) {
+  const environment = environmentOverride ?? getWiPayEnvironment();
   const baseUrl = environment === "live"
     ? "https://tt.wipayfinancial.com"
     : "https://ttsb.wipayfinancial.com";

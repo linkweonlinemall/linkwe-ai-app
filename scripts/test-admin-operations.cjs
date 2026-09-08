@@ -126,6 +126,43 @@ async function main() {
   await recalc.recalculateMainOrderStatus('o');assert.equal(statusStore.status,'COMPLETED');
   console.log('PASS: exports deny non-admin access; all completed parcels complete the customer order.');
 
+  const savedWiPayEnvironment=process.env.WIPAY_ENVIRONMENT;
+  const savedWiPayAccount=process.env.WIPAY_ACCOUNT_NUMBER;
+  const savedWiPayKey=process.env.WIPAY_API_KEY;
+  process.env.WIPAY_ENVIRONMENT='live';process.env.WIPAY_ACCOUNT_NUMBER='live-account';process.env.WIPAY_API_KEY='live-key';
+  try {
+    const config=load('lib/wipay/config.ts');
+    assert.equal(config.getWiPayConfig().environment,'live');
+    assert.equal(config.getWiPayConfig('sandbox').baseUrl,'https://ttsb.wipayfinancial.com');
+    assert.equal(config.getWiPayConfig('sandbox').accountNumber,'1234567890');
+    const payments=load('lib/wipay/payments.ts',{'@/lib/wipay/config':config});
+    const crypto=require('node:crypto');
+    const transactionId='sandbox-transaction';const amountMinor=1250;
+    const sandboxHash=crypto.createHash('md5').update(`${transactionId}12.50123`).digest('hex');
+    assert.equal(payments.verifyWiPayResponseHash({transactionId,originalAmountMinor:amountMinor,receivedHash:sandboxHash,environment:'sandbox'}),true);
+    assert.equal(payments.verifyWiPayResponseHash({transactionId,originalAmountMinor:amountMinor,receivedHash:sandboxHash,environment:'live'}),false);
+  } finally {
+    if(savedWiPayEnvironment===undefined) delete process.env.WIPAY_ENVIRONMENT;else process.env.WIPAY_ENVIRONMENT=savedWiPayEnvironment;
+    if(savedWiPayAccount===undefined) delete process.env.WIPAY_ACCOUNT_NUMBER;else process.env.WIPAY_ACCOUNT_NUMBER=savedWiPayAccount;
+    if(savedWiPayKey===undefined) delete process.env.WIPAY_API_KEY;else process.env.WIPAY_API_KEY=savedWiPayKey;
+  }
+  console.log('PASS: per-admin sandbox payments use sandbox credentials and callback hashing while the site remains live.');
+
+  let fulfilledOrder=null;let paymentMarked=false;let auditCreated=false;
+  const adminOrders=load('app/actions/admin-orders.ts',{
+    '@/lib/auth/session':{getSession:async()=>({role:'ADMIN',userId:'admin',fullName:'Admin'})},
+    '@/lib/prisma':{prisma:{mainOrder:{findUnique:async()=>({buyerId:'buyer',status:'PENDING_PAYMENT',paymentAttempts:[{id:'attempt',providerData:{environment:'sandbox'}}]})},$transaction:async fn=>fn({paymentAttempt:{updateMany:async()=>{paymentMarked=true;}},orderDocument:{create:async()=>{auditCreated=true;}}})}},
+    '@/lib/payments/fulfill-product-order':{fulfillProductOrder:async(id,buyer)=>{fulfilledOrder={id,buyer};}},
+    '@/lib/finance/complete-order':{releaseSplitOrderEarnings:async()=>({ok:true})},
+    '@/lib/fulfillment/order-status':{recalculateMainOrderStatus:async()=>{}},
+    '@/lib/fulfillment/bays':{releaseBays:async()=>{}},
+    '@/lib/csv/escape-cell':{escapeCsvCell:String},
+    'next/cache':{revalidatePath:()=>{}},'next/navigation':{redirect:()=>{throw Error('redirect');}},
+  });
+  assert.equal((await adminOrders.confirmPendingPayment('order','Test Lab approval')).ok,true);
+  assert.deepEqual(fulfilledOrder,{id:'order',buyer:'buyer'});assert.equal(paymentMarked,true);assert.equal(auditCreated,true);
+  console.log('PASS: Admin sandbox confirmation invokes the real vendor-order fulfilment path and records payment audit state.');
+
   if(process.env.ADMIN_AI_SMOKE==='1') {
     const fixture={updatedAt:new Date().toISOString(),verification:0,payouts:0,warehouses:[],orders:[{id:'test-order',referenceNumber:'TEST-ORDER',status:'READY_TO_SHIP',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),buyer:{fullName:'Example customer'},splitOrders:[{id:'test-split',referenceNumber:'TEST-PARCEL-1',status:'AT_WAREHOUSE',bayNumber:1,warehouseReceivedAt:new Date().toISOString(),store:{name:'Example vendor'}}]}]};
     const assistant=load('app/actions/admin-assistant.ts',{'@/lib/auth/session':{getSession:async()=>({role:'ADMIN',userId:'test-admin'})},'@/app/actions/admin-operations':{getOperationsWorkspace:async()=>fixture,updateWarehouseOrder:async()=>{throw Error('Smoke test must not execute mutations');}},'@/app/actions/admin-bays':{getDockBayData:async()=>({bays:[{bayNumber:4,occupants:[],blocked:false}],unassigned:[]})},'@/lib/security/rate-limit':{checkRateLimit:async()=>({allowed:true})},jose});

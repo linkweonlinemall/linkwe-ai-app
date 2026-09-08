@@ -7,7 +7,6 @@ import { cleanupAbandonedOrders, deleteAllOrders } from "@/app/actions/admin-del
 import UndoDeleteToast from "./undo-delete-toast";
 import {
   cancelOrders,
-  confirmPendingPayment,
   completeAllDeliveredSplits,
   completeSplitOrder,
   exportOrdersCSV,
@@ -18,6 +17,11 @@ import type { MainOrderStatus } from "@prisma/client";
 
 type Order = Awaited<ReturnType<typeof getAdminOrders>>[number];
 type Stats = Awaited<ReturnType<typeof getAdminOrderStats>>;
+
+function isSandboxPayment(order: Order): boolean {
+  const data = order.paymentAttempts[0]?.providerData as { environment?: unknown } | null;
+  return data?.environment === "sandbox";
+}
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   PENDING_PAYMENT: { label: "Pending payment", color: "#B45309", bg: "#FFFBEB" },
@@ -912,7 +916,7 @@ export default function OrdersTab() {
                       {/* Vendor fulfillment */}
                       <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Vendor fulfillment</p>
                       <div className="mb-4">
-                        <OrderControls orderId={row.id} status={row.status} splits={row.splitOrders} onRefresh={() => setRefreshKey(k => k + 1)}/>
+                        <OrderControls orderId={row.id} status={row.status} splits={row.splitOrders} sandboxPayment={isSandboxPayment(row)} hasShippingAddress={Boolean(row.shippingAddressId)} onRefresh={() => setRefreshKey(k => k + 1)}/>
                         <VendorFulfillmentCards
                           splits={row.splitOrders}
                           onRefresh={() => setRefreshKey((k) => k + 1)}
@@ -1154,7 +1158,7 @@ export default function OrdersTab() {
                                 <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
                                   Vendor fulfillment
                                 </p>
-                                <OrderControls orderId={row.id} status={row.status} splits={row.splitOrders} onRefresh={() => setRefreshKey(k => k + 1)}/>
+                                <OrderControls orderId={row.id} status={row.status} splits={row.splitOrders} sandboxPayment={isSandboxPayment(row)} hasShippingAddress={Boolean(row.shippingAddressId)} onRefresh={() => setRefreshKey(k => k + 1)}/>
                         <VendorFulfillmentCards
                                   splits={row.splitOrders}
                                   onRefresh={() => setRefreshKey((k) => k + 1)}

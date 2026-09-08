@@ -1,6 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 
-import { getWiPayConfig } from "@/lib/wipay/config";
+import { getWiPayConfig, type WiPayEnvironment } from "@/lib/wipay/config";
 
 type CreateHostedPaymentInput = {
   merchantOrderId: string;
@@ -24,8 +24,9 @@ export function formatWiPayAmount(amountMinor: number): string {
 
 export async function createWiPayHostedPayment(
   input: CreateHostedPaymentInput,
+  environmentOverride?: WiPayEnvironment,
 ): Promise<CreateHostedPaymentResponse> {
-  const config = getWiPayConfig();
+  const config = getWiPayConfig(environmentOverride);
   const body = new URLSearchParams({
     account_number: config.accountNumber,
     country_code: "TT",
@@ -65,8 +66,9 @@ export function verifyWiPayResponseHash(input: {
   transactionId: string;
   originalAmountMinor: number;
   receivedHash: string;
+  environment?: WiPayEnvironment;
 }): boolean {
-  const { apiKey } = getWiPayConfig();
+  const { apiKey } = getWiPayConfig(input.environment);
   const expected = createHash("md5")
     .update(`${input.transactionId}${formatWiPayAmount(input.originalAmountMinor)}${apiKey}`)
     .digest();
