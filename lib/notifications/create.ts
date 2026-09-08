@@ -1,5 +1,6 @@
 import type { NotificationType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { sendPushNotification } from "@/lib/notifications/push";
 
 export async function createNotification(input: {
   userId: string;
@@ -18,8 +19,13 @@ export async function createNotification(input: {
         linkUrl: input.linkUrl ?? null,
       },
     });
+
+    try {
+      await sendPushNotification(input);
+    } catch (error) {
+      console.error("Push notification delivery failed", error);
+    }
   } catch {
     // Never crash the app over a failed notification
   }
 }
-
