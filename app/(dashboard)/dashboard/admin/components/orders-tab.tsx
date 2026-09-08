@@ -247,8 +247,6 @@ function VendorFulfillmentCards({
 
 // ─── Fulfillment derived data ─────────────────────────────────────────────────
 
-const RECEIVED_STATUSES: Set<string> = new Set(["DELIVERED", "COMPLETED"]);
-
 const AWAITING_VENDOR_STATUSES: Set<string> = new Set([
   "PAID",
   "PROCESSING",
@@ -270,7 +268,7 @@ const CLOSED_STATUSES: Set<string> = new Set([
 const STALE_THRESHOLD_MS = 48 * 60 * 60 * 1000; // 48 hours
 
 function receivedCount(order: Order): number {
-  return order.splitOrders.filter((s) => RECEIVED_STATUSES.has(s.status)).length;
+  return order.splitOrders.filter((s) => s.warehouseReceivedAt != null).length;
 }
 
 function fullyReceived(order: Order): boolean {

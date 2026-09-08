@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import type { StoreShippingMode } from "@prisma/client";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import {
@@ -185,6 +186,7 @@ export default async function VendorOrderDetailPage({ params }: Props) {
   const showReadyForLinkWePanel = splitOrder.status === "READY_FOR_LINKWE";
   const showOutForDeliveryPanel = splitOrder.status === "OUT_FOR_DELIVERY";
   const showDeliveredPanel = splitOrder.status === "DELIVERED" || splitOrder.status === "COMPLETED";
+  const warehouseHasReceived = ["AT_WAREHOUSE", "PACKAGED", "BUNDLED_FOR_DISPATCH", "OUT_FOR_DELIVERY", "DISPATCHED", "SHIPPED", "DELIVERED", "COMPLETED", "READY_FOR_CUSTOMER_PICKUP"].includes(splitOrder.status);
   const receiptQrDataUrl = await generateOrderReceiptQRCodeDataURL(splitOrder.mainOrderId, splitOrder.id);
   const deliveryLat = splitOrder.mainOrder.shippingAddress?.latitude ? Number(splitOrder.mainOrder.shippingAddress.latitude) : null;
   const deliveryLng = splitOrder.mainOrder.shippingAddress?.longitude ? Number(splitOrder.mainOrder.shippingAddress.longitude) : null;
@@ -201,13 +203,13 @@ export default async function VendorOrderDetailPage({ params }: Props) {
   return (
     <div className="bg-[#f5f5f5] pb-24 sm:pb-0">
       <div className="max-w-4xl mx-auto px-6 py-6">
-        <a
+        <Link
           href="/dashboard/vendor/orders"
           className="mb-4 inline-flex items-center gap-1 text-xs hover:underline"
           style={{ color: "var(--blue)" }}
         >
           ← Back to dashboard
-        </a>
+        </Link>
 
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
           <div>
@@ -249,7 +251,7 @@ export default async function VendorOrderDetailPage({ params }: Props) {
             <form action={chooseVendorDropoff}><input type="hidden" name="splitOrderId" value={splitOrder.id}/><button className="min-h-20 w-full rounded-xl border border-zinc-200 bg-white p-4 text-left font-semibold">I’ll drop it off · Free<span className="mt-1 block text-xs font-normal text-zinc-500">Bring your labelled order to the LinkWe warehouse.</span></button></form>
             <form action={chooseCourierPickup}><input type="hidden" name="splitOrderId" value={splitOrder.id}/><button className="min-h-20 w-full rounded-xl bg-[#D4450A] p-4 text-left font-semibold text-white">Collect my order · TTD 40<span className="mt-1 block text-xs font-normal text-white/80">Pack it first. TTD 40 will be deducted from this order’s earnings.</span></button></form>
           </div>
-        </section> : splitOrder.vendorInboundMethod ? <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm">{splitOrder.vendorInboundMethod === "PICKUP_REQUESTED" ? "Collection requested. Staff will arrange CSF collection to our warehouse. TTD 40 is deducted from your earnings." : "Drop-off selected. Bring the labelled order to our warehouse; staff will confirm receipt. No collection fee."}</div> : null}
+        </section> : warehouseHasReceived ? <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">Received at the LinkWe warehouse. No further vendor action is needed.</div> : splitOrder.vendorInboundMethod ? <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm">{splitOrder.vendorInboundMethod === "PICKUP_REQUESTED" ? "Collection requested. Staff will arrange collection to our warehouse. TTD 40 is deducted from your earnings." : "Drop-off selected. Bring the labelled order to our warehouse; staff will confirm receipt. No collection fee."}</div> : null}
 
         <div
           data-tour="order-progress"

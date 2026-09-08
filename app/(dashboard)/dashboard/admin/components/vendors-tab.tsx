@@ -72,7 +72,11 @@ function approveErrorMessage(code: string | undefined): string {
   }
 }
 
-export default function VendorsTab() {
+export default function VendorsTab({
+  initialView = "vendors",
+}: {
+  initialView?: "vendors" | "payouts" | "history";
+}) {
   function calcPayoutBalance(req: PayoutRequest) {
     const credits = req.store.ledgerEntries
       .filter((e) => e.entryType === "CREDIT_ORDER_SETTLEMENT")
@@ -87,7 +91,7 @@ export default function VendorsTab() {
   const [payoutRequests, setPayoutRequests] = useState<PayoutRequest[]>([]);
   const [payoutHistory, setPayoutHistory] = useState<PayoutHistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeView, setActiveView] = useState<"vendors" | "payouts" | "history">("vendors");
+  const [activeView, setActiveView] = useState<"vendors" | "payouts" | "history">(initialView);
   const [search, setSearch] = useState("");
   const [expandedVendor, setExpandedVendor] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
@@ -128,13 +132,13 @@ export default function VendorsTab() {
         setPayoutRequests(p);
         setPayoutHistory(h);
         setLoading(false);
-        if (p.length > 0) setActiveView("payouts");
-        else setActiveView("vendors");
+        if (initialView === "payouts" || p.length > 0) setActiveView("payouts");
+        else setActiveView(initialView);
       })
       .catch(() => {
         setLoading(false);
       });
-  }, [refreshKey]);
+  }, [initialView, refreshKey]);
 
   const filteredVendors = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -153,9 +157,9 @@ export default function VendorsTab() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-zinc-900">Vendors & Payouts</h2>
+          <h2 className="text-xl font-bold text-zinc-900">Vendor finance</h2>
           <p className="mt-0.5 text-sm text-zinc-500">
-            Manage vendor accounts and approve payout requests
+            Review vendor balances, bank details and payout requests
           </p>
         </div>
         <div className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2 shadow-sm">
@@ -205,7 +209,7 @@ export default function VendorsTab() {
           <div className="rounded-2xl border border-dashed border-zinc-200 bg-white p-12 text-center shadow-sm">
             <p className="text-base font-semibold text-zinc-900">No pending payout requests</p>
             <p className="mt-1 text-sm text-zinc-500">
-              Vendor payout requests will appear here for approval.
+              Nothing needs approval. A request appears here after a vendor requests money from their available balance.
             </p>
           </div>
         ) : (

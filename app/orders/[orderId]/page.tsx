@@ -135,6 +135,7 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
           status: true,
           subtotalMinor: true,
           deliveredAt: true,
+          warehouseReceivedAt: true,
           earningsReleased: true,
           store: {
             select: { name: true, slug: true, shippingMode: true },
@@ -193,8 +194,8 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
     splitOrder.items.some((item) => !isDigitalSplitItem(item)),
   );
   const splitTotal = physicalSplitOrders.length;
-  const deliveredCount = physicalSplitOrders.filter((s) =>
-    ["DELIVERED", "COMPLETED"].includes(s.status),
+  const warehouseCount = physicalSplitOrders.filter(
+    (splitOrder) => splitOrder.warehouseReceivedAt != null,
   ).length;
   const isMultiStore = splitTotal > 1;
 
@@ -368,7 +369,7 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
               {isMultiStore ? (
                 <p className="text-sm text-zinc-600">
                   <span className="font-semibold">
-                    {deliveredCount} of {splitTotal} stores received
+                    {warehouseCount} of {splitTotal} vendor parcels at LinkWe
                   </span>
                 </p>
               ) : physicalSplitOrders.length === 1 ? (
@@ -398,16 +399,23 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
               </svg>
               <p className="text-xs text-zinc-600">
                 This order has items from{" "}
-                <span className="font-semibold">{physicalSplitOrders.length} stores</span>. Each store
-                {order.shippingAddressId == null
-                  ? " prepares its items for pickup separately."
-                  : " ships its items separately."}
+                <span className="font-semibold">{physicalSplitOrders.length} stores</span>. LinkWe combines
+                their parcels into one customer order before pickup or delivery.
               </p>
             </div>
           ) : null}
 
           {!allDigital && order.status !== "CANCELLED" && order.status !== "REFUNDED" ? (
             <p className="mt-4 text-sm text-zinc-500">{statusInfo.description}</p>
+          ) : null}
+
+          {!allDigital && isBuyer && order.status === "DELIVERED" ? (
+            <div id={confirmReceipt ? "confirm-receipt" : undefined} className="mt-4 scroll-mt-24">
+              <MarkReceivedButton
+                orderId={order.id}
+                initiallyConfirming={Boolean(confirmReceipt)}
+              />
+            </div>
           ) : null}
         </section>
 
@@ -470,13 +478,6 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
                             ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                             : "border-zinc-200 bg-zinc-50 text-zinc-600",
                         };
-                    const isReceivable =
-                      splitHasPhysicalItems &&
-                      isBuyer &&
-                      (splitOrder.status === "SHIPPED" || splitOrder.status === "OUT_FOR_DELIVERY" || splitOrder.status === "READY_FOR_CUSTOMER_PICKUP");
-                    const isReceived =
-                      splitHasPhysicalItems &&
-                      (splitOrder.status === "DELIVERED" || splitOrder.status === "COMPLETED");
                     const splitWeight = computeSplitWeightLbs(
                       splitOrder.items,
                       order.items.map((oi) => ({
@@ -610,29 +611,6 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
                           </p>
                         </div>
 
-                        {isReceivable ? (
-                          <div id={confirmReceipt === splitOrder.id ? "confirm-receipt" : undefined} className="scroll-mt-24 border-t border-zinc-100 bg-emerald-50/50 px-4 py-3">
-                            <MarkReceivedButton
-                              splitOrderId={splitOrder.id}
-                              storeName={splitOrder.store.name}
-                              initiallyConfirming={confirmReceipt === splitOrder.id}
-                            />
-                          </div>
-                        ) : isReceived ? (
-                          <div className="flex items-center gap-2 border-t border-emerald-100 bg-emerald-50 px-4 py-3">
-                            <svg
-                              width="14"
-                              height="14"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="#059669"
-                              strokeWidth="2.5"
-                            >
-                              <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                            <p className="text-xs font-semibold text-emerald-800">Received ✓</p>
-                          </div>
-                        ) : null}
                       </div>
                     );
                   })}

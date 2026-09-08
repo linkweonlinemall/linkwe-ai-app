@@ -299,6 +299,7 @@ export async function getAdminOrders(filters?: {
           referenceNumber: true,
           status: true,
           earningsReleased: true,
+          warehouseReceivedAt: true,
           bayNumber: true,
           subtotalMinor: true,
           packagedAt: true,
