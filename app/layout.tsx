@@ -11,6 +11,7 @@ import ServiceWorkerRegistration from "@/components/pwa/ServiceWorkerRegistratio
 import RouteScrollManager from "@/components/layout/RouteScrollManager";
 import AppStartupSplash from "@/components/layout/AppStartupSplash";
 import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
+import OneSignalProvider from "@/components/notifications/OneSignalProvider";
 
 import "./globals.css";
 
@@ -100,6 +101,7 @@ export default function RootLayout({
         <AppStartupSplash />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "Organization", name: "LinkWe", url: "https://www.linkweonlinemall.com", logo: "https://www.linkweonlinemall.com/linkwe-logo-mark-on-light.png", slogan: "We People. We Business. We Marketplace.", description: "Trinidad & Tobago's marketplace for local products, services, stores and events." }) }} />
         <ServiceWorkerRegistration />
+        <OneSignalProvider />
         <RouteScrollManager />
         <Suspense fallback={null}><GoogleAnalytics /></Suspense>
         <InstallPrompt />
