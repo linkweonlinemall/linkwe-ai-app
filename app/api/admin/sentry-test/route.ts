@@ -1,7 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { getSession } from "@/lib/auth/session";
 
-export async function POST() {
+async function runMonitoringCheck() {
   const session = await getSession();
   if (session?.role !== "ADMIN") {
     return Response.json({ error: "Administrator access required." }, { status: 403 });
@@ -17,3 +17,6 @@ export async function POST() {
 
   return Response.json({ ok: true, eventId });
 }
+
+export const GET = runMonitoringCheck;
+export const POST = runMonitoringCheck;
