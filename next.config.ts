@@ -1,4 +1,5 @@
 import type { NextConfig } from "next"
+import { withSentryConfig } from "@sentry/nextjs/config"
 
 const securityHeaders = [
   { key: "X-DNS-Prefetch-Control", value: "on" },
@@ -34,4 +35,18 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default nextConfig
+export default withSentryConfig(nextConfig, {
+  org: "linkwe-online-mall",
+  project: "javascript-nextjs",
+  silent: !process.env.CI,
+  sourcemaps: {
+    // Error monitoring works without an auth token. Source-map uploads can be
+    // enabled later after a narrowly scoped Sentry token is added to Vercel.
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
+})

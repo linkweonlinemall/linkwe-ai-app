@@ -3,11 +3,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import * as Sentry from "@sentry/nextjs";
 
 const RETRY_SECONDS = 15;
 
-export default function Error({ reset }: { reset: () => void }) {
+export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const [secondsUntilRetry, setSecondsUntilRetry] = useState(RETRY_SECONDS);
+
+  useEffect(() => {
+    Sentry.captureException(error);
+  }, [error]);
 
   useEffect(() => {
     const countdown = window.setInterval(() => {
