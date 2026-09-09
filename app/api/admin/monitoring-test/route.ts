@@ -10,7 +10,7 @@ async function runMonitoringCheck() {
   const eventId = Sentry.captureMessage("LinkWe production monitoring test", {
     level: "info",
     tags: {
-      check: "admin-sentry-test",
+      check: "admin-monitoring-test",
     },
   });
   await Sentry.flush(2_000);
