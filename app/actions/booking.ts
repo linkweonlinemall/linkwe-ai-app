@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import {
   BookingStatus,
   CancelledBy,
+  NotificationType,
   type Prisma,
 } from "@prisma/client";
 
@@ -27,6 +28,7 @@ import {
   isSlotInPastTrinidad,
 } from "@/lib/timezone/trinidad";
 import { canVendorUsePayOnArrival } from "@/lib/services/payment-policy";
+import { createNotification } from "@/lib/notifications/create";
 
 // Get service booking data for customer
 export async function getServiceBookingData(serviceSlug: string) {
@@ -171,7 +173,7 @@ export async function createBooking(input: {
           subscriptionPlan: true,
           subscriptionStatus: true,
           status: true,
-          owner: { select: { idVerificationStatus: true } },
+          owner: { select: { id: true, idVerificationStatus: true } },
         },
       },
       bookingSlots: {
@@ -332,6 +334,14 @@ export async function createBooking(input: {
 
   if (initialStatus === BookingStatus.CONFIRMED) {
     await sendBookingConfirmationEmails(booking.id, session.userId);
+  } else if (!needsPayment) {
+    await createNotification({
+      userId: service.store.owner.id,
+      type: NotificationType.BOOKING_CONFIRMED,
+      title: `New booking request — ${service.name}`,
+      body: "A customer is waiting for your approval.",
+      linkUrl: "/dashboard/vendor/bookings",
+    });
   }
 
   revalidatePath(`/service/${service.slug}`);
@@ -592,6 +602,12 @@ export async function updateBookingStatus(
       id: bookingId,
       product: vendorBookingServiceWhere(store.id),
     },
+    select: {
+      id: true,
+      customerId: true,
+      vendorNotes: true,
+      product: { select: { name: true } },
+    },
   });
   if (!booking) return { error: "Booking not found" };
 
@@ -605,6 +621,20 @@ export async function updateBookingStatus(
       vendorNotes:
         vendorNotes !== undefined ? vendorNotes ?? null : booking.vendorNotes,
     },
+  });
+
+  await createNotification({
+    userId: booking.customerId,
+    type: NotificationType.BOOKING_CONFIRMED,
+    title:
+      nextStatus === BookingStatus.CONFIRMED
+        ? `Booking confirmed — ${booking.product.name}`
+        : `Booking marked no-show — ${booking.product.name}`,
+    body:
+      nextStatus === BookingStatus.CONFIRMED
+        ? "Your vendor confirmed the booking. Open it to review the details."
+        : "The vendor marked this booking as a no-show. Contact them if this is incorrect.",
+    linkUrl: "/bookings",
   });
 
   revalidatePath("/dashboard/vendor/bookings");
@@ -622,8 +652,10 @@ export async function updateBookingMeetingLink(
     where: { id: bookingId },
     select: {
       id: true,
+      customerId: true,
       product: {
         select: {
+          name: true,
           store: { select: { ownerId: true } },
         },
       },
@@ -638,6 +670,16 @@ export async function updateBookingMeetingLink(
   await prisma.productBooking.update({
     where: { id: bookingId },
     data: { meetingLink: meetingLink.trim() || null },
+  });
+
+  await createNotification({
+    userId: booking.customerId,
+    type: NotificationType.BOOKING_CONFIRMED,
+    title: `Booking details updated — ${booking.product.name}`,
+    body: meetingLink.trim()
+      ? "A meeting link was added or changed. Open your booking to view it."
+      : "The meeting link was removed. Contact the vendor if you need assistance.",
+    linkUrl: "/bookings",
   });
 
   revalidatePath("/dashboard/vendor/bookings");

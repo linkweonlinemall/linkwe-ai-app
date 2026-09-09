@@ -1,5 +1,6 @@
 import { BASE_URL } from "@/lib/email/resend";
 import { sendEmail } from "@/lib/email/send";
+import { createNotification } from "@/lib/notifications/create";
 import { prisma } from "@/lib/prisma";
 
 type AdminAlertInput = {
@@ -17,15 +18,15 @@ export async function alertAdmins(input: AdminAlertInput): Promise<void> {
   });
   if (admins.length === 0) return;
 
-  await prisma.notification.createMany({
-    data: admins.map((admin) => ({
+  await Promise.all(admins.map((admin) =>
+    createNotification({
       userId: admin.id,
       type: "GENERAL" as const,
       title: input.title,
       body: input.body,
       linkUrl: input.linkUrl,
-    })),
-  });
+    }),
+  ));
 
   const absoluteUrl = new URL(input.linkUrl, BASE_URL).toString();
   await Promise.all(

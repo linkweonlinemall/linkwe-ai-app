@@ -1,6 +1,6 @@
 "use server";
 
-import type { MainOrderStatus } from "@prisma/client";
+import { NotificationType, type MainOrderStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -11,6 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { releaseBays } from "@/lib/fulfillment/bays";
 import { escapeCsvCell } from "@/lib/csv/escape-cell";
 import { fulfillProductOrder } from "@/lib/payments/fulfill-product-order";
+import { createNotification } from "@/lib/notifications/create";
 
 export async function completeOrders(orderIds: string[]): Promise<void> {
   const session=await getSession();
@@ -101,19 +102,29 @@ export async function cancelOrders(orderIds: string[], reason = "Cancelled by ad
   const ids = [...new Set(orderIds.map(id => id.trim()).filter(Boolean))];
   let cancelled = 0;
   for (const id of ids) {
-    const changed = await prisma.$transaction(async tx => {
+    const cancelledOrder = await prisma.$transaction(async tx => {
       const claim = await tx.mainOrder.updateMany({ where: { id, status: { in: CANCELLABLE_MAIN_STATUSES } }, data: { updatedAt: new Date() } });
-      if (!claim.count) return false;
+      if (!claim.count) return null;
       const order = await tx.mainOrder.findUniqueOrThrow({ where: { id }, include: { splitOrders: true } });
-      if (order.splitOrders.some(s => s.earningsReleased || ["DELIVERED", "COMPLETED", "OUT_FOR_DELIVERY", "DISPATCHED", "SHIPPED"].includes(s.status))) return false;
+      if (order.splitOrders.some(s => s.earningsReleased || ["DELIVERED", "COMPLETED", "OUT_FOR_DELIVERY", "DISPATCHED", "SHIPPED"].includes(s.status))) return null;
       await tx.mainOrder.update({ where: { id }, data: { status: "CANCELLED" } });
       await tx.splitOrder.updateMany({ where: { mainOrderId: id }, data: { status: "CANCELLED", autoCompleteAt: null } });
       await releaseBays(tx, order.splitOrders.map(s => s.id));
       await tx.orderDocument.create({ data: { mainOrderId: id, documentType: "OTHER", metadata: { kind: "warehouse_audit", action: "cancel", actorId: session.userId, actorName: session.fullName, note: reason } } });
-      await tx.notification.create({ data: { userId: order.buyerId, type: "ORDER_STATUS_UPDATED", title: "Order cancelled", body: "Your order has been cancelled. Contact LinkWe for any payment refund arrangements.", linkUrl: `/orders/${id}` } });
-      return true;
+      return { buyerId: order.buyerId, referenceNumber: order.referenceNumber };
     });
-    if (changed) cancelled++;
+    if (cancelledOrder) {
+      cancelled++;
+      await createNotification({
+        userId: cancelledOrder.buyerId,
+        type: NotificationType.ORDER_STATUS_UPDATED,
+        title: "Order cancelled",
+        body: cancelledOrder.referenceNumber
+          ? `Order #${cancelledOrder.referenceNumber} was cancelled. Open it for details.`
+          : "Your order was cancelled. Open it for details.",
+        linkUrl: `/orders/${id}`,
+      });
+    }
   }
   revalidatePath("/dashboard/admin", "layout");
   revalidatePath("/dashboard/vendor", "layout");

@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import { slotInstantTrinidad } from "@/lib/timezone/trinidad";
 import { prisma } from "@/lib/prisma";
+import { createNotification } from "@/lib/notifications/create";
+import { NotificationType } from "@prisma/client";
 import { generateEventScanCodeValue } from "@/lib/tickets/event-scan-code";
 import { getPaidTicketSoldCountsForEvents } from "@/lib/tickets/sold-counts";
 import { uploadFile } from "@/lib/uploads/upload";
@@ -291,10 +293,11 @@ export async function deleteEvent(
     where: { id: eventId, store: { ownerId: session.userId } },
     select: {
       id: true,
+      title: true,
       slug: true,
       ticketTypes: { select: { quantitySold: true } },
       tickets: { select: { id: true }, take: 1 },
-      ticketOrders: { select: { id: true }, take: 1 },
+      ticketOrders: { select: { id: true, userId: true, status: true } },
     },
   });
 
@@ -311,6 +314,16 @@ export async function deleteEvent(
         where: { id: eventId },
         data: { status: "CANCELLED", isPublished: false },
       });
+      const customerIds = [...new Set(event.ticketOrders
+        .filter((order) => !["CANCELLED", "REFUNDED"].includes(order.status))
+        .map((order) => order.userId))];
+      await Promise.all(customerIds.map((userId) => createNotification({
+        userId,
+        type: NotificationType.GENERAL,
+        title: `Event cancelled — ${event.title}`,
+        body: "Open My Tickets for your ticket details and refund status.",
+        linkUrl: "/my-tickets",
+      })));
     } else {
       await prisma.$transaction([
         prisma.eventPromoCode.deleteMany({ where: { eventId } }),
@@ -594,7 +607,7 @@ export async function bulkUpdateEventStatus(
   // Verify ownership of all events before taking any action
   const ownedEvents = await prisma.event.findMany({
     where: { id: { in: eventIds }, store: { ownerId: session.userId } },
-    select: { id: true, ticketTypes: { select: { quantitySold: true } } },
+    select: { id: true, title: true, ticketTypes: { select: { quantitySold: true } }, ticketOrders: { select: { userId: true, status: true } } },
   });
 
   if (ownedEvents.length !== eventIds.length) {
@@ -625,6 +638,16 @@ export async function bulkUpdateEventStatus(
             where: { id: event.id },
             data: { status: "CANCELLED" },
           });
+          const customerIds = [...new Set(event.ticketOrders
+            .filter((order) => !["CANCELLED", "REFUNDED"].includes(order.status))
+            .map((order) => order.userId))];
+          await Promise.all(customerIds.map((userId) => createNotification({
+            userId,
+            type: NotificationType.GENERAL,
+            title: `Event cancelled — ${event.title}`,
+            body: "Open My Tickets for your ticket details and refund status.",
+            linkUrl: "/my-tickets",
+          })));
         } else {
           await prisma.event.delete({ where: { id: event.id } });
         }

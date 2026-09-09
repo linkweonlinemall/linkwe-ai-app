@@ -176,7 +176,7 @@ export async function createTicketPaymentIntent(
       store: {
         select: {
           status: true,
-          owner: { select: { idVerificationStatus: true } },
+          owner: { select: { id: true, idVerificationStatus: true } },
         },
       },
     },
@@ -403,12 +403,19 @@ export async function createTicketPaymentIntent(
   }
 
   if (isFree) {
-    void createNotification({
+    await createNotification({
       userId: session.userId,
       type: NotificationType.TICKET_PURCHASED,
       title: `You're registered for ${event.title}`,
       body: `${ticketCount} free ticket${ticketCount !== 1 ? "s" : ""} confirmed.`,
       linkUrl: "/my-tickets",
+    });
+    await createNotification({
+      userId: event.store.owner.id,
+      type: NotificationType.TICKET_PURCHASED,
+      title: `New registration — ${event.title}`,
+      body: `${ticketCount} free ticket${ticketCount !== 1 ? "s" : ""} registered.`,
+      linkUrl: "/dashboard/vendor/events",
     });
 
     const emailData = ticketConfirmationEmail({

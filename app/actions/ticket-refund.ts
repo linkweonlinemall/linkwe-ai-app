@@ -2,12 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { NotificationType } from "@prisma/client";
 
 import { getSession } from "@/lib/auth/session";
 import { calculateTicketEarningsMinor } from "@/lib/finance/commission";
 import { prisma } from "@/lib/prisma";
 import { requestWiPayRefund } from "@/lib/wipay/wapi";
 import { ticketPaidMinor } from "@/lib/tickets/ticket-paid-minor";
+import { createNotification } from "@/lib/notifications/create";
 
 export async function refundTicket(
   ticketId: string,
@@ -31,6 +33,7 @@ export async function refundTicket(
       ticketOrder: {
         select: {
           id: true,
+          userId: true,
           status: true,
           total: true,
           earningsReleased: true,
@@ -45,7 +48,7 @@ export async function refundTicket(
           },
         },
       },
-      event: { select: { storeId: true } },
+      event: { select: { storeId: true, title: true } },
     },
   });
 
@@ -164,6 +167,14 @@ export async function refundTicket(
       }
     }
     await tx.ticketOrder.update({ where: { id: orderId }, data: { status: "REFUNDED" } });
+  });
+
+  await createNotification({
+    userId: order.userId,
+    type: NotificationType.GENERAL,
+    title: `Ticket refund requested — ${ticket.event.title}`,
+    body: `Your refund of TTD ${(amountMinor / 100).toFixed(2)} was submitted to WiPay.`,
+    linkUrl: "/my-tickets",
   });
 
   revalidatePath("/dashboard/admin");

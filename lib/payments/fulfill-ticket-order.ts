@@ -26,7 +26,7 @@ export async function fulfillPaidTicketOrder(ticketOrderId: string): Promise<voi
         total: true,
         userId: true,
         promoCodeId: true,
-        event: { select: { title: true, startDate: true, endDate: true } },
+        event: { select: { title: true, startDate: true, endDate: true, store: { select: { ownerId: true } } } },
         user: { select: { email: true, fullName: true } },
         tickets: { select: { ticketTypeId: true } },
       },
@@ -69,6 +69,13 @@ export async function fulfillPaidTicketOrder(ticketOrderId: string): Promise<voi
     title: `Tickets confirmed — ${order.event.title}`,
     body: `${ticketCount} ticket${ticketCount !== 1 ? "s" : ""} for ${order.event.title}`,
     linkUrl: "/my-tickets",
+  });
+  await createNotification({
+    userId: order.event.store.ownerId,
+    type: NotificationType.TICKET_PURCHASED,
+    title: `New ticket sale — ${order.event.title}`,
+    body: `${ticketCount} ticket${ticketCount !== 1 ? "s" : ""} sold.`,
+    linkUrl: "/dashboard/vendor/events",
   });
   await sendEmail({
     to: order.user.email,
