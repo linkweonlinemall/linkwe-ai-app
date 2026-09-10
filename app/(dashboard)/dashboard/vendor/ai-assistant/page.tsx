@@ -674,13 +674,13 @@ export default function VendorAIAssistantPage() {
 
   return (
     <div
-      className={`flex h-full min-h-0 flex-col overflow-hidden ${REX_FONT.className}`}
-      style={{ background: "radial-gradient(circle at 70% 0%, rgba(212,69,10,0.12), transparent 34%), #0F1117" }}
+      className={`rex-studio flex h-full min-h-0 flex-col overflow-hidden ${REX_FONT.className}`}
+      style={{ background: "radial-gradient(circle at 72% -10%, rgba(71,207,255,0.18), transparent 38%), radial-gradient(circle at 18% 105%, rgba(124,58,237,0.18), transparent 42%), #07111F" }}
     >
       <header
         className="shrink-0 border-b px-3 py-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.18)] sm:px-4 md:py-4"
         style={{
-          backgroundColor: "#161B27",
+          backgroundColor: "rgba(9, 22, 38, .84)",
           borderColor: CARD_BORDER_STYLE.borderColor,
         }}
       >
@@ -743,7 +743,7 @@ export default function VendorAIAssistantPage() {
             sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
           }`}
           style={{
-            background: "linear-gradient(180deg, #191F2C 0%, #121620 100%)",
+            background: "linear-gradient(180deg, rgba(15,34,55,.98) 0%, rgba(7,17,31,.98) 100%)",
             borderColor: "rgba(255,255,255,0.08)",
           }}
         >
@@ -765,12 +765,12 @@ export default function VendorAIAssistantPage() {
 
         <div
           className="flex min-h-0 min-w-0 flex-1 flex-col"
-          style={{ backgroundColor: "#0F1117" }}
+          style={{ backgroundColor: "transparent" }}
         >
           <div
             className="flex shrink-0 border-b"
             style={{
-              backgroundColor: "#161B27",
+              backgroundColor: "rgba(8, 20, 35, .76)",
               borderColor: CARD_BORDER_STYLE.borderColor,
             }}
           >
@@ -799,7 +799,7 @@ export default function VendorAIAssistantPage() {
             </button>
           </div>
           {activeTab === "assistant" && (
-            <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col px-3 py-2 sm:px-4 sm:py-4">
+            <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col px-3 py-2 sm:px-6 sm:py-5">
             <div
               className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-4"
               style={{ flex: 1, overflowY: "auto", minHeight: 0 }}
@@ -958,8 +958,8 @@ export default function VendorAIAssistantPage() {
               <div
                 className={`text-[14px] ${
                   m.role === "user"
-                    ? "max-w-[90%] md:max-w-[80%] lg:max-w-[75%] bg-gradient-to-br from-[#D4450A] to-[#E8820C] px-4 py-3 text-white [border-radius:18px_18px_4px_18px]"
-                    : `max-w-[90%] md:max-w-[80%] border bg-[#1E2433] px-[18px] py-[14px] text-[#E4E4E7] shadow-none [border-radius:4px_18px_18px_18px]`
+                    ? "rex-user-bubble max-w-[90%] md:max-w-[80%] lg:max-w-[72%] bg-gradient-to-br from-[#6D5DFD] via-[#7357E9] to-[#3C8DFF] px-4 py-3 text-white [border-radius:22px_22px_6px_22px]"
+                    : `rex-assistant-bubble max-w-[92%] md:max-w-[82%] border bg-[#11253A] px-[18px] py-[14px] text-[#EAF4FF] [border-radius:6px_22px_22px_22px]`
                 } ${m.role === "user" ? "whitespace-pre-wrap" : ""}`}
                 style={
                   m.role === "assistant"
@@ -1325,7 +1325,7 @@ export default function VendorAIAssistantPage() {
             </div>
           )}
 
-          <div data-tour="rex-prompts" className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-[#191F2C]/95 p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.32)] backdrop-blur-xl focus-within:border-[#D4450A]/60 focus-within:ring-2 focus-within:ring-[#D4450A]/10 sm:gap-2 sm:rounded-2xl sm:p-2">
+          <div data-tour="rex-prompts" className="rex-composer flex items-center gap-1.5 rounded-xl border border-cyan-200/15 bg-[#0D2136]/90 p-1.5 shadow-[0_18px_46px_rgba(0,0,0,0.38)] backdrop-blur-xl focus-within:border-cyan-300/50 focus-within:ring-2 focus-within:ring-cyan-300/10 sm:gap-2 sm:rounded-2xl sm:p-2">
             {/* Paperclip / attach button */}
             <button
               type="button"
@@ -1384,7 +1384,7 @@ export default function VendorAIAssistantPage() {
                     startImagePreviews.length > 0
                   ))
               }
-              className="h-9 shrink-0 rounded-lg bg-gradient-to-br from-[#D4450A] to-[#E8820C] px-3 text-xs font-bold text-white shadow-lg shadow-orange-950/30 transition-all hover:-translate-y-0.5 hover:brightness-110 disabled:translate-y-0 disabled:grayscale disabled:opacity-40 sm:h-11 sm:rounded-xl sm:px-5 sm:text-sm"
+              className="h-9 shrink-0 rounded-lg bg-gradient-to-br from-[#7C5CFF] to-[#199CF2] px-3 text-xs font-bold text-white shadow-lg shadow-blue-950/40 transition-all hover:-translate-y-0.5 hover:brightness-110 disabled:translate-y-0 disabled:grayscale disabled:opacity-40 sm:h-11 sm:rounded-xl sm:px-5 sm:text-sm"
             >
               Send
             </button>

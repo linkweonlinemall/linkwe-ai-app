@@ -453,9 +453,9 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
             aria-hidden
           />
           <div
-            className="fixed inset-0 z-[150] flex h-[100dvh] w-full flex-col overflow-hidden sm:inset-auto sm:bottom-6 sm:right-6 sm:h-[600px] sm:w-[380px] sm:rounded-2xl"
+            className="rex-float fixed inset-0 z-[150] flex h-[100dvh] w-full flex-col overflow-hidden sm:inset-auto sm:bottom-6 sm:right-6 sm:h-[660px] sm:w-[420px] sm:rounded-[26px]"
             style={{
-              backgroundColor: "#161B27",
+              background: "radial-gradient(circle at 80% 0%, rgba(38,173,255,.18), transparent 34%), #081523",
               border: "1px solid rgba(255,255,255,0.12)",
               boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
             }}
@@ -469,7 +469,7 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
           >
             <div className="flex flex-col gap-0.5">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-white">Rex</span>
+                <span className="text-base font-black tracking-tight text-white">Rex</span>
                 <span
                   className="h-2 w-2 shrink-0 rounded-full"
                   style={{
@@ -570,7 +570,7 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
 
           <div
             className="flex flex-1 flex-col space-y-3 overflow-y-auto p-4"
-            style={{ backgroundColor: "#0F1117" }}
+            style={{ backgroundColor: "transparent" }}
           >
             {messages.length === 0 ? (
               <div className="flex flex-col gap-3 px-1 py-2">
@@ -628,9 +628,9 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
               >
                 {m.role === "user" ? (
                   <div
-                    className="max-w-[80%] overflow-hidden text-[13px] leading-relaxed text-white [border-radius:18px_18px_4px_18px]"
+                    className="rex-user-bubble max-w-[82%] overflow-hidden text-[13px] leading-relaxed text-white [border-radius:22px_22px_6px_22px]"
                     style={{
-                      background: "linear-gradient(135deg, #D4450A, #E8820C)",
+                      background: "linear-gradient(135deg, #7C5CFF, #298DFF)",
                     }}
                   >
                     {m.images && m.images.length > 0 && (
@@ -654,9 +654,9 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
                   </div>
                 ) : (
                   <div
-                    className="max-w-[85%] overflow-hidden border text-[13px] leading-relaxed text-[#E4E4E7] [border-radius:4px_18px_18px_18px] px-[14px] py-2.5"
+                    className="rex-assistant-bubble max-w-[88%] overflow-hidden border px-[14px] py-2.5 text-[13px] leading-relaxed text-[#EAF4FF] [border-radius:6px_22px_22px_22px]"
                     style={{
-                      backgroundColor: "#1E2433",
+                      backgroundColor: "#11253A",
                       borderColor: "rgba(255,255,255,0.08)",
                     }}
                   >

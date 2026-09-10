@@ -34,7 +34,7 @@ export async function sendPushNotification(input: {
       contents: { en: input.body?.trim() || input.title },
       url: toAbsoluteUrl(input.linkUrl),
       chrome_web_icon: `${LINKWE_ORIGIN}/linkwe-pwa-192-v3.png`,
-      chrome_web_badge: `${LINKWE_ORIGIN}/linkwe-pwa-72-v3.png`,
+      chrome_web_badge: `${LINKWE_ORIGIN}/linkwe-notification-badge.png`,
       name: `LinkWe: ${input.title}`.slice(0, 128),
     }),
     signal: AbortSignal.timeout(5_000),

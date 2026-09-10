@@ -1,6 +1,6 @@
 importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
 
-const CACHE_NAME = "linkwe-v7";
+const CACHE_NAME = "linkwe-v8";
 const OFFLINE_URL = "/offline";
 
 const STATIC_ASSETS = [
@@ -12,6 +12,7 @@ const STATIC_ASSETS = [
   "/linkwe-startup-splash-desktop.jpg",
   "/linkwe-pwa-192-v3.png",
   "/linkwe-pwa-512-v3.png",
+  "/linkwe-notification-badge.png",
 ];
 
 // Install — cache static assets
