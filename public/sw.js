@@ -1,4 +1,6 @@
-const CACHE_NAME = "linkwe-v6";
+importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
+
+const CACHE_NAME = "linkwe-v7";
 const OFFLINE_URL = "/offline";
 
 const STATIC_ASSETS = [
@@ -120,27 +122,5 @@ self.addEventListener("fetch", (event) => {
           return caches.match(OFFLINE_URL);
         });
       })
-  );
-});
-
-// Handle push notifications (future use)
-self.addEventListener("push", (event) => {
-  if (!event.data) return;
-  const data = event.data.json();
-  event.waitUntil(
-    self.registration.showNotification(data.title || "LinkWe", {
-      body: data.body || "",
-      icon: "/linkwe-pwa-192-v3.png",
-      badge: "/linkwe-pwa-72-v3.png",
-      data: { url: data.url || "/" },
-    })
-  );
-});
-
-// Handle notification click
-self.addEventListener("notificationclick", (event) => {
-  event.notification.close();
-  event.waitUntil(
-    clients.openWindow(event.notification.data?.url || "/")
   );
 });

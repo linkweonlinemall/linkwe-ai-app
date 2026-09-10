@@ -13,9 +13,7 @@ export const getVendorNavCounts = cache(async (storeId: string) => {
     prisma.splitOrder.count({
       where: {
         storeId,
-        status: {
-          notIn: ["DELIVERED", "CANCELLED"],
-        },
+        status: "AWAITING_VENDOR_ACTION",
       },
     }),
   ]);

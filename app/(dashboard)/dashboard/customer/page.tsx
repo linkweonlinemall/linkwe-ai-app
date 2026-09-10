@@ -225,7 +225,7 @@ export default async function CustomerDashboardPage() {
     <div className="h-full min-h-0 overflow-y-auto bg-[#F5F5F5] pb-mobile-public lg:pb-0">
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         {/* Header */}
-        <div className="mb-5 overflow-hidden rounded-[28px] border border-white/10 shadow-[0_24px_70px_rgba(28,28,26,.18)]" style={{ background: "radial-gradient(circle at 88% 0%, rgba(242,138,45,.42), transparent 34%), radial-gradient(circle at 10% 100%, rgba(26,127,181,.18), transparent 36%), linear-gradient(135deg, #161614 0%, #342012 100%)" }}>
+        <div className="mb-5 rounded-[28px] border border-white/10 shadow-[0_24px_70px_rgba(28,28,26,.18)]" style={{ background: "radial-gradient(circle at 88% 0%, rgba(242,138,45,.42), transparent 34%), radial-gradient(circle at 10% 100%, rgba(26,127,181,.18), transparent 36%), linear-gradient(135deg, #161614 0%, #342012 100%)" }}>
           <div className="relative px-6 py-8 sm:px-8">
             <div className="absolute right-4 top-4 z-10 flex size-11 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white backdrop-blur sm:right-6 sm:top-6"><NotificationBell initialUnreadCount={notificationUnreadCount} variant="dark" compactToolbar /></div>
             <div

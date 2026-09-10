@@ -1,7 +1,7 @@
 "use client";
 
 import Script from "next/script";
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 const ONESIGNAL_APP_ID = "58c03778-9ace-4ff9-afdb-f436f1e530c6";
 const ONESIGNAL_SAFARI_WEB_ID =
@@ -36,6 +36,7 @@ type OneSignalSdk = {
   }): Promise<void>;
   login(externalId: string): Promise<void>;
   logout(): Promise<void>;
+  Notifications: { requestPermission(): Promise<boolean> };
 };
 
 declare global {
@@ -46,6 +47,13 @@ declare global {
 
 export default function OneSignalProvider() {
   const initialized = useRef(false);
+  const sdk = useRef<OneSignalSdk | null>(null);
+
+  useEffect(() => {
+    const prompt = () => void sdk.current?.Notifications.requestPermission();
+    window.addEventListener("linkwe-push:prompt", prompt);
+    return () => window.removeEventListener("linkwe-push:prompt", prompt);
+  }, []);
 
   const initialize = useCallback(() => {
     if (initialized.current) return;
@@ -53,13 +61,14 @@ export default function OneSignalProvider() {
 
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     window.OneSignalDeferred.push(async (OneSignal) => {
+      sdk.current = OneSignal;
       await OneSignal.init({
         appId: ONESIGNAL_APP_ID,
         safari_web_id: ONESIGNAL_SAFARI_WEB_ID,
-        serviceWorkerPath: "push/onesignal/OneSignalSDKWorker.js",
-        serviceWorkerParam: { scope: "/push/onesignal/" },
+        serviceWorkerPath: "/sw.js",
+        serviceWorkerParam: { scope: "/" },
         notifyButton: {
-          enable: true,
+          enable: false,
           position: "bottom-left",
           size: "medium",
           colors: {
@@ -85,7 +94,7 @@ export default function OneSignalProvider() {
         },
       });
 
-      try {
+      const syncIdentity = async () => { try {
         const response = await fetch("/api/push/identity", {
           credentials: "same-origin",
           cache: "no-store",
@@ -108,7 +117,14 @@ export default function OneSignalProvider() {
         }
       } catch (error) {
         console.warn("LinkWe push identity could not be synchronized", error);
-      }
+      }};
+
+      await syncIdentity();
+      window.addEventListener("focus", syncIdentity);
+      window.addEventListener("pageshow", syncIdentity);
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") void syncIdentity();
+      });
     });
   }, []);
 

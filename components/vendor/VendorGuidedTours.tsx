@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { IconArrowLeft, IconArrowRight, IconCheck, IconChevronDown, IconClock, IconHelpCircle, IconPlayerPlay, IconSparkles, IconX } from "@tabler/icons-react";
+import { IconArrowLeft, IconArrowRight, IconCheck, IconChevronDown, IconClock, IconPlayerPlay, IconSparkles, IconX } from "@tabler/icons-react";
 import { tutorialCatalog, tutorialCategories, type TutorialName, type TutorialStep } from "@/lib/vendor/tutorial-catalog";
 
 const VERSION = "2026.09";
@@ -48,8 +48,17 @@ export default function VendorGuidedTours() {
 
   useEffect(() => {
     const open = () => { setWelcome(false); setLibrary(true); };
+    const launch = (event: Event) => {
+      const name = (event as CustomEvent<TutorialName>).detail;
+      if (name && tutorialCatalog[name]) start(name);
+    };
     addEventListener("vendor-tour:open-library", open);
-    return () => removeEventListener("vendor-tour:open-library", open);
+    addEventListener("vendor-tour:start", launch);
+    return () => {
+      removeEventListener("vendor-tour:open-library", open);
+      removeEventListener("vendor-tour:start", launch);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const measure = useCallback(() => {
@@ -138,10 +147,6 @@ export default function VendorGuidedTours() {
   function move(next: number) { setRect(null); setMissing(false); setIndex(next); }
 
   return <>
-    <button type="button" onClick={() => setLibrary(true)} className="fixed bottom-[88px] left-3 z-[89] flex h-11 items-center gap-2 rounded-full border border-white/80 bg-white/95 px-3.5 text-xs font-bold text-[#1C1C1A] shadow-[0_12px_34px_rgba(28,28,26,.18)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:text-[#D4450A] md:bottom-5 md:left-[76px] lg:left-[238px]" aria-label="Open Help and Tutorials">
-      <IconHelpCircle className="size-5 text-[#D4450A]"/><span className="hidden sm:inline">Help &amp; Tutorials</span>
-    </button>
-
     {(welcome || library) && <div className="fixed inset-0 z-[250] flex items-end justify-center bg-black/60 p-2.5 backdrop-blur-[4px] sm:items-center sm:p-4" role="dialog" aria-modal="true">
       <div className="relative flex max-h-[min(92dvh,820px)] w-full max-w-3xl flex-col overflow-hidden rounded-[24px] border border-white/70 bg-white shadow-[0_30px_100px_rgba(0,0,0,.38)] sm:rounded-[30px]">
         <div className="shrink-0 bg-[radial-gradient(circle_at_85%_10%,rgba(240,106,42,.35),transparent_32%),linear-gradient(135deg,#171715,#29251F_60%,#54200D)] px-5 pb-5 pt-5 text-white sm:px-7 sm:pb-7 sm:pt-7">

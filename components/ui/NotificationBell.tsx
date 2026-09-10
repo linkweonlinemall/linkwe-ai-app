@@ -160,6 +160,10 @@ export default function NotificationBell({
   const btnSize = compactToolbar ? "h-8 w-8 rounded-lg" : "h-9 w-9 rounded-xl";
   const iconPx = compactToolbar ? 18 : 20;
 
+  function enableDeviceAlerts() {
+    window.dispatchEvent(new CustomEvent("linkwe-push:prompt"));
+  }
+
   return (
     <div className="relative" ref={dropdownRef}>
       {/* Bell button */}
@@ -195,7 +199,7 @@ export default function NotificationBell({
 
       {/* Dropdown */}
       {open ? (
-        <div className="fixed left-4 right-4 top-16 z-50 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl sm:absolute sm:left-auto sm:right-0 sm:top-11 sm:w-80">
+        <div className="fixed left-4 right-4 top-16 z-[240] overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl sm:absolute sm:left-auto sm:right-0 sm:top-11 sm:w-80">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
             <div className="flex items-center gap-2">
@@ -217,6 +221,10 @@ export default function NotificationBell({
               </button>
             ) : null}
           </div>
+
+          <button type="button" onClick={enableDeviceAlerts} className="flex w-full items-center justify-center gap-2 border-b border-zinc-100 bg-orange-50/70 px-4 py-2.5 text-xs font-bold text-[#B83A09] hover:bg-orange-50">
+            <Bell className="size-3.5" /> Enable alerts on this device
+          </button>
 
           {/* Notification list */}
           <div className="max-h-96 overflow-y-auto">

@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { IconHome, IconPlus } from "@tabler/icons-react";
+import { usePathname } from "next/navigation";
+import { IconHome, IconPlus, IconRouteSquare } from "@tabler/icons-react";
 
 import MessageNavBadge from "@/components/messages/MessageNavBadge";
 import NotificationBell from "@/components/ui/NotificationBell";
+import type { TutorialName } from "@/lib/vendor/tutorial-catalog";
 
 const VENDOR_TIME_ZONE = "America/Port_of_Spain";
 
@@ -53,6 +55,27 @@ export default function VendorDashboardTopbar({
   renderedAt,
 }: VendorDashboardTopbarProps) {
   const now = new Date(renderedAt);
+  const pathname = usePathname() ?? "";
+  const pageTour: TutorialName | null =
+    pathname === "/dashboard/vendor" ? "essentials" :
+    pathname === "/dashboard/vendor/products/new" ? "productSimple" :
+    pathname.startsWith("/dashboard/vendor/products") ? "products" :
+    pathname === "/dashboard/vendor/services/new" ? "serviceBooking" :
+    pathname.startsWith("/dashboard/vendor/services") ? "services" :
+    pathname.startsWith("/dashboard/vendor/orders") ? "orders" :
+    pathname.startsWith("/dashboard/vendor/bookings") ? "bookings" :
+    pathname.startsWith("/dashboard/vendor/subscribers") ? "subscribers" :
+    pathname === "/dashboard/vendor/events/new" ? "eventCreate" :
+    pathname.startsWith("/dashboard/vendor/events") ? "events" :
+    pathname.startsWith("/dashboard/vendor/requests") ? "requests" :
+    pathname.startsWith("/dashboard/vendor/store") ? "store" :
+    pathname.startsWith("/dashboard/vendor/partners") ? "partners" :
+    pathname.startsWith("/dashboard/vendor/staff") ? "staff" :
+    pathname.startsWith("/dashboard/vendor/finance") ? "finance" :
+    pathname.startsWith("/dashboard/vendor/reports") ? "reports" :
+    pathname.startsWith("/dashboard/vendor/messages") ? "messages" :
+    pathname.startsWith("/dashboard/vendor/reviews") ? "reviews" :
+    pathname.startsWith("/dashboard/vendor/settings") ? "settings" : null;
 
   return (
     <header
@@ -67,6 +90,17 @@ export default function VendorDashboardTopbar({
         <p className="truncate text-[15px] font-medium text-[#1C1C1A]">{shortGreeting(firstName || "there", now)}</p>
       </div>
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+        {pageTour ? (
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent("vendor-tour:start", { detail: pageTour }))}
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#D4450A]/30 px-2 text-[11px] font-bold text-[#D4450A] transition hover:bg-[#FFF5F0] sm:px-3"
+            aria-label="Tour this page"
+          >
+            <IconRouteSquare className="size-4" />
+            <span className="hidden sm:inline">Tour</span>
+          </button>
+        ) : null}
         <Link
           href="/"
           className="flex size-8 items-center justify-center rounded-lg border border-[rgba(28,28,26,0.12)] text-[#7c7b77] transition-colors hover:bg-[#F7F5F2] hover:text-[#D4450A] md:hidden"
