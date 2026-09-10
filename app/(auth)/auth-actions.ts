@@ -48,22 +48,6 @@ export async function registerAction(
   _prev: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
-  const headersList = await headers();
-  const ip =
-    headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    headersList.get("x-real-ip") ??
-    "unknown";
-
-  const rateLimitKey = `register:${ip}`;
-  const rateLimit = await checkRateLimit(rateLimitKey, 3, 60 * 60 * 1000); // 3 attempts per hour
-
-  if (!rateLimit.allowed) {
-    const minutesLeft = Math.ceil((rateLimit.resetAt - Date.now()) / 60000);
-    return {
-      error: `Too many registration attempts. Please try again in ${minutesLeft} minute${minutesLeft !== 1 ? "s" : ""}.`,
-    };
-  }
-
   const signupKind = parseSignupKind(formData.get("signupKind"));
   if (!signupKind) {
     return { error: "Invalid registration type." };
@@ -85,6 +69,27 @@ export async function registerAction(
 
   const nameErr = validateFullName(fullName);
   if (nameErr) return { error: nameErr };
+
+  // A shared office, event or mobile carrier IP can legitimately onboard many
+  // different people. Keep a generous abuse ceiling per IP and a tighter limit
+  // per email so one person cannot hammer the endpoint without blocking others.
+  // Validation happens first so typos do not consume an attempt.
+  const headersList = await headers();
+  const ip =
+    headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    headersList.get("x-real-ip") ??
+    "unknown";
+  const [ipLimit, emailLimit] = await Promise.all([
+    checkRateLimit(`register:ip:${ip}`, 30, 60 * 60 * 1000),
+    checkRateLimit(`register:email:${email}`, 5, 60 * 60 * 1000),
+  ]);
+  const blocked = !ipLimit.allowed ? ipLimit : !emailLimit.allowed ? emailLimit : null;
+  if (blocked) {
+    const minutesLeft = Math.max(1, Math.ceil((blocked.resetAt - Date.now()) / 60000));
+    return {
+      error: `Too many registration attempts. Please try again in ${minutesLeft} minute${minutesLeft !== 1 ? "s" : ""}.`,
+    };
+  }
 
   if (!process.env.DATABASE_URL) {
     return { error: "Server is missing DATABASE_URL. Add it to .env and restart the dev server." };

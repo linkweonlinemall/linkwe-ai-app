@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import PasswordInput from "@/components/ui/PasswordInput";
 
 import { changePassword } from "@/app/actions/settings";
 
@@ -125,7 +126,7 @@ export default function PasswordForm() {
           <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
             Confirm new password
           </label>
-          <input
+          <PasswordInput
             type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { IconArrowLeft } from "@tabler/icons-react";
 
-import { getConversationMessages, sendMessage } from "@/app/actions/messages";
+import { getConversationMessages, sendMessage, touchMessagePresence } from "@/app/actions/messages";
 import { toastFormError } from "@/lib/feedback/toasts";
 import { formatMessageTimestamp } from "@/lib/messages/format-time";
 
@@ -68,6 +68,8 @@ export function MessageThread({
   }
 
   useEffect(() => {
+    // Server refreshes replace the initial snapshot; live polling handles later updates.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMessages(initialMessages);
 
     if (!didInitialScroll.current) {
@@ -83,6 +85,8 @@ export function MessageThread({
   }, [initialMessages]);
 
   useEffect(() => {
+    void touchMessagePresence();
+    const presenceId = window.setInterval(() => void touchMessagePresence(), 60_000);
     async function pollMessages() {
       const result = await getConversationMessages(conversationId);
       if (!result.ok) return;
@@ -109,7 +113,7 @@ export function MessageThread({
     }
 
     const id = window.setInterval(() => void pollMessages(), 5_000);
-    return () => window.clearInterval(id);
+    return () => { window.clearInterval(id); window.clearInterval(presenceId); };
   }, [conversationId]);
 
   function handleSend(e: React.FormEvent) {

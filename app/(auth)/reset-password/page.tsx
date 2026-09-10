@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
 import { resetPassword } from "@/app/actions/password-reset";
+import PasswordInput from "@/components/ui/PasswordInput";
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
@@ -47,7 +48,7 @@ function ResetPasswordForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="mb-1 block text-sm font-medium text-zinc-700">New password</label>
-          <input
+          <PasswordInput
             name="password"
             type="password"
             required
@@ -58,7 +59,7 @@ function ResetPasswordForm() {
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-zinc-700">Confirm password</label>
-          <input
+          <PasswordInput
             name="confirm"
             type="password"
             required

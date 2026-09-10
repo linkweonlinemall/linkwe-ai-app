@@ -89,7 +89,7 @@ export default async function MessagesInboxPage() {
             </Link>
           </div>
         ) : (
-          <ConversationInboxList conversations={conversations.map((row) => ({ id: row.id, name: row.storeName, imageUrl: row.storeLogoUrl, lastMessageText: row.lastMessageText, lastMessageAt: row.lastMessageAt, unread: row.unread, href: `/messages/${row.id}` }))} />
+          <ConversationInboxList conversations={conversations.map((row) => ({ id: row.id, name: row.storeName, imageUrl: row.storeLogoUrl, lastMessageText: row.lastMessageText, lastMessageAt: row.lastMessageAt, unread: row.unread, lastSeenAt: row.lastSeenAt, href: `/messages/${row.id}` }))} />
         )}
       </div>
     </div>

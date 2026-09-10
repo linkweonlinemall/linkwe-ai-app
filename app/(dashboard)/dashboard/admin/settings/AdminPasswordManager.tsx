@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import PasswordInput from "@/components/ui/PasswordInput";
 
 import { adminChangeUserPassword } from "@/app/actions/settings";
 
@@ -142,7 +143,7 @@ export default function AdminPasswordManager({ users }: { users: User[] }) {
             <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
               New password
             </label>
-            <input
+            <PasswordInput
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
@@ -155,7 +156,7 @@ export default function AdminPasswordManager({ users }: { users: User[] }) {
             <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
               Confirm new password
             </label>
-            <input
+            <PasswordInput
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}

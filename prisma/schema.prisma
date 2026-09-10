@@ -33,6 +33,8 @@ model User {
   suspended              Boolean              @default(false)
   createdAt              DateTime             @default(now()) @map("created_at")
   updatedAt              DateTime             @updatedAt @map("updated_at")
+  /// Lightweight Messenger presence heartbeat; never used for authentication.
+  lastSeenAt             DateTime?            @map("last_seen_at")
 
   // Vendor verification (id document URL/status above)
   idVerifiedAt   DateTime? @map("id_verified_at")
@@ -77,6 +79,7 @@ model User {
 
   @@index([email])
   @@index([createdAt])
+  @@index([lastSeenAt])
   @@map("users")
 }
 

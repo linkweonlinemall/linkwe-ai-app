@@ -49,6 +49,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "People",
     items: [
+      { label: "Creation Studio", href: "/dashboard/admin/onboarding", icon: icon("M12 5v14M5 12h14M3 3h18v18H3z") },
       { label: "Messages",     href: "/dashboard/admin/messages",      icon: icon("M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z") },
       { label: "People & access",        href: "/dashboard/admin/users",         icon: icon("M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z") },
     ],

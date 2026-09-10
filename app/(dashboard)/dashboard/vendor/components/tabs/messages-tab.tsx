@@ -53,6 +53,6 @@ export default async function MessagesTab() {
   }
 
   return (
-    <ConversationInboxList conversations={conversations.map((row) => ({ id: row.id, name: row.customerName, lastMessageText: row.lastMessageText, lastMessageAt: row.lastMessageAt, unread: row.unread, href: `/dashboard/vendor/messages/${row.id}` }))} />
+    <ConversationInboxList conversations={conversations.map((row) => ({ id: row.id, name: row.customerName, lastMessageText: row.lastMessageText, lastMessageAt: row.lastMessageAt, unread: row.unread, lastSeenAt: row.lastSeenAt, href: `/dashboard/vendor/messages/${row.id}` }))} />
   );
 }

@@ -16,6 +16,7 @@ export type VendorConversationListItem = {
   lastMessageText: string | null;
   lastMessageAt: Date;
   unread: number;
+  lastSeenAt: Date | null;
 };
 
 export type CustomerConversationListItem = {
@@ -25,6 +26,7 @@ export type CustomerConversationListItem = {
   lastMessageText: string | null;
   lastMessageAt: Date;
   unread: number;
+  lastSeenAt: Date | null;
 };
 
 export type MyConversationsResult =
@@ -64,7 +66,15 @@ export type AdminConversationListItem = {
   lastMessageAt: Date;
   customerUnread: number;
   storeUnread: number;
+  customerLastSeenAt: Date | null;
+  vendorLastSeenAt: Date | null;
 };
+
+export async function touchMessagePresence(): Promise<void> {
+  const session = await getSession();
+  if (!session) return;
+  await prisma.user.update({ where: { id: session.userId }, data: { lastSeenAt: new Date() } });
+}
 
 function truncatePreview(text: string): string {
   const trimmed = text.trim();
@@ -354,7 +364,7 @@ export async function getMyConversations(): Promise<MyConversationsResult> {
         lastMessageText: true,
         lastMessageAt: true,
         storeUnread: true,
-        customer: { select: { fullName: true } },
+        customer: { select: { fullName: true, lastSeenAt: true } },
       },
     });
 
@@ -367,6 +377,7 @@ export async function getMyConversations(): Promise<MyConversationsResult> {
         lastMessageText: row.lastMessageText,
         lastMessageAt: row.lastMessageAt,
         unread: row.storeUnread,
+        lastSeenAt: row.customer.lastSeenAt,
       })),
     };
   }
@@ -379,7 +390,7 @@ export async function getMyConversations(): Promise<MyConversationsResult> {
       lastMessageText: true,
       lastMessageAt: true,
       customerUnread: true,
-      store: { select: { name: true, logoUrl: true } },
+      store: { select: { name: true, logoUrl: true, owner: { select: { lastSeenAt: true } } } },
     },
   });
 
@@ -393,6 +404,7 @@ export async function getMyConversations(): Promise<MyConversationsResult> {
       lastMessageText: row.lastMessageText,
       lastMessageAt: row.lastMessageAt,
       unread: row.customerUnread,
+      lastSeenAt: row.store.owner.lastSeenAt,
     })),
   };
 }
@@ -488,8 +500,8 @@ export async function getAllConversations(): Promise<
       lastMessageAt: true,
       customerUnread: true,
       storeUnread: true,
-      customer: { select: { fullName: true } },
-      store: { select: { name: true } },
+      customer: { select: { fullName: true, lastSeenAt: true } },
+      store: { select: { name: true, owner: { select: { lastSeenAt: true } } } },
     },
   });
 
@@ -503,6 +515,8 @@ export async function getAllConversations(): Promise<
       lastMessageAt: row.lastMessageAt,
       customerUnread: row.customerUnread,
       storeUnread: row.storeUnread,
+      customerLastSeenAt: row.customer.lastSeenAt,
+      vendorLastSeenAt: row.store.owner.lastSeenAt,
     })),
   };
 }
@@ -581,4 +595,30 @@ export async function adminSendMessage(
   }
 
   return { ok: true };
+}
+
+export async function getAdminMessageRecipients() {
+  const session = await getSession();
+  if (session?.role !== "ADMIN") return { ok:false as const, error:"Not authorized" };
+  const [people,stores]=await Promise.all([
+    prisma.user.findMany({where:{isActive:true,role:{not:"ADMIN"}},orderBy:{fullName:"asc"},select:{id:true,fullName:true,email:true,role:true}}),
+    prisma.store.findMany({orderBy:{name:"asc"},select:{id:true,name:true,ownerId:true}}),
+  ]);
+  return {ok:true as const,people,stores};
+}
+
+export async function adminStartConversation(input:{customerId:string;storeId:string;content:string}) {
+  const session=await getSession();
+  if(session?.role!=="ADMIN") return {ok:false as const,error:"Not authorized"};
+  const content=input.content?.trim();
+  if(!content) return {ok:false as const,error:"Write the first message."};
+  const [person,store]=await Promise.all([
+    prisma.user.findUnique({where:{id:input.customerId},select:{id:true}}),
+    prisma.store.findUnique({where:{id:input.storeId},select:{id:true,ownerId:true}}),
+  ]);
+  if(!person||!store) return {ok:false as const,error:"Choose a valid person and store."};
+  if(person.id===store.ownerId) return {ok:false as const,error:"Choose someone other than this store's owner."};
+  const conversation=await prisma.conversation.upsert({where:{customerId_storeId:{customerId:person.id,storeId:store.id}},update:{},create:{customerId:person.id,storeId:store.id},select:{id:true}});
+  const sent=await adminSendMessage(conversation.id,content);
+  return sent.ok ? {ok:true as const,conversationId:conversation.id} : sent;
 }
