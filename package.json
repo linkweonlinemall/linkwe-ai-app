@@ -36,6 +36,7 @@
     "canvas-confetti": "^1.9.4",
     "cloudinary": "^2.9.0",
     "csv-parse": "^6.2.1",
+    "emoji-picker-react": "^4.20.7",
     "exceljs": "^4.4.0",
     "html5-qrcode": "^2.3.8",
     "idb": "^8.0.3",
