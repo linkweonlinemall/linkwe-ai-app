@@ -16,6 +16,7 @@ import {
   IconLayoutDashboard,
   IconLogout,
   IconMessageCircle,
+  IconNews,
   IconRobot,
   IconRouteSquare,
   IconRoute,
@@ -43,6 +44,7 @@ type MoreNavItem = {
 };
 
 const MORE_ITEMS: MoreNavItem[] = [
+  { href: "/dashboard/vendor/timeline", label: "Timeline Studio", Icon: IconNews },
   { href: "/dashboard/vendor/ai-assistant", label: "Rex AI", Icon: IconRobot },
   { href: "/dashboard/vendor/services", label: "My Services", Icon: IconTools },
   { href: "/dashboard/vendor/bookings", label: "Bookings", Icon: IconCalendarEvent },

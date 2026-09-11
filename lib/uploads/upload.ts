@@ -15,7 +15,8 @@ export type UploadFolder =
   | "accommodations"
   | "services"
   | "avatars"
-  | "digital";
+  | "digital"
+  | "timeline";
 
 export async function uploadFile(file: File, folder: UploadFolder): Promise<string> {
   assertCloudinaryConfigured();

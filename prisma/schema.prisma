@@ -76,6 +76,8 @@ model User {
   customerServiceSubscriptions CustomerServiceSubscription[]
   wipayTrustedCards            WiPayTrustedCard[]
   wipayCardEnrollments         WiPayCardEnrollment[]
+  businessPostLikes            BusinessPostLike[]
+  businessPostComments         BusinessPostComment[]
 
   @@index([email])
   @@index([createdAt])
@@ -222,9 +224,57 @@ model Store {
   shippingRates                VendorShippingRate[]
   customerServiceSubscriptions CustomerServiceSubscription[]
   dailyViews                   StoreDailyView[]
+  businessPosts                BusinessPost[]
 
   @@index([slug])
   @@map("stores")
+}
+
+/// Vendor-authored business updates shown to customers who follow (save) the store.
+model BusinessPost {
+  id        String                @id @default(cuid())
+  storeId   String                @map("store_id")
+  caption   String
+  images    String[]              @default([])
+  published Boolean               @default(true)
+  createdAt DateTime              @default(now()) @map("created_at")
+  updatedAt DateTime              @updatedAt @map("updated_at")
+  store     Store                 @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  likes     BusinessPostLike[]
+  comments  BusinessPostComment[]
+
+  @@index([storeId, published, createdAt])
+  @@map("business_posts")
+}
+
+model BusinessPostLike {
+  postId    String       @map("post_id")
+  userId    String       @map("user_id")
+  createdAt DateTime     @default(now()) @map("created_at")
+  post      BusinessPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
+  @@index([userId])
+  @@map("business_post_likes")
+}
+
+model BusinessPostComment {
+  id        String                @id @default(cuid())
+  postId    String                @map("post_id")
+  userId    String                @map("user_id")
+  parentId  String?               @map("parent_id")
+  body      String
+  createdAt DateTime              @default(now()) @map("created_at")
+  updatedAt DateTime              @updatedAt @map("updated_at")
+  post      BusinessPost          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent    BusinessPostComment?  @relation("BusinessCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   BusinessPostComment[] @relation("BusinessCommentReplies")
+
+  @@index([postId, createdAt])
+  @@index([parentId])
+  @@map("business_post_comments")
 }
 
 /// Daily storefront visits used for vendor-facing analytics.
@@ -243,15 +293,15 @@ model StoreDailyView {
 }
 
 model VendorShippingRate {
-  id        String   @id @default(cuid())
-  storeId   String   @map("store_id")
-  zone      String
-  rateMinor Int      @map("rate_minor")
-  active    Boolean  @default(true)
-  linkweFallback Boolean @default(false) @map("linkwe_fallback")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  storeId        String   @map("store_id")
+  zone           String
+  rateMinor      Int      @map("rate_minor")
+  active         Boolean  @default(true)
+  linkweFallback Boolean  @default(false) @map("linkwe_fallback")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  store          Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@unique([storeId, zone])
   @@index([storeId])
@@ -1699,7 +1749,7 @@ model Product {
   viewCount       Int     @default(0)
   metaTitle       String?
   metaDescription String?
-  checkoutFields  Json?             @map("checkout_fields")
+  checkoutFields  Json?   @map("checkout_fields")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

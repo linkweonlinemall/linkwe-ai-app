@@ -13,6 +13,7 @@ import {
   IconLayoutDashboard,
   IconLink,
   IconMessageCircle,
+  IconNews,
   IconRouteSquare,
   IconPackage,
   IconQrcode,
@@ -161,6 +162,7 @@ export default function VendorDashboardSidebar({
   const MAIN: NavLeaf[] = [
     { href: "/dashboard/vendor", label: "Dashboard", Icon: IconLayoutDashboard, exact: true },
     { href: "/dashboard/vendor/products", label: "Products", Icon: IconPackage },
+    { href: "/dashboard/vendor/timeline", label: "Timeline", Icon: IconNews },
     { href: "/dashboard/vendor/services", label: "My Services", Icon: IconTools },
     { href: "/dashboard/vendor/events", label: "Events", Icon: IconTicket },
     { href: "/dashboard/vendor/bookings", label: "Bookings", Icon: IconCalendarEvent },

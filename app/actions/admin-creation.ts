@@ -19,11 +19,13 @@ function slug(value: unknown) { return text(value, 64).toLowerCase().replace(/[^
 
 export async function getCreationStudioOptions() {
   await admin();
-  const [users, stores] = await Promise.all([
+  const [users, stores, products, listings] = await Promise.all([
     prisma.user.findMany({ where:{isActive:true}, orderBy:{fullName:"asc"}, select:{id:true,fullName:true,email:true,role:true} }),
     prisma.store.findMany({ orderBy:{name:"asc"}, select:{id:true,name:true,ownerId:true} }),
+    prisma.product.findMany({ take:200, orderBy:{updatedAt:"desc"}, select:{id:true,name:true,isService:true,store:{select:{name:true}}} }),
+    prisma.listing.findMany({ take:200, orderBy:{updatedAt:"desc"}, select:{id:true,title:true,type:true,store:{select:{name:true}}} }),
   ]);
-  return { users, stores };
+  return { users, stores, products, listings };
 }
 
 export async function createAdminRecord(kind: CreationKind, values: Record<string, string>) {
