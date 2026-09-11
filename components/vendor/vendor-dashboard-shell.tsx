@@ -52,7 +52,7 @@ export default function VendorDashboardShell({
         <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
       </div>
     ) : (
-    <div className="vendor-premium-shell flex h-full min-h-0 min-w-0 bg-[#07111F]">
+    <div className="vendor-premium-shell flex h-full min-h-0 min-w-0 bg-[#F3F2EF]">
       <Suspense fallback={null}>
         <VendorDashboardSidebar
           storeName={storeName}
