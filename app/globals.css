@@ -49,6 +49,85 @@ html {
     0 0 36px rgba(34, 155, 242, 0.06);
 }
 
+/* Vendor workspace — a lighter extension of Rex's navy intelligence system. */
+.vendor-premium-shell {
+  background:
+    radial-gradient(circle at 92% 0%, rgba(32, 160, 240, 0.14), transparent 30%),
+    radial-gradient(circle at 12% 92%, rgba(112, 74, 255, 0.12), transparent 34%),
+    #07111f;
+}
+
+.vendor-premium-sidebar {
+  background:
+    radial-gradient(circle at 20% 0%, rgba(66, 189, 255, 0.12), transparent 28%),
+    linear-gradient(180deg, #0b1e33 0%, #07131f 100%);
+  border-right: 1px solid rgba(125, 211, 252, 0.1);
+  box-shadow: 18px 0 48px rgba(0, 0, 0, 0.2);
+}
+
+.vendor-premium-topbar {
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.2);
+}
+
+.vendor-overview {
+  padding: clamp(14px, 2.2vw, 28px);
+}
+
+.vendor-overview > div:not([data-tour="vendor-readiness"]),
+.vendor-overview .dash-card-pad {
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.vendor-overview [class*="bg-white"] {
+  border-color: rgba(125, 211, 252, 0.15) !important;
+  background-color: rgba(14, 33, 53, 0.92) !important;
+  color: #eaf4ff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 16px 38px rgba(0, 0, 0, 0.18);
+}
+
+.vendor-overview [class*="bg-white"]:hover {
+  border-color: rgba(103, 232, 249, 0.26) !important;
+}
+
+.vendor-overview [class*="text-[#1C1C1A]"] {
+  color: #f5f9ff !important;
+}
+
+.vendor-overview [class*="text-[#7c7b77]"],
+.vendor-overview [class*="text-[#a09f9b]"] {
+  color: rgba(220, 236, 255, 0.56) !important;
+}
+
+.vendor-overview a[class*="text-[#1A7FB5]"] {
+  color: #67e8f9 !important;
+}
+
+.vendor-overview [class*="border-[rgba(28,28,26"] {
+  border-color: rgba(125, 211, 252, 0.11) !important;
+}
+
+.vendor-overview [class*="from-[#D4450A]"] {
+  --tw-gradient-from: #7c5cff var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgb(124 92 255 / 0) var(--tw-gradient-to-position) !important;
+}
+
+.vendor-overview [class*="to-[#E8820C]"] {
+  --tw-gradient-to: #199cf2 var(--tw-gradient-to-position) !important;
+}
+
+.vendor-premium-bottom-nav a,
+.vendor-premium-bottom-nav button {
+  color: rgba(220, 236, 255, 0.58);
+}
+
+.vendor-premium-bottom-nav a[class*="text-[#D4450A]"],
+.vendor-premium-bottom-nav button[class*="text-[#D4450A]"] {
+  color: #67e8f9 !important;
+  background: rgba(83, 91, 235, 0.2) !important;
+}
+
 * {
   box-sizing: border-box;
 }

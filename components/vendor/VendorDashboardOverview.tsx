@@ -153,7 +153,7 @@ export default function VendorDashboardOverview(props: {
   const maxReviewCount = Math.max(...[1, 2, 3, 4, 5].map((s) => reviewSummary.breakdown[s] ?? 0), 1);
 
   return (
-    <div className="min-w-0 max-w-full space-y-5 font-sans max-md:[&_.dash-card-pad]:p-3">
+    <div className="vendor-overview min-w-0 max-w-full space-y-5 font-sans max-md:[&_.dash-card-pad]:p-3">
       <div data-tour="vendor-readiness">{openForBusinessChecklist}</div>
       {verificationChecklist ? <div className="min-w-0">{verificationChecklist}</div> : null}
       {overallPct < 100 ? (

@@ -79,22 +79,22 @@ export default function VendorDashboardTopbar({
 
   return (
     <header
-      className="sticky top-0 z-50 flex h-14 min-w-0 shrink-0 items-center justify-between gap-2 border-b border-[var(--color-border-tertiary)] bg-white px-3 sm:gap-3 sm:px-6"
+      className="vendor-premium-topbar sticky top-0 z-50 flex h-14 min-w-0 shrink-0 items-center justify-between gap-2 border-b border-cyan-200/10 bg-[#09182A]/90 px-3 text-white backdrop-blur-xl sm:gap-3 sm:px-6"
       style={{ borderBottomWidth: "0.5px", height: "56px" }}
     >
       <div className="hidden min-w-0 sm:block">
-        <p className="truncate text-[15px] font-medium text-[#1C1C1A]">{greetingLine(firstName || "there", now)}</p>
-        <p className="mt-0.5 hidden truncate text-[11px] text-[rgba(124,123,119,1)] md:block">{formatVendorDate(now)}</p>
+        <p className="truncate text-[15px] font-bold tracking-tight text-white">{greetingLine(firstName || "there", now)}</p>
+        <p className="mt-0.5 hidden truncate text-[11px] text-sky-100/45 md:block">{formatVendorDate(now)}</p>
       </div>
       <div className="min-w-0 flex-1 sm:hidden">
-        <p className="truncate text-[15px] font-medium text-[#1C1C1A]">{shortGreeting(firstName || "there", now)}</p>
+        <p className="truncate text-[15px] font-bold tracking-tight text-white">{shortGreeting(firstName || "there", now)}</p>
       </div>
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
         {pageTour ? (
           <button
             type="button"
             onClick={() => window.dispatchEvent(new CustomEvent("vendor-tour:start", { detail: pageTour }))}
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#D4450A]/30 px-2 text-[11px] font-bold text-[#D4450A] transition hover:bg-[#FFF5F0] sm:px-3"
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-cyan-200/20 bg-white/5 px-2 text-[11px] font-bold text-cyan-200 transition hover:bg-white/10 sm:px-3"
             aria-label="Tour this page"
           >
             <IconRouteSquare className="size-4" />
@@ -103,7 +103,7 @@ export default function VendorDashboardTopbar({
         ) : null}
         <Link
           href="/"
-          className="flex size-8 items-center justify-center rounded-lg border border-[rgba(28,28,26,0.12)] text-[#7c7b77] transition-colors hover:bg-[#F7F5F2] hover:text-[#D4450A] md:hidden"
+          className="flex size-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-sky-100/65 transition-colors hover:bg-white/10 hover:text-white md:hidden"
           aria-label="Back to LinkWe homepage"
           title="Home"
         >
@@ -112,15 +112,15 @@ export default function VendorDashboardTopbar({
         <MessageNavBadge
           href="/dashboard/vendor/messages"
           enabled
-          className="relative flex size-8 items-center justify-center rounded-lg border border-[rgba(28,28,26,0.12)] text-[#7c7b77] transition-colors hover:bg-[#F7F5F2] hover:text-[#D4450A]"
+          className="relative flex size-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-sky-100/65 transition-colors hover:bg-white/10 hover:text-white"
           iconClassName="size-[18px] shrink-0"
         />
-        <div className="flex size-8 items-center justify-center rounded-lg border border-[rgba(28,28,26,0.12)]">
-          <NotificationBell compactToolbar initialUnreadCount={unreadCount} variant="light" />
+        <div className="flex size-8 items-center justify-center rounded-lg border border-white/10 bg-white/5">
+          <NotificationBell compactToolbar initialUnreadCount={unreadCount} variant="dark" />
         </div>
         <Link
           href="/dashboard/vendor/products/new"
-          className="inline-flex size-8 items-center justify-center whitespace-nowrap rounded-lg border border-[rgba(212,69,10,0.35)] text-sm font-medium text-[#D4450A] hover:bg-[#FFF5F0] sm:h-auto sm:w-auto sm:px-4 sm:py-2"
+          className="inline-flex size-8 items-center justify-center whitespace-nowrap rounded-lg bg-gradient-to-br from-[#7C5CFF] to-[#199CF2] text-sm font-bold text-white shadow-[0_8px_20px_rgba(50,110,245,.25)] hover:brightness-110 sm:h-auto sm:w-auto sm:px-4 sm:py-2"
           aria-label="Add product"
         >
           <IconPlus className="size-[18px] sm:hidden" stroke={2} aria-hidden />
@@ -128,7 +128,7 @@ export default function VendorDashboardTopbar({
         </Link>
           <Link
             href="/dashboard/vendor/reports"
-            className="hidden items-center justify-center whitespace-nowrap rounded-lg bg-[#D4450A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#b83a09] md:inline-flex"
+            className="hidden items-center justify-center whitespace-nowrap rounded-lg border border-cyan-200/20 bg-white/[0.07] px-4 py-2 text-sm font-semibold text-white hover:bg-white/10 md:inline-flex"
           >
             Reports
           </Link>

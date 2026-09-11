@@ -127,8 +127,8 @@ function NavSection({
                 "text-[13px] transition-colors lg:justify-start",
                 "justify-center lg:justify-start",
                 active
-                  ? "border-l-[#D4450A] bg-[rgba(212,69,10,0.2)] font-medium text-white lg:pl-[13px]"
-                  : "text-[rgba(255,255,255,0.6)] hover:bg-white/[0.05] hover:text-white",
+                  ? "border-l-[#67E8F9] bg-[rgba(73,114,255,0.2)] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,.08)] lg:pl-[13px]"
+                  : "text-[rgba(220,236,255,0.62)] hover:bg-white/[0.06] hover:text-white",
               ].join(" ")}
             >
               <Icon className="size-4 shrink-0" stroke={1.5} aria-hidden />
@@ -195,7 +195,7 @@ export default function VendorDashboardSidebar({
 
   return (
     <aside
-      className="fixed left-0 top-0 z-[100] hidden h-dvh max-h-dvh w-[220px] flex-col overflow-hidden bg-[#1C1C1A] md:flex md:w-[60px] lg:w-[220px]"
+      className="vendor-premium-sidebar fixed left-0 top-0 z-[100] hidden h-dvh max-h-dvh w-[220px] flex-col overflow-hidden bg-[#081523] md:flex md:w-[60px] lg:w-[220px]"
     >
       {/* Top: logo + store — non-scrolling */}
       <div className="shrink-0 pt-5">
@@ -214,7 +214,7 @@ export default function VendorDashboardSidebar({
           </Link>
         </div>
 
-        <div className="mx-4 mt-5 hidden rounded-xl border border-white/10 bg-white/5 px-3 py-3 lg:block">
+        <div className="mx-4 mt-5 hidden rounded-2xl border border-cyan-200/10 bg-white/[0.055] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_14px_30px_rgba(0,0,0,.2)] lg:block">
           <div className="flex items-start gap-2">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#D4450A] text-[11px] font-bold text-white">
               {initialsFromStoreName(storeName)}
@@ -259,7 +259,7 @@ export default function VendorDashboardSidebar({
           type="button"
           title="Help and feature tutorials"
           onClick={() => window.dispatchEvent(new CustomEvent("vendor-tour:open-library"))}
-          className="mb-1 flex items-center justify-center gap-3 rounded-lg bg-[#D4450A]/15 py-2.5 text-[13px] font-semibold text-[#F08A58] transition-colors hover:bg-[#D4450A]/25 hover:text-white lg:justify-start lg:px-3"
+          className="mb-1 flex items-center justify-center gap-3 rounded-xl bg-[#6958F5]/20 py-2.5 text-[13px] font-semibold text-[#A9DFFF] transition-colors hover:bg-[#6958F5]/30 hover:text-white lg:justify-start lg:px-3"
         >
           <IconRouteSquare className="size-4 shrink-0" stroke={1.6} aria-hidden />
           <span className="hidden lg:inline">Help &amp; Tutorials</span>

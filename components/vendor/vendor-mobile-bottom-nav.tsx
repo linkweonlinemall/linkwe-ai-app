@@ -222,7 +222,7 @@ export default function VendorMobileBottomNav() {
   return (
     <>
       <nav
-        className="fixed bottom-0 left-2 right-2 z-[101] grid grid-cols-5 rounded-t-[22px] border border-b-0 border-white/90 bg-white/95 pb-safe pt-1 shadow-[0_-10px_34px_rgba(28,28,26,0.16)] backdrop-blur-xl md:hidden"
+        className="vendor-premium-bottom-nav fixed bottom-0 left-2 right-2 z-[101] grid grid-cols-5 rounded-t-[22px] border border-b-0 border-cyan-200/15 bg-[#0A1B2E]/95 pb-safe pt-1 text-sky-100/60 shadow-[0_-14px_38px_rgba(0,0,0,0.38)] backdrop-blur-xl md:hidden"
         aria-label="Vendor navigation"
       >
         <Link
