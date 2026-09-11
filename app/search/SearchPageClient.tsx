@@ -180,7 +180,7 @@ function SearchStoreCard({ store: s, saved }: { store: SearchStoreResult; saved:
             loading="lazy"
           />
         ) : null}
-        <span className="absolute right-2 top-2 rounded-[20px] bg-[#FAEEDA] px-2 py-[3px] text-[9px] font-bold uppercase text-[#854F0B]">
+        <span className="absolute left-2 top-2 rounded-[20px] bg-[#FAEEDA] px-2 py-[3px] text-[9px] font-bold uppercase text-[#854F0B]">
           Store
         </span>
       </div>

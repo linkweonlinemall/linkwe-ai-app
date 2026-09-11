@@ -15,6 +15,7 @@ import StorefrontViewTracker from "@/components/analytics/StorefrontViewTracker"
 import { getApprovedPartnerContent } from "@/app/actions/cross-store";
 import { getSavedStoreIds, getWishlistProductIds } from "@/app/actions/wishlist";
 import { getStoreReviewsNew, getUserStoreReview } from "@/app/actions/reviews";
+import { getStoreTimeline } from "@/app/actions/business-timeline";
 import { tw } from "@/lib/design-system";
 import { isStoreSellable } from "@/lib/store/sellable-store";
 
@@ -134,10 +135,11 @@ export default async function PublicStorePage({ params }: Props) {
   const [savedStoreIds, wishlistProductIds] = await Promise.all([getSavedStoreIds(), getWishlistProductIds()]);
   const isSaved = savedStoreIds.includes(store.id);
 
-  const [reviewData, userReview, { items: partnerItems }] = await Promise.all([
+  const [reviewData, userReview, { items: partnerItems }, timelinePosts] = await Promise.all([
     getStoreReviewsNew(store.id),
     getUserStoreReview(store.id),
     getApprovedPartnerContent(store.id),
+    getStoreTimeline(store.id),
   ]);
 
   const socialLinks = Object.fromEntries(
@@ -287,6 +289,7 @@ export default async function PublicStorePage({ params }: Props) {
           wishlistProductIds={wishlistProductIds}
           services={services}
           partnerItems={partnerItems}
+          timelinePosts={JSON.parse(JSON.stringify(timelinePosts))}
           relatedStores={relatedStores}
           openingHours={openingHours}
           socialLinks={socialLinks}

@@ -22,12 +22,16 @@ export default function SaveStoreButton({ storeId, initialSaved, variant = "defa
   const router = useRouter();
 
   async function handleToggle() {
+    const previous = saved;
+    setSaved(!previous);
     setLoading(true);
     const result = await toggleSavedStore(storeId);
     if ("error" in result) {
       if (result.error === "not_logged_in") {
+        setSaved(previous);
         router.push("/login");
       } else {
+        setSaved(previous);
         toastFormError();
       }
     } else {
@@ -43,14 +47,14 @@ export default function SaveStoreButton({ storeId, initialSaved, variant = "defa
     return (
       <button
         type="button"
-        aria-label={saved ? "Saved store — remove from saved" : "Save store"}
+        aria-label={saved ? "Following store — unfollow" : "Follow store"}
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
           void handleToggle();
         }}
         disabled={loading}
-        className="pointer-events-auto absolute right-4 top-4 z-20 flex size-10 items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm transition-colors duration-200 ease-in-out hover:bg-white disabled:opacity-60"
+        className="pointer-events-auto absolute right-3 top-3 z-20 flex min-h-10 items-center justify-center gap-1.5 rounded-full bg-white/95 px-3 text-[11px] font-bold text-zinc-900 shadow-md backdrop-blur-sm transition hover:bg-white disabled:opacity-60"
       >
         {loading ? (
           <Skeleton className="size-[18px] shrink-0 rounded-full" />
@@ -63,6 +67,7 @@ export default function SaveStoreButton({ storeId, initialSaved, variant = "defa
             aria-hidden
           />
         )}
+        {saved ? "Following" : "Follow"}
       </button>
     );
   }
@@ -90,7 +95,7 @@ export default function SaveStoreButton({ storeId, initialSaved, variant = "defa
           aria-hidden
         />
       )}
-      {saved ? "Saved" : "Save store"}
+      {saved ? "Following" : "Follow store"}
     </button>
   );
 }

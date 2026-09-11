@@ -153,10 +153,10 @@ export default function PublicNav({
         (p.startsWith("/shop") || p.startsWith("/products")) && !p.startsWith("/checkout"),
     },
     {
-      href: "/search",
-      label: "Search",
-      Icon: IconSearch,
-      isActive: (p) => p.startsWith("/search"),
+      href: "/timeline",
+      label: "Timeline",
+      Icon: IconNews,
+      isActive: (p) => p.startsWith("/timeline"),
     },
     {
       href: "/cart",
@@ -484,6 +484,14 @@ export default function PublicNav({
               }`}
             >
               <IconCalendarEvent className="size-4 shrink-0" stroke={1.75} aria-hidden /> Events
+            </Link>
+            <Link
+              href={user ? "/timeline" : "/login?callbackUrl=/timeline"}
+              className={`${desktopNavLinkClass} ${
+                navIsLight ? (pathname.startsWith("/timeline") ? "bg-zinc-100 text-[#1C1C1A]" : "text-zinc-600 hover:bg-zinc-100 hover:text-[#1C1C1A]") : (pathname.startsWith("/timeline") ? "bg-white/[0.12] text-white" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white")
+              }`}
+            >
+              <IconNews className="size-4 shrink-0" stroke={1.75} aria-hidden /> Timeline
             </Link>
             <Link
               href="/pricing"

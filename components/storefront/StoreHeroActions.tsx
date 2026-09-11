@@ -101,7 +101,7 @@ export default function StoreHeroActions({
           style={glassStyle}
         >
           <IconBookmark className="size-4 shrink-0" stroke={1.75} aria-hidden />
-          {following ? "Saved" : "Save store"}
+          {following ? "Following" : "Follow"}
         </button>
       )}
 

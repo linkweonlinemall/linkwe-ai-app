@@ -20,6 +20,7 @@ import { COLOUR_OPTIONS } from "@/lib/variant-options";
 import RelatedContentCards from "@/components/storefront/RelatedContentCards";
 import WishlistButton from "@/components/ui/WishlistButton";
 import { formatTTDPrice } from "@/lib/format/price";
+import { Heart, Images, MessageCircle } from "lucide-react";
 
 const PLACEHOLDER_COLORS = ["#E8820C", "#1A7FB5", "#D4450A", "#15803D", "#7C3AED"] as const;
 
@@ -250,7 +251,9 @@ export type StorefrontTabsStore = {
   owner: { fullName: string };
 };
 
-const TAB_IDS = ["about", "store", "services", "partners", "reviews"] as const;
+type StoreTimelinePost = { id: string; caption: string; images: string[]; attachments: unknown; createdAt: string; _count: { likes: number; comments: number } };
+
+const TAB_IDS = ["about", "timeline", "store", "services", "partners", "reviews"] as const;
 type TabId = (typeof TAB_IDS)[number];
 
 /** Constrains tab body width; hero, stats, and tab bar stay full width. */
@@ -265,6 +268,7 @@ type Props = {
   wishlistProductIds?: string[];
   services?: StoreTabServiceRow[];
   partnerItems?: PartnerContentItem[];
+  timelinePosts?: StoreTimelinePost[];
   relatedStores?: RelatedStore[];
   openingHours: WeekSchedule | null;
   socialLinks: Record<string, string>;
@@ -293,6 +297,7 @@ export default function StorefrontTabs({
   wishlistProductIds = [],
   services,
   partnerItems = [],
+  timelinePosts = [],
   relatedStores,
   openingHours,
   socialLinks,
@@ -441,6 +446,7 @@ export default function StorefrontTabs({
 
   const tabItems: { id: TabId; label: string; count?: number }[] = [
     { id: "about", label: "About" },
+    { id: "timeline", label: "Timeline", count: timelinePosts.length },
     { id: "store", label: "Store", count: products.length },
     { id: "services", label: "Services", count: services?.length ?? 0 },
     { id: "partners", label: "Collab", count: partnerItems.length },
@@ -628,6 +634,8 @@ export default function StorefrontTabs({
         </div>
         </div>
       ) : null}
+
+      {activeTab === "timeline" ? <div className="bg-[radial-gradient(circle_at_top,rgba(242,138,45,.14),transparent_32%),#F7F5F2]"><div className={TAB_CONTENT_CLASS}><section className="mb-6 rounded-[26px] bg-gradient-to-br from-zinc-950 to-[#3A1A0D] p-6 text-white shadow-xl"><p className="text-[10px] font-black uppercase tracking-[.2em] text-orange-300">Latest from {store.name}</p><h2 className="mt-2 text-2xl font-black">Store timeline</h2><p className="mt-2 max-w-xl text-sm text-white/60">New arrivals, offers, events and updates—straight from the business.</p></section>{timelinePosts.length ? <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{timelinePosts.map((post) => <Link href={`/timeline/${post.id}`} key={post.id} className="group overflow-hidden rounded-[24px] border border-white bg-white shadow-[0_14px_38px_rgba(70,43,26,.10)] transition hover:-translate-y-1 hover:shadow-xl">{post.images[0] ? <div className="relative aspect-square overflow-hidden bg-zinc-100"><img src={post.images[0]} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />{post.images.length > 1 ? <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-[10px] font-bold text-white"><Images className="size-3" /> {post.images.length}</span> : null}</div> : <div className="flex aspect-video items-center justify-center bg-gradient-to-br from-orange-50 to-amber-100 text-4xl">📣</div>}<div className="p-4"><p className="line-clamp-3 whitespace-pre-wrap text-sm leading-6 text-zinc-700">{post.caption || "Photo update"}</p><div className="mt-4 flex items-center gap-4 border-t border-zinc-100 pt-3 text-[11px] font-bold text-zinc-400"><span className="flex items-center gap-1"><Heart className="size-3.5" /> {post._count.likes}</span><span className="flex items-center gap-1"><MessageCircle className="size-3.5" /> {post._count.comments}</span><time className="ml-auto">{new Date(post.createdAt).toLocaleDateString("en-TT", { month: "short", day: "numeric" })}</time></div></div></Link>)}</div> : <div className="rounded-[26px] border border-dashed border-orange-200 bg-white/70 py-16 text-center"><span className="text-4xl">✨</span><p className="mt-3 text-sm font-semibold text-zinc-700">No timeline posts yet</p><p className="mt-1 text-xs text-zinc-400">Check back soon for updates from this store.</p></div>}</div></div> : null}
 
       {activeTab === "partners" ? <div className={TAB_CONTENT_CLASS}><section className="overflow-hidden rounded-[28px] border border-orange-100 bg-[radial-gradient(circle_at_top_right,rgba(242,122,61,.18),transparent_36%),linear-gradient(145deg,#fff,#fff8f3)] p-5 shadow-[0_18px_55px_rgba(212,69,10,.10)] sm:p-8"><p className="text-[10px] font-black uppercase tracking-[.2em] text-[#D4450A]">Trusted network</p><h2 className="mt-2 text-2xl font-black text-zinc-950">From partner stores</h2><p className="mb-6 mt-2 max-w-2xl text-sm leading-6 text-zinc-500">Discover products and services this store recommends from approved LinkWe partners.</p>{partnerItems.length ? <RelatedContentCards items={partnerItems.map((item)=>({id:item.id,name:item.name,image:item.image,price:item.price,href:item.href}))}/>:<div className="rounded-2xl border border-dashed border-orange-200 bg-white/70 py-14 text-center text-sm text-zinc-500">This store has not featured any partner items yet.</div>}</section></div> : null}
 

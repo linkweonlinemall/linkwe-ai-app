@@ -97,12 +97,16 @@ export async function toggleSavedStore(storeId: string): Promise<
   if (existing) {
     await prisma.savedStore.delete({ where: { id: existing.id } });
     revalidatePath("/saved-stores");
+    revalidatePath("/timeline");
+    revalidatePath("/store/[slug]", "page");
     return { ok: true, saved: false };
   }
   await prisma.savedStore.create({
     data: { userId: session.userId, storeId },
   });
   revalidatePath("/saved-stores");
+  revalidatePath("/timeline");
+  revalidatePath("/store/[slug]", "page");
   return { ok: true, saved: true };
 }
 

@@ -54,21 +54,21 @@ export default function StoreFollowCard({
           <div className="mx-auto mb-2 flex size-10 items-center justify-center rounded-full bg-[#3B6D11]/20">
             <IconCircleCheck className="size-6 text-[#3B6D11]" stroke={1.75} aria-hidden />
           </div>
-          <p className="text-[13px] font-medium text-white">Store saved</p>
+          <p className="text-[13px] font-medium text-white">You follow this store</p>
           <button
             type="button"
             disabled={busy}
             onClick={() => void toggle()}
             className="mt-2 text-[11px] text-white/40 underline-offset-2 hover:text-white/60 hover:underline disabled:opacity-60"
           >
-            Remove from saved stores
+            Unfollow store
           </button>
         </>
       ) : (
         <>
-          <p className="text-sm font-medium text-white">Save this store</p>
+          <p className="text-sm font-medium text-white">Follow this store</p>
           <p className="mb-3.5 mt-1 text-[11px] text-white/[0.45]">
-            Keep it handy in your saved stores
+            See new posts from this store in your timeline
           </p>
           <button
             type="button"
@@ -78,10 +78,10 @@ export default function StoreFollowCard({
             style={{ backgroundColor: SCARLET }}
           >
             <IconBookmark className="size-4" stroke={1.75} aria-hidden />
-            Save {storeName}
+            Follow {storeName}
           </button>
           <p className="mt-2.5 text-[11px] text-white/[0.35]">
-            {count === 1 ? "Saved by 1 customer" : `Saved by ${count} customers`}
+            {count === 1 ? "Followed by 1 customer" : `Followed by ${count} customers`}
           </p>
         </>
       )}
