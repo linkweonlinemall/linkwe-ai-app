@@ -5,6 +5,7 @@ import { getApprovedPartnerContent } from "@/app/actions/cross-store";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { uploadFile } from "@/lib/uploads/upload";
+import { Prisma } from "@prisma/client";
 
 export type TimelineAttachment = {
   key: string;
@@ -95,12 +96,34 @@ const postInclude = (userId?: string) => ({
   _count: { select: { likes: true, comments: true } },
 });
 
-export async function getTimelineFeed() {
+export type TimelineSearchOptions = { query?: string; type?: string; photos?: boolean; scope?: "following" | "all" };
+
+export async function getTimelineFeed(options: TimelineSearchOptions = {}) {
   const session = await getSession();
   if (!session) return { session: null, posts: [] };
   const followed = await prisma.savedStore.findMany({ where: { userId: session.userId }, select: { storeId: true } });
+  const storeIds = followed.map((row) => row.storeId);
+  const query = options.query?.trim().slice(0, 120) ?? "";
+  const type = ["PRODUCT", "SERVICE", "EVENT", "STORE", "TICKET"].includes(options.type ?? "") ? options.type! : "";
+  const scope = options.scope === "all" ? "all" : "following";
+  if (scope === "following" && storeIds.length === 0) return { session, posts: [] };
+  const conditions: Prisma.Sql[] = [Prisma.sql`bp."published" = true`];
+  if (scope === "following") conditions.push(Prisma.sql`bp."store_id" IN (${Prisma.join(storeIds)})`);
+  if (query) {
+    const pattern = `%${query}%`;
+    conditions.push(Prisma.sql`(bp."caption" ILIKE ${pattern} OR s."name" ILIKE ${pattern} OR bp."attachments"::text ILIKE ${pattern})`);
+  }
+  if (type) conditions.push(Prisma.sql`bp."attachments"::text ILIKE ${`%${type}%`}`);
+  if (options.photos) conditions.push(Prisma.sql`cardinality(bp."images") > 0`);
+  const matches = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+    SELECT bp."id" FROM "business_posts" bp
+    JOIN "stores" s ON s."id" = bp."store_id"
+    WHERE ${Prisma.join(conditions, " AND ")}
+    ORDER BY bp."created_at" DESC
+    LIMIT 120
+  `);
   const posts = await prisma.businessPost.findMany({
-    where: { published: true, storeId: { in: followed.map((row) => row.storeId) } },
+    where: { id: { in: matches.map((row) => row.id) } },
     orderBy: { createdAt: "desc" }, take: 60, include: postInclude(session.userId),
   });
   return { session, posts };

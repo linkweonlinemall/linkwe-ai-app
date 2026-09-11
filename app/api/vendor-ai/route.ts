@@ -615,6 +615,48 @@ const DELETE_EVENT_TOOL: Anthropic.Tool = {
   },
 }
 
+const CREATE_TIMELINE_POST_TOOL: Anthropic.Tool = {
+  name: "create_timeline_post",
+  description:
+    "Create and publish a store timeline post. Rex can reuse up to 4 photos from the vendor's store profile, products, services, or events and attach those items as clickable shopping cards. Call this whenever the vendor asks Rex to create, write and post, or publish a timeline update.",
+  input_schema: {
+    type: "object",
+    properties: {
+      caption: { type: "string", description: "Finished customer-facing post copy, maximum 2200 characters. Markdown, links and emojis are supported." },
+      sources: {
+        type: "array",
+        maxItems: 4,
+        description: "Store content whose existing photos should be reused. Use IDs returned by existing Rex tools or visible in context; never invent IDs.",
+        items: {
+          type: "object",
+          properties: {
+            type: { type: "string", enum: ["STORE", "PRODUCT", "SERVICE", "EVENT"] },
+            id: { type: "string" },
+            image_positions: { type: "array", items: { type: "number" }, description: "Optional 1-based photo positions. Omit to use the first available photo." },
+            attach: { type: "boolean", description: "Add the source as a clickable card. Defaults to true for products, services and events." },
+          },
+          required: ["type", "id"],
+        },
+      },
+      uploaded_image_urls: { type: "array", maxItems: 4, items: { type: "string" }, description: "Optional trusted URLs uploaded in the current Rex conversation." },
+      published: { type: "boolean", description: "Defaults to true. Set false only when the vendor explicitly asks for a draft." },
+    },
+    required: ["caption"],
+  },
+}
+
+const SEARCH_TIMELINE_SOURCES_TOOL: Anthropic.Tool = {
+  name: "search_timeline_sources",
+  description: "Find the vendor's own store, products, services, and events that have reusable photos for a timeline post. Call this before create_timeline_post whenever the correct source ID or available photos are not already known.",
+  input_schema: {
+    type: "object",
+    properties: {
+      query: { type: "string", description: "Optional name or keyword." },
+      type: { type: "string", enum: ["ALL", "STORE", "PRODUCT", "SERVICE", "EVENT"] },
+    },
+  },
+}
+
 const VENDOR_TOOLS: Anthropic.Tool[] = [
   CREATE_PRODUCT_TOOL,
   CREATE_SERVICE_TOOL,
@@ -645,6 +687,8 @@ const VENDOR_TOOLS: Anthropic.Tool[] = [
   DELETE_EVENT_TOOL,
   UPLOAD_EVENT_COVER_TOOL,
   UPLOAD_EVENT_GALLERY_TOOL,
+  SEARCH_TIMELINE_SOURCES_TOOL,
+  CREATE_TIMELINE_POST_TOOL,
 ]
 
 /** Body messages: string or Anthropic user content (text + image blocks). */
@@ -1877,6 +1921,80 @@ export async function POST(req: NextRequest) {
               galleryCount: updated.length,
             }),
           }
+        }
+
+        if (toolBlock.name === "search_timeline_sources") {
+          const raw = toolBlock.input as { query?: unknown; type?: unknown }
+          const query = String(raw.query ?? "").trim().slice(0, 100)
+          const type = ["STORE", "PRODUCT", "SERVICE", "EVENT"].includes(String(raw.type ?? "")) ? String(raw.type) : "ALL"
+          const nameFilter = query ? { contains: query, mode: "insensitive" as const } : undefined
+          const [storeSource, productSources, eventSources] = await Promise.all([
+            type === "ALL" || type === "STORE" ? prisma.store.findUnique({ where: { id: store.id }, select: { id: true, name: true, logoUrl: true, coverPhotoUrl: true, images: { orderBy: { position: "asc" }, select: { url: true } } } }) : null,
+            type === "ALL" || type === "PRODUCT" || type === "SERVICE" ? prisma.product.findMany({ where: { storeId: store.id, ...(type === "PRODUCT" ? { isService: false } : type === "SERVICE" ? { isService: true } : {}), ...(nameFilter ? { name: nameFilter } : {}) }, select: { id: true, name: true, isService: true, images: true }, orderBy: { updatedAt: "desc" }, take: 30 }) : [],
+            type === "ALL" || type === "EVENT" ? prisma.event.findMany({ where: { storeId: store.id, ...(nameFilter ? { title: nameFilter } : {}) }, select: { id: true, title: true, coverImage: true, galleryImages: true }, orderBy: { updatedAt: "desc" }, take: 20 }) : [],
+          ])
+          const results = [
+            ...(storeSource ? [{ type: "STORE", id: storeSource.id, name: storeSource.name, photos: [storeSource.coverPhotoUrl, storeSource.logoUrl, ...storeSource.images.map((image) => image.url)].filter(Boolean).slice(0, 8) }] : []),
+            ...productSources.map((item) => ({ type: item.isService ? "SERVICE" : "PRODUCT", id: item.id, name: item.name, photos: item.images.slice(0, 8) })),
+            ...eventSources.map((item) => ({ type: "EVENT", id: item.id, name: item.title, photos: [item.coverImage, ...item.galleryImages].filter(Boolean).slice(0, 8) })),
+          ].filter((item) => !query || item.name.toLowerCase().includes(query.toLowerCase()))
+          return { content: JSON.stringify({ ok: true, results }) }
+        }
+
+        if (toolBlock.name === "create_timeline_post") {
+          const raw = toolBlock.input as {
+            caption?: unknown
+            sources?: Array<{ type?: unknown; id?: unknown; image_positions?: unknown; attach?: unknown }>
+            uploaded_image_urls?: unknown
+            published?: unknown
+          }
+          const caption = String(raw.caption ?? "").trim().slice(0, 2200)
+          const images: string[] = []
+          const attachments: Array<Record<string, string | null>> = []
+          const addImages = (available: Array<string | null | undefined>, positions: unknown) => {
+            const clean = available.filter((url): url is string => typeof url === "string" && url.startsWith("https://"))
+            const requested = Array.isArray(positions)
+              ? positions.map(Number).filter((value) => Number.isInteger(value) && value > 0).map((value) => clean[value - 1]).filter((url): url is string => Boolean(url))
+              : clean.slice(0, 1)
+            for (const url of requested) if (!images.includes(url) && images.length < 4) images.push(url)
+          }
+
+          for (const source of Array.isArray(raw.sources) ? raw.sources.slice(0, 4) : []) {
+            const type = String(source.type ?? "")
+            const id = String(source.id ?? "").trim()
+            if (type === "STORE") {
+              if (id && id !== "current" && id !== store.id) return { content: JSON.stringify({ ok: false, error: "Rex can only use photos from your own store." }) }
+              const row = await prisma.store.findUnique({ where: { id: store.id }, select: { id: true, name: true, slug: true, categoryId: true, logoUrl: true, coverPhotoUrl: true, images: { orderBy: { position: "asc" }, select: { url: true } } } })
+              if (row) {
+                addImages([row.coverPhotoUrl, row.logoUrl, ...row.images.map((image) => image.url)], source.image_positions)
+                if (source.attach === true) attachments.push({ key: `STORE:${row.id}`, kind: "STORE", name: row.name, subtitle: row.categoryId.replaceAll("_", " "), href: `/store/${row.slug}`, image: row.logoUrl })
+              }
+              continue
+            }
+            if (type === "PRODUCT" || type === "SERVICE") {
+              const row = await prisma.product.findFirst({ where: { id, storeId: store.id, isService: type === "SERVICE" }, select: { id: true, name: true, slug: true, price: true, images: true } })
+              if (!row) return { content: JSON.stringify({ ok: false, error: `${type === "SERVICE" ? "Service" : "Product"} not found in your store.` }) }
+              addImages(row.images, source.image_positions)
+              if (source.attach !== false) attachments.push({ key: `${type}:${row.id}`, kind: type, name: row.name, subtitle: `${type === "SERVICE" ? "Service" : "Product"} · TTD ${row.price.toFixed(2)}`, href: type === "SERVICE" ? `/service/${row.slug}` : `/products/${row.slug}`, image: row.images[0] ?? null })
+              continue
+            }
+            if (type === "EVENT") {
+              const row = await prisma.event.findFirst({ where: { id, storeId: store.id }, select: { id: true, title: true, slug: true, startDate: true, coverImage: true, galleryImages: true } })
+              if (!row) return { content: JSON.stringify({ ok: false, error: "Event not found in your store." }) }
+              addImages([row.coverImage, ...row.galleryImages], source.image_positions)
+              if (source.attach !== false) attachments.push({ key: `EVENT:${row.id}`, kind: "EVENT", name: row.title, subtitle: `Event · ${row.startDate.toLocaleDateString("en-TT", { month: "short", day: "numeric", year: "numeric" })}`, href: `/events/${row.slug}`, image: row.coverImage })
+            }
+          }
+
+          const uploaded = Array.isArray(raw.uploaded_image_urls) ? raw.uploaded_image_urls.map(String).filter(isTrustedHostedImageUrl) : []
+          addImages(uploaded, uploaded.map((_, index) => index + 1))
+          if (!caption && images.length === 0) return { content: JSON.stringify({ ok: false, error: "A timeline post needs a caption or at least one photo." }) }
+          const row = await prisma.businessPost.create({ data: { storeId: store.id, caption, images, attachments: attachments.slice(0, 4) as Prisma.InputJsonValue, published: raw.published !== false }, select: { id: true, published: true } })
+          const storeRow = await prisma.store.findUnique({ where: { id: store.id }, select: { slug: true } })
+          revalidatePath("/timeline")
+          revalidatePath("/dashboard/vendor/timeline")
+          if (storeRow) revalidatePath(`/store/${storeRow.slug}`)
+          return { content: JSON.stringify({ ok: true, postId: row.id, published: row.published, imageCount: images.length, attachmentCount: attachments.length, url: `/timeline/${row.id}`, message: row.published ? "Timeline post published." : "Timeline post saved as a draft." }) }
         }
 
         return {

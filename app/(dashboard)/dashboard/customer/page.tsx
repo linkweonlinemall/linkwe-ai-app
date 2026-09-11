@@ -227,7 +227,7 @@ export default async function CustomerDashboardPage() {
         {/* Header */}
         <div className="mb-5 rounded-[28px] border border-white/10 shadow-[0_24px_70px_rgba(28,28,26,.18)]" style={{ background: "radial-gradient(circle at 88% 0%, rgba(242,138,45,.42), transparent 34%), radial-gradient(circle at 10% 100%, rgba(26,127,181,.18), transparent 36%), linear-gradient(135deg, #161614 0%, #342012 100%)" }}>
           <div className="relative px-6 py-8 sm:px-8">
-            <div className="absolute right-4 top-4 z-10 flex size-11 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white backdrop-blur sm:right-6 sm:top-6"><NotificationBell initialUnreadCount={notificationUnreadCount} variant="dark" compactToolbar /></div>
+            <div className="absolute right-4 top-4 z-[260] flex size-11 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white backdrop-blur sm:right-6 sm:top-6"><NotificationBell initialUnreadCount={notificationUnreadCount} variant="dark" compactToolbar /></div>
             <div
               className="absolute right-0 top-0 h-48 w-48 rounded-full opacity-10 blur-3xl"
               style={{ background: "radial-gradient(circle, #E8820C, transparent)" }}
