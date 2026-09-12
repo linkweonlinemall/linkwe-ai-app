@@ -1,234 +1,162 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import PublicNav from "@/components/layout/PublicNav";
-import { getRoleDashboardPath } from "@/lib/auth/redirects";
-import { getSession } from "@/lib/auth/session";
-import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
-import { prisma } from "@/lib/prisma";
+
+import PublicStaticPageShell from "@/components/layout/PublicStaticPageShell";
 
 export const metadata: Metadata = {
-  title: "Terms of Service · LinkWe",
-  description: "Terms and conditions for using LinkWe — Trinidad and Tobago's multi-vendor marketplace.",
+  title: "Terms of Service",
+  description:
+    "Current terms for shopping, selling, services, events, Timeline, Rex, payments, delivery, and accounts on LinkWe.",
 };
 
-export default async function TermsOfServicePage() {
-  const session = await getSession();
-  const user = session ? await prisma.user.findUnique({ where: { id: session.userId } }) : null;
-  const continueHref = user ? getRoleDashboardPath(user.role) : null;
+const vendorDuties = [
+  "Provide accurate business, identity, payout, listing, price, stock, availability, delivery, cancellation, refund, licence, and event information",
+  "Supply safe, lawful, authentic goods and services and hold all licences, permissions, insurance, tax registrations, and intellectual-property rights required for the business",
+  "Honour confirmed orders, bookings, subscriptions, tickets, promotions, and collaborations, and communicate promptly when fulfilment is at risk",
+  "Package physical products appropriately, follow the displayed fulfilment workflow, and hand parcels to LinkWe or an approved fulfilment partner when required",
+  "Protect customer information and use it only for the relevant transaction, support, safety, or other lawful purpose",
+  "Apply published policies consistently without limiting mandatory consumer rights",
+] as const;
 
-  const unreadCount = await getNavUnreadCount();
+const prohibited = [
+  "Illegal, unsafe, counterfeit, stolen, recalled, deceptive, infringing, or prohibited goods, services, events, or content",
+  "Fraud, payment abuse, false orders, manipulation of ratings or engagement, fee avoidance, or moving a LinkWe transaction off-platform to evade applicable charges",
+  "Harassment, threats, discrimination, impersonation, spam, malicious code, scraping, unauthorised automation, or interference with LinkWe",
+  "Publishing another person’s sensitive information without authority or using customer information for unrelated marketing",
+  "Misleading claims, undisclosed material terms, fabricated scarcity, or content that violates law or another person’s rights",
+] as const;
 
+export default function TermsOfServicePage() {
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
-      <PublicNav
-        user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null}
-        dashboardHref={continueHref ?? undefined}
-        unreadCount={unreadCount}
-      />
-      <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
-        <div className="mb-10 overflow-hidden rounded-[28px] bg-gradient-to-br from-[#1C1C1A] via-[#292724] to-[#6b260d] p-7 text-white shadow-xl sm:p-10">
-          <p className="text-xs font-bold uppercase tracking-widest text-[#D4450A]">Legal</p>
-          <h1 className="font-display mt-2 text-4xl font-bold text-white">
-            Terms of Service
-          </h1>
-          <p className="mt-3 text-sm text-white/65">
-            Effective 30 August 2026 · LinkWe Online Directory
-          </p>
+    <PublicStaticPageShell
+      eyebrow="Legal"
+      title="Terms of Service"
+      subtitle="The rules that keep LinkWe’s marketplace, community, fulfilment, payments, and business tools useful and trustworthy."
+      updated="11 September 2026"
+      legal
+    >
+      <section>
+        <h2 className="text-xl font-black text-zinc-900">1. Acceptance and eligibility</h2>
+        <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-600">
+          <p>By accessing LinkWe, creating an account, publishing content, or completing a transaction, you agree to these Terms and our <Link href="/privacy" className="font-bold text-[#D4450A] hover:underline">Privacy Policy</Link>. If you do not agree, do not use LinkWe.</p>
+          <p>You must be at least 18 years old and legally able to enter a binding agreement to hold an account. You must provide accurate information, keep credentials secure, and promptly report suspected unauthorised access. A person acting for a business confirms that they have authority to bind it.</p>
         </div>
+      </section>
 
-        <div className="flex flex-col gap-8">
+      <section>
+        <h2 className="text-xl font-black text-zinc-900">2. What LinkWe provides</h2>
+        <p className="mt-3 text-sm leading-7 text-zinc-600">
+          LinkWe Online Directory operates a multi-vendor marketplace and business platform for products, digital goods, services, bookings, requests, subscriptions, events, tickets, storefronts, Timeline content, messaging, discovery, payments, and coordinated fulfilment. Vendors are independent businesses and are ordinarily the seller or service provider. LinkWe supplies the platform and may coordinate payment, support, delivery, pickup, verification, or dispute handling; it does not manufacture vendor goods or perform vendor services unless expressly stated.
+        </p>
+      </section>
 
-          <section className="rounded-2xl border border-zinc-200 bg-white p-6">
-            <h2 className="mb-3 text-lg font-bold text-zinc-900">1. Acceptance of terms</h2>
-            <p className="text-sm leading-7 text-zinc-600">
-              By creating an account or using LinkWe, you agree to these Terms of Service and our{" "}
-              <Link href="/privacy" className="font-semibold text-[#D4450A] hover:underline">
-                Privacy Policy
-              </Link>.
-              These terms apply to all users including customers, vendors, and couriers.
-              If you do not agree to these terms, do not use LinkWe.
-            </p>
-          </section>
-
-          <section className="rounded-2xl border border-zinc-200 bg-white p-6">
-            <h2 className="mb-3 text-lg font-bold text-zinc-900">2. The LinkWe platform</h2>
-            <p className="text-sm leading-7 text-zinc-600">
-              LinkWe is a marketplace platform that connects customers with vendors and couriers in
-              Trinidad and Tobago. LinkWe Online Directory acts as a platform operator and is not
-              a party to transactions between customers and vendors. Vendors are independent businesses
-              responsible for their own products, services, pricing, and fulfilment.
-            </p>
-          </section>
-
-          <section className="rounded-2xl border border-zinc-200 bg-white p-6">
-            <h2 className="mb-3 text-lg font-bold text-zinc-900">3. Account registration</h2>
-            <div className="flex flex-col gap-3 text-sm leading-7 text-zinc-600">
-              <p>You must be at least 18 years old to create an account on LinkWe.</p>
-              <p>You are responsible for maintaining the security of your account credentials.
-              Do not share your password with anyone. Notify us immediately at{" "}
-                <a href="mailto:admin@linkwemall.com" className="font-semibold text-[#D4450A] hover:underline">
-                  admin@linkwemall.com
-                </a>{" "}
-                if you suspect unauthorised access to your account.</p>
-              <p>You may only create one account per person. Creating multiple accounts to circumvent
-              suspensions or restrictions is prohibited.</p>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-zinc-200 bg-white p-6">
-            <h2 className="mb-3 text-lg font-bold text-zinc-900">4. Vendor terms</h2>
-            <div className="flex flex-col gap-3 text-sm leading-7 text-zinc-600">
-              <p>By registering as a vendor on LinkWe, you agree to:</p>
-              <ul className="ml-4 flex flex-col gap-2">
-                {[
-                  "Provide accurate and truthful information about your business, products, and services",
-                  "Honour all orders and bookings made through the platform",
-                  "Maintain accurate pricing, availability, and stock levels",
-                  "Comply with all applicable laws in Trinidad and Tobago including consumer protection laws",
-                  "Not list prohibited items including illegal goods, counterfeit products, or items that violate intellectual property rights",
-                  "Respond to customer enquiries and disputes in a timely and professional manner",
-                  "Accept that LinkWe may remove listings or suspend accounts that violate these terms",
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2">
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D4450A]" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <p><strong className="text-zinc-900">Plans and commissions:</strong> Starter has no monthly fee and currently charges 15% on products and 8% on services. Growth is TTD 300 monthly with 5% on products and no service commission. Pro is TTD 500 monthly with no product or service commission. Event tickets carry a 6% platform commission on all plans. Current pricing shown on the Pricing page controls if a conflict arises.</p>
-              <p><strong className="text-zinc-900">Payouts:</strong> Eligible vendor earnings become available in the LinkWe balance after the applicable fulfilment rules are met. Vendors request payout to their verified bank details, subject to the displayed minimum, fraud review, refunds, disputes and lawful holds.</p>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-zinc-200 bg-white p-6">
-            <h2 className="mb-3 text-lg font-bold text-zinc-900">5. Customer terms</h2>
-            <div className="flex flex-col gap-3 text-sm leading-7 text-zinc-600">
-              <p>As a customer on LinkWe, you agree to:</p>
-              <ul className="ml-4 flex flex-col gap-2">
-                {[
-                  "Provide accurate delivery and contact information when placing orders",
-                  "Pay for orders and bookings at the time of purchase",
-                  "Not attempt to circumvent the platform by transacting directly with vendors to avoid fees",
-                  "Use the platform respectfully and not submit false reviews or fraudulent orders",
-                  "Understand that LinkWe is a marketplace and vendors are responsible for their own products and services",
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2">
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D4450A]" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <p><strong className="text-zinc-900">Refunds and disputes:</strong> Refund requests must be submitted within 7 days of receiving an order. Contact us at{" "}
-                <a href="mailto:admin@linkwemall.com" className="font-semibold text-[#D4450A] hover:underline">
-                  admin@linkwemall.com
-                </a>{" "}
-                and we will work with the vendor to resolve your issue.
-              </p>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-zinc-200 bg-white p-6">
-            <h2 className="mb-3 text-lg font-bold text-zinc-900">6. Courier terms</h2>
-            <div className="flex flex-col gap-3 text-sm leading-7 text-zinc-600">
-              <p>As a courier on LinkWe, you agree to:</p>
-              <ul className="ml-4 flex flex-col gap-2">
-                {[
-                  "Provide accurate information about your vehicle and operating region",
-                  "Accept and complete assigned deliveries in a timely and professional manner",
-                  "Handle packages with care and deliver them in the condition received",
-                  "Maintain a valid driver's licence and vehicle insurance",
-                  "Not accept deliveries you cannot complete",
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2">
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D4450A]" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-zinc-200 bg-white p-6">
-            <h2 className="mb-3 text-lg font-bold text-zinc-900">7. Prohibited conduct</h2>
-            <div className="flex flex-col gap-3 text-sm leading-7 text-zinc-600">
-              <p>All users are prohibited from:</p>
-              <ul className="ml-4 flex flex-col gap-2">
-                {[
-                  "Using LinkWe for any illegal purpose",
-                  "Harassing, threatening, or abusing other users",
-                  "Submitting false or misleading information",
-                  "Attempting to hack, disrupt, or interfere with the platform",
-                  "Scraping or copying platform content without permission",
-                  "Impersonating another person or business",
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2">
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D4450A]" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-zinc-200 bg-white p-6">
-            <h2 className="mb-3 text-lg font-bold text-zinc-900">8. Payments</h2>
-            <div className="flex flex-col gap-3 text-sm leading-7 text-zinc-600">
-            <p>
-              Online payments on LinkWe are processed securely through WiPay. By making a payment,
-              you agree to WiPay&apos;s terms of service. LinkWe does not store card details.
-              Prices on LinkWe are displayed in Trinidad and Tobago Dollars (TTD) unless otherwise stated.
-              International card payments may be subject to currency conversion by your card issuer.
-            </p>
-            <p><strong className="text-zinc-900">Subscriptions:</strong> Subscription price and billing interval are shown before payment. WiPay may require the customer or vendor to approve each renewal rather than charging automatically. A subscription can be cancelled for future periods from the relevant dashboard; cancellation does not automatically refund a period already purchased.</p>
-            <p><strong className="text-zinc-900">Payment failures:</strong> An order, ticket, booking, or subscription is not confirmed until LinkWe receives successful payment confirmation. A failed or abandoned payment does not create a right to fulfilment.</p>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-zinc-200 bg-white p-6">
-            <h2 className="mb-3 text-lg font-bold text-zinc-900">9. Limitation of liability</h2>
-            <p className="text-sm leading-7 text-zinc-600">
-              LinkWe Online Directory provides the platform on an &quot;as is&quot; basis. We are not liable for
-              the quality, safety, or legality of items listed by vendors; the accuracy of vendor listings;
-              the ability of vendors to complete transactions; or any losses arising from transactions
-              between users. Our total liability to any user shall not exceed the amount paid by that user
-              to LinkWe in the 12 months preceding the claim.
-            </p>
-          </section>
-
-          <section className="rounded-2xl border border-zinc-200 bg-white p-6">
-            <h2 className="mb-3 text-lg font-bold text-zinc-900">10. Governing law</h2>
-            <p className="text-sm leading-7 text-zinc-600">
-              These terms are governed by the laws of Trinidad and Tobago. Any disputes arising from
-              use of LinkWe shall be subject to the exclusive jurisdiction of the courts of
-              Trinidad and Tobago.
-            </p>
-          </section>
-
-          <section className="rounded-2xl border border-zinc-200 bg-white p-6">
-            <h2 className="mb-3 text-lg font-bold text-zinc-900">11. Changes to these terms</h2>
-            <p className="text-sm leading-7 text-zinc-600">
-              We may update these terms from time to time. We will notify registered users of material
-              changes by email at least 14 days before they take effect. Continued use of LinkWe
-              after changes take effect constitutes acceptance of the updated terms.
-            </p>
-          </section>
-
-          <section className="rounded-2xl border border-zinc-200 bg-white p-6">
-            <h2 className="mb-3 text-lg font-bold text-zinc-900">12. Contact</h2>
-            <p className="text-sm leading-7 text-zinc-600">
-              Questions about these terms? Contact LinkWe Online Directory at{" "}
-              <a href="mailto:admin@linkwemall.com" className="font-semibold text-[#D4450A] hover:underline">
-                admin@linkwemall.com
-              </a>{" "}
-              or visit our{" "}
-              <Link href="/contact" className="font-semibold text-[#D4450A] hover:underline">
-                contact page
-              </Link>.
-            </p>
-          </section>
-
+      <section>
+        <h2 className="text-xl font-black text-zinc-900">3. Customers and transactions</h2>
+        <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-600">
+          <p>A customer must review the listing, seller, price, variants, availability, policies, fulfilment method, checkout questions, and order total before paying. Orders containing several vendors are divided into vendor portions for preparation while remaining part of the customer&apos;s main order.</p>
+          <p>A transaction is not confirmed until LinkWe receives successful payment confirmation. Stock, capacity, tickets, appointments, and promotions may remain subject to availability. LinkWe or a vendor may cancel an order where payment fails, stock is unavailable, a listing or price is clearly erroneous, fraud is suspected, fulfilment is unsafe or impossible, or law requires it; any amount properly due back will be handled through the applicable refund process.</p>
+          <p>Customers must provide accurate contact, delivery, map-pin, attendee, booking, and customisation information, be available for delivery or collection, inspect purchases reasonably promptly, and use products or services lawfully.</p>
         </div>
-      </div>
-    </div>
+      </section>
+
+      <section>
+        <h2 className="text-xl font-black text-zinc-900">4. Vendors</h2>
+        <ul className="mt-4 grid gap-2">
+          {vendorDuties.map((item) => (
+            <li key={item} className="flex items-start gap-3 rounded-xl bg-zinc-50 px-4 py-3 text-sm leading-6 text-zinc-600"><span className="mt-2 size-1.5 shrink-0 rounded-full bg-[#D4450A]" />{item}</li>
+          ))}
+        </ul>
+        <div className="mt-4 space-y-3 text-sm leading-7 text-zinc-600">
+          <p><strong className="text-zinc-900">Plans and commission:</strong> Starter is currently free with 15% product commission and 8% service commission; Growth is currently TTD 300 monthly with 5% product commission and no service commission; Pro is currently TTD 500 monthly with no product or service commission. Event tickets currently carry 6% commission on every plan. Product, service, Rex, placement, support, and other plan limits are shown on the <Link href="/pricing" className="font-bold text-[#D4450A] hover:underline">Pricing page</Link>, which controls if displayed pricing conflicts with this summary.</p>
+          <p><strong className="text-zinc-900">Payouts:</strong> Eligible earnings enter the LinkWe balance under the applicable fulfilment rules. Payouts require verified bank details and are subject to the displayed minimum, available balance, refunds, chargebacks, disputes, fraud review, corrections, and lawful holds.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-xl font-black text-zinc-900">5. Delivery, pickup and digital fulfilment</h2>
+        <p className="mt-3 text-sm leading-7 text-zinc-600">
+          Eligible physical orders use LinkWe&apos;s current coordinated fulfilment flow. Vendors prepare their portions, LinkWe may receive and combine parcels, and the customer selects available combined delivery or LinkWe warehouse pickup at checkout. Fees depend on the displayed quote and may reflect destination, weight, distance, and inter-island movement. Dates are estimates unless expressly guaranteed. Digital goods are delivered through the download flow after confirmed payment and remain subject to the listing&apos;s access, file, expiry, download, and licence terms. See <Link href="/shipping-info" className="font-bold text-[#D4450A] hover:underline">Shipping, Delivery & Pickup</Link>.
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-xl font-black text-zinc-900">6. Services, bookings and subscriptions</h2>
+        <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-600">
+          <p>Services may be bookable, quoted, on-demand, virtual, recurring, or otherwise described on the listing. The vendor controls the service description, eligibility, schedule, capacity, location, deposit, balance, cancellation window, and service-specific conditions, subject to law and LinkWe rules.</p>
+          <p>Customers and vendors must attend, deliver, reschedule, cancel, or record completion honestly. Cancellation after a self-service window may require direct vendor assistance. A recurring subscription continues according to its displayed interval until it ends or is cancelled; cancellation for a future period does not automatically refund the current period.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-xl font-black text-zinc-900">7. Events and tickets</h2>
+        <p className="mt-3 text-sm leading-7 text-zinc-600">
+          Event organisers are responsible for event accuracy, venue or stream access, capacity, permissions, safety, changes, cancellation, and the displayed refund policy. Tickets may include QR credentials and may be transferred only through available LinkWe tools and subject to restrictions. Do not duplicate, resell, or misuse a ticket or QR code. Refund eligibility follows the event terms and applicable law; WiPay may require a complete ticket-order transaction to be refunded.
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-xl font-black text-zinc-900">8. Timeline, Messages, reviews and user content</h2>
+        <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-600">
+          <p>Users retain ownership of content they submit. You grant LinkWe a worldwide, non-exclusive, royalty-free licence to host, store, reproduce, adapt for display, distribute, and promote that content as reasonably needed to operate and market LinkWe and the relevant store or listing. This licence ends when content is deleted, except for cached, backup, shared, transaction, moderation, or legal copies that reasonably remain.</p>
+          <p>Timeline publishing is currently limited to stores with an active Growth or Pro plan; customers can discover eligible posts, follow stores, like, comment, reply, search, and share. LinkWe may rank, limit, label, moderate, archive, or remove content or engagement that violates these Terms, creates risk, or is misleading.</p>
+          <p>Reviews must reflect genuine experience. Private messages are for legitimate marketplace communication; users must not send payment credentials, harmful content, spam, or unrelated marketing.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-xl font-black text-zinc-900">9. Rex and AI-assisted features</h2>
+        <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-600">
+          <p>Rex can help vendors draft listings and Timeline posts, work with images and marketplace data, answer operational questions, and prepare actions. AI output may be incomplete, inaccurate, or unsuitable. The user must review prices, stock, policies, claims, images, attachments, recipients, and any proposed action before relying on or publishing it.</p>
+          <p>Do not submit secrets, card data, unnecessary personal information, illegal content, or material you lack permission to use. LinkWe may apply usage allowances, top-up charges, safety limits, or feature changes shown in the product. Rex is not legal, financial, medical, tax, or other professional advice.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-xl font-black text-zinc-900">10. Payments, refunds and chargebacks</h2>
+        <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-600">
+          <p>Prices are displayed in Trinidad and Tobago dollars unless stated otherwise. WiPay processes online card transactions, card enrolments where enabled, renewals, and refunds under its terms and availability. LinkWe does not store full card details. A bank or card issuer may apply separate conversion or service charges.</p>
+          <p>Refunds, returns, booking cancellations, digital goods, subscriptions, and event tickets follow the applicable listing terms, LinkWe process, payment-provider limits, and mandatory consumer rights. A refund request is not complete until processed by the payment provider and financial institution. See <Link href="/returns" className="font-bold text-[#D4450A] hover:underline">Returns, Cancellations & Refunds</Link>.</p>
+          <p>Users must contact LinkWe promptly before filing a chargeback where practical, must not seek duplicate recovery, and must cooperate with reasonable transaction verification. LinkWe may offset valid refunds, reversals, fees, or losses against a vendor balance where the governing transaction permits.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-xl font-black text-zinc-900">11. Prohibited conduct</h2>
+        <ul className="mt-4 grid gap-2">
+          {prohibited.map((item) => (
+            <li key={item} className="flex items-start gap-3 rounded-xl bg-red-50/60 px-4 py-3 text-sm leading-6 text-zinc-600"><span className="mt-2 size-1.5 shrink-0 rounded-full bg-red-500" />{item}</li>
+          ))}
+        </ul>
+      </section>
+
+      <section>
+        <h2 className="text-xl font-black text-zinc-900">12. Platform changes, moderation and termination</h2>
+        <p className="mt-3 text-sm leading-7 text-zinc-600">
+          LinkWe may update, suspend, restrict, or discontinue features; correct errors; reject or remove listings; withhold publication; reverse abusive engagement; require verification; or suspend or terminate access where reasonably necessary for security, legal compliance, payment risk, repeated poor fulfilment, policy violations, or protection of users. Where appropriate, we may give notice or an opportunity to correct the issue. Obligations concerning completed transactions, fees, payouts, refunds, licences, liability, and disputes survive account closure where applicable.
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-xl font-black text-zinc-900">13. Disclaimers and liability</h2>
+        <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-600">
+          <p>LinkWe is provided on an “as available” basis. To the maximum extent permitted by law, LinkWe does not guarantee uninterrupted operation, every vendor&apos;s conduct, the accuracy of all user content, or the quality, safety, legality, availability, or suitability of a vendor&apos;s offering.</p>
+          <p>Nothing in these Terms excludes or limits a right, remedy, warranty, duty, or liability that cannot lawfully be excluded. Subject to that qualification, LinkWe is not liable for indirect, incidental, special, or consequential loss, or loss caused by a vendor, customer, organiser, courier, financial institution, force-majeure event, or misuse of the platform. Where liability can lawfully be limited, LinkWe&apos;s aggregate liability relating to the service will not exceed the greater of the amount the claimant paid directly to LinkWe in the preceding 12 months or the minimum amount required by law.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-xl font-black text-zinc-900">14. Disputes and governing law</h2>
+        <p className="mt-3 text-sm leading-7 text-zinc-600">
+          Contact the relevant vendor and LinkWe Support promptly, keep records, and allow a reasonable opportunity to investigate. Consumers may also seek assistance from the Trinidad and Tobago Consumer Affairs Division or another competent authority. These Terms are governed by the laws of Trinidad and Tobago, and disputes are subject to its courts unless applicable law requires otherwise.
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-xl font-black text-zinc-900">15. Changes and contact</h2>
+        <p className="mt-3 text-sm leading-7 text-zinc-600">
+          We may update these Terms to reflect platform, operational, payment, or legal changes. The effective date above identifies the current version, and material changes may be communicated through LinkWe or email. Questions may be sent to <a href="mailto:admin@linkwemall.com" className="font-bold text-[#D4450A] hover:underline">admin@linkwemall.com</a> or through our <Link href="/contact" className="font-bold text-[#D4450A] hover:underline">contact page</Link>.
+        </p>
+      </section>
+    </PublicStaticPageShell>
   );
 }
