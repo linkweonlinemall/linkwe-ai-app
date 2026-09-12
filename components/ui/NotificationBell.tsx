@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 
 import {
   getNotifications,
@@ -95,11 +96,12 @@ export default function NotificationBell({
   const [loaded, setLoaded] = useState(false);
   const [isPending, startTransition] = useTransition();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   // Close on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node) && !panelRef.current?.contains(e.target as Node)) {
         setOpen(false);
       }
     }
@@ -198,8 +200,9 @@ export default function NotificationBell({
       </button>
 
       {/* Dropdown */}
-      {open ? (
-        <div className="fixed left-4 right-4 top-16 z-[240] overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl sm:absolute sm:left-auto sm:right-0 sm:top-11 sm:w-80">
+      {open && typeof document !== "undefined" ? createPortal(
+        <div className="fixed inset-0 z-[500] bg-black/20 px-3 pt-16 backdrop-blur-[1px] sm:flex sm:justify-end sm:bg-transparent sm:px-6 sm:pt-20" onClick={() => setOpen(false)}>
+        <div ref={panelRef} role="dialog" aria-modal="true" aria-label="Notifications" className="mx-auto max-h-[calc(100svh-5rem)] w-full max-w-sm overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_24px_80px_rgba(28,28,26,.3)] sm:mx-0 sm:h-fit" onClick={(event) => event.stopPropagation()}>
           {/* Header */}
           <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
             <div className="flex items-center gap-2">
@@ -293,7 +296,7 @@ export default function NotificationBell({
               </p>
             </div>
           ) : null}
-        </div>
+        </div></div>, document.body
       ) : null}
     </div>
   );

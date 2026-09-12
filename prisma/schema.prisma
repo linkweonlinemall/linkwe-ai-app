@@ -236,6 +236,8 @@ model BusinessPost {
   storeId   String                @map("store_id")
   caption   String
   images    String[]              @default([])
+  /// Vendor-supplied discovery terms used by timeline search.
+  searchTags String[]             @default([]) @map("search_tags")
   /// Snapshot cards for products, services, partner items, stores, events and tickets.
   attachments Json                @default("[]")
   published Boolean               @default(true)

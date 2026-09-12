@@ -23,6 +23,8 @@ type OwnProps = {
    * identically to before (compression still happens, onChange still fires).
    */
   onUploadingChange?: (isUploading: boolean) => void;
+  /** Limit the current selection before compression. */
+  maxFiles?: number;
 };
 
 // We always force type="file" internally, so callers can't accidentally pass
@@ -41,6 +43,7 @@ type Props = Omit<ComponentProps<typeof Input>, "type"> & OwnProps;
  */
 export default function CompressedFileInput({
   onUploadingChange,
+  maxFiles,
   onChange,
   ...rest
 }: Props) {
@@ -58,7 +61,7 @@ export default function CompressedFileInput({
       return;
     }
 
-    const fileArray = Array.from(files);
+    const fileArray = Array.from(files).slice(0, maxFiles ?? files.length);
 
     // Initialise one status row per file before any async work.
     setFileStatuses(

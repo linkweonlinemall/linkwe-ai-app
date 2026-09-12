@@ -623,6 +623,7 @@ const CREATE_TIMELINE_POST_TOOL: Anthropic.Tool = {
     type: "object",
     properties: {
       caption: { type: "string", description: "Finished customer-facing post copy, maximum 2200 characters. Markdown, links and emojis are supported." },
+      search_tags: { type: "array", maxItems: 12, items: { type: "string" }, description: "Relevant shopper search terms without # symbols, such as streetwear, lunch special, or Port of Spain." },
       sources: {
         type: "array",
         maxItems: 4,
@@ -1924,6 +1925,7 @@ export async function POST(req: NextRequest) {
         }
 
         if (toolBlock.name === "search_timeline_sources") {
+          if (store.subscriptionStatus !== "ACTIVE" || (store.subscriptionPlan !== "GROWTH" && store.subscriptionPlan !== "PRO")) return { content: JSON.stringify({ ok: false, error: "Timeline posting is available on active Growth and Pro plans." }) }
           const raw = toolBlock.input as { query?: unknown; type?: unknown }
           const query = String(raw.query ?? "").trim().slice(0, 100)
           const type = ["STORE", "PRODUCT", "SERVICE", "EVENT"].includes(String(raw.type ?? "")) ? String(raw.type) : "ALL"
@@ -1942,13 +1944,16 @@ export async function POST(req: NextRequest) {
         }
 
         if (toolBlock.name === "create_timeline_post") {
+          if (store.subscriptionStatus !== "ACTIVE" || (store.subscriptionPlan !== "GROWTH" && store.subscriptionPlan !== "PRO")) return { content: JSON.stringify({ ok: false, error: "Timeline posting is available on active Growth and Pro plans." }) }
           const raw = toolBlock.input as {
             caption?: unknown
+            search_tags?: unknown
             sources?: Array<{ type?: unknown; id?: unknown; image_positions?: unknown; attach?: unknown }>
             uploaded_image_urls?: unknown
             published?: unknown
           }
           const caption = String(raw.caption ?? "").trim().slice(0, 2200)
+          const searchTags = [...new Set((Array.isArray(raw.search_tags) ? raw.search_tags : []).map(String).map((value) => value.trim().replace(/^#+/, "").replace(/\s+/g, " ").toLowerCase().slice(0, 32)).filter(Boolean))].slice(0, 12)
           const images: string[] = []
           const attachments: Array<Record<string, string | null>> = []
           const addImages = (available: Array<string | null | undefined>, positions: unknown) => {
@@ -1989,7 +1994,7 @@ export async function POST(req: NextRequest) {
           const uploaded = Array.isArray(raw.uploaded_image_urls) ? raw.uploaded_image_urls.map(String).filter(isTrustedHostedImageUrl) : []
           addImages(uploaded, uploaded.map((_, index) => index + 1))
           if (!caption && images.length === 0) return { content: JSON.stringify({ ok: false, error: "A timeline post needs a caption or at least one photo." }) }
-          const row = await prisma.businessPost.create({ data: { storeId: store.id, caption, images, attachments: attachments.slice(0, 4) as Prisma.InputJsonValue, published: raw.published !== false }, select: { id: true, published: true } })
+          const row = await prisma.businessPost.create({ data: { storeId: store.id, caption, images, searchTags, attachments: attachments.slice(0, 4) as Prisma.InputJsonValue, published: raw.published !== false }, select: { id: true, published: true } })
           const storeRow = await prisma.store.findUnique({ where: { id: store.id }, select: { slug: true } })
           revalidatePath("/timeline")
           revalidatePath("/dashboard/vendor/timeline")
