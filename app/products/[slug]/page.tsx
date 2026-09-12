@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { MainOrderStatus, type ProductCondition } from "@prisma/client";
-import { Package } from "lucide-react";
+import { BadgeCheck, Download, Package, RotateCcw, ShieldCheck, Star, Truck } from "lucide-react";
 
 import ProductBuyBox from "@/components/product/ProductBuyBox";
 import ProductContactActions from "@/components/product/ProductContactActions";
@@ -25,7 +25,7 @@ import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { prisma } from "@/lib/prisma";
 import { formatTTDPrice } from "@/lib/format/price";
-import { typography, radius, shadow, spacing, tw } from "@/lib/design-system";
+import { typography, radius, tw } from "@/lib/design-system";
 import { isStoreSellable } from "@/lib/store/sellable-store";
 
 function formatLabel(value: string): string {
@@ -268,17 +268,19 @@ export default async function PublicProductPage({ params }: Props) {
   }));
 
   return (
-    <div className={`min-h-screen pb-28 ${tw.fontSans} antialiased md:pb-16 lg:pb-0 ${tw.bgPage}`}>
+    <div className={`relative isolate min-h-screen overflow-hidden bg-[linear-gradient(180deg,#f8fcff_0%,#fff_42%,#fff9f4_100%)] pb-28 ${tw.fontSans} antialiased md:pb-16 lg:pb-0`}>
       <PublicNav
         user={session ? { name: session.fullName ?? "Account", href: dashboardHref! } : null}
         dashboardHref={dashboardHref ?? undefined}
         unreadCount={unreadCount}
       />
 
-      <div className="w-full px-8 py-6">
-        <div className={`mb-4 h-1 w-16 ${radius.pill} ${tw.bgScarlet}`} />
+      <div className="pointer-events-none absolute -left-52 top-24 size-[34rem] rounded-full bg-[#1A7FB5]/10 blur-[120px]" aria-hidden />
+      <div className="pointer-events-none absolute -right-48 top-[34rem] size-[30rem] rounded-full bg-[#D4450A]/8 blur-[120px]" aria-hidden />
+
+      <div className="relative mx-auto w-full max-w-screen-xl px-4 py-5 sm:px-6 sm:py-8">
         {/* Breadcrumb */}
-        <nav className={`mb-6 flex items-center gap-2 ${typography.bodySmall} text-zinc-400`}>
+        <nav className="hide-scrollbar mb-5 flex items-center gap-2 overflow-x-auto whitespace-nowrap rounded-full border border-white/90 bg-white/75 px-4 py-2.5 text-[11px] font-bold text-zinc-400 shadow-[0_8px_30px_rgba(38,73,96,.07)] backdrop-blur sm:mb-8 sm:w-fit">
           <Link href="/" className="transition-colors hover:text-zinc-700">
             Home
           </Link>
@@ -297,35 +299,42 @@ export default async function PublicProductPage({ params }: Props) {
           <span className="max-w-48 truncate text-zinc-600">{product.name}</span>
         </nav>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_360px] lg:gap-10">
-          {/* Gallery — edge-to-edge on mobile */}
-          <div className="-mx-8 min-w-0 md:mx-0">
+        <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2 md:gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.08fr)_350px] lg:gap-8">
+          {/* Immersive product gallery */}
+          <div className="min-w-0">
             <ProductGallery images={product.images} name={product.name} />
           </div>
 
           {/* Product info */}
-          <div className="flex min-w-0 flex-col gap-5 px-4 md:px-0">
+          <div className="flex min-w-0 flex-col gap-5 rounded-[1.75rem] border border-white/90 bg-white/80 p-5 shadow-[0_22px_65px_rgba(38,73,96,.10)] ring-1 ring-sky-950/[.04] backdrop-blur sm:p-7">
             <div className="flex flex-wrap items-center gap-2">
               {product.category ? (
-                <span className="font-sans text-[13px] font-normal uppercase tracking-wide text-gray-600">
+                <span className="rounded-full border border-sky-100 bg-sky-50 px-3 py-1 font-sans text-[10px] font-black uppercase tracking-[.14em] text-[#1A7FB5]">
                   {formatLabel(product.category).toUpperCase()}
                 </span>
               ) : null}
               {product.isFeatured ? (
-                <span className="rounded-md bg-[#D4450A] px-2 py-0.5 font-sans text-[11px] font-semibold uppercase text-white">
+                <span className="rounded-full bg-gradient-to-r from-[#D4450A] to-[#F28A2D] px-3 py-1 font-sans text-[10px] font-black uppercase tracking-wider text-white shadow-sm">
                   FEATURED
                 </span>
               ) : null}
               {cond ? (
-                <span className="rounded-md bg-green-50 px-2 py-0.5 font-sans text-[11px] font-semibold text-green-700">
+                <span className={`rounded-full border px-3 py-1 font-sans text-[10px] font-black uppercase tracking-wider ${cond.className}`}>
                   {cond.label}
                 </span>
               ) : null}
             </div>
 
-            <h1 className={`${typography.h3} font-sans leading-tight text-zinc-900 sm:text-4xl sm:leading-tight`}>
+            <h1 className="font-sans text-3xl font-black leading-[1.08] tracking-[-.035em] text-zinc-950 sm:text-4xl lg:text-[2.65rem]">
               {product.name}
             </h1>
+
+            {reviewData.count > 0 ? (
+              <a href="#reviews" className="flex w-fit items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 transition hover:bg-amber-100">
+                <span className="flex items-center gap-1"><Star className="size-3.5 fill-amber-400 text-amber-400" /> {reviewData.average.toFixed(1)}</span>
+                <span className="text-amber-700/70">{reviewData.count} review{reviewData.count === 1 ? "" : "s"}</span>
+              </a>
+            ) : null}
 
             <div className="flex flex-wrap items-center gap-3">
               <p className={`${typography.bodySmall} text-zinc-600`}>
@@ -344,9 +353,7 @@ export default async function PublicProductPage({ params }: Props) {
             </div>
 
             {product.shortDescription ? (
-              <p
-                className={`border-l-2 ${tw.borderScarletMuted30} py-3 pl-4 font-sans text-lg font-medium italic leading-normal text-gray-700`}
-              >
+              <p className="rounded-2xl border border-sky-100 bg-gradient-to-r from-sky-50 to-white px-4 py-3.5 font-sans text-base font-semibold leading-7 text-zinc-700 shadow-sm">
                 {product.shortDescription}
               </p>
             ) : null}
@@ -360,19 +367,15 @@ export default async function PublicProductPage({ params }: Props) {
             ) : null}
 
             {product.previewUrl ? (
-              <div className={`${radius.card} border border-zinc-200 bg-white ${spacing.cardPadding} ${shadow.card}`}>
+              <div className="rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50 to-white p-5 shadow-[0_12px_35px_rgba(26,127,181,.09)]">
                 <h2 className={`mb-3 ${typography.caption} text-zinc-900`}>Preview</h2>
                 <a
                   href={product.previewUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`flex items-center gap-2 ${radius.card} border-2 ${tw.borderScarletMuted30} ${tw.bgScarletMuted5} px-4 py-3 ${typography.bodySmall} font-semibold ${tw.textScarlet} transition-colors ${tw.hoverBgScarletMuted10}`}
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#1A7FB5] to-[#2D9AD1] px-4 py-3 text-sm font-bold text-white shadow-[0_10px_25px_rgba(26,127,181,.22)] transition hover:-translate-y-0.5"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="17 8 12 3 7 8" />
-                    <line x1="12" y1="3" x2="12" y2="15" />
-                  </svg>
+                  <Download className="size-4" />
                   Download free preview
                 </a>
               </div>
@@ -380,7 +383,7 @@ export default async function PublicProductPage({ params }: Props) {
 
             <div>
               <h2 className={`mb-3 ${typography.caption} text-zinc-900`}>Product Details</h2>
-              <div className={`overflow-hidden ${radius.card} border border-zinc-200 bg-white ${shadow.card}`}>
+              <div className="overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-[0_12px_35px_rgba(38,73,96,.08)]">
                 <table className="w-full font-sans text-sm">
                   <tbody className="divide-y divide-zinc-100">
                     {product.brand ? (
@@ -469,9 +472,11 @@ export default async function PublicProductPage({ params }: Props) {
 
           {/* Purchase card — full width on tablet, sidebar on desktop */}
           <aside className="min-w-0 md:col-span-2 lg:col-span-1">
-            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm lg:sticky lg:top-24 lg:z-10">
-              <div className="mb-4"><ProductContactActions storeId={product.storeId} title={product.name} isOwner={isOwner} /></div>
-              <ProductBuyBox
+            <div className="relative overflow-hidden rounded-[1.75rem] border border-white bg-gradient-to-br from-white via-white to-sky-50/75 p-5 shadow-[0_25px_75px_rgba(26,127,181,.15)] ring-1 ring-sky-950/[.06] sm:p-6 lg:sticky lg:top-24 lg:z-10">
+              <div className="pointer-events-none absolute -right-16 -top-16 size-40 rounded-full bg-[#1A7FB5]/10 blur-3xl" aria-hidden />
+              <div className="relative">
+                <div className="mb-4"><ProductContactActions storeId={product.storeId} title={product.name} isOwner={isOwner} /></div>
+                <ProductBuyBox
                 mobileStickyBar
                 productId={product.id}
                 productName={product.name}
@@ -506,12 +511,27 @@ export default async function PublicProductPage({ params }: Props) {
                     : null
                 }
                 initialWishlisted={isWishlisted}
-              />
+                />
+              </div>
             </div>
           </aside>
         </div>
 
-        <section className="mt-12 border-t border-zinc-200 pt-12 md:mt-16 md:pt-16">
+        <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Shopping assurances">
+          {[
+            { Icon: ShieldCheck, title: "Secure checkout", text: "Protected payments through WiPay", color: "from-sky-50 to-white text-[#1A7FB5]" },
+            { Icon: BadgeCheck, title: store.owner.idVerificationStatus === "APPROVED" ? "Verified business" : "Local business", text: `Sold directly by ${store.name}`, color: "from-emerald-50 to-white text-emerald-600" },
+            { Icon: product.isDigital ? Download : Truck, title: product.isDigital ? "Digital delivery" : product.allowDelivery ? "Delivery available" : "Pickup available", text: product.isDigital ? "Access after confirmed payment" : "Fulfilment options shown at checkout", color: "from-orange-50 to-white text-[#D4450A]" },
+            { Icon: RotateCcw, title: "Clear policies", text: product.returnPolicy ? "Return details provided by the seller" : "Message the seller before ordering", color: "from-violet-50 to-white text-violet-600" },
+          ].map((item) => (
+            <div key={item.title} className="flex items-center gap-3 rounded-2xl border border-white bg-white/85 p-4 shadow-[0_12px_36px_rgba(38,73,96,.09)] ring-1 ring-sky-950/[.035] backdrop-blur">
+              <span className={`flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${item.color}`}><item.Icon className="size-5" /></span>
+              <div><p className="text-sm font-black text-zinc-900">{item.title}</p><p className="mt-0.5 text-[11px] leading-4 text-zinc-500">{item.text}</p></div>
+            </div>
+          ))}
+        </section>
+
+        <section id="reviews" className="mt-12 rounded-[1.75rem] border border-white bg-white/80 p-5 shadow-[0_22px_65px_rgba(38,73,96,.09)] ring-1 ring-sky-950/[.04] backdrop-blur sm:p-8 md:mt-16">
           <ProductReviewsSection
             productId={product.id}
             productName={product.name}
@@ -523,12 +543,16 @@ export default async function PublicProductPage({ params }: Props) {
             fullWidthLayout
           />
         </section>
-        <RelatedContentSection heading="Related items" items={linkedItems} />
+        {linkedItems.length > 0 ? (
+          <div className="mt-12 overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-white to-sky-50/70 shadow-[0_20px_60px_rgba(38,73,96,.08)] ring-1 ring-sky-950/[.04] sm:p-2">
+            <RelatedContentSection heading="Related items" items={linkedItems} />
+          </div>
+        ) : null}
         {moreFromStoreProducts.length > 0 ? (
-          <div className="mt-16">
+          <section className="mt-16">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className={`${typography.h4} text-zinc-900`}>More from {store.name}</h2>
-              <Link href={`/store/${store.slug}`} className={`${typography.bodySmall} ${tw.textScarlet} hover:underline`}>
+              <div><p className="mb-2 text-[10px] font-black uppercase tracking-[.18em] text-[#1A7FB5]">Keep discovering</p><h2 className="text-2xl font-black tracking-tight text-zinc-900 sm:text-3xl">More from {store.name}</h2></div>
+              <Link href={`/store/${store.slug}`} className="shrink-0 rounded-full border border-sky-100 bg-white px-4 py-2 text-xs font-black text-[#1A7FB5] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                 View all →
               </Link>
             </div>
@@ -537,7 +561,7 @@ export default async function PublicProductPage({ params }: Props) {
                 <Link
                   key={p.id}
                   href={`/products/${p.slug}`}
-                  className={`group overflow-hidden ${radius.card} bg-white ${shadow.card} transition-all hover:shadow-md`}
+                  className="group overflow-hidden rounded-[1.4rem] border border-white bg-gradient-to-br from-white via-white to-sky-50/70 shadow-[0_15px_42px_rgba(38,73,96,.10)] ring-1 ring-sky-950/[.04] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_55px_rgba(26,127,181,.16)]"
                 >
                   <div className="aspect-square overflow-hidden bg-zinc-100">
                     {p.images[0] ? (
@@ -553,7 +577,7 @@ export default async function PublicProductPage({ params }: Props) {
                       </div>
                     )}
                   </div>
-                  <div className="p-3">
+                  <div className="p-3.5 sm:p-4">
                     {p.category ? (
                       <p className="mb-0.5 text-[10px] uppercase tracking-wide text-zinc-400">{formatLabel(p.category)}</p>
                     ) : null}
@@ -570,18 +594,16 @@ export default async function PublicProductPage({ params }: Props) {
                 </Link>
               ))}
             </div>
-          </div>
+          </section>
         ) : null}
 
         {categoryRelatedProducts.length > 0 ? (
-          <div className="mt-12">
+          <section className="mt-14 pb-6">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className={`${typography.h4} text-zinc-900`}>
-                More in {formatLabel(product.category ?? "")}
-              </h2>
+              <div><p className="mb-2 text-[10px] font-black uppercase tracking-[.18em] text-[#D4450A]">You may also like</p><h2 className="text-2xl font-black tracking-tight text-zinc-900 sm:text-3xl">More in {formatLabel(product.category ?? "")}</h2></div>
               <Link
                 href={`/shop?category=${product.category}`}
-                className={`${typography.bodySmall} ${tw.textScarlet} hover:underline`}
+                className="shrink-0 rounded-full border border-orange-100 bg-white px-4 py-2 text-xs font-black text-[#D4450A] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
               >
                 View all →
               </Link>
@@ -591,7 +613,7 @@ export default async function PublicProductPage({ params }: Props) {
                 <Link
                   key={p.id}
                   href={`/products/${p.slug}`}
-                  className={`group overflow-hidden ${radius.card} bg-white ${shadow.card} transition-all hover:shadow-md`}
+                  className="group overflow-hidden rounded-[1.4rem] border border-white bg-gradient-to-br from-white via-white to-orange-50/55 shadow-[0_15px_42px_rgba(38,73,96,.10)] ring-1 ring-sky-950/[.04] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_55px_rgba(212,69,10,.14)]"
                 >
                   <div className="aspect-square overflow-hidden bg-zinc-100">
                     {p.images[0] ? (
@@ -607,7 +629,7 @@ export default async function PublicProductPage({ params }: Props) {
                       </div>
                     )}
                   </div>
-                  <div className="p-3">
+                  <div className="p-3.5 sm:p-4">
                     <p className="mb-0.5 truncate text-[10px] uppercase tracking-wide text-zinc-400">
                       {p.store.name}
                     </p>
@@ -624,7 +646,7 @@ export default async function PublicProductPage({ params }: Props) {
                 </Link>
               ))}
             </div>
-          </div>
+          </section>
         ) : null}
       </div>
     </div>

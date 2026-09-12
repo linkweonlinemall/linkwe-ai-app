@@ -98,11 +98,11 @@ export default function AddToCartButton({
   };
 
   const baseBtn =
-    "font-sans flex h-14 w-full items-center justify-center whitespace-nowrap rounded-md text-base font-semibold transition-all duration-200 ease-in-out";
+    "font-sans flex h-14 w-full items-center justify-center whitespace-nowrap rounded-2xl text-sm font-black transition-all duration-200 ease-in-out";
 
   if (disabled) {
     return (
-      <button type="button" disabled className={`${baseBtn} cursor-not-allowed bg-gray-300 text-zinc-600`}>
+      <button type="button" disabled className={`${baseBtn} cursor-not-allowed bg-zinc-200 text-zinc-500`}>
         Select options
       </button>
     );
@@ -110,7 +110,7 @@ export default function AddToCartButton({
 
   if (stock === 0) {
     return (
-      <button type="button" disabled className={`${baseBtn} cursor-not-allowed bg-gray-300 text-white`}>
+      <button type="button" disabled className={`${baseBtn} cursor-not-allowed bg-zinc-300 text-white`}>
         Out of stock
       </button>
     );
@@ -122,8 +122,8 @@ export default function AddToCartButton({
         type="button"
         onClick={() => void handleClick()}
         disabled={loading || Boolean(disabled)}
-        className={`${baseBtn} text-white ${
-          added ? "bg-emerald-600" : "bg-[#D4450A] hover:opacity-[0.97]"
+        className={`${baseBtn} text-white shadow-[0_13px_30px_rgba(212,69,10,.24)] ${
+          added ? "bg-emerald-600" : "bg-gradient-to-r from-[#D4450A] to-[#F06A2A] hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(212,69,10,.32)]"
         } ${loading && !added ? "opacity-90" : ""}`}
       >
         {loading ? (

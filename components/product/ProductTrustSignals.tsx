@@ -14,23 +14,23 @@ export default function ProductTrustSignals({
   const pickupMuted = !allowPickup;
 
   return (
-    <ul className="flex flex-col gap-2 font-sans text-sm text-zinc-600">
-      <li className={`flex items-start gap-2 ${deliveryMuted ? "opacity-60" : ""}`}>
-        <Truck className="mt-0.5 size-4 shrink-0 text-zinc-500" strokeWidth={2} aria-hidden />
+    <ul className="flex flex-col gap-3 font-sans text-sm text-zinc-600">
+      <li className={`flex items-start gap-3 ${deliveryMuted ? "opacity-55" : ""}`}>
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-[#1A7FB5]"><Truck className="size-4" strokeWidth={2} aria-hidden /></span>
         <span>
           Delivery available
           {allowDelivery ? deliveryFeeSuffix ?? "" : " — Not offered for this item"}
         </span>
       </li>
-      <li className={`flex items-start gap-2 ${pickupMuted ? "opacity-60" : ""}`}>
-        <MapPin className="mt-0.5 size-4 shrink-0 text-zinc-500" strokeWidth={2} aria-hidden />
+      <li className={`flex items-start gap-3 ${pickupMuted ? "opacity-55" : ""}`}>
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#D4450A]"><MapPin className="size-4" strokeWidth={2} aria-hidden /></span>
         <span>
           Local pickup available
           {!allowPickup ? " — Not offered by this seller" : ""}
         </span>
       </li>
-      <li className="flex items-start gap-2">
-        <Lock className="mt-0.5 size-4 shrink-0 text-zinc-500" strokeWidth={2} aria-hidden />
+      <li className="flex items-start gap-3">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"><Lock className="size-4" strokeWidth={2} aria-hidden /></span>
         <span>Secure checkout via WiPay</span>
       </li>
     </ul>

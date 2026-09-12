@@ -103,7 +103,7 @@ export default function ProductBuyBox({
     <div id="product-options" className="flex w-full scroll-mt-24 flex-col font-sans">
       {/* 1 Price — duplicated in mobile sticky bar when enabled */}
       <div className={`mb-3 ${mobileStickyBar ? "max-md:hidden" : ""}`}>
-        <p className="text-[36px] font-semibold leading-none tracking-tight text-[#D4450A]">
+        <p className="bg-gradient-to-r from-[#D4450A] via-[#F06A2A] to-[#1A7FB5] bg-clip-text text-[38px] font-black leading-none tracking-[-.04em] text-transparent">
           {formatTTDPrice(price)}
         </p>
         {compareAtPrice && compareAtPrice > price ? (
@@ -118,8 +118,8 @@ export default function ProductBuyBox({
       </div>
 
       {/* 2 Stock */}
-      <div className="mb-6 flex items-center gap-2 font-sans text-sm text-zinc-700">
-        <span className={`size-2 shrink-0 rounded-full ${stockStatus.dot}`} aria-hidden />
+      <div className="mb-6 flex w-fit items-center gap-2 rounded-full border border-zinc-100 bg-white px-3 py-1.5 font-sans text-xs font-bold text-zinc-700 shadow-sm">
+        <span className={`size-2 shrink-0 rounded-full ${stockStatus.dot} shadow-[0_0_0_4px_rgba(16,185,129,.10)]`} aria-hidden />
         {stockStatus.text}
       </div>
 
@@ -143,7 +143,7 @@ export default function ProductBuyBox({
         >
           Quantity
         </label>
-        <div className="flex h-12 w-full min-w-0 overflow-hidden rounded-md border border-gray-300 bg-white">
+        <div className="flex h-12 w-full min-w-0 overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-sm">
           <button
             type="button"
             aria-label="Decrease quantity"
@@ -197,7 +197,7 @@ export default function ProductBuyBox({
       </div>
 
       {mobileStickyBar ? (
-        <div className="fixed bottom-[calc(60px+env(safe-area-inset-bottom,0px))] left-0 right-0 z-50 border-t border-zinc-200 bg-white px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] md:hidden">
+        <div className="fixed bottom-[calc(60px+env(safe-area-inset-bottom,0px))] left-0 right-0 z-50 border-t border-white/80 bg-white/90 px-3 py-3 shadow-[0_-12px_35px_rgba(26,52,70,.13)] backdrop-blur-xl md:hidden">
           <div className="mx-auto flex w-full max-w-lg items-center gap-2">
             {hasVariants && variants.length > 0 && !allSelected ? (
               <a
@@ -210,7 +210,7 @@ export default function ProductBuyBox({
             ) : (
               <p className="shrink-0 text-sm font-semibold text-[#D4450A]">{formatTTDPrice(price)}</p>
             )}
-            {allSelected ? <div className="flex h-11 w-[84px] shrink-0 overflow-hidden rounded-xl border border-zinc-200 bg-white">
+            {allSelected ? <div className="flex h-11 w-[84px] shrink-0 overflow-hidden rounded-xl border border-sky-100 bg-white shadow-sm">
               <button type="button" aria-label="Decrease quantity" disabled={cap === 0 || effectiveQty <= 1} onClick={() => setQuantity(effectiveQty - 1)} className="flex w-7 items-center justify-center text-zinc-700 disabled:opacity-30"><Minus className="size-3.5" /></button>
               <span className="flex min-w-0 flex-1 items-center justify-center border-x border-zinc-100 text-sm font-bold tabular-nums">{effectiveQty}</span>
               <button type="button" aria-label="Increase quantity" disabled={cap === 0 || effectiveQty >= cap} onClick={() => setQuantity(effectiveQty + 1)} className="flex w-7 items-center justify-center text-zinc-700 disabled:opacity-30"><Plus className="size-3.5" /></button>
@@ -230,8 +230,8 @@ export default function ProductBuyBox({
       ) : null}
 
       {isDigital && digitalMeta ? (
-        <div className="mb-6 space-y-2 border-t border-gray-200 pt-4 font-sans text-sm text-zinc-600">
-          <p>Instant digital download</p>
+        <div className="mb-6 space-y-2 rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50 to-white p-4 font-sans text-sm text-zinc-600 shadow-sm">
+          <p className="font-black text-[#1A7FB5]">Instant digital download</p>
           {digitalMeta.fileType ? (
             <p>
               {digitalMeta.fileType.toUpperCase()} file
@@ -267,7 +267,7 @@ export default function ProductBuyBox({
       </div>
 
       {/* 8 Trust */}
-      <div className="mb-6 border-t border-gray-200 pt-6">
+      <div className="mb-6 rounded-2xl border border-zinc-100 bg-white/75 p-4 shadow-sm">
         <ProductTrustSignals
           allowPickup={Boolean(allowPickup) && !isDigital}
           allowDelivery={Boolean(allowDelivery) && !isDigital}
@@ -276,7 +276,7 @@ export default function ProductBuyBox({
       </div>
 
       {/* 9 Sold by */}
-      <div className="mb-4 border-t border-gray-200 pt-6">
+      <div className="mb-4 border-t border-sky-100 pt-6">
         <p className="mb-3 font-sans text-xs font-semibold uppercase tracking-wide text-zinc-500">Sold by</p>
         <div className="mb-4 flex gap-3">
           {store.logoUrl ? (
@@ -284,10 +284,10 @@ export default function ProductBuyBox({
             <img
               src={store.logoUrl}
               alt=""
-              className="size-10 shrink-0 rounded-full border border-gray-100 object-cover"
+              className="size-11 shrink-0 rounded-2xl border border-white object-cover shadow-md ring-1 ring-sky-100"
             />
           ) : (
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-gray-100 bg-orange-50 text-sm font-bold text-[#D4450A]">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-white bg-gradient-to-br from-sky-100 to-orange-100 text-sm font-black text-[#D4450A] shadow-md ring-1 ring-sky-100">
               {store.name[0]?.toUpperCase() ?? "?"}
             </div>
           )}
@@ -300,7 +300,7 @@ export default function ProductBuyBox({
 
       <Link
         href={`/store/${store.slug}`}
-        className="flex h-11 w-full min-w-0 items-center justify-between rounded-md border border-gray-300 bg-white px-4 font-sans text-sm font-semibold text-zinc-900 transition-colors hover:border-gray-400"
+        className="flex h-12 w-full min-w-0 items-center justify-between rounded-2xl border border-sky-100 bg-white px-4 font-sans text-sm font-black text-zinc-900 shadow-sm transition-all hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md"
       >
         Visit store
         <ChevronRight className="size-4 shrink-0 text-zinc-500" strokeWidth={2} aria-hidden />

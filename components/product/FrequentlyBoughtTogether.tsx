@@ -103,7 +103,7 @@ function FbtProductCard({
       )}
       <Link
         href={`/products/${item.slug}`}
-        className="block h-[120px] w-[120px] shrink-0 overflow-hidden rounded-lg bg-zinc-100"
+        className="block h-[120px] w-[120px] shrink-0 overflow-hidden rounded-2xl border border-white bg-zinc-100 shadow-[0_10px_28px_rgba(38,73,96,.12)] ring-1 ring-sky-950/[.04] transition hover:-translate-y-1 hover:shadow-lg"
       >
         {item.images[0] ? (
           /* eslint-disable-next-line @next/next/no-img-element */
@@ -169,8 +169,8 @@ export default function FrequentlyBoughtTogether({
   if (items.length === 0) return null;
 
   return (
-    <div className="rounded-[12px] border-[0.5px] border-[var(--color-border-tertiary)] bg-white p-5 font-sans">
-      <h2 className="text-sm font-bold uppercase tracking-wide text-zinc-900">Frequently bought together</h2>
+    <div className="rounded-[1.5rem] border border-sky-100 bg-gradient-to-br from-white to-sky-50/70 p-5 font-sans shadow-[0_14px_40px_rgba(38,73,96,.09)]">
+      <h2 className="text-sm font-black uppercase tracking-wide text-zinc-900">Frequently bought together</h2>
 
       <div className="mt-5 flex flex-col items-stretch gap-3 md:flex-row md:flex-wrap md:items-center md:justify-start md:gap-2">
         <FbtProductCard item={currentProduct} label="This item" checked disabled />
@@ -200,7 +200,7 @@ export default function FrequentlyBoughtTogether({
           type="button"
           disabled={loading}
           onClick={() => void handleAddTogether()}
-          className="mt-4 flex h-11 w-full items-center justify-center rounded-lg bg-[#D4450A] text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:opacity-70"
+          className="mt-4 flex h-12 w-full items-center justify-center rounded-2xl bg-gradient-to-r from-[#D4450A] to-[#F06A2A] text-sm font-black text-white shadow-[0_12px_28px_rgba(212,69,10,.22)] transition-all hover:-translate-y-0.5 hover:shadow-[0_15px_34px_rgba(212,69,10,.3)] disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:opacity-70"
         >
           {loading ? "Adding…" : "Add all to cart"}
         </button>

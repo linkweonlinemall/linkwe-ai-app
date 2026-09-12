@@ -111,11 +111,11 @@ export default function VariantSelector({ variants, onVariantChange }: Props) {
                     type="button"
                     disabled={!available}
                     onClick={() => handleSelect(attrName, attr.value)}
-                    className={`relative inline-flex items-center gap-2 overflow-hidden rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                    className={`relative inline-flex min-h-11 items-center gap-2 overflow-hidden rounded-2xl border px-4 py-2 text-sm font-bold transition-all ${
                       isSelected
-                        ? "border-[#D4450A] bg-[#D4450A] text-white shadow-sm"
+                        ? "border-[#D4450A] bg-gradient-to-r from-[#D4450A] to-[#F06A2A] text-white shadow-[0_9px_24px_rgba(212,69,10,.22)]"
                         : available
-                          ? "border-gray-300 bg-white text-zinc-800 hover:border-zinc-400"
+                          ? "border-sky-100 bg-white text-zinc-800 shadow-sm hover:-translate-y-0.5 hover:border-sky-300 hover:shadow-md"
                           : "cursor-not-allowed border-zinc-100 bg-zinc-50 text-zinc-300"
                     }`}
                   >
@@ -147,7 +147,7 @@ export default function VariantSelector({ variants, onVariantChange }: Props) {
       })}
 
       {!selectionComplete ? (
-        <div className="mb-6 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-3">
+        <div className="mb-6 flex items-start gap-2 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-white px-4 py-3 shadow-sm">
           <Info className="mt-0.5 size-4 shrink-0 text-amber-600" strokeWidth={2} aria-hidden />
           <p className="font-sans text-sm font-medium text-amber-800">{chooseMessage(attributeNames, selected)}</p>
         </div>

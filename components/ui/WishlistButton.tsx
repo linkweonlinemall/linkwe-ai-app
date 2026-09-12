@@ -65,8 +65,8 @@ export default function WishlistButton({
         type="button"
         onClick={handleToggle}
         disabled={loading}
-        className={`flex h-12 w-full items-center justify-start gap-2 rounded-md border border-gray-300 bg-white px-4 font-sans text-sm font-semibold shadow-sm transition-all duration-200 ease-in-out disabled:opacity-50 ${
-          wishlisted ? "border-[#D4450A]/50 bg-rose-50/50 text-[#D4450A]" : "text-zinc-900 hover:border-gray-400"
+        className={`flex h-12 w-full items-center justify-start gap-2 rounded-2xl border bg-white px-4 font-sans text-sm font-bold shadow-sm transition-all duration-200 ease-in-out disabled:opacity-50 ${
+          wishlisted ? "border-[#D4450A]/30 bg-gradient-to-r from-orange-50 to-white text-[#D4450A]" : "border-sky-100 text-zinc-900 hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md"
         }`}
       >
         {loading ? (
