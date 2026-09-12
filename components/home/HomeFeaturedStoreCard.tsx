@@ -72,10 +72,10 @@ export default function HomeFeaturedStoreCard({ store }: { store: FeaturedStoreC
   return (
     <Link
       href={`/store/${store.slug}`}
-      className="group block cursor-pointer rounded-xl border border-gray-100 bg-white shadow-sm transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-md"
+      className="group block cursor-pointer rounded-[1.65rem] border border-white bg-gradient-to-br from-white via-white to-sky-50/70 shadow-[0_18px_50px_rgba(38,73,96,.11)] ring-1 ring-sky-950/[.05] transition-all duration-300 ease-in-out hover:-translate-y-1.5 hover:border-sky-200 hover:shadow-[0_25px_65px_rgba(26,127,181,.17)]"
     >
       <div className="relative">
-        <div className="relative aspect-[16/10] w-full overflow-hidden rounded-t-xl">
+        <div className="relative aspect-[16/10] w-full overflow-hidden rounded-t-[1.65rem]">
           {store.coverPhotoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- remote vendor URLs
             <img
@@ -94,7 +94,7 @@ export default function HomeFeaturedStoreCard({ store }: { store: FeaturedStoreC
           <SaveStoreButton storeId={store.id} initialSaved={store.initialSaved} variant="iconOverlay" />
         </div>
 
-        <div className="rounded-b-xl bg-white p-6">
+        <div className="rounded-b-[1.65rem] bg-gradient-to-br from-white via-white to-sky-50/70 p-6">
           <div className="flex items-start gap-4">
             <div className="-mt-8 relative z-10 size-16 shrink-0 overflow-hidden rounded-full border-4 border-white bg-white shadow-sm">
               {store.logoUrl ? (

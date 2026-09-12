@@ -24,6 +24,19 @@ import {
   Wrench,
   Zap,
   Check,
+  Bot,
+  Camera,
+  ChartBar,
+  CreditCard,
+  Heart,
+  Megaphone,
+  MessagesSquare,
+  ShieldCheck,
+  Sparkles,
+  Ticket,
+  Truck,
+  WandSparkles,
+  Workflow,
 } from "lucide-react";
 import { formatTTDPrice } from "@/lib/format/price";
 
@@ -40,7 +53,7 @@ import { EventCard, type EventCardData } from "@/components/events/EventCard";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { PRODUCT_CATEGORIES } from "@/lib/categories";
 import { sellableStoreWhere } from "@/lib/store/sellable-store";
-import { colors, css, radius, shadow, spacing, typography, tw } from "@/lib/design-system";
+import { css, radius, shadow, spacing, typography, tw } from "@/lib/design-system";
 
 export const metadata: Metadata = {
   title: "LinkWe — We People. We Business. We Marketplace.",
@@ -83,6 +96,28 @@ const HOW_IT_WORKS_STEPS: { step: string; Icon: LucideIcon; title: string; desc:
     desc: "Secure WiPay checkout. Delivery island-wide. Digital downloads instant. Services bookable in seconds.",
     lightClass: tw.bgPage,
   },
+];
+
+const PLATFORM_FEATURES: { Icon: LucideIcon; title: string; desc: string; href: string; accent: string; wide?: boolean }[] = [
+  { Icon: ShoppingBag, title: "Products that fit real life", desc: "Shop physical products, variations and instant digital downloads from local businesses.", href: "/shop", accent: "from-orange-100 to-amber-50 text-[#D4450A]", wide: true },
+  { Icon: Calendar, title: "Services, your way", desc: "Book appointments, request quotes, subscribe, or call an on-demand professional.", href: "/services", accent: "from-sky-100 to-blue-50 text-[#1A7FB5]", wide: true },
+  { Icon: Ticket, title: "Events & tickets", desc: "Discover events, buy digital tickets and check in with secure QR codes.", href: "/events", accent: "from-rose-100 to-orange-50 text-rose-600" },
+  { Icon: Megaphone, title: "Shop the Timeline", desc: "Follow stores and discover launches, offers and products through visual posts.", href: "/timeline", accent: "from-violet-100 to-sky-50 text-violet-600" },
+  { Icon: Store, title: "Rich storefronts", desc: "Explore products, services, reviews, business details, partners and updates in one place.", href: "/stores", accent: "from-cyan-100 to-sky-50 text-cyan-700" },
+  { Icon: Truck, title: "Flexible fulfilment", desc: "Choose LinkWe delivery, vendor delivery, pickup or instant digital delivery.", href: "/shipping-info", accent: "from-blue-100 to-cyan-50 text-blue-700" },
+  { Icon: CreditCard, title: "Secure local checkout", desc: "Pay online in TTD with clear order, booking and ticket confirmation.", href: "/shop", accent: "from-emerald-100 to-cyan-50 text-emerald-700" },
+  { Icon: MessagesSquare, title: "Messages & alerts", desc: "Stay connected with stores through messaging, in-app updates and push notifications.", href: "/messages", accent: "from-indigo-100 to-blue-50 text-indigo-700" },
+  { Icon: Heart, title: "Save what matters", desc: "Wishlist products, follow favourite stores and build a more personal marketplace.", href: "/wishlist", accent: "from-pink-100 to-rose-50 text-pink-600" },
+  { Icon: ShieldCheck, title: "Trust built in", desc: "Verified businesses, reviews and clear policies help every purchase feel more confident.", href: "/stores", accent: "from-teal-100 to-emerald-50 text-teal-700" },
+  { Icon: Workflow, title: "Business collaboration", desc: "Vendors can connect products, services, events and partner stores into shared customer journeys.", href: "/register?role=vendor", accent: "from-fuchsia-100 to-violet-50 text-fuchsia-700", wide: true },
+  { Icon: ChartBar, title: "A serious vendor workspace", desc: "Manage inventory, orders, bookings, customers, payouts, staff, reports and marketing from one dashboard.", href: "/register?role=vendor", accent: "from-sky-100 to-indigo-50 text-[#1A7FB5]", wide: true },
+];
+
+const REX_CAPABILITIES: { Icon: LucideIcon; title: string; desc: string }[] = [
+  { Icon: WandSparkles, title: "Build listings faster", desc: "Create and improve products, services and events through a natural conversation." },
+  { Icon: Camera, title: "Work with your visuals", desc: "Use store, product, service and event photos while creating polished content." },
+  { Icon: Megaphone, title: "Publish timeline posts", desc: "Turn business updates into searchable posts with photos, links and shopping attachments." },
+  { Icon: ChartBar, title: "Understand the business", desc: "Ask about sales, stock, orders and performance without digging through every screen." },
 ];
 
 function ServiceTypeBadge({ type }: { type: string | null }) {
@@ -133,6 +168,7 @@ export default async function Home() {
     : null;
   const continueHref = user ? getRoleDashboardPath(user.role) : null;
   const showHeroDashboard = user?.role === "VENDOR";
+  const rexHref = user?.role === "VENDOR" ? "/dashboard/vendor/ai-assistant" : "/pricing";
 
   const unreadCount = await getNavUnreadCount();
 
@@ -352,6 +388,91 @@ export default async function Home() {
         </div>
       </div>
 
+      {/* Platform feature bento */}
+      <section className="relative overflow-hidden border-b border-sky-100/70 bg-[linear-gradient(180deg,#ffffff_0%,#f7fbff_45%,#fffaf5_100%)] py-16 sm:py-24">
+        <div className="pointer-events-none absolute -left-40 top-20 size-[30rem] rounded-full bg-[#1A7FB5]/12 blur-[110px]" aria-hidden />
+        <div className="pointer-events-none absolute -right-32 bottom-0 size-[28rem] rounded-full bg-[#D4450A]/10 blur-[110px]" aria-hidden />
+        <div className="relative mx-auto max-w-screen-xl px-4 sm:px-6">
+          <div className="mx-auto mb-12 max-w-3xl text-center sm:mb-16">
+            <span className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white/85 px-4 py-2 text-[10px] font-black uppercase tracking-[.18em] text-[#1A7FB5] shadow-[0_8px_28px_rgba(26,127,181,.12)]"><Sparkles className="size-3.5" /> One marketplace. More possibilities.</span>
+            <h2 className="mt-5 text-3xl font-black tracking-[-.04em] text-[#1C1C1A] sm:text-5xl md:text-6xl">Everything local business<br className="hidden sm:block" /> needs to <span className="bg-gradient-to-r from-[#D4450A] via-[#F06A2A] to-[#1A7FB5] bg-clip-text text-transparent">move forward.</span></h2>
+            <p className="mx-auto mt-5 max-w-2xl text-sm leading-7 text-zinc-500 sm:text-base">LinkWe brings shopping, services, events, delivery, communication and business tools into one beautifully connected experience.</p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {PLATFORM_FEATURES.map((feature) => (
+              <Link key={feature.title} href={feature.href} className={`group relative min-h-56 overflow-hidden rounded-[1.65rem] border border-white/90 bg-white/90 p-6 shadow-[0_18px_55px_rgba(35,66,87,.10)] ring-1 ring-sky-950/[.04] backdrop-blur transition-all duration-300 hover:-translate-y-1.5 hover:border-sky-200 hover:shadow-[0_24px_65px_rgba(26,127,181,.16)] ${feature.wide ? "lg:col-span-2" : ""}`}>
+                <div className={`flex size-13 items-center justify-center rounded-2xl bg-gradient-to-br ${feature.accent} shadow-[inset_0_1px_0_rgba(255,255,255,.8),0_9px_24px_rgba(45,83,108,.12)]`}><feature.Icon className="size-6" strokeWidth={1.9} aria-hidden /></div>
+                <h3 className="mt-6 text-lg font-black tracking-tight text-zinc-900">{feature.title}</h3>
+                <p className="mt-2 max-w-md text-sm leading-6 text-zinc-500">{feature.desc}</p>
+                <span className="absolute bottom-5 right-5 flex size-9 items-center justify-center rounded-full bg-zinc-950 text-white opacity-0 shadow-lg transition-all group-hover:translate-x-0.5 group-hover:opacity-100"><ArrowRight className="size-4" /></span>
+                <div className="pointer-events-none absolute -bottom-16 -right-16 size-36 rounded-full bg-gradient-to-br from-[#1A7FB5]/10 to-[#D4450A]/10 blur-2xl transition group-hover:scale-125" aria-hidden />
+              </Link>
+            ))}
+          </div>
+
+          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            <Link href="/shop" className="group flex items-center justify-between gap-4 rounded-[1.5rem] bg-gradient-to-r from-[#1A7FB5] to-[#155f91] p-6 text-white shadow-[0_18px_45px_rgba(26,127,181,.25)] transition hover:-translate-y-1"><div><p className="text-[10px] font-black uppercase tracking-[.18em] text-white/65">For customers</p><p className="mt-1 text-xl font-black">Discover what is nearby</p></div><ArrowRight className="size-6 shrink-0 transition-transform group-hover:translate-x-1" /></Link>
+            <Link href="/register?role=vendor" className="group flex items-center justify-between gap-4 rounded-[1.5rem] bg-gradient-to-r from-[#D4450A] to-[#F28A2D] p-6 text-white shadow-[0_18px_45px_rgba(212,69,10,.25)] transition hover:-translate-y-1"><div><p className="text-[10px] font-black uppercase tracking-[.18em] text-white/70">For businesses</p><p className="mt-1 text-xl font-black">Open your digital storefront</p></div><ArrowRight className="size-6 shrink-0 transition-transform group-hover:translate-x-1" /></Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Timeline spotlight */}
+      <section className="relative overflow-hidden border-b border-sky-100 bg-[#07131d] py-16 text-white sm:py-24">
+        <div className="pointer-events-none absolute -left-24 top-0 size-80 rounded-full bg-[#1A7FB5]/30 blur-[110px]" aria-hidden />
+        <div className="pointer-events-none absolute -right-20 bottom-0 size-72 rounded-full bg-[#D4450A]/20 blur-[100px]" aria-hidden />
+        <div className="relative mx-auto grid max-w-screen-xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-[.9fr_1.1fr] lg:gap-20">
+          <div>
+            <span className="inline-flex items-center gap-2 rounded-full border border-sky-300/25 bg-sky-400/10 px-4 py-2 text-[10px] font-black uppercase tracking-[.2em] text-sky-200 shadow-[0_10px_35px_rgba(26,127,181,.18)]"><Megaphone className="size-4" /> The LinkWe Timeline</span>
+            <h2 className="mt-6 text-4xl font-black leading-[1.02] tracking-[-.045em] sm:text-6xl">See what local businesses are <span className="bg-gradient-to-r from-sky-300 via-blue-400 to-orange-400 bg-clip-text text-transparent">creating now.</span></h2>
+            <p className="mt-6 max-w-xl text-base leading-8 text-slate-300">Timeline turns discovery into a living local feed. Follow stores you love, search posts and ads, browse photo carousels, and shop what catches your eye without leaving the conversation.</p>
+            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+              {[
+                { Icon: Search, label: "Search posts, ads and tags" },
+                { Icon: Camera, label: "Rich photo carousels" },
+                { Icon: Heart, label: "Instant likes and follows" },
+                { Icon: MessageCircle, label: "Comments and replies" },
+              ].map((item) => (
+                <div key={item.label} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[.055] px-4 py-3.5 shadow-lg backdrop-blur">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#1A7FB5] to-[#2D9AD1] text-white"><item.Icon className="size-4" /></span>
+                  <span className="text-sm font-bold text-slate-200">{item.label}</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link href="/timeline" className="inline-flex min-h-13 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#1A7FB5] to-[#2D9AD1] px-6 text-sm font-black text-white shadow-[0_15px_40px_rgba(26,127,181,.32)] transition hover:-translate-y-0.5">Explore Timeline <ArrowRight className="size-4" /></Link>
+              <Link href="/register?role=vendor" className="inline-flex min-h-13 items-center justify-center rounded-2xl border border-white/20 bg-white/[.06] px-6 text-sm font-bold text-white backdrop-blur transition hover:bg-white/[.11]">Post as a business</Link>
+            </div>
+          </div>
+
+          <div className="relative mx-auto w-full max-w-xl">
+            <div className="absolute -inset-8 rounded-full bg-gradient-to-r from-sky-500/20 to-orange-500/15 blur-3xl" aria-hidden />
+            <div className="relative rotate-[1deg] overflow-hidden rounded-[2rem] border border-white/15 bg-white/[.08] p-3 shadow-[0_35px_90px_rgba(0,0,0,.4)] backdrop-blur-xl transition duration-500 hover:rotate-0">
+              <div className="overflow-hidden rounded-[1.45rem] bg-white text-zinc-900">
+                <div className="flex items-center justify-between p-4">
+                  <div className="flex items-center gap-3"><span className="flex size-11 items-center justify-center rounded-full bg-gradient-to-br from-[#1A7FB5] to-[#D4450A] text-sm font-black text-white">LW</span><div><p className="text-sm font-black">Local Finds TT</p><p className="text-[11px] text-zinc-400">Just now · Port of Spain</p></div></div>
+                  <span className="rounded-full bg-orange-50 px-3 py-1 text-[9px] font-black uppercase tracking-wider text-[#D4450A]">New drop</span>
+                </div>
+                <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-sky-100 via-[#d9eff9] to-orange-100 p-8 sm:p-10">
+                  <div className="absolute -right-12 -top-16 size-52 rounded-full bg-[#1A7FB5]/25 blur-2xl" aria-hidden />
+                  <div className="absolute -bottom-16 -left-12 size-48 rounded-full bg-[#D4450A]/20 blur-2xl" aria-hidden />
+                  <div className="relative flex h-full flex-col justify-between rounded-[1.5rem] border border-white/80 bg-white/55 p-6 shadow-[0_20px_55px_rgba(26,127,181,.17)] backdrop-blur-md">
+                    <div className="flex items-center justify-between"><span className="rounded-full bg-white px-3 py-1 text-[9px] font-black uppercase tracking-[.16em] text-[#1A7FB5] shadow-sm">Shop the post</span><span className="text-xs font-bold text-zinc-500">1 / 4</span></div>
+                    <div><p className="text-3xl font-black tracking-[-.04em] text-zinc-900 sm:text-5xl">Made here.<br /><span className="text-[#D4450A]">Found here.</span></p><p className="mt-3 max-w-xs text-xs leading-5 text-zinc-600 sm:text-sm">Fresh products, services and events from businesses across T&amp;T.</p></div>
+                  </div>
+                  <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1.5"><span className="h-1.5 w-6 rounded-full bg-[#1A7FB5]" /><span className="size-1.5 rounded-full bg-zinc-400/60" /><span className="size-1.5 rounded-full bg-zinc-400/60" /><span className="size-1.5 rounded-full bg-zinc-400/60" /></div>
+                </div>
+                <div className="p-4">
+                  <p className="text-sm leading-6 text-zinc-700"><strong>Local Finds TT</strong> Weekend collection is live. Tap to browse every item.</p>
+                  <div className="mt-4 flex items-center justify-between border-t border-zinc-100 pt-3"><div className="flex gap-5 text-zinc-500"><span className="flex items-center gap-1.5 text-xs font-bold"><Heart className="size-4 text-[#D4450A]" /> Like</span><span className="flex items-center gap-1.5 text-xs font-bold"><MessageCircle className="size-4 text-[#1A7FB5]" /> Comment</span></div><span className="rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-3 py-2 text-[10px] font-black text-white shadow-md">View product</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Featured products */}
       {featuredProducts.length > 0 && (
         <section className={`relative mx-auto max-w-screen-xl px-4 sm:px-6 ${spacing.sectionY}`}>
@@ -387,7 +508,7 @@ export default async function Home() {
                 <Link
                   key={product.id}
                   href={`/products/${product.slug}`}
-                  className={`group relative overflow-hidden rounded-[1.35rem] bg-white ring-1 ring-black/[0.05] transition-all duration-300 hover:-translate-y-1.5 ${shadow.card} hover:shadow-xl ${
+                  className={`group relative overflow-hidden rounded-[1.6rem] border border-white bg-gradient-to-br from-white via-white to-sky-50/75 ring-1 ring-sky-950/[0.05] shadow-[0_16px_45px_rgba(38,73,96,.11)] transition-all duration-300 hover:-translate-y-1.5 hover:border-sky-200 hover:shadow-[0_24px_60px_rgba(26,127,181,.17)] ${
                     isHero ? "col-span-2 row-span-2" : ""
                   }`}
                 >
@@ -459,6 +580,7 @@ export default async function Home() {
             className="absolute bottom-0 left-0 h-[400px] w-[400px] rounded-full opacity-10 blur-3xl"
             style={{ background: css.scarletRadialMuted }}
           />
+          <div className="absolute -right-24 bottom-0 size-[28rem] rounded-full bg-[#1A7FB5]/20 blur-[110px]" aria-hidden />
           <div className="relative mx-auto max-w-screen-xl px-4 sm:px-6">
             <div className="mb-10 flex items-end justify-between">
               <div>
@@ -548,7 +670,8 @@ export default async function Home() {
       )}
 
       {/* Service categories */}
-      <section className={`bg-gradient-to-b from-[#FFF9F5] to-[#F7F5F1] ${spacing.sectionY}`}>
+      <section className={`relative overflow-hidden bg-gradient-to-b from-[#FFF9F5] via-[#F7FBFF] to-[#F7F5F1] ${spacing.sectionY}`}>
+        <div className="pointer-events-none absolute -left-40 top-12 size-96 rounded-full bg-[#1A7FB5]/10 blur-[100px]" aria-hidden />
         <div className="mx-auto max-w-screen-xl px-4 sm:px-6">
           <div className="mb-10 flex items-end justify-between">
             <div>
@@ -575,7 +698,7 @@ export default async function Home() {
               <Link
                 key={item.label}
                 href={item.href}
-                className="group flex min-h-32 flex-col items-center justify-center gap-3 rounded-[1.35rem] border border-orange-900/10 bg-white/90 px-2 py-6 text-center shadow-[0_12px_35px_rgba(70,35,15,.06)] transition-all duration-300 hover:-translate-y-1 hover:border-[#D4450A]/35 hover:bg-[#FFF5EF] hover:shadow-lg sm:py-8"
+                className="group flex min-h-32 flex-col items-center justify-center gap-3 rounded-[1.55rem] border border-white bg-gradient-to-br from-white via-white to-sky-50/80 px-2 py-6 text-center shadow-[0_14px_40px_rgba(40,77,100,.09)] ring-1 ring-sky-950/[.04] transition-all duration-300 hover:-translate-y-1 hover:border-sky-200 hover:shadow-[0_20px_48px_rgba(26,127,181,.14)] sm:py-8"
               >
                 <item.Icon
                   className={`size-8 transition-transform duration-300 group-hover:scale-110 ${tw.textScarlet}`}
@@ -593,7 +716,7 @@ export default async function Home() {
 
       {/* Featured stores — require ≥3 stores for a balanced grid */}
       {featuredStoreCards.length > 0 && (
-        <section className="bg-white py-14 sm:py-20 md:py-28">
+        <section className="bg-gradient-to-b from-white via-sky-50/35 to-white py-14 sm:py-20 md:py-28">
           <div className="mx-auto max-w-screen-xl px-4 sm:px-6">
             <div className="mb-10 flex items-end justify-between gap-6">
               <div>
@@ -620,7 +743,7 @@ export default async function Home() {
 
       {/* Upcoming events */}
       {upcomingEvents.length > 0 && (
-        <section className="bg-[#F0ECE6] py-14 sm:py-20 md:py-28">
+        <section className="bg-gradient-to-br from-[#F0ECE6] via-white to-sky-50 py-14 sm:py-20 md:py-28">
           <div className="mx-auto max-w-screen-xl px-4 sm:px-6">
             <div className="mb-8 flex items-center justify-between gap-4">
               <div>
@@ -669,7 +792,7 @@ export default async function Home() {
             {HOW_IT_WORKS_STEPS.map((item, idx) => (
               <div
                 key={item.step}
-                className="relative flex flex-col items-center rounded-[1.5rem] border border-zinc-900/5 bg-[#FAF8F5] px-6 py-8 text-center shadow-[0_12px_40px_rgba(40,30,20,.05)] sm:px-8"
+                className="relative flex flex-col items-center rounded-[1.65rem] border border-white bg-gradient-to-br from-[#FAF8F5] via-white to-sky-50/70 px-6 py-8 text-center shadow-[0_16px_45px_rgba(38,73,96,.09)] ring-1 ring-sky-950/[.04] sm:px-8"
               >
                 <div
                   className={`mb-6 flex h-20 w-20 items-center justify-center rounded-lg ${item.lightClass} ${shadow.modal} ring-2 ring-[#D4450A]/25`}
@@ -686,6 +809,39 @@ export default async function Home() {
                 ) : null}
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Rex AI */}
+      <section className="relative overflow-hidden bg-[#111827] py-16 sm:py-24 md:py-28">
+        <div className="pointer-events-none absolute -left-44 top-0 size-[36rem] rounded-full bg-[#1A7FB5]/30 blur-[130px]" aria-hidden />
+        <div className="pointer-events-none absolute -right-44 bottom-[-10rem] size-[36rem] rounded-full bg-[#D4450A]/25 blur-[130px]" aria-hidden />
+        <div className="pointer-events-none absolute inset-0 opacity-[.08] [background-image:linear-gradient(rgba(255,255,255,.18)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.18)_1px,transparent_1px)] [background-size:72px_72px]" aria-hidden />
+        <div className="relative mx-auto grid max-w-screen-xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-[.9fr_1.1fr] lg:gap-16">
+          <div>
+            <span className="inline-flex items-center gap-2 rounded-full border border-sky-300/25 bg-sky-400/10 px-4 py-2 text-[10px] font-black uppercase tracking-[.2em] text-sky-200 shadow-[0_10px_35px_rgba(26,127,181,.16)]"><Bot className="size-4" /> Meet Rex</span>
+            <h2 className="mt-6 text-4xl font-black leading-[1.02] tracking-[-.045em] text-white sm:text-6xl">Your business has a lot to do.<br /><span className="bg-gradient-to-r from-sky-300 via-blue-400 to-orange-400 bg-clip-text text-transparent">Rex helps you do it.</span></h2>
+            <p className="mt-6 max-w-xl text-base leading-8 text-slate-300">Rex is LinkWe&apos;s AI business assistant, built directly into the vendor workspace. Talk naturally, get useful answers and turn ideas into real marketplace actions—without jumping between tools.</p>
+            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+              {REX_CAPABILITIES.map((item) => <div key={item.title} className="rounded-2xl border border-white/10 bg-white/[.055] p-4 shadow-[0_14px_35px_rgba(0,0,0,.14)] backdrop-blur"><div className="flex items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400/20 to-orange-400/15 text-sky-200 ring-1 ring-white/10"><item.Icon className="size-4.5" /></span><div><h3 className="text-sm font-black text-white">{item.title}</h3><p className="mt-1 text-xs leading-5 text-slate-400">{item.desc}</p></div></div></div>)}
+            </div>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row"><Link href={rexHref} className="inline-flex min-h-13 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#1A7FB5] to-[#2D9AD1] px-6 text-sm font-black text-white shadow-[0_15px_40px_rgba(26,127,181,.32)] transition hover:-translate-y-0.5"><Sparkles className="size-4" /> {user?.role === "VENDOR" ? "Open Rex" : "Explore vendor plans"}</Link><Link href="/register?role=vendor" className="inline-flex min-h-13 items-center justify-center rounded-2xl border border-white/20 bg-white/[.06] px-6 text-sm font-bold text-white backdrop-blur transition hover:bg-white/[.11]">Start a business</Link></div>
+            <p className="mt-4 text-[11px] text-slate-500">Starter vendors receive complimentary prompts. Growth and Pro include monthly Rex access.</p>
+          </div>
+
+          <div className="relative mx-auto w-full max-w-2xl">
+            <div className="absolute -inset-5 rounded-[2.5rem] bg-gradient-to-br from-sky-400/20 via-transparent to-orange-400/20 blur-2xl" aria-hidden />
+            <div className="relative overflow-hidden rounded-[2rem] border border-white/15 bg-[#0B1220]/90 shadow-[0_35px_100px_rgba(0,0,0,.45)] backdrop-blur-xl">
+              <div className="flex items-center justify-between border-b border-white/10 bg-white/[.04] px-5 py-4"><div className="flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#1A7FB5] to-[#D4450A] text-white shadow-lg"><Bot className="size-5" /></span><div><p className="text-sm font-black text-white">Rex</p><p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Ready to help</p></div></div><span className="rounded-full border border-white/10 bg-white/[.05] px-3 py-1 text-[10px] font-bold text-slate-400">LinkWe AI</span></div>
+              <div className="space-y-5 p-5 sm:p-7">
+                <div className="ml-auto max-w-[84%] rounded-[1.35rem] rounded-br-md bg-gradient-to-r from-[#D4450A] to-[#F06A2A] px-4 py-3 text-sm leading-6 text-white shadow-lg">Create a timeline post for our weekend sale. Use the blue shirt photo and attach the product.</div>
+                <div className="max-w-[90%] rounded-[1.35rem] rounded-bl-md border border-white/10 bg-white/[.07] px-4 py-4 text-sm leading-6 text-slate-200 shadow-lg"><p>I found the product and its photos. I&apos;ll create a polished post with shopping tags and the product attached.</p><div className="mt-4 overflow-hidden rounded-2xl border border-sky-300/15 bg-gradient-to-br from-sky-400/10 to-orange-400/10 p-3"><div className="flex items-center gap-3"><span className="flex size-12 items-center justify-center rounded-xl bg-gradient-to-br from-sky-300 to-blue-600 text-white"><ShoppingBag className="size-5" /></span><div><p className="text-xs font-black text-white">Weekend offer post</p><p className="mt-0.5 text-[10px] text-slate-400">Photo · Product attached · Search tags added</p></div><BadgeCheck className="ml-auto size-5 text-emerald-400" /></div></div></div>
+                <div className="max-w-[80%] rounded-[1.35rem] rounded-bl-md border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm font-bold text-emerald-200"><span className="mr-2">✓</span>Your timeline post is live.</div>
+              </div>
+              <div className="border-t border-white/10 p-4"><div className="flex min-h-13 items-center gap-3 rounded-2xl border border-white/10 bg-white/[.055] px-4 text-sm text-slate-500"><span className="flex-1">Ask Rex to help your business…</span><span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#1A7FB5] to-[#D4450A] text-white"><ArrowRight className="size-4" /></span></div></div>
+            </div>
+            <div className="absolute -bottom-5 -left-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-xs font-bold text-white shadow-xl backdrop-blur-xl sm:-left-8"><span className="text-sky-300">One conversation.</span><br />Real business actions.</div>
           </div>
         </div>
       </section>
