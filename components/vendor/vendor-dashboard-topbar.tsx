@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { IconHome, IconPlus, IconRouteSquare } from "@tabler/icons-react";
+import { CalendarDays, ChevronDown, ConciergeBell, Package } from "lucide-react";
 
 import MessageNavBadge from "@/components/messages/MessageNavBadge";
 import NotificationBell from "@/components/ui/NotificationBell";
@@ -118,14 +119,18 @@ export default function VendorDashboardTopbar({
         <div className="flex size-8 items-center justify-center rounded-lg border border-black/10 bg-white shadow-sm">
           <NotificationBell compactToolbar initialUnreadCount={unreadCount} variant="light" />
         </div>
-        <Link
-          href="/dashboard/vendor/products/new"
-          className="inline-flex size-8 items-center justify-center whitespace-nowrap rounded-lg bg-gradient-to-b from-[#F06A2A] to-[#D4450A] text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,.3),0_5px_12px_rgba(212,69,10,.2)] hover:brightness-105 sm:h-auto sm:w-auto sm:px-4 sm:py-2"
-          aria-label="Add product"
-        >
-          <IconPlus className="size-[18px] sm:hidden" stroke={2} aria-hidden />
-          <span className="hidden sm:inline">Add product</span>
-        </Link>
+        <details className="group relative">
+          <summary className="inline-flex size-8 cursor-pointer list-none items-center justify-center whitespace-nowrap rounded-lg bg-gradient-to-b from-[#F06A2A] to-[#D4450A] text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,.3),0_5px_12px_rgba(212,69,10,.2)] hover:brightness-105 sm:h-auto sm:w-auto sm:gap-1.5 sm:px-4 sm:py-2" aria-label="Add product, service or event">
+            <IconPlus className="size-[18px]" stroke={2} aria-hidden />
+            <span className="hidden sm:inline">Add</span>
+            <ChevronDown className="hidden size-3.5 transition group-open:rotate-180 sm:block" aria-hidden />
+          </summary>
+          <div className="absolute right-0 top-[calc(100%+.55rem)] z-[80] w-56 overflow-hidden rounded-2xl border border-orange-100 bg-white p-2 shadow-[0_18px_55px_rgba(28,28,26,.20)]">
+            <Link href="/dashboard/vendor/products/new" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-zinc-800 hover:bg-orange-50 hover:text-[#D4450A]"><span className="flex size-9 items-center justify-center rounded-xl bg-orange-100 text-[#D4450A]"><Package className="size-4" /></span>Add product</Link>
+            <Link href="/dashboard/vendor/services/new" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-zinc-800 hover:bg-amber-50 hover:text-amber-700"><span className="flex size-9 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><ConciergeBell className="size-4" /></span>Add service</Link>
+            <Link href="/dashboard/vendor/events/new" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-zinc-800 hover:bg-rose-50 hover:text-rose-700"><span className="flex size-9 items-center justify-center rounded-xl bg-rose-100 text-rose-700"><CalendarDays className="size-4" /></span>Add event</Link>
+          </div>
+        </details>
           <Link
             href="/dashboard/vendor/reports"
             className="hidden items-center justify-center whitespace-nowrap rounded-lg border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-[#343330] shadow-sm hover:bg-[#F8F7F5] md:inline-flex"

@@ -5,8 +5,25 @@ import PublicNav from "@/components/layout/PublicNav";
 import { prisma } from "@/lib/prisma";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
+import type { Metadata } from "next";
 
-export default async function TimelinePostPage({ params }: { params: Promise<{ postId: string }> }) {
+type Props = { params: Promise<{ postId: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { postId } = await params;
+  const { post } = await getBusinessPost(postId);
+  if (!post) return { title: "Timeline post" };
+  const description = (post.caption || `See the latest update from ${post.store.name}.`).replace(/[*_<>#[\]()]/g, "").slice(0, 180);
+  const previewImage = post.images[0] ?? post.store.logoUrl;
+  return {
+    title: `${post.store.name} timeline post`,
+    description,
+    openGraph: { type: "article", title: post.store.name, description, url: `/timeline/${post.id}`, images: previewImage ? [{ url: previewImage, alt: `${post.store.name} timeline post` }] : [] },
+    twitter: { card: "summary_large_image", title: post.store.name, description, images: previewImage ? [previewImage] : [] },
+  };
+}
+
+export default async function TimelinePostPage({ params }: Props) {
   const { postId } = await params;
   const { post, session } = await getBusinessPost(postId);
   if (!post) notFound();
