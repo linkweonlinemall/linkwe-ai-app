@@ -1,6 +1,7 @@
 import type { PaymentAttemptStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { releaseBookingPaymentHoldTx } from "@/lib/payments/release-booking-hold";
 
 type FailureStatus = Extract<PaymentAttemptStatus, "FAILED" | "ERROR">;
 
@@ -16,7 +17,7 @@ export async function failWiPayAttempt(
   return prisma.$transaction(async (tx) => {
     const changed = await tx.paymentAttempt.updateMany({
       where: { id: attemptId, status: "PENDING" },
-      data: { status, failureMessage: failureMessage.slice(0, 500) },
+      data: { status, activeKey: null, failureMessage: failureMessage.slice(0, 500) },
     });
     if (changed.count === 0) return false;
 
@@ -41,6 +42,13 @@ export async function failWiPayAttempt(
         where: { id: attempt.targetId, status: "PENDING_PAYMENT" },
         data: { status: "CANCELLED", promoReservationExpiresAt: null },
       });
+    }
+    if (attempt?.purpose === "PRODUCT_BOOKING") {
+      await releaseBookingPaymentHoldTx(
+        tx,
+        attempt.targetId,
+        "Payment was not approved.",
+      );
     }
     return true;
   });

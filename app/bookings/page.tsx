@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Banknote, Calendar, Clock, ConciergeBell } from "lucide-react";
+import { Banknote, Calendar, Clock, ConciergeBell, Video } from "lucide-react";
 
 import CancelBookingButton from "@/components/bookings/CancelBookingButton";
 import MarkBookingCompleteButton from "@/components/bookings/MarkBookingCompleteButton";
@@ -9,6 +9,7 @@ import PublicNav from "@/components/layout/PublicNav";
 import { canCustomerMarkBookingComplete, customerCancelState } from "@/lib/finance/booking-ui";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
+import { getBookingScheduledEnd } from "@/lib/finance/booking-schedule";
 import { icn } from "@/lib/iconography";
 import { prisma } from "@/lib/prisma";
 
@@ -17,9 +18,14 @@ export const metadata: Metadata = {
   description: "View and manage your service bookings.",
 };
 
-export default async function BookingsPage() {
+export default async function BookingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ payment?: string }>;
+}) {
   const session = await getSession();
   if (!session) redirect("/login");
+  const paymentNotice = (await searchParams).payment;
 
   const user = await prisma.user.findUnique({ where: { id: session.userId } });
   const continueHref = user ? getRoleDashboardPath(user.role) : null;
@@ -37,6 +43,7 @@ export default async function BookingsPage() {
       completedAt: true,
       earningsReleased: true,
       customerNotes: true,
+      meetingLink: true,
       product: {
         select: {
           name: true,
@@ -67,12 +74,26 @@ export default async function BookingsPage() {
     return `${hour}:${m.toString().padStart(2, "0")} ${period}`;
   }
 
+  function safeMeetingHref(value: string | null) {
+    if (!value) return null;
+    try {
+      const parsed = new URL(value);
+      return parsed.protocol === "https:" || parsed.protocol === "http:"
+        ? parsed.toString()
+        : null;
+    } catch {
+      return null;
+    }
+  }
+
+  const now = new Date();
   const upcoming = bookings.filter(
-    (b) => new Date(b.bookingDate) >= new Date() && b.status !== "CANCELLED",
+    (booking) =>
+      !["CANCELLED", "COMPLETED", "NO_SHOW"].includes(booking.status) &&
+      getBookingScheduledEnd(booking.bookingDate, booking.endTime) >= now,
   );
-  const past = bookings.filter(
-    (b) => new Date(b.bookingDate) < new Date() || b.status === "CANCELLED",
-  );
+  const upcomingIds = new Set(upcoming.map((booking) => booking.id));
+  const past = bookings.filter((booking) => !upcomingIds.has(booking.id));
 
   const STATUS_COLOR: Record<string, string> = {
     PENDING: "bg-amber-100 text-amber-700",
@@ -84,6 +105,8 @@ export default async function BookingsPage() {
   };
 
   function BookingCard({ booking }: { booking: (typeof bookings)[0] }) {
+    const meetingHref = safeMeetingHref(booking.meetingLink);
+
     return (
       <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
         <div className="flex items-start gap-4 p-4">
@@ -139,6 +162,17 @@ export default async function BookingsPage() {
             </div>
             {booking.customerNotes ? (
               <p className="mt-1.5 text-xs text-zinc-400">{booking.customerNotes}</p>
+            ) : null}
+            {meetingHref && booking.status !== "CANCELLED" ? (
+              <a
+                href={meetingHref}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100"
+              >
+                <Video className={icn.inline} aria-hidden strokeWidth={2} />
+                Join virtual appointment
+              </a>
             ) : null}
           </div>
         </div>
@@ -221,6 +255,12 @@ export default async function BookingsPage() {
             Browse services
           </Link>
         </div>
+
+        {paymentNotice === "refunded" ? (
+          <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+            This checkout had already closed, so LinkWe immediately requested a full refund to your card.
+          </div>
+        ) : null}
 
         {bookings.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-white py-20 text-center">

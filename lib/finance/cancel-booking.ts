@@ -29,8 +29,9 @@ export async function cancelBookingCore(
       customerId: true,
       amountPaid: true,
       earningsReleased: true,
+      cancelledAt: true,
       slot: {
-        select: { id: true, currentBookings: true, maxBookings: true },
+        select: { id: true },
       },
       product: {
         select: {
@@ -50,6 +51,39 @@ export async function cancelBookingCore(
   if (booking.earningsReleased) {
     return { ok: false, error: "Earnings already released for this booking" };
   }
+  if (booking.cancelledAt) {
+    return { ok: false, error: "Booking cancellation is already in progress" };
+  }
+
+  const originalStatus = booking.status;
+  const cancellationClaimedAt = new Date();
+  const claimed = await prisma.productBooking.updateMany({
+    where: {
+      id: bookingId,
+      status: originalStatus,
+      earningsReleased: false,
+      cancelledAt: null,
+    },
+    data: {
+      cancelledAt: cancellationClaimedAt,
+      cancelledBy,
+      cancellationReason: reason ?? null,
+    },
+  });
+  if (claimed.count !== 1) {
+    return { ok: false, error: "Booking changed. Refresh and try again." };
+  }
+
+  async function releaseCancellationClaim() {
+    await prisma.productBooking.updateMany({
+      where: {
+        id: bookingId,
+        status: originalStatus,
+        cancelledAt: cancellationClaimedAt,
+      },
+      data: { cancelledAt: null, cancelledBy: null, cancellationReason: null },
+    });
+  }
 
   // 2. WiPay refund — must happen before $transaction.
   // Invariant: it must be structurally impossible to reach the $transaction
@@ -65,6 +99,7 @@ export async function cancelBookingCore(
       orderBy: { createdAt: "desc" },
     });
     if (!payment?.providerTransactionId) {
+      await releaseCancellationClaim();
       return {
         ok: false,
         error: "Could not locate the payment to refund. Nothing was changed.",
@@ -82,6 +117,7 @@ export async function cancelBookingCore(
         refundedTTD = booking.amountPaid;
       } catch (err) {
         console.error("[cancelBookingCore] WiPay refund failed", err);
+        await releaseCancellationClaim();
         return { ok: false, error: "Refund failed. Please try again." };
       }
     }
@@ -94,16 +130,21 @@ export async function cancelBookingCore(
 
   await prisma.$transaction(async (tx) => {
     // a. Mark booking cancelled
-    await tx.productBooking.update({
-      where: { id: bookingId },
+    const cancelled = await tx.productBooking.updateMany({
+      where: {
+        id: bookingId,
+        status: originalStatus,
+        earningsReleased: false,
+        cancelledAt: cancellationClaimedAt,
+      },
       data: {
         status: BookingStatus.CANCELLED,
-        cancelledAt: new Date(),
-        cancelledBy,
-        cancellationReason: reason ?? null,
         ...(vendorNotes != null ? { vendorNotes } : {}),
       },
     });
+    if (cancelled.count !== 1) {
+      throw new Error("Booking changed while cancellation was completing");
+    }
 
     // b. Clawback deposit credit if one exists
     const depositCredit = await tx.vendorLedgerEntry.findFirst({
@@ -143,13 +184,9 @@ export async function cancelBookingCore(
 
     // c. Free the slot capacity
     if (booking.slot) {
-      const currentBookings = Math.max(0, booking.slot.currentBookings - 1);
-      await tx.productBookingSlot.update({
-        where: { id: booking.slot.id },
-        data: {
-          currentBookings,
-          isAvailable: currentBookings < booking.slot.maxBookings,
-        },
+      await tx.productBookingSlot.updateMany({
+        where: { id: booking.slot.id, currentBookings: { gt: 0 } },
+        data: { currentBookings: { decrement: 1 }, isAvailable: true },
       });
     }
   });

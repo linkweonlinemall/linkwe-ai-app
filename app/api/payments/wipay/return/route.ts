@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { verifyWiPayResponseHash } from "@/lib/wipay/payments";
-import { fulfillWiPayAttempt } from "@/lib/payments/fulfill-wipay-attempt";
 import { failWiPayAttempt } from "@/lib/payments/fail-wipay-attempt";
+import { settleVerifiedWiPaySuccess } from "@/lib/payments/settle-wipay-success";
 import type { WiPayEnvironment } from "@/lib/wipay/config";
 
 export const runtime = "nodejs";
@@ -46,15 +46,17 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/checkout?payment=failed", request.url));
   }
 
-  if (attempt.status !== "SUCCEEDED") {
-    await fulfillWiPayAttempt(attempt);
-    await prisma.paymentAttempt.update({
-      where: { id: attempt.id },
-      data: {
-        status: "SUCCEEDED",
-        paidAt: new Date(),
-      },
-    });
+  const outcome = await settleVerifiedWiPaySuccess(attempt.id);
+  if (outcome === "refunded_closed_or_expired") {
+    const refundDestination =
+      attempt.purpose === "PRODUCT_BOOKING"
+        ? "/bookings?payment=refunded"
+        : attempt.purpose === "SERVICE_SUBSCRIPTION"
+          ? "/dashboard/customer/subscriptions?payment=refunded"
+          : attempt.purpose === "VENDOR_SUBSCRIPTION"
+            ? "/dashboard/vendor/finance?payment=refunded"
+            : "/my-requests?payment=refunded";
+    return NextResponse.redirect(new URL(refundDestination, request.url));
   }
 
   const destination = attempt.purpose === "PRODUCT_ORDER"

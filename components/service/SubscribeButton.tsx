@@ -8,10 +8,12 @@ import {
   cancelMyServiceSubscription,
   resumeMyServiceSubscription,
   startServiceSubscriptionCheckout,
+  unpauseMyServiceSubscription,
 } from "@/app/actions/service-subscription";
 
 type SubscriptionInfo = {
   id: string;
+  status: "ACTIVE" | "PAUSED" | "PAST_DUE" | "CANCELED";
   cancelAtPeriodEnd: boolean;
   currentPeriodEnd: Date | string | null;
 };
@@ -41,6 +43,7 @@ function errorMessage(error: string): string {
     case "invalid_price":
     case "not_subscription":
     case "invalid_service":
+    case "invalid_trial_price":
       return "This subscription can't be purchased online right now.";
     default:
       return "Could not start checkout. Please try again.";
@@ -55,6 +58,8 @@ function manageErrorMessage(error: string): string {
     case "not_active":
     case "no_subscription":
       return "This subscription can't be updated right now.";
+    case "notice_period":
+      return "The cancellation notice window has passed. Contact the provider for help with this cycle.";
     default:
       return "Couldn't update — try again.";
   }
@@ -129,9 +134,27 @@ export default function SubscribeButton({
       setManageError(manageErrorMessage(result.error));
     }
 
+    async function handleUnpause() {
+      setManageError(null);
+      setManageLoading(true);
+      const result = await unpauseMyServiceSubscription(subscription!.id);
+      setManageLoading(false);
+      if (result.ok) return router.refresh();
+      setManageError(manageErrorMessage(result.error));
+    }
+
     return (
       <div className="flex flex-col gap-2">
-        {subscription.cancelAtPeriodEnd ? (
+        {subscription.status === "PAUSED" ? (
+          <>
+            <p className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-center text-sm font-medium text-sky-900">
+              Your subscription is paused. Your paid-through date will extend when you resume.
+            </p>
+            <button type="button" disabled={manageLoading} onClick={() => void handleUnpause()} className="w-full rounded-xl bg-[#D4450A] py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+              {manageLoading ? "Updating…" : "Resume now"}
+            </button>
+          </>
+        ) : subscription.cancelAtPeriodEnd ? (
           <>
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm font-medium text-amber-900">
               Your subscription ends on {periodEndLabel}.

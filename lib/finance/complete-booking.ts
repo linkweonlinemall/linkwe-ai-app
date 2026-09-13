@@ -35,7 +35,7 @@ export async function releaseBookingEarnings(
     },
   });
 
-  if (!booking || booking.earningsReleased) {
+  if (!booking || booking.earningsReleased || booking.cancelledAt) {
     return { ok: false as const, error: "Booking not eligible" };
   }
 
@@ -51,9 +51,14 @@ export async function releaseBookingEarnings(
   const { net } = calculateEarnings(grossTTD, "service", plan);
   const now = new Date();
 
-  await prisma.$transaction(async (tx) => {
-    await tx.productBooking.update({
-      where: { id: bookingId },
+  const released = await prisma.$transaction(async (tx) => {
+    const transitioned = await tx.productBooking.updateMany({
+      where: {
+        id: bookingId,
+        status: { in: [BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID] },
+        earningsReleased: false,
+        cancelledAt: null,
+      },
       data: {
         status: BookingStatus.COMPLETED,
         completedAt: now,
@@ -62,6 +67,7 @@ export async function releaseBookingEarnings(
         earningsAmount: net,
       },
     });
+    if (transitioned.count !== 1) return false;
 
     if (grossTTD > 0) {
       await createVendorEarningsLedgerPair(tx, {
@@ -79,7 +85,10 @@ export async function releaseBookingEarnings(
         markedByUserId: markedCompleteBy === "SYSTEM" ? undefined : markedCompleteBy,
       });
     }
+    return true;
   });
+
+  if (!released) return { ok: false as const, error: "Booking not eligible" };
 
   const ownerId = booking.product.store.ownerId;
   if (ownerId) {

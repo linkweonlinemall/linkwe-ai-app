@@ -232,20 +232,20 @@ model Store {
 
 /// Vendor-authored business updates shown to customers who follow (save) the store.
 model BusinessPost {
-  id        String                @id @default(cuid())
-  storeId   String                @map("store_id")
-  caption   String
-  images    String[]              @default([])
+  id          String                @id @default(cuid())
+  storeId     String                @map("store_id")
+  caption     String
+  images      String[]              @default([])
   /// Vendor-supplied discovery terms used by timeline search.
-  searchTags String[]             @default([]) @map("search_tags")
+  searchTags  String[]              @default([]) @map("search_tags")
   /// Snapshot cards for products, services, partner items, stores, events and tickets.
-  attachments Json                @default("[]")
-  published Boolean               @default(true)
-  createdAt DateTime              @default(now()) @map("created_at")
-  updatedAt DateTime              @updatedAt @map("updated_at")
-  store     Store                 @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  likes     BusinessPostLike[]
-  comments  BusinessPostComment[]
+  attachments Json                  @default("[]")
+  published   Boolean               @default(true)
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+  store       Store                 @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  likes       BusinessPostLike[]
+  comments    BusinessPostComment[]
 
   @@index([storeId, published, createdAt])
   @@map("business_posts")
@@ -696,9 +696,11 @@ enum PaymentPurpose {
 
 enum PaymentAttemptStatus {
   PENDING
+  PROCESSING
   SUCCEEDED
   FAILED
   ERROR
+  EXPIRED
   REFUND_REQUESTED
   REFUNDED
   CHARGEBACK_PENDING
@@ -757,6 +759,7 @@ model PaymentAttempt {
   purpose               PaymentPurpose
   status                PaymentAttemptStatus @default(PENDING)
   merchantOrderId       String               @unique @map("merchant_order_id")
+  activeKey             String?              @unique @map("active_key")
   providerTransactionId String?              @unique @map("provider_transaction_id")
   amountMinor           Int                  @map("amount_minor")
   currency              String               @default("TTD")
@@ -767,6 +770,7 @@ model PaymentAttempt {
   failureMessage        String?              @map("failure_message")
   providerData          Json?                @map("provider_data")
   paidAt                DateTime?            @map("paid_at")
+  expiresAt             DateTime?            @map("expires_at")
   createdAt             DateTime             @default(now()) @map("created_at")
   updatedAt             DateTime             @updatedAt @map("updated_at")
 
@@ -775,6 +779,7 @@ model PaymentAttempt {
   @@index([userId, status])
   @@index([purpose, targetId])
   @@index([status, createdAt])
+  @@index([status, expiresAt])
   @@map("payment_attempts")
 }
 
@@ -1297,6 +1302,8 @@ enum LedgerEntryType {
   ADJUSTMENT
   BOOKING_COMPLETE
   BOOKING_AUTO_COMPLETE
+  ON_DEMAND_COMPLETE
+  ON_DEMAND_AUTO_COMPLETE
   DEPOSIT_RECEIVED
   ORDER_AUTO_COMPLETE
   TICKET_SALE
@@ -1307,6 +1314,7 @@ enum LedgerEntryType {
 
 enum CustomerSubscriptionStatus {
   ACTIVE
+  PAUSED
   PAST_DUE
   CANCELED
 }
@@ -1325,35 +1333,59 @@ enum StoreSubscriptionStatus {
 }
 
 /// Customer subscribed to a vendor's SUBSCRIPTION-type service (Product).
-/// One active row per (customer, product) enforced by partial unique index in DB migration.
+/// One active row per (customer, product) is enforced by the original partial unique index.
 model CustomerServiceSubscription {
-  id                   String                     @id @default(cuid())
-  customerId           String                     @map("customer_id")
-  customer             User                       @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  productId            String                     @map("product_id")
-  product              Product                    @relation(fields: [productId], references: [id], onDelete: Cascade)
-  storeId              String                     @map("store_id")
-  store                Store                      @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  stripeSubscriptionId String?                    @map("stripe_subscription_id")
-  wipayTrustedCardId   String?                    @map("wipay_trusted_card_id")
-  status               CustomerSubscriptionStatus @default(ACTIVE)
-  currentPeriodEnd     DateTime?                  @map("current_period_end")
-  nextChargeAt         DateTime?                  @map("next_charge_at")
-  lastChargeAt         DateTime?                  @map("last_charge_at")
+  id                     String                            @id @default(cuid())
+  customerId             String                            @map("customer_id")
+  customer               User                              @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  productId              String                            @map("product_id")
+  product                Product                           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  storeId                String                            @map("store_id")
+  store                  Store                             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  stripeSubscriptionId   String?                           @map("stripe_subscription_id")
+  wipayTrustedCardId     String?                           @map("wipay_trusted_card_id")
+  status                 CustomerSubscriptionStatus        @default(ACTIVE)
+  currentPeriodEnd       DateTime?                         @map("current_period_end")
+  nextChargeAt           DateTime?                         @map("next_charge_at")
+  lastChargeAt           DateTime?                         @map("last_charge_at")
   /// TTD minor units at subscribe time (snapshot).
-  priceMinor           Int                        @map("price_minor")
+  priceMinor             Int                               @map("price_minor")
   /// Billing interval snapshot: weekly|fortnightly|monthly|quarterly.
-  interval             String
-  cancelAtPeriodEnd    Boolean                    @default(false) @map("cancel_at_period_end")
-  canceledAt           DateTime?                  @map("canceled_at")
-  createdAt            DateTime                   @default(now()) @map("created_at")
-  updatedAt            DateTime                   @updatedAt @map("updated_at")
+  interval               String
+  sessionsIncluded       Int?                              @map("sessions_included")
+  sessionsRemaining      Int?                              @map("sessions_remaining")
+  cancellationNoticeDays Int                               @default(0) @map("cancellation_notice_days")
+  canPause               Boolean                           @default(false) @map("can_pause")
+  pauseMaxWeeks          Int?                              @map("pause_max_weeks")
+  pauseUsedSeconds       Int                               @default(0) @map("pause_used_seconds")
+  pausedAt               DateTime?                         @map("paused_at")
+  pauseEndsAt            DateTime?                         @map("pause_ends_at")
+  trialStartedAt         DateTime?                         @map("trial_started_at")
+  trialEndsAt            DateTime?                         @map("trial_ends_at")
+  cancelAtPeriodEnd      Boolean                           @default(false) @map("cancel_at_period_end")
+  canceledAt             DateTime?                         @map("canceled_at")
+  createdAt              DateTime                          @default(now()) @map("created_at")
+  updatedAt              DateTime                          @updatedAt @map("updated_at")
+  sessionUsages          ServiceSubscriptionSessionUsage[]
 
   @@index([customerId])
   @@index([productId])
   @@index([storeId])
+  @@index([status, currentPeriodEnd])
+  @@index([status, pauseEndsAt])
   @@index([stripeSubscriptionId])
   @@map("customer_service_subscriptions")
+}
+
+model ServiceSubscriptionSessionUsage {
+  id             String                      @id @default(cuid())
+  subscriptionId String                      @map("subscription_id")
+  subscription   CustomerServiceSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  recordedById   String                      @map("recorded_by_id")
+  usedAt         DateTime                    @default(now()) @map("used_at")
+
+  @@index([subscriptionId, usedAt])
+  @@map("service_subscription_session_usages")
 }
 
 /// How vendor gets goods into the warehouse for this split
@@ -1614,6 +1646,7 @@ enum OnDemandRequestStatus {
   PENDING
   ACCEPTED
   CONFIRMED
+  REFUND_PENDING
   DECLINED
   COMPLETED
   CANCELLED
@@ -1971,6 +2004,11 @@ model OnDemandRequest {
   declineReason         String?
   respondedAt           DateTime?
   completedAt           DateTime?
+  vendorCompletedAt     DateTime?             @map("vendor_completed_at")
+  autoCompleteAt        DateTime?             @map("auto_complete_at")
+  markedCompleteBy      String?               @map("marked_complete_by")
+  earningsReleased      Boolean               @default(false) @map("earnings_released")
+  earningsAmount        Float?                @map("earnings_amount")
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
 
@@ -1978,6 +2016,7 @@ model OnDemandRequest {
   @@index([customerId])
   @@index([storeId])
   @@index([status])
+  @@index([autoCompleteAt, earningsReleased])
   @@map("on_demand_requests")
 }
 

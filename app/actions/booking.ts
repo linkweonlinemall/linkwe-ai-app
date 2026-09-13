@@ -5,7 +5,7 @@ import {
   BookingStatus,
   CancelledBy,
   NotificationType,
-  type Prisma,
+  Prisma,
 } from "@prisma/client";
 
 import { getSession } from "@/lib/auth/session";
@@ -14,6 +14,10 @@ import { createWiPayHostedPayment } from "@/lib/wipay/payments";
 import { BASE_URL } from "@/lib/email/resend";
 import { sendBookingConfirmationEmails } from "@/app/actions/booking-emails";
 import { cancelBookingCore } from "@/lib/finance/cancel-booking";
+import {
+  getBookingScheduledEnd,
+  getBookingScheduledStart,
+} from "@/lib/finance/booking-schedule";
 import {
   generateSlotsForDate,
   getAvailableDates,
@@ -29,6 +33,38 @@ import {
 } from "@/lib/timezone/trinidad";
 import { canVendorUsePayOnArrival } from "@/lib/services/payment-policy";
 import { createNotification } from "@/lib/notifications/create";
+import { releaseBookingPaymentHoldTx } from "@/lib/payments/release-booking-hold";
+import {
+  checkoutExpiresAt,
+  expireCheckoutAttempt,
+} from "@/lib/payments/checkout-expiry";
+
+class SlotUnavailableError extends Error {}
+
+function isRetryableBookingConflict(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    (error.code === "P2002" || error.code === "P2034")
+  );
+}
+
+async function releaseUnpaidBookingReservation(
+  bookingId: string,
+  customerId: string,
+  reason: string,
+) {
+  await prisma.$transaction(
+    async (tx) => {
+      const owned = await tx.productBooking.findFirst({
+        where: { id: bookingId, customerId },
+        select: { id: true },
+      });
+      if (!owned) return;
+      await releaseBookingPaymentHoldTx(tx, owned.id, reason);
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  );
+}
 
 // Get service booking data for customer
 export async function getServiceBookingData(serviceSlug: string) {
@@ -133,6 +169,15 @@ export async function createBooking(input: {
   const session = await getSession();
   if (!session) return { error: "not_logged_in" };
 
+  const guestCount = input.guestCount ?? 1;
+  if (!Number.isInteger(guestCount) || guestCount < 1 || guestCount > 100) {
+    return { error: "Enter a valid number of guests." };
+  }
+  const customerNotes = input.customerNotes?.trim() || null;
+  if (customerNotes && customerNotes.length > 2_000) {
+    return { error: "Booking notes must be 2,000 characters or fewer." };
+  }
+
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) {
     return { error: "slot_unavailable" };
   }
@@ -165,6 +210,9 @@ export async function createBooking(input: {
       availableFrom: true,
       availableTo: true,
       isAvailable: true,
+      isPublished: true,
+      isArchived: true,
+      isService: true,
       storeId: true,
       store: {
         select: {
@@ -192,9 +240,19 @@ export async function createBooking(input: {
     },
   });
 
-  if (!service) return { error: "Service not found" };
+  if (
+    !service ||
+    !service.isPublished ||
+    service.isArchived ||
+    !service.isService
+  ) {
+    return { error: "Service not found" };
+  }
 
   if (!isStoreSellable(service.store)) return { error: "Service not found" };
+  if (service.store.owner.id === session.userId) {
+    return { error: "You cannot book your own service." };
+  }
 
   if (!service.isAvailable) return { error: "slot_unavailable" };
 
@@ -250,9 +308,10 @@ export async function createBooking(input: {
   const chosen = slots.find((s) => s.time === input.startTime && s.available);
   if (!chosen) return { error: "slot_unavailable" };
 
-  const endTime = chosen.endTime;
-
   const totalPrice = service.price;
+  if (!Number.isFinite(totalPrice) || totalPrice < 0) {
+    return { error: "This service does not have a valid price." };
+  }
 
   const depositDue =
     service.depositAmount != null && service.depositAmount > 0
@@ -264,73 +323,133 @@ export async function createBooking(input: {
       : input.paymentMethod === "arrival" && depositDue != null
         ? depositDue
         : null;
-  const needsPayment = chargeAmount != null;
+  const needsPayment = chargeAmount != null && chargeAmount > 0;
   const initialStatus = service.requiresApproval
     ? BookingStatus.PENDING
     : needsPayment
       ? BookingStatus.PENDING
       : BookingStatus.CONFIRMED;
+  const paymentType = input.paymentMethod === "online" ? "full" : "deposit";
+  const paymentAttemptExpiresAt = needsPayment ? checkoutExpiresAt() : null;
 
-  let slot = await prisma.productBookingSlot.findFirst({
-    where: {
-      productId: input.serviceId,
-      startTime: input.startTime,
-      date: { gte: dayStart, lte: dayEnd },
-    },
-  });
+  let booking: Awaited<ReturnType<typeof prisma.productBooking.create>> | null = null;
 
-  if (!slot) {
-    slot = await prisma.productBookingSlot.create({
-      data: {
-        productId: input.serviceId,
-        date: bookingDate,
-        startTime: input.startTime,
-        endTime,
-        maxBookings: 1,
-        currentBookings: 0,
-        isAvailable: true,
-      },
-    });
-  } else if (slot.currentBookings >= slot.maxBookings) {
-    return { error: "slot_unavailable" };
-  } else if (!slot.isAvailable || slot.date.getTime() !== bookingDate.getTime()) {
-    // Recover capacity flags left stale by bookings cancelled before slot-release
-    // handling updated both currentBookings and isAvailable atomically.
-    slot = await prisma.productBookingSlot.update({
-      where: { id: slot.id },
-      data: {
-        ...(!slot.isAvailable ? { isAvailable: true } : {}),
-        ...(slot.date.getTime() !== bookingDate.getTime()
-          ? { date: bookingDate, endTime }
-          : {}),
-      },
-    });
+  for (let attempt = 0; attempt < 3 && !booking; attempt++) {
+    try {
+      booking = await prisma.$transaction(
+        async (tx) => {
+          const liveBookingSlots = await tx.productBookingSlot.findMany({
+            where: {
+              productId: input.serviceId,
+              date: { gte: dayStart, lte: dayEnd },
+            },
+            select: {
+              date: true,
+              startTime: true,
+              endTime: true,
+              currentBookings: true,
+              maxBookings: true,
+              isAvailable: true,
+            },
+          });
+          const liveChosen = getAvailableSlots(
+            {
+              durationMinutes,
+              bufferMinutes: service.bufferMinutes ?? 0,
+              maxPerDay: service.maxPerDay,
+              useStoreHours: service.useStoreHours,
+              availableDays: service.availableDays,
+              availableFrom: service.availableFrom,
+              availableTo: service.availableTo,
+              isAvailable: service.isAvailable,
+            },
+            input.date,
+            openingHours,
+            liveBookingSlots,
+          ).find((candidate) => candidate.time === input.startTime && candidate.available);
+
+          if (!liveChosen) throw new SlotUnavailableError();
+
+          let slot = await tx.productBookingSlot.findFirst({
+            where: {
+              productId: input.serviceId,
+              startTime: input.startTime,
+              date: { gte: dayStart, lte: dayEnd },
+            },
+          });
+
+          if (!slot) {
+            slot = await tx.productBookingSlot.create({
+              data: {
+                productId: input.serviceId,
+                date: bookingDate,
+                startTime: input.startTime,
+                endTime: liveChosen.endTime,
+                maxBookings: 1,
+                currentBookings: 0,
+                isAvailable: true,
+              },
+            });
+          }
+
+          if (!slot.isAvailable || slot.currentBookings >= slot.maxBookings) {
+            throw new SlotUnavailableError();
+          }
+
+          const created = await tx.productBooking.create({
+            data: {
+              productId: input.serviceId,
+              slotId: slot.id,
+              customerId: session.userId,
+              bookingDate,
+              startTime: input.startTime,
+              endTime: liveChosen.endTime,
+              guestCount,
+              totalPrice,
+              status: initialStatus,
+              customerNotes,
+            },
+          });
+
+          if (needsPayment && chargeAmount != null && paymentAttemptExpiresAt) {
+            await tx.paymentAttempt.create({
+              data: {
+                purpose: "PRODUCT_BOOKING",
+                merchantOrderId: `booking-${created.id}-${paymentType}`,
+                activeKey: `PRODUCT_BOOKING:${created.id}`,
+                amountMinor: Math.round(chargeAmount * 100),
+                userId: session.userId,
+                targetId: created.id,
+                providerData: { paymentType },
+                expiresAt: paymentAttemptExpiresAt,
+              },
+            });
+          }
+
+          const nextCount = slot.currentBookings + 1;
+          await tx.productBookingSlot.update({
+            where: { id: slot.id },
+            data: {
+              currentBookings: nextCount,
+              isAvailable: nextCount < slot.maxBookings,
+            },
+          });
+
+          return created;
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    } catch (error) {
+      if (error instanceof SlotUnavailableError) {
+        return { error: "slot_unavailable" };
+      }
+      if (isRetryableBookingConflict(error) && attempt < 2) continue;
+      if (isRetryableBookingConflict(error)) return { error: "slot_unavailable" };
+      throw error;
+    }
   }
 
-  const booking = await prisma.productBooking.create({
-    data: {
-      productId: input.serviceId,
-      slotId: slot.id,
-      customerId: session.userId,
-      bookingDate,
-      startTime: input.startTime,
-      endTime,
-      guestCount: input.guestCount ?? 1,
-      totalPrice,
-      status: initialStatus,
-      customerNotes: input.customerNotes ?? null,
-    },
-  });
-
-  const nextCount = slot.currentBookings + 1;
-
-  await prisma.productBookingSlot.update({
-    where: { id: slot.id },
-    data: {
-      currentBookings: nextCount,
-      isAvailable: nextCount < slot.maxBookings,
-    },
-  });
+  if (!booking) return { error: "slot_unavailable" };
 
   if (initialStatus === BookingStatus.CONFIRMED) {
     await sendBookingConfirmationEmails(booking.id, session.userId);
@@ -350,8 +469,8 @@ export async function createBooking(input: {
     ok: true,
     bookingId: booking.id,
     status: booking.status,
-    requiresPayment: chargeAmount != null,
-    chargeAmount,
+    requiresPayment: needsPayment,
+    chargeAmount: needsPayment ? chargeAmount : null,
     totalPrice,
     depositAmount: depositDue,
   };
@@ -404,22 +523,59 @@ export async function createBookingPaymentIntent(
       : booking.totalPrice;
 
   const amountMinor = Math.round(amountTtd * 100);
-  if (amountMinor < 1) return { error: "Invalid payment amount" };
+  if (amountMinor < 1) {
+    await releaseUnpaidBookingReservation(
+      bookingId,
+      session.userId,
+      "The payment amount was invalid.",
+    );
+    return { error: "Invalid payment amount" };
+  }
 
   const merchantOrderId = `booking-${bookingId}-${paymentType}`;
+  const activeKey = `PRODUCT_BOOKING:${bookingId}`;
+  const existingActiveAttempt = await prisma.paymentAttempt.findUnique({
+    where: { activeKey },
+    select: { merchantOrderId: true },
+  });
+  if (
+    existingActiveAttempt &&
+    existingActiveAttempt.merchantOrderId !== merchantOrderId
+  ) {
+    return { error: "A payment checkout is already active for this booking." };
+  }
+
   try {
-    await prisma.paymentAttempt.upsert({
+    const attempt = await prisma.paymentAttempt.upsert({
       where: { merchantOrderId },
       create: {
         purpose: "PRODUCT_BOOKING",
         merchantOrderId,
+        activeKey,
         amountMinor,
         userId: session.userId,
         targetId: bookingId,
         providerData: { paymentType },
+        expiresAt: checkoutExpiresAt(),
       },
-      update: { amountMinor, status: "PENDING", failureMessage: null },
+      update: {
+        amountMinor,
+        activeKey,
+        failureMessage: null,
+      },
     });
+    if (attempt.status === "PENDING" && attempt.expiresAt && attempt.expiresAt <= new Date()) {
+      await expireCheckoutAttempt(attempt.id);
+      return { error: "This checkout expired. Please select the time again." };
+    }
+    if (attempt.status !== "PENDING") {
+      await releaseUnpaidBookingReservation(
+        bookingId,
+        session.userId,
+        "Checkout is no longer active.",
+      );
+      return { error: "This checkout expired. Please select the time again." };
+    }
     const payment = await createWiPayHostedPayment({
       merchantOrderId,
       amountMinor,
@@ -434,6 +590,33 @@ export async function createBookingPaymentIntent(
     return { ok: true, checkoutUrl: payment.url };
   } catch (e) {
     console.error("[createBookingPaymentIntent]", e);
+    if (
+      e instanceof Prisma.PrismaClientKnownRequestError &&
+      e.code === "P2002"
+    ) {
+      return { error: "A payment checkout is already active for this booking." };
+    }
+    try {
+      await prisma.paymentAttempt.updateMany({
+        where: { merchantOrderId, status: "PENDING" },
+        data: {
+          status: "ERROR",
+          activeKey: null,
+          failureMessage: "Hosted payment setup failed",
+        },
+      });
+    } catch (attemptError) {
+      console.error("[createBookingPaymentIntent:attempt]", attemptError);
+    }
+    try {
+      await releaseUnpaidBookingReservation(
+        bookingId,
+        session.userId,
+        "Payment could not be started.",
+      );
+    } catch (releaseError) {
+      console.error("[createBookingPaymentIntent:release]", releaseError);
+    }
     return { error: "Payment setup failed. Please try again." };
   }
 }
@@ -497,10 +680,9 @@ export async function getVendorBookings(
   if (filter === "pending") {
     whereClause.status = BookingStatus.PENDING;
   } else if (filter === "upcoming") {
-    whereClause.bookingDate = { gte: now };
-    whereClause.status = BookingStatus.CONFIRMED;
-  } else if (filter === "past") {
-    whereClause.bookingDate = { lt: now };
+    whereClause.status = {
+      in: [BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID],
+    };
   }
 
   const bookings = await prisma.productBooking.findMany({
@@ -540,7 +722,26 @@ export async function getVendorBookings(
     orderBy: { bookingDate: "asc" },
   });
 
-  const customerIds = [...new Set(bookings.map((b) => b.customerId))];
+  const filteredBookings = bookings.filter((booking) => {
+    if (filter === "upcoming") {
+      return getBookingScheduledEnd(booking.bookingDate, booking.endTime) >= now;
+    }
+    if (filter === "past") {
+      return (
+        (
+          [
+            BookingStatus.CANCELLED,
+            BookingStatus.COMPLETED,
+            BookingStatus.NO_SHOW,
+          ] as BookingStatus[]
+        ).includes(booking.status) ||
+        getBookingScheduledEnd(booking.bookingDate, booking.endTime) < now
+      );
+    }
+    return true;
+  });
+
+  const customerIds = [...new Set(filteredBookings.map((b) => b.customerId))];
   const customers =
     customerIds.length > 0
       ? await prisma.user.findMany({
@@ -555,7 +756,7 @@ export async function getVendorBookings(
       : [];
   const customerById = new Map(customers.map((u) => [u.id, u]));
 
-  return bookings.map((b) => ({
+  return filteredBookings.map((b) => ({
     ...b,
     customer: customerById.get(b.customerId) ?? null,
   }));
@@ -605,23 +806,56 @@ export async function updateBookingStatus(
     select: {
       id: true,
       customerId: true,
+      status: true,
+      cancelledAt: true,
+      bookingDate: true,
+      startTime: true,
       vendorNotes: true,
       product: { select: { name: true } },
     },
   });
   if (!booking) return { error: "Booking not found" };
+  if (booking.cancelledAt) {
+    return { error: "Booking cancellation is already in progress." };
+  }
 
   const nextStatus =
     status === "CONFIRMED" ? BookingStatus.CONFIRMED : BookingStatus.NO_SHOW;
 
-  await prisma.productBooking.update({
-    where: { id: bookingId },
+  if (booking.status === nextStatus) return { ok: true as const };
+
+  const allowedCurrentStatuses: BookingStatus[] =
+    nextStatus === BookingStatus.CONFIRMED
+      ? [BookingStatus.PENDING, BookingStatus.DEPOSIT_PAID]
+      : [BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID];
+
+  if (!allowedCurrentStatuses.includes(booking.status)) {
+    return { error: "Booking cannot be moved to that status." };
+  }
+
+  if (
+    nextStatus === BookingStatus.NO_SHOW &&
+    new Date() < getBookingScheduledStart(booking.bookingDate, booking.startTime)
+  ) {
+    return { error: "A booking cannot be marked no-show before its start time." };
+  }
+
+  const updated = await prisma.productBooking.updateMany({
+    where: {
+      id: bookingId,
+      status: { in: allowedCurrentStatuses },
+      cancelledAt: null,
+    },
     data: {
       status: nextStatus,
       vendorNotes:
         vendorNotes !== undefined ? vendorNotes ?? null : booking.vendorNotes,
     },
   });
+
+  if (updated.count !== 1) {
+    return { error: "Booking changed while you were updating it. Please refresh." };
+  }
 
   await createNotification({
     userId: booking.customerId,
@@ -653,6 +887,7 @@ export async function updateBookingMeetingLink(
     select: {
       id: true,
       customerId: true,
+      status: true,
       product: {
         select: {
           name: true,
@@ -666,23 +901,47 @@ export async function updateBookingMeetingLink(
   if (booking.product.store.ownerId !== session.userId) {
     return { error: "Not authorized" };
   }
+  if (
+    (
+      [
+        BookingStatus.CANCELLED,
+        BookingStatus.COMPLETED,
+        BookingStatus.NO_SHOW,
+      ] as BookingStatus[]
+    ).includes(booking.status)
+  ) {
+    return { error: "Meeting details cannot be changed for a closed booking." };
+  }
+
+  const normalizedMeetingLink = meetingLink.trim();
+  if (normalizedMeetingLink) {
+    try {
+      const parsed = new URL(normalizedMeetingLink);
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+        return { error: "Meeting link must start with https:// or http://" };
+      }
+    } catch {
+      return { error: "Enter a valid meeting link, including https://" };
+    }
+  }
 
   await prisma.productBooking.update({
     where: { id: bookingId },
-    data: { meetingLink: meetingLink.trim() || null },
+    data: { meetingLink: normalizedMeetingLink || null },
   });
 
   await createNotification({
     userId: booking.customerId,
     type: NotificationType.BOOKING_CONFIRMED,
     title: `Booking details updated — ${booking.product.name}`,
-    body: meetingLink.trim()
+    body: normalizedMeetingLink
       ? "A meeting link was added or changed. Open your booking to view it."
       : "The meeting link was removed. Contact the vendor if you need assistance.",
     linkUrl: "/bookings",
   });
 
   revalidatePath("/dashboard/vendor/bookings");
+  revalidatePath("/bookings");
   return { ok: true };
 }
 
@@ -703,19 +962,19 @@ export async function getVendorBookingStats() {
     product: vendorBookingServiceWhere(store.id),
   };
 
-  const [pending, upcoming, completed, total] = await Promise.all([
+  const [pending, upcomingCandidates, completed, total] = await Promise.all([
     prisma.productBooking.count({
       where: {
         ...productScope,
         status: BookingStatus.PENDING,
       },
     }),
-    prisma.productBooking.count({
+    prisma.productBooking.findMany({
       where: {
         ...productScope,
-        status: BookingStatus.CONFIRMED,
-        bookingDate: { gte: now },
+        status: { in: [BookingStatus.CONFIRMED, BookingStatus.DEPOSIT_PAID] },
       },
+      select: { bookingDate: true, endTime: true },
     }),
     prisma.productBooking.count({
       where: {
@@ -727,6 +986,10 @@ export async function getVendorBookingStats() {
       where: productScope,
     }),
   ]);
+
+  const upcoming = upcomingCandidates.filter(
+    (booking) => getBookingScheduledEnd(booking.bookingDate, booking.endTime) >= now,
+  ).length;
 
   return { pending, upcoming, completed, total };
 }

@@ -15,9 +15,14 @@ export const metadata: Metadata = {
   description: "Track your on-demand service requests.",
 };
 
-export default async function MyRequestsPage() {
+export default async function MyRequestsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ payment?: string }>;
+}) {
   const session = await getSession();
   if (!session) redirect("/login");
+  const paymentNotice = (await searchParams).payment;
 
   const user = await prisma.user.findUnique({ where: { id: session.userId } });
   const continueHref = user ? getRoleDashboardPath(user.role) : null;
@@ -38,6 +43,11 @@ export default async function MyRequestsPage() {
           </h1>
           <p className="mt-2 text-sm text-white/60">Track quotes, provider responses, payment and completion from one place.</p>
         </div>
+        {paymentNotice === "refunded" ? (
+          <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+            This checkout had already closed, so LinkWe immediately requested a full refund to your card.
+          </div>
+        ) : null}
         <CustomerRequestsClient initialRequests={requests} />
       </div>
     </div>

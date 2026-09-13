@@ -5,16 +5,21 @@ import { useState } from "react";
 
 import {
   cancelMyServiceSubscription,
+  pauseMyServiceSubscription,
   renewMyServiceSubscription,
   resumeMyServiceSubscription,
+  unpauseMyServiceSubscription,
 } from "@/app/actions/service-subscription";
 import { formatSubscriptionPeriodEnd as formatPeriodEnd } from "@/lib/finance/subscription-format";
 
 type Props = {
   subscriptionId: string;
+  status: "ACTIVE" | "PAUSED" | "PAST_DUE" | "CANCELED";
   cancelAtPeriodEnd: boolean;
   currentPeriodEnd: Date | string | null;
   canRenew?: boolean;
+  canPause?: boolean;
+  pauseEndsAt?: Date | string | null;
   layout?: "card" | "compact";
 };
 
@@ -28,6 +33,14 @@ function manageErrorMessage(error: string): string {
       return "This subscription can't be updated right now.";
     case "too_early":
       return "Renewal opens seven days before your access ends.";
+    case "notice_period":
+      return "The cancellation notice window has passed. Contact the provider for help with this cycle.";
+    case "pause_unavailable":
+      return "Pausing is not available for this subscription.";
+    case "pause_limit_used":
+      return "You have used this billing cycle's pause allowance.";
+    case "renewal_due":
+      return "Renew this subscription before pausing it.";
     default:
       return "Couldn't update — try again.";
   }
@@ -35,9 +48,12 @@ function manageErrorMessage(error: string): string {
 
 export default function SubscriptionManageActions({
   subscriptionId,
+  status,
   cancelAtPeriodEnd,
   currentPeriodEnd,
   canRenew = false,
+  canPause = false,
+  pauseEndsAt = null,
   layout = "card",
 }: Props) {
   const router = useRouter();
@@ -87,6 +103,38 @@ export default function SubscriptionManageActions({
     setError(manageErrorMessage(result.error));
   }
 
+  async function handlePause() {
+    if (!window.confirm("Pause this subscription? Your paid-through date will move forward by the time paused.")) return;
+    setError(null);
+    setLoading(true);
+    const result = await pauseMyServiceSubscription(subscriptionId);
+    setLoading(false);
+    if (result.ok) return router.refresh();
+    setError(manageErrorMessage(result.error));
+  }
+
+  async function handleUnpause() {
+    setError(null);
+    setLoading(true);
+    const result = await unpauseMyServiceSubscription(subscriptionId);
+    setLoading(false);
+    if (result.ok) return router.refresh();
+    setError(manageErrorMessage(result.error));
+  }
+
+  if (status === "PAUSED") {
+    const pauseEndLabel = formatPeriodEnd(pauseEndsAt);
+    return (
+      <div className={layout === "card" ? "flex flex-col items-end gap-2" : "flex flex-col gap-2"}>
+        <button type="button" disabled={loading} onClick={() => void handleUnpause()} className="rounded-xl bg-[#D4450A] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50">
+          {loading ? "Updating…" : "Resume now"}
+        </button>
+        <p className="text-[11px] text-zinc-500">Automatically resumes by {pauseEndLabel}</p>
+        {error ? <p className="text-xs text-red-600">{error}</p> : null}
+      </div>
+    );
+  }
+
   if (cancelAtPeriodEnd) {
     return (
       <div className={layout === "card" ? "flex flex-col items-end gap-2" : "flex flex-col gap-2"}>
@@ -117,6 +165,16 @@ export default function SubscriptionManageActions({
           className="rounded-xl bg-[#D4450A] px-4 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {loading ? "Redirecting…" : "Renew now"}
+        </button>
+      ) : null}
+      {canPause && status === "ACTIVE" ? (
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() => void handlePause()}
+          className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+        >
+          {loading ? "Updating…" : "Pause subscription"}
         </button>
       ) : null}
       <button

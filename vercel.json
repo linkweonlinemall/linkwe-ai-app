@@ -1,4 +1,9 @@
 {
+  "git": {
+    "deploymentEnabled": {
+      "codex/admin-operations-redesign": false
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/auto-complete",

@@ -18,10 +18,14 @@ type Request = {
   status: string;
   requestType: "ON_DEMAND" | "QUOTE";
   quotedPrice: number | null;
+  amountPaid: number | null;
   estimatedArrival: string | null;
   declineReason: string | null;
   vendorNotes: string | null;
   respondedAt: Date | null;
+  vendorCompletedAt: Date | null;
+  autoCompleteAt: Date | null;
+  earningsReleased: boolean;
   createdAt: Date;
   service: { name: string; slug: string; travelFee: number | null };
   customer: { fullName: string | null; email: string; phone: string | null };
@@ -124,8 +128,29 @@ export default function VendorRequestsClient({ initialRequests }: { initialReque
 
   async function handleComplete(requestId: string) {
     setActingId(requestId);
-    await completeOnDemandRequest(requestId);
-    setRequests((prev) => prev.map((r) => (r.id === requestId ? { ...r, status: "COMPLETED" } : r)));
+    const result = await completeOnDemandRequest(requestId);
+    if ("error" in result) {
+      toast.error(result.error);
+    } else {
+      const completedAt = new Date();
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.id === requestId
+            ? {
+                ...r,
+                vendorCompletedAt: completedAt,
+                autoCompleteAt: new Date(completedAt.getTime() + 48 * 60 * 60 * 1_000),
+              }
+            : r,
+        ),
+      );
+      const request = requests.find((item) => item.id === requestId);
+      toast.success(
+        request?.amountPaid
+          ? "Customer asked to confirm completion. Payout releases after confirmation or 48 hours."
+          : "Customer asked to confirm completion. The request closes after confirmation or 48 hours.",
+      );
+    }
     setActingId(null);
   }
 
@@ -182,7 +207,10 @@ export default function VendorRequestsClient({ initialRequests }: { initialReque
         <div data-tour="request-list" className="flex flex-col gap-3">
           {filtered.map((request) => {
             const expanded = expandedId === request.id;
-            const status = STATUS_CONFIG[request.status] ?? STATUS_CONFIG.PENDING;
+            const status =
+              request.status === "CONFIRMED" && request.vendorCompletedAt
+                ? { label: "Awaiting customer", color: "bg-blue-100 text-blue-700" }
+                : STATUS_CONFIG[request.status] ?? STATUS_CONFIG.PENDING;
             const mode = actionMode[request.id] ?? null;
 
             return (
@@ -440,9 +468,24 @@ export default function VendorRequestsClient({ initialRequests }: { initialReque
                         </div>
                       ) : null}
 
-                      {request.status === "ACCEPTED" || request.status === "CONFIRMED" ? (
+                      {request.status === "ACCEPTED" ? (
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800">
+                          Waiting for the customer to confirm the quote and payment method.
+                        </div>
+                      ) : null}
+
+                      {request.status === "CONFIRMED" ? (
                         <div className="flex flex-col gap-3">
-                          {mode === "decline" && request.status === "CONFIRMED" ? (
+                          {request.vendorCompletedAt ? (
+                            <div className="rounded-xl border border-blue-200 bg-blue-50 p-3">
+                              <p className="text-sm font-bold text-blue-900">Waiting for customer confirmation</p>
+                              <p className="mt-1 text-xs text-blue-700">
+                                {request.amountPaid
+                                  ? "Payout releases when the customer confirms, or automatically after 48 hours."
+                                  : "The request closes when the customer confirms, or automatically after 48 hours."}
+                              </p>
+                            </div>
+                          ) : mode === "decline" ? (
                             <div className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
                               <p className="text-xs font-bold text-red-800">Cancel &amp; refund this request</p>
                               <textarea
@@ -482,16 +525,14 @@ export default function VendorRequestsClient({ initialRequests }: { initialReque
                               >
                                 {actingId === request.id ? "Marking..." : "Mark as completed ✓"}
                               </button>
-                              {request.status === "CONFIRMED" ? (
-                                <button
-                                  type="button"
-                                  onClick={() => setActionMode((prev) => ({ ...prev, [request.id]: "decline" }))}
-                                  disabled={actingId === request.id}
-                                  className="rounded-xl border-2 border-red-200 px-4 text-sm font-bold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
-                                >
-                                  Cancel & refund
-                                </button>
-                              ) : null}
+                              <button
+                                type="button"
+                                onClick={() => setActionMode((prev) => ({ ...prev, [request.id]: "decline" }))}
+                                disabled={actingId === request.id}
+                                className="rounded-xl border-2 border-red-200 px-4 text-sm font-bold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
+                              >
+                                Cancel & refund
+                              </button>
                             </div>
                           )}
                         </div>

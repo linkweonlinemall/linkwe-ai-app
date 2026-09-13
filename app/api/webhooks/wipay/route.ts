@@ -3,9 +3,9 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { getWiPayConfig } from "@/lib/wipay/config";
-import { fulfillWiPayAttempt } from "@/lib/payments/fulfill-wipay-attempt";
 import { failWiPayAttempt } from "@/lib/payments/fail-wipay-attempt";
 import { alertAdmins } from "@/lib/admin/alerts";
+import { settleVerifiedWiPaySuccess } from "@/lib/payments/settle-wipay-success";
 
 export const runtime = "nodejs";
 
@@ -63,13 +63,7 @@ export async function POST(request: Request) {
       const attempt = await prisma.paymentAttempt.findFirst({
         where: { providerTransactionId: transactionId },
       });
-      if (attempt && attempt.status !== "SUCCEEDED") {
-        await fulfillWiPayAttempt(attempt);
-        await prisma.paymentAttempt.update({
-          where: { id: attempt.id },
-          data: { status: "SUCCEEDED", paidAt: new Date() },
-        });
-      }
+      if (attempt) await settleVerifiedWiPaySuccess(attempt.id);
     }
     if (
       transactionId &&

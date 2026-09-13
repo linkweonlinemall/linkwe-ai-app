@@ -1,16 +1,15 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
+
 import { revalidatePath } from "next/cache";
 
-import type { OnDemandRequestStatus } from "@prisma/client";
-import { NotificationType } from "@prisma/client";
+import { NotificationType, Prisma, type OnDemandRequestStatus } from "@prisma/client";
 
 import { createNotification } from "@/lib/notifications/create";
 import { getSession } from "@/lib/auth/session";
-import { calculateEarnings } from "@/lib/finance/commission";
 import { cancelOnDemandCore } from "@/lib/finance/cancel-ondemand";
-import { createVendorEarningsLedgerPair } from "@/lib/finance/release-earnings";
-import { resolveVendorPlan } from "@/lib/finance/vendor-plan";
+import { releaseOnDemandEarnings } from "@/lib/finance/complete-ondemand";
 import { prisma } from "@/lib/prisma";
 import { createWiPayHostedPayment } from "@/lib/wipay/payments";
 import { uploadFile } from "@/lib/uploads/upload";
@@ -21,6 +20,9 @@ import {
   onDemandDeclinedCustomerEmail,
 } from "@/lib/email/templates";
 import { BASE_URL } from "@/lib/email/resend";
+import { isStoreSellable } from "@/lib/store/sellable-store";
+import { canVendorUsePayOnArrival } from "@/lib/services/payment-policy";
+import { checkoutExpiresAt } from "@/lib/payments/checkout-expiry";
 
 const ALLOWED_PHOTO_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -79,11 +81,31 @@ export async function submitOnDemandRequest(input: {
     },
     select: {
       id: true,
+      isAvailable: true,
       serviceRadius: true,
-      store: { select: { latitude: true, longitude: true } },
+      store: {
+        select: {
+          latitude: true,
+          longitude: true,
+          isAvailableNow: true,
+          ownerId: true,
+          status: true,
+          owner: { select: { idVerificationStatus: true } },
+        },
+      },
     },
   });
   if (!product) return { error: "Service not found or unavailable." };
+  if (
+    !product.isAvailable ||
+    !product.store.isAvailableNow ||
+    !isStoreSellable(product.store)
+  ) {
+    return { error: "This provider is not accepting on-demand requests right now." };
+  }
+  if (product.store.ownerId === session.userId) {
+    return { error: "You cannot request your own service." };
+  }
 
   if (input.customerLat != null && input.customerLng != null) {
     const service = product;
@@ -271,10 +293,14 @@ export async function getVendorOnDemandRequests(filter?: string) {
       status: true,
       requestType: true,
       quotedPrice: true,
+      amountPaid: true,
       estimatedArrival: true,
       declineReason: true,
       vendorNotes: true,
       respondedAt: true,
+      vendorCompletedAt: true,
+      autoCompleteAt: true,
+      earningsReleased: true,
       createdAt: true,
       service: { select: { name: true, slug: true, travelFee: true } },
       customer: { select: { fullName: true, email: true, phone: true } },
@@ -290,6 +316,10 @@ export async function acceptOnDemandRequest(
   const session = await getSession();
   if (!session) return { error: "Not authenticated" };
 
+  if (!Number.isFinite(input.quotedPrice) || input.quotedPrice <= 0) {
+    return { error: "Enter a valid quoted price." };
+  }
+
   const store = await prisma.store.findFirst({
     where: { ownerId: session.userId },
     select: { id: true },
@@ -298,12 +328,15 @@ export async function acceptOnDemandRequest(
 
   const request = await prisma.onDemandRequest.findFirst({
     where: { id: requestId, storeId: store.id },
-    select: { id: true, customerId: true },
+    select: { id: true, customerId: true, status: true },
   });
   if (!request) return { error: "Request not found" };
+  if (request.status !== "PENDING") {
+    return { error: "Only pending requests can be accepted." };
+  }
 
-  await prisma.onDemandRequest.update({
-    where: { id: requestId },
+  const accepted = await prisma.onDemandRequest.updateMany({
+    where: { id: requestId, status: "PENDING" },
     data: {
       status: "ACCEPTED",
       quotedPrice: input.quotedPrice,
@@ -312,6 +345,9 @@ export async function acceptOnDemandRequest(
       respondedAt: new Date(),
     },
   });
+  if (accepted.count !== 1) {
+    return { error: "This request changed while you were updating it. Please refresh." };
+  }
 
   const acceptedForEmail = await prisma.onDemandRequest.findUnique({
     where: { id: requestId },
@@ -408,7 +444,7 @@ export async function completeOnDemandRequest(requestId: string): Promise<{ ok: 
 
   const store = await prisma.store.findFirst({
     where: { ownerId: session.userId },
-    select: { id: true, ownerId: true, subscriptionPlan: true },
+    select: { id: true },
   });
   if (!store) return { error: "No store found" };
 
@@ -417,91 +453,68 @@ export async function completeOnDemandRequest(requestId: string): Promise<{ ok: 
     select: {
       id: true,
       status: true,
-      amountPaid: true,
-      stripePaymentIntentId: true,
       customerId: true,
+      vendorCompletedAt: true,
     },
   });
   if (!request) return { error: "Request not found" };
 
-  if (request.status === "COMPLETED") {
-    return { error: "Already completed" };
+  if (request.status !== "CONFIRMED") {
+    return { error: "Only confirmed requests can be completed." };
   }
+  if (request.vendorCompletedAt) return { ok: true };
 
-  const wipayPayment = await prisma.paymentAttempt.findFirst({
+  const vendorCompletedAt = new Date();
+  const autoCompleteAt = new Date(vendorCompletedAt.getTime() + 48 * 60 * 60 * 1_000);
+  const marked = await prisma.onDemandRequest.updateMany({
     where: {
-      purpose: "ON_DEMAND_SERVICE",
-      targetId: request.id,
-      status: "SUCCEEDED",
+      id: requestId,
+      status: "CONFIRMED",
+      vendorCompletedAt: null,
+      earningsReleased: false,
     },
-    select: { id: true },
+    data: { vendorCompletedAt, autoCompleteAt },
   });
-
-  const wasPaidOnline =
-    request.amountPaid != null &&
-    request.amountPaid > 0 &&
-    (!!request.stripePaymentIntentId || !!wipayPayment);
-
-  if (!wasPaidOnline) {
-    await prisma.onDemandRequest.update({
-      where: { id: requestId },
-      data: { status: "COMPLETED", completedAt: new Date() },
-    });
-
-    await createNotification({
-      userId: request.customerId,
-      type: NotificationType.ON_DEMAND_REQUEST_COMPLETED,
-      title: "Service completed",
-      body: "Your on-demand service has been marked complete.",
-      linkUrl: "/my-requests",
-    });
-
-    revalidatePath("/dashboard/vendor/requests");
-    revalidatePath("/my-requests");
-    return { ok: true };
+  if (marked.count !== 1) {
+    return { error: "This request changed while you were updating it. Please refresh." };
   }
-
-  const plan = resolveVendorPlan(store.subscriptionPlan);
-  const grossTTD = request.amountPaid as number;
-  const { net } = calculateEarnings(grossTTD, "service", plan);
-
-  await prisma.$transaction(async (tx) => {
-    await tx.onDemandRequest.update({
-      where: { id: requestId },
-      data: { status: "COMPLETED", completedAt: new Date() },
-    });
-
-    await createVendorEarningsLedgerPair(tx, {
-      storeId: store.id,
-      ledgerEntryType: "ORDER_REVENUE",
-      grossTTD,
-      itemType: "service",
-      plan,
-      idempotencyKey: `ondemand:${requestId}:complete`,
-      description: "On-demand service completed",
-      markedByUserId: session.userId,
-      metadata: { onDemandRequestId: requestId },
-    });
-  });
-
-  await createNotification({
-    userId: store.ownerId,
-    type: NotificationType.PAYOUT_PROCESSED,
-    title: "On-demand job completed",
-    body: `TTD ${net.toFixed(2)} added to your balance`,
-    linkUrl: "/dashboard/vendor/finance",
-  });
 
   await createNotification({
     userId: request.customerId,
     type: NotificationType.ON_DEMAND_REQUEST_COMPLETED,
-    title: "Service completed",
-    body: "Your on-demand service has been marked complete.",
+    title: "Confirm your service is complete",
+    body: "The provider marked this service complete. Confirm within 48 hours, or contact support if something is wrong.",
     linkUrl: "/my-requests",
   });
 
   revalidatePath("/dashboard/vendor/requests");
   revalidatePath("/my-requests");
+  return { ok: true };
+}
+
+export async function markOnDemandRequestComplete(
+  requestId: string,
+): Promise<{ ok: true } | { error: string }> {
+  const session = await getSession();
+  if (!session) return { error: "not_logged_in" };
+
+  const request = await prisma.onDemandRequest.findFirst({
+    where: {
+      id: requestId,
+      customerId: session.userId,
+      status: "CONFIRMED",
+      vendorCompletedAt: { not: null },
+      earningsReleased: false,
+    },
+    select: { id: true },
+  });
+  if (!request) return { error: "This request is not ready to complete." };
+
+  const result = await releaseOnDemandEarnings(request.id, session.userId);
+  if (!result.ok) return { error: result.error };
+
+  revalidatePath("/my-requests");
+  revalidatePath("/dashboard/vendor/requests");
   return { ok: true };
 }
 
@@ -541,6 +554,9 @@ export async function getCustomerOnDemandRequests() {
       quotedPrice: true,
       estimatedArrival: true,
       declineReason: true,
+      vendorCompletedAt: true,
+      autoCompleteAt: true,
+      earningsReleased: true,
       createdAt: true,
       service: { select: { name: true, slug: true } },
       store: { select: { name: true, slug: true } },
@@ -563,32 +579,68 @@ export async function confirmOnDemandRequest(
       quotedPrice: true,
       storeId: true,
       requestType: true,
-      service: { select: { name: true } },
+      service: {
+        select: {
+          name: true,
+          isPublished: true,
+          isArchived: true,
+          isAvailable: true,
+          store: {
+            select: {
+              status: true,
+              subscriptionPlan: true,
+              subscriptionStatus: true,
+              owner: { select: { idVerificationStatus: true } },
+            },
+          },
+        },
+      },
     },
   });
 
   if (!request) return { error: "Request not found or not in accepted state" };
+  if (
+    !request.service.isPublished ||
+    request.service.isArchived ||
+    !request.service.isAvailable ||
+    !isStoreSellable(request.service.store)
+  ) {
+    return { error: "This service is no longer available." };
+  }
 
   if (request.requestType === "QUOTE" && paymentMethod !== "online") {
     return { error: "Quotes must be paid online." };
   }
 
+  if (
+    paymentMethod === "arrival" &&
+    !canVendorUsePayOnArrival(
+      request.service.store.subscriptionPlan,
+      request.service.store.subscriptionStatus,
+    )
+  ) {
+    return { error: "This service must be paid online through LinkWe." };
+  }
+
+  if (!request.quotedPrice || request.quotedPrice <= 0) {
+    return { error: "This request does not have a valid quoted price." };
+  }
+
   if (paymentMethod === "online") {
+    const merchantOrderId = `service-${request.id}-${randomUUID()}`;
     try {
-      const price =
-        request.quotedPrice && request.quotedPrice > 0 ? request.quotedPrice : 1;
+      const price = request.quotedPrice;
       const amountMinor = Math.round(price * 100);
-      const merchantOrderId = `service-${request.id}`;
-      await prisma.paymentAttempt.upsert({
-        where: { merchantOrderId },
-        create: {
+      await prisma.paymentAttempt.create({
+        data: {
           purpose: "ON_DEMAND_SERVICE",
           merchantOrderId,
+          activeKey: `ON_DEMAND_SERVICE:${request.id}`,
           amountMinor,
           userId: session.userId,
           targetId: request.id,
+          expiresAt: checkoutExpiresAt(),
         },
-        update: { amountMinor, status: "PENDING", failureMessage: null },
       });
       const payment = await createWiPayHostedPayment({
         merchantOrderId,
@@ -608,14 +660,35 @@ export async function confirmOnDemandRequest(
       return { ok: true, checkoutUrl: payment.url };
     } catch (err) {
       console.error("WiPay error:", err);
+      await prisma.paymentAttempt
+        .updateMany({
+          where: { merchantOrderId, status: "PENDING" },
+          data: {
+            status: "ERROR",
+            activeKey: null,
+            failureMessage: "Hosted payment setup failed",
+          },
+        })
+        .catch((attemptError) =>
+          console.error("[confirmOnDemandRequest:attempt]", attemptError),
+        );
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2002"
+      ) {
+        return { error: "A payment checkout is already active for this request." };
+      }
       return { error: "Payment failed. Please try again." };
     }
   }
 
-  await prisma.onDemandRequest.update({
-    where: { id: requestId },
+  const confirmed = await prisma.onDemandRequest.updateMany({
+    where: { id: requestId, status: "ACCEPTED" },
     data: { status: "CONFIRMED" },
   });
+  if (confirmed.count !== 1) {
+    return { error: "This request changed while you were updating it. Please refresh." };
+  }
 
   revalidatePath("/my-requests");
   revalidatePath("/dashboard/vendor/requests");

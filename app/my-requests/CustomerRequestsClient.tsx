@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { cancelOnDemandRequest, confirmOnDemandRequest } from "@/app/actions/on-demand";
+import {
+  cancelOnDemandRequest,
+  confirmOnDemandRequest,
+  markOnDemandRequestComplete,
+} from "@/app/actions/on-demand";
 
 type Request = {
   id: string;
@@ -13,6 +17,9 @@ type Request = {
   quotedPrice: number | null;
   estimatedArrival: string | null;
   declineReason: string | null;
+  vendorCompletedAt: Date | string | null;
+  autoCompleteAt: Date | string | null;
+  earningsReleased: boolean;
   createdAt: Date | string;
   service: { name: string; slug: string };
   store: { name: string; slug: string };
@@ -86,7 +93,7 @@ export default function CustomerRequestsClient({
     const result = await confirmOnDemandRequest(requestId, method);
     if ("ok" in result) {
       if (method === "online" && "checkoutUrl" in result && result.checkoutUrl) {
-        window.location.href = result.checkoutUrl;
+        window.location.assign(result.checkoutUrl);
         return;
       }
       setRequests((prev) => prev.map((r) => (r.id === requestId ? { ...r, status: "CONFIRMED" } : r)));
@@ -139,6 +146,31 @@ export default function CustomerRequestsClient({
       }));
     } else {
       setCancelFeedback((prev) => ({ ...prev, [requestId]: { type: "error", text: result.error } }));
+    }
+    setActingId(null);
+  }
+
+  async function handleComplete(requestId: string) {
+    if (!confirm("Confirm that this service was completed to your satisfaction?")) return;
+    setActingId(requestId);
+    const result = await markOnDemandRequestComplete(requestId);
+    if ("error" in result) {
+      setCancelFeedback((prev) => ({
+        ...prev,
+        [requestId]: { type: "error", text: result.error },
+      }));
+    } else {
+      setRequests((prev) =>
+        prev.map((request) =>
+          request.id === requestId
+            ? { ...request, status: "COMPLETED", earningsReleased: true }
+            : request,
+        ),
+      );
+      setCancelFeedback((prev) => ({
+        ...prev,
+        [requestId]: { type: "success", text: "Service confirmed complete. Thank you." },
+      }));
     }
     setActingId(null);
   }
@@ -223,7 +255,9 @@ export default function CustomerRequestsClient({
                     <p className="text-sm font-semibold text-zinc-900">
                       {isQuote && request.status === "CONFIRMED"
                         ? "Quote paid — the provider will be in touch"
-                        : status.desc}
+                        : request.status === "CONFIRMED" && request.vendorCompletedAt
+                          ? "Provider marked the job complete — please confirm or report a problem"
+                          : status.desc}
                     </p>
                   </div>
 
@@ -359,6 +393,16 @@ export default function CustomerRequestsClient({
                   {/* Cancel button for CONFIRMED */}
                   {request.status === "CONFIRMED" ? (
                     <div className="flex flex-col gap-2">
+                      {request.vendorCompletedAt ? (
+                        <button
+                          type="button"
+                          onClick={() => handleComplete(request.id)}
+                          disabled={actingId === request.id}
+                          className="w-full rounded-xl bg-emerald-600 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                          {actingId === request.id ? "Confirming..." : "Confirm service completed ✓"}
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => handleCancelConfirmedRequest(request.id)}
@@ -367,7 +411,11 @@ export default function CustomerRequestsClient({
                       >
                         {actingId === request.id ? "Cancelling..." : "Cancel request"}
                       </button>
-                      <p className="text-center text-xs text-zinc-400">Cancelling will refund your payment.</p>
+                      <p className="text-center text-xs text-zinc-400">
+                        {request.vendorCompletedAt
+                          ? "If something is wrong, cancel and request a refund before the 48-hour review window ends."
+                          : "Cancelling will refund your payment."}
+                      </p>
                     </div>
                   ) : null}
 
