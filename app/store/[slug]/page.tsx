@@ -16,7 +16,7 @@ import { getApprovedPartnerContent } from "@/app/actions/cross-store";
 import { getSavedStoreIds, getWishlistProductIds } from "@/app/actions/wishlist";
 import { getStoreReviewsNew, getUserStoreReview } from "@/app/actions/reviews";
 import { getStoreTimeline } from "@/app/actions/business-timeline";
-import { tw } from "@/lib/design-system";
+import styles from "@/components/storefront/storefront.module.css";
 import { isStoreSellable } from "@/lib/store/sellable-store";
 
 type WeekSchedule = Record<
@@ -96,6 +96,7 @@ export default async function PublicStorePage({ params }: Props) {
       description: true,
       coverPhotoUrl: true,
       status: true,
+      isAvailableNow: true,
       images: {
         select: { id: true, url: true, position: true },
         orderBy: { position: "asc" },
@@ -196,9 +197,18 @@ export default async function PublicStorePage({ params }: Props) {
       serviceType: true,
       serviceDuration: true,
       serviceLocation: true,
+      quotePriceType: true,
+      subscriptionInterval: true,
+      isAvailable: true,
       isFeatured: true,
     },
     orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+  });
+
+  const events = await prisma.event.findMany({
+    where: { storeId: store.id, status: "PUBLISHED", isPublished: true },
+    select: { id: true, title: true, slug: true, startDate: true, coverImage: true, venueName: true, region: true, isOnline: true },
+    orderBy: { startDate: "desc" },
   });
 
   const relatedStores = await prisma.store.findMany({
@@ -237,10 +247,10 @@ export default async function PublicStorePage({ params }: Props) {
   const reviewCount = reviewData?.count ?? 0;
 
   return (
-    <div className={`min-h-screen pb-mobile-public lg:pb-0 ${tw.fontSans} ${tw.bgPage}`}>
+    <div className={styles.page}>
       {!canEditStore ? <StorefrontViewTracker storeId={store.id} /> : null}
       <PublicNav
-        transparent
+        appearance="storefront"
         user={
           navUser
             ? { name: navUser.fullName ?? "Account", href: continueHref! }
@@ -261,6 +271,9 @@ export default async function PublicStorePage({ params }: Props) {
             coverPhotoUrl: store.coverPhotoUrl,
             categoryId: store.categoryId,
             region: store.region,
+            latitude: store.latitude,
+            longitude: store.longitude,
+            address: store.address,
           }}
           initials={initials}
           canEditStore={canEditStore}
@@ -268,6 +281,9 @@ export default async function PublicStorePage({ params }: Props) {
           initialFollowing={isSaved}
           averageRating={averageRating}
           reviewCount={reviewCount}
+          isVerified={isVerified}
+          serviceFirst={products.length === 0 && services.length > 0}
+          spotlight={products[0] ?? services[0]}
         />
       </div>
 
@@ -277,6 +293,7 @@ export default async function PublicStorePage({ params }: Props) {
         averageRating={averageRating}
         reviewCount={reviewCount}
         isVerified={isVerified}
+        followerCount={store._count.savedBy}
       />
 
       <Suspense fallback={<div className="min-h-[40vh] bg-[#F7F5F2]" />}>
@@ -288,6 +305,7 @@ export default async function PublicStorePage({ params }: Props) {
           products={products}
           wishlistProductIds={wishlistProductIds}
           services={services}
+          events={events.map(event => ({ ...event, startDate: event.startDate.toISOString() }))}
           partnerItems={partnerItems}
           timelinePosts={JSON.parse(JSON.stringify(timelinePosts))}
           relatedStores={relatedStores}
@@ -305,14 +323,7 @@ export default async function PublicStorePage({ params }: Props) {
         />
       </Suspense>
 
-      <footer className={`mt-8 border-t border-zinc-200 px-4 py-6 text-center ${tw.bgPage}`}>
-        <p className="text-xs text-zinc-500">
-          <Link href="/" className={`font-semibold ${tw.textScarlet} hover:underline`}>
-            LinkWe
-          </Link>{" "}
-          — We People. We Business. We Marketplace.
-        </p>
-      </footer>
+      <footer className={`${styles.container} ${styles.storeFooter}`}><Link href="/stores">Explore more local stores ↗</Link><span>We people. We business. We marketplace.</span><Link href="/">Back to LinkWe ↗</Link></footer>
     </div>
   );
 }

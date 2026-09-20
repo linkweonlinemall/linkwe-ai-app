@@ -15,6 +15,7 @@ import {
   IconTools,
   IconX,
 } from "@tabler/icons-react";
+import { storefrontServicePrice, type StorefrontServiceDetails } from "@/lib/storefront/service-display";
 import { formatTTDPrice } from "@/lib/format/price";
 import {
   Check,
@@ -35,14 +36,15 @@ import {
   type DaySchedule,
   type WeekSchedule,
 } from "@/lib/store/opening-hours-utils";
-import { normalizeWhatsAppUrl } from "@/lib/store/social-links";
+import { getStoreSocialLinks } from "@/lib/store/social-links";
 
 import type { PartnerContentItem } from "@/lib/cross-store/types";
 
 import RelatedContentCards from "./RelatedContentCards";
 import StoreCompactCartButton from "./StoreCompactCartButton";
 import StoreFollowCard from "./StoreFollowCard";
-import { StoreMapBox } from "./StorefrontMapAndProducts";
+import StoreLocationCard from "./StoreLocationCard";
+import styles from "./storefront.module.css";
 import type { StorefrontTabsStore } from "./StorefrontTabs";
 
 const SCARLET = "#D4450A";
@@ -60,7 +62,7 @@ type ProductPreview = {
   hasVariants?: boolean;
 };
 
-type ServicePreview = {
+type ServicePreview = StorefrontServiceDetails & {
   id: string;
   name: string;
   slug: string;
@@ -71,6 +73,8 @@ type ServicePreview = {
 };
 
 type Props = {
+  preview?: boolean;
+  basePath?: string;
   store: StorefrontTabsStore;
   storeId: string;
   slug: string;
@@ -100,10 +104,6 @@ const SERVICE_TYPE_LABELS: Record<string, string> = {
   SUBSCRIPTION: "Subscription",
   VIRTUAL: "Virtual",
 };
-
-function ensureHttps(url: string) {
-  return url.startsWith("http") ? url : `https://${url}`;
-}
 
 function toTitleCase(str: string) {
   return str.replace(/\b\w/g, (c) => c.toUpperCase());
@@ -191,16 +191,16 @@ function SectionBar({
   );
 }
 
-function ProductRow({ product }: { product: ProductPreview }) {
+function ProductRow({ product, preview = false }: { product: ProductPreview; preview?: boolean }) {
   const router = useRouter();
 
   return (
     <div
       role="link"
       tabIndex={0}
-      onClick={() => router.push(`/products/${product.slug}`)}
+      onClick={() => router.push(`${preview ? "https://www.linkweonlinemall.com" : ""}/products/${product.slug}`)}
       onKeyDown={(e) => {
-        if (e.key === "Enter") router.push(`/products/${product.slug}`);
+        if (e.key === "Enter") router.push(`${preview ? "https://www.linkweonlinemall.com" : ""}/products/${product.slug}`);
       }}
       className="flex cursor-pointer items-center gap-3 border-b border-[0.5px] border-[var(--color-border-tertiary)] px-4 py-[11px] transition-colors last:border-b-0 hover:bg-[var(--color-background-secondary)]"
     >
@@ -223,18 +223,18 @@ function ProductRow({ product }: { product: ProductPreview }) {
         <p className="text-[13px] font-medium" style={{ color: SCARLET }}>
           {formatTTDPrice(product.price ?? 0)}
         </p>
-        <StoreCompactCartButton
+        {!preview && <StoreCompactCartButton
           productId={product.id}
           productName={product.name}
           hasVariants={product.hasVariants}
           slug={product.slug}
-        />
+        />}
       </div>
     </div>
   );
 }
 
-function ServiceRow({ service }: { service: ServicePreview }) {
+function ServiceRow({ service, preview = false }: { service: ServicePreview; preview?: boolean }) {
   const router = useRouter();
   const typeLabel = service.serviceType
     ? (SERVICE_TYPE_LABELS[service.serviceType] ?? service.serviceType)
@@ -248,9 +248,9 @@ function ServiceRow({ service }: { service: ServicePreview }) {
     <div
       role="link"
       tabIndex={0}
-      onClick={() => router.push(`/service/${service.slug}`)}
+      onClick={() => router.push(`${preview ? "https://www.linkweonlinemall.com" : ""}/service/${service.slug}`)}
       onKeyDown={(e) => {
-        if (e.key === "Enter") router.push(`/service/${service.slug}`);
+        if (e.key === "Enter") router.push(`${preview ? "https://www.linkweonlinemall.com" : ""}/service/${service.slug}`);
       }}
       className="flex cursor-pointer items-center gap-3 border-b border-[0.5px] border-[var(--color-border-tertiary)] px-4 py-[11px] transition-colors last:border-b-0 hover:bg-[var(--color-background-secondary)]"
     >
@@ -270,16 +270,16 @@ function ServiceRow({ service }: { service: ServicePreview }) {
         ) : null}
       </div>
       <div className="flex shrink-0 items-center gap-2" onClick={(e) => e.stopPropagation()}>
-        <p className="text-[13px] font-medium" style={{ color: BLUE }}>
-          {formatTTDPrice(service.price ?? 0)}
+        <p className="max-w-[100px] text-right text-[13px] font-medium sm:max-w-[160px]" style={{ color: BLUE }}>
+          {storefrontServicePrice(service)}
         </p>
         <Link
-          href={`/service/${service.slug}`}
+          href={`${preview ? "https://www.linkweonlinemall.com" : ""}/service/${service.slug}`}
           onClick={(e) => e.stopPropagation()}
           className="inline-flex h-7 items-center rounded-lg px-2.5 text-[11px] font-semibold"
           style={{ backgroundColor: "#E6F1FB", color: BLUE_TEXT }}
         >
-          Book
+          {service.serviceType === "QUOTE" ? "Enquire" : "View"}
         </Link>
       </div>
     </div>
@@ -287,6 +287,8 @@ function ServiceRow({ service }: { service: ServicePreview }) {
 }
 
 export default function StoreAboutTab({
+  preview = false,
+  basePath,
   store,
   storeId,
   slug,
@@ -303,36 +305,7 @@ export default function StoreAboutTab({
   const [amenitiesExpanded, setAmenitiesExpanded] = useState(false);
   const todayKey = getTodayKey();
 
-  const socialLinkItems = [
-    socialLinks.instagram?.trim()
-      ? { key: "instagram", platform: "Instagram", url: ensureHttps(socialLinks.instagram.trim()) }
-      : null,
-    socialLinks.facebook?.trim()
-      ? { key: "facebook", platform: "Facebook", url: ensureHttps(socialLinks.facebook.trim()) }
-      : null,
-    socialLinks.x?.trim()
-      ? { key: "x", platform: "X", url: ensureHttps(socialLinks.x.trim()) }
-      : null,
-    socialLinks.tiktok?.trim()
-      ? { key: "tiktok", platform: "TikTok", url: ensureHttps(socialLinks.tiktok.trim()) }
-      : null,
-    socialLinks.youtube?.trim()
-      ? { key: "youtube", platform: "YouTube", url: ensureHttps(socialLinks.youtube.trim()) }
-      : null,
-    socialLinks.linkedin?.trim()
-      ? { key: "linkedin", platform: "LinkedIn", url: ensureHttps(socialLinks.linkedin.trim()) }
-      : null,
-    socialLinks.whatsapp?.trim()
-      ? {
-          key: "whatsapp",
-          platform: "WhatsApp",
-          url: normalizeWhatsAppUrl(socialLinks.whatsapp),
-        }
-      : null,
-    socialLinks.website?.trim()
-      ? { key: "website", platform: "Website", url: ensureHttps(socialLinks.website.trim()) }
-      : null,
-  ].filter((item): item is { key: string; platform: string; url: string } => item != null);
+  const socialLinkItems = getStoreSocialLinks(socialLinks);
 
   const amenities = store.amenities ?? [];
   const tags = store.tags ?? [];
@@ -351,6 +324,7 @@ export default function StoreAboutTab({
   const hiddenTagCount = tags.length - tagLimit;
 
   const galleryImages = store.images ?? [];
+  const galleryCount = galleryImages.length;
   const masonryImages = galleryImages.slice(0, 5);
   const galleryExtra = galleryImages.length > 5 ? galleryImages.length - 4 : 0;
 
@@ -367,13 +341,13 @@ export default function StoreAboutTab({
 
   const goPrev = useCallback(() => {
     setLightboxIndex((i) =>
-      i === null ? null : (i - 1 + galleryImages.length) % galleryImages.length,
+      i === null ? null : (i - 1 + galleryCount) % galleryCount,
     );
-  }, [galleryImages.length]);
+  }, [galleryCount]);
 
   const goNext = useCallback(() => {
-    setLightboxIndex((i) => (i === null ? null : (i + 1) % galleryImages.length));
-  }, [galleryImages.length]);
+    setLightboxIndex((i) => (i === null ? null : (i + 1) % galleryCount));
+  }, [galleryCount]);
 
   useEffect(() => {
     if (lightboxIndex === null) return;
@@ -422,6 +396,7 @@ export default function StoreAboutTab({
                   return (
                     <button
                       key={img.id}
+                      aria-label={`Open store photo ${idx + 1}`}
                       type="button"
                       className={`relative overflow-hidden rounded transition-opacity hover:opacity-[0.88] ${GALLERY_GRID[idx] ?? ""}`}
                       onClick={() => setLightboxIndex(idx)}
@@ -452,11 +427,11 @@ export default function StoreAboutTab({
                     <SectionBar
                       icon={<IconShoppingBag className="size-[13px]" stroke={1.75} aria-hidden />}
                       label="Products"
-                      viewAllHref={`/store/${slug}?tab=store`}
+                      viewAllHref={`${basePath ?? `/store/${slug}`}?tab=store#store-content`}
                       count={products.length}
                     />
                     {previewProducts.map((p) => (
-                      <ProductRow key={p.id} product={p} />
+                      <ProductRow key={p.id} product={p} preview={preview} />
                     ))}
                   </>
                 ) : null}
@@ -470,11 +445,11 @@ export default function StoreAboutTab({
                     <SectionBar
                       icon={<IconTools className="size-[13px]" stroke={1.75} aria-hidden />}
                       label="Services"
-                      viewAllHref={`/store/${slug}?tab=services`}
+                      viewAllHref={`${basePath ?? `/store/${slug}`}?tab=services#store-content`}
                       count={services.length}
                     />
                     {previewServices.map((s) => (
-                      <ServiceRow key={s.id} service={s} />
+                      <ServiceRow key={s.id} service={s} preview={preview} />
                     ))}
                   </>
                 ) : null}
@@ -520,25 +495,18 @@ export default function StoreAboutTab({
               <p className="text-[13px] italic text-[var(--text-muted)]">No description added yet</p>
             )}
           </div>
+          {store.policies?.trim() && <section className={styles.storePolicies}><h2>Store policies</h2><p>{store.policies}</p></section>}
         </div>
 
         <div>
-          <StoreFollowCard
+          {!preview && <StoreFollowCard
             storeId={storeId}
             storeName={store.name}
             initialFollowing={initialFollowing}
             followerCount={followerCount}
-          />
+          />}
 
-          {store.latitude !== null && store.longitude !== null && process.env.NEXT_PUBLIC_MAPBOX_TOKEN ? (
-            <div className="mb-3.5 overflow-hidden rounded-xl border border-[0.5px] border-[var(--color-border-tertiary)] bg-white shadow-sm">
-              <div className="flex items-center justify-between gap-3 px-4 py-3">
-                <div className="min-w-0"><p className="text-[13px] font-semibold text-[var(--text-primary)]">Store location</p><p className="truncate text-[11px] text-[var(--text-muted)]">{store.address?.trim() || store.region}</p></div>
-                <a href={`https://www.google.com/maps/dir/?api=1&destination=${store.latitude},${store.longitude}`} target="_blank" rel="noopener noreferrer" className="shrink-0 rounded-lg bg-[#FEF0EB] px-3 py-2 text-[11px] font-semibold text-[#D4450A]">Directions</a>
-              </div>
-              <StoreMapBox latitude={store.latitude} longitude={store.longitude} mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN} />
-            </div>
-          ) : null}
+          <div className="mb-3.5"><StoreLocationCard store={store} compact /></div>
 
           <div className="mb-3.5 overflow-hidden rounded-xl border border-[0.5px] border-[var(--color-border-tertiary)] bg-white">
             <div className="flex items-center gap-2 border-b border-[0.5px] border-[var(--color-border-tertiary)] px-4 py-3">

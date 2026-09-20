@@ -39,7 +39,7 @@ const SCARLET = "#D4450A";
 type TablerOutlineIcon = typeof IconHome;
 
 type Props = {
-  appearance?: "default" | "home";
+  appearance?: "default" | "home" | "storefront";
   transparent?: boolean;
   /** Standard storefront mark; `/chat` uses AI logo glyph. */
   logoVariant?: "wordmark" | "ai";
@@ -94,6 +94,7 @@ export default function PublicNav({
   unreadCount = 0,
 }: Props) {
   const isHomeAppearance = appearance === "home";
+  const isBrandedAppearance = appearance !== "default";
   const pathname = usePathname() ?? "";
   const hash = useHashFragment();
   const drawerOpen = useDrawerOpenControlled();
@@ -179,11 +180,11 @@ export default function PublicNav({
 
   function LogoMark({ desktop }: { desktop: boolean }) {
     // Asset names describe the logo artwork: "light" belongs on dark surfaces.
-    const surface = navScrolled || isHomeAppearance ? "light" : "dark";
+    const surface = navScrolled || isBrandedAppearance ? "light" : "dark";
     return (
       <img
         src={
-          isHomeAppearance
+          isBrandedAppearance
             ? "/linkwe-app-icon.png"
             : logoVariant === "ai"
             ? `/linkwe-logo-mark-on-${surface}.png`
@@ -192,17 +193,17 @@ export default function PublicNav({
               : `/linkwe-logo-mark-on-${surface}.png`
         }
         alt="LinkWe"
-        className={`${desktop ? "block h-11 w-auto shrink-0" : "block size-11 shrink-0 object-contain"} ${isHomeAppearance ? "rounded-xl" : ""}`}
+        className={`${desktop ? "block h-11 w-auto shrink-0" : "block size-11 shrink-0 object-contain"} ${isBrandedAppearance ? "rounded-xl" : ""}`}
       />
     );
   }
 
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
-  const storeNavAtTop = isStorePage && !navScrolled;
-  const navIsLight = !isHomeAppearance && navScrolled;
+  const storeNavAtTop = isStorePage && !isBrandedAppearance && !navScrolled;
+  const navIsLight = !isBrandedAppearance && navScrolled;
 
-  const headerPosition = isStorePage
+  const headerPosition = isStorePage && !isBrandedAppearance
     ? "fixed inset-x-0 top-0 z-50"
     : transparent
       ? "sticky top-0 z-40"
@@ -376,13 +377,13 @@ export default function PublicNav({
         </>
       ) : null}
 
-      <header className={`${glassHeader} ${isHomeAppearance ? "home-public-nav" : ""}`}>
+      <header className={`${glassHeader} ${isHomeAppearance ? "home-public-nav" : appearance === "storefront" ? "storefront-public-nav" : ""}`}>
         {/* Mobile */}
         <nav aria-label="Primary mobile" className="flex px-3 py-3 md:hidden sm:px-4">
           <div className="flex w-full min-w-0 items-center justify-between gap-3">
             <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="LinkWe home">
               <LogoMark desktop={false} />
-              {isHomeAppearance && <span className="text-[23px] font-bold tracking-[-1px] text-white">Link<span className="text-[#ff8758]">We</span></span>}
+              {isBrandedAppearance && <span className="text-[23px] font-bold tracking-[-1px] text-white">Link<span className="text-[#ff8758]">We</span></span>}
             </Link>
             <div className="flex shrink-0 items-center gap-2">
               <button
@@ -448,7 +449,7 @@ export default function PublicNav({
         <nav aria-label="Primary desktop" className="hidden h-[68px] w-full min-w-0 items-center gap-4 overflow-visible px-6 md:flex xl:px-8">
           <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="LinkWe home">
             <LogoMark desktop />
-            {isHomeAppearance && <span className="text-[28px] font-bold tracking-[-1.5px] text-white">Link<span className="text-[#ff8758]">We</span></span>}
+            {isBrandedAppearance && <span className="text-[28px] font-bold tracking-[-1.5px] text-white">Link<span className="text-[#ff8758]">We</span></span>}
           </Link>
 
           <div className="flex min-h-0 min-w-0 flex-1 justify-center overflow-visible px-2 lg:px-6">

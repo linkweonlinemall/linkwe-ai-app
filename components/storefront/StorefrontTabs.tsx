@@ -5,76 +5,24 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { IconAdjustments } from "@tabler/icons-react";
 
-import AddToCartButton from "@/components/product/AddToCartButton";
-import ProductCardChooseOptionsLink from "@/components/shop/ProductCardChooseOptionsLink";
 import StoreAboutTab from "@/components/storefront/StoreAboutTab";
 import StoreMobileFilterSheet from "@/components/storefront/StoreMobileFilterSheet";
 import StoreProductFiltersPanel from "@/components/storefront/StoreProductFiltersPanel";
 import StoreServiceFiltersPanel from "@/components/storefront/StoreServiceFiltersPanel";
 import StoreWriteReviewSection from "@/components/storefront/StoreWriteReviewSection";
 import ReviewsList from "@/components/ui/ReviewsList";
-import { StorefrontMapAndProducts, type StorefrontProductRow } from "@/components/storefront/StorefrontMapAndProducts";
+import { type StorefrontProductRow } from "@/components/storefront/StorefrontMapAndProducts";
 import type { PartnerContentItem } from "@/lib/cross-store/types";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { COLOUR_OPTIONS } from "@/lib/variant-options";
 import RelatedContentCards from "@/components/storefront/RelatedContentCards";
-import WishlistButton from "@/components/ui/WishlistButton";
-import { formatTTDPrice } from "@/lib/format/price";
-import { Heart, Images, MessageCircle } from "lucide-react";
+import { Heart, Images, MessageCircle, Search, Sparkles } from "lucide-react";
 
-const PLACEHOLDER_COLORS = ["#E8820C", "#1A7FB5", "#D4450A", "#15803D", "#7C3AED"] as const;
-
-const AMENITY_ICON_MAP: Record<string, string> = {
-  free_wifi: "📶",
-  parking_available: "🅿️",
-  wheelchair_accessible: "♿",
-  air_conditioned: "❄️",
-  outdoor_seating: "🌿",
-  indoor_seating: "🪑",
-  waiting_area: "🛋️",
-  private_rooms: "🚪",
-  card_payments: "💳",
-  cash_accepted: "💵",
-  linx_accepted: "🏦",
-  online_payment: "📱",
-  free_consultation: "💬",
-  payment_plans: "📋",
-  deposits_required: "💰",
-  home_visits: "🏠",
-  mobile_service: "🚗",
-  virtual_sessions: "💻",
-  same_day_service: "⚡",
-  emergency_service: "🚨",
-  weekend_available: "📅",
-  evening_available: "🌙",
-  walk_ins_welcome: "🚶",
-  by_appointment_only: "📌",
-  sanitized_equipment: "🧼",
-  gloves_used: "🧤",
-  masks_available: "😷",
-  vaccinated_staff: "💉",
-  insured: "🛡️",
-  certified_staff: "🎓",
-  pet_friendly: "🐾",
-  family_friendly: "👨‍👩‍👧",
-  child_friendly: "👶",
-  refreshments: "☕",
-  loyalty_program: "⭐",
-  delivery_available: "🚚",
-  pickup_available: "📦",
-  free_delivery: "🎁",
-  express_delivery: "⚡",
-  installation_included: "🔧",
-  removal_service: "🗑️",
-};
-
-function formatAmenityLabel(value: string): string {
-  if (value.includes(" ")) return value;
-  return value
-    .split("_")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
+import StorefrontListingCard from "./StorefrontListingCard";
+import StorefrontImage from "./StorefrontImage";
+import StorefrontEvents, { type StorefrontEvent } from "./StorefrontEvents";
+import StorefrontOverview from "./StorefrontOverview";
+import styles from "./storefront.module.css";
 
 type StoreTabProduct = StorefrontProductRow & {
   stock: number | null;
@@ -85,6 +33,7 @@ type StoreTabProduct = StorefrontProductRow & {
 };
 
 type StoreTabServiceRow = {
+  quotePriceType?: string | null; subscriptionInterval?: string | null; isAvailable?: boolean;
   id: string;
   name: string;
   slug: string;
@@ -108,132 +57,12 @@ type RelatedStore = {
   categoryId: string;
 };
 
-function StoreTabProductCard({ product, wishlisted }: { product: StoreTabProduct; wishlisted: boolean }) {
-  const [hovered, setHovered] = useState(false);
-  const img = product.images[0];
-  const bgColor = PLACEHOLDER_COLORS[product.name.length % PLACEHOLDER_COLORS.length];
-  const isLowStock = product.stock !== null && product.stock <= 5 && product.stock > 0;
-  const isOutOfStock = product.stock === 0;
-  const compareAt = product.compareAtPrice ?? null;
-
-  return (
-    <li className="h-full">
-      <div
-        className="group relative flex flex-col overflow-hidden rounded-2xl bg-white transition-all duration-300 h-full"
-        style={{
-          border: "1px solid var(--card-border)",
-          boxShadow: hovered
-            ? "0 12px 40px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.06)"
-            : "0 2px 8px rgba(0,0,0,0.06)",
-          transform: hovered ? "translateY(-4px)" : "translateY(0)",
-        }}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-      >
-        <div className="absolute right-2.5 top-2.5 z-20"><WishlistButton productId={product.id} initialWishlisted={wishlisted} /></div>
-        <div className="relative">
-          <Link href={`/products/${product.slug}`} className="block">
-            <div className="relative overflow-hidden" style={{ aspectRatio: "1/1" }}>
-              {img ? (
-                <img
-                  alt={product.name}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
-                  src={img}
-                />
-              ) : (
-                <div
-                  className="absolute inset-0 flex items-center justify-center"
-                  style={{ backgroundColor: `${bgColor}12` }}
-                >
-                  <div
-                    className="flex h-14 w-14 items-center justify-center rounded-2xl text-xl font-bold text-white"
-                    style={{ backgroundColor: `${bgColor}40` }}
-                  >
-                    {product.name.charAt(0)}
-                  </div>
-                </div>
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            </div>
-          </Link>
-
-          {isLowStock && (
-            <div className="absolute top-2 left-2 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-              Only {product.stock} left
-            </div>
-          )}
-          {isOutOfStock && (
-            <div className="absolute top-2 left-2 bg-zinc-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-              Out of stock
-            </div>
-          )}
-
-          <div
-            className="absolute inset-x-0 bottom-0 flex justify-center px-3 pb-3"
-            style={{
-              opacity: hovered ? 1 : 0,
-              transform: hovered ? "translateY(0)" : "translateY(8px)",
-              transition: "opacity 0.2s, transform 0.2s",
-              pointerEvents: hovered ? "auto" : "none",
-            }}
-          >
-            <div className="w-full max-w-[220px]">
-              {product.hasVariants ? (
-                <ProductCardChooseOptionsLink slug={product.slug} />
-              ) : (
-                <AddToCartButton productId={product.id} productName={product.name} stock={product.stock} />
-              )}
-            </div>
-          </div>
-        </div>
-
-        <Link href={`/products/${product.slug}`} className="flex flex-col p-4 flex-1 bg-white">
-          {product.category ? (
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-              {product.category.replace(/_/g, " ")}
-            </p>
-          ) : null}
-
-          <p className="mb-2 line-clamp-2 flex-1 text-sm font-semibold leading-snug text-zinc-900">{product.name}</p>
-
-          <div className="mt-auto flex items-center justify-between border-t border-zinc-100 pt-2">
-            <div>
-              <p className="text-base font-black" style={{ color: "var(--scarlet)" }}>
-                {formatTTDPrice(product.price ?? 0)}
-              </p>
-              {compareAt && compareAt > product.price ? (
-                <p className="-mt-0.5 text-xs text-zinc-400 line-through">TTD {compareAt.toFixed(2)}</p>
-              ) : null}
-            </div>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#D4450A]/10 transition-colors duration-200 group-hover:bg-[#D4450A]">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                className="text-[#D4450A] group-hover:text-white transition-colors duration-200"
-              >
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-            </div>
-          </div>
-        </Link>
-      </div>
-    </li>
-  );
-}
-
 type TimeSlot = { from: string; to: string };
 type DaySchedule = { closed: boolean; allDay: boolean; slots: TimeSlot[] };
 type WeekSchedule = Record<string, DaySchedule>;
 
-const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
-
 export type StorefrontTabsStore = {
+  isAvailableNow?: boolean;
   name: string;
   slug: string;
   logoUrl: string | null;
@@ -253,13 +82,14 @@ export type StorefrontTabsStore = {
 
 type StoreTimelinePost = { id: string; caption: string; images: string[]; attachments: unknown; createdAt: string; _count: { likes: number; comments: number } };
 
-const TAB_IDS = ["about", "timeline", "store", "services", "partners", "reviews"] as const;
+const TAB_IDS = ["discover", "about", "timeline", "store", "services", "partners", "reviews", "events"] as const;
 type TabId = (typeof TAB_IDS)[number];
 
 /** Constrains tab body width; hero, stats, and tab bar stay full width. */
-const TAB_CONTENT_CLASS = "mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-7 lg:py-8";
+const TAB_CONTENT_CLASS = `${styles.container} ${styles.catalogueBody}`;
 
 type Props = {
+  preview?: boolean;
   store: StorefrontTabsStore;
   storeId: string;
   initialSaved: boolean;
@@ -267,6 +97,7 @@ type Props = {
   products: StoreTabProduct[];
   wishlistProductIds?: string[];
   services?: StoreTabServiceRow[];
+  events?: StorefrontEvent[];
   partnerItems?: PartnerContentItem[];
   timelinePosts?: StoreTimelinePost[];
   relatedStores?: RelatedStore[];
@@ -289,6 +120,7 @@ type Props = {
 };
 
 export default function StorefrontTabs({
+  preview = false,
   store,
   storeId,
   initialSaved,
@@ -296,6 +128,7 @@ export default function StorefrontTabs({
   products,
   wishlistProductIds = [],
   services,
+  events = [],
   partnerItems = [],
   timelinePosts = [],
   relatedStores,
@@ -313,17 +146,17 @@ export default function StorefrontTabs({
   const tabParam = searchParams.get("tab");
   const activeTab: TabId = TAB_IDS.includes(tabParam as TabId)
     ? (tabParam as TabId)
-    : "about";
+    : "discover";
 
   function setActiveTab(tab: TabId) {
     const sp = new URLSearchParams(searchParams.toString());
-    if (tab === "about") {
+    if (tab === "discover") {
       sp.delete("tab");
     } else {
       sp.set("tab", tab);
     }
     const qs = sp.toString();
-    router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    router.push(`${qs ? `${pathname}?${qs}` : pathname}#store-content`);
   }
 
   const [search, setSearch] = useState("");
@@ -445,12 +278,14 @@ export default function StorefrontTabs({
   );
 
   const tabItems: { id: TabId; label: string; count?: number }[] = [
-    { id: "about", label: "About" },
+    { id: "discover", label: "Discover" },
+    ...(products.length > 0 || !services?.length ? [{ id: "store" as const, label: "The collection", count: products.length }] : []),
+    ...(services?.length ? [{ id: "services" as const, label: "Services", count: services.length }] : []),
+    ...(events.length ? [{ id: "events" as const, label: "Events", count: events.length }] : []),
+    { id: "about", label: "Store info" },
     { id: "timeline", label: "Timeline", count: timelinePosts.length },
-    { id: "store", label: "Store", count: products.length },
-    { id: "services", label: "Services", count: services?.length ?? 0 },
-    { id: "partners", label: "Collab", count: partnerItems.length },
     { id: "reviews", label: "Reviews", count: reviewData?.count ?? 0 },
+    { id: "partners", label: "Our circle", count: partnerItems.length },
   ];
 
   void canEditStore;
@@ -458,42 +293,17 @@ export default function StorefrontTabs({
 
   return (
     <>
-      <div className="sticky top-0 z-10 border-b border-[0.5px] border-[var(--color-border-tertiary)] bg-white">
-        <div className="hide-scrollbar flex flex-nowrap overflow-x-auto px-4 md:px-7">
-          {tabItems.map(({ id, label, count }) => {
-            const isActive = activeTab === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setActiveTab(id)}
-                className={`relative shrink-0 whitespace-nowrap px-4 py-[14px] text-[13px] font-medium transition-colors hover:text-[var(--text-primary)] ${
-                  isActive
-                    ? "border-b-2 border-[#D4450A] text-[#D4450A]"
-                    : "border-b-2 border-transparent text-[var(--text-secondary)]"
-                }`}
-              >
-                {label}
-                {count != null && count > 0 ? (
-                  <span
-                    className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
-                      isActive ? "bg-[#FEF0EB] text-[#D4450A]" : "bg-[#F7F7F6] text-[var(--text-muted)]"
-                    }`}
-                  >
-                    {count}
-                  </span>
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <div className={styles.tabBar} id="store-content"><nav className={`${styles.container} ${styles.tabInner}`} aria-label="Explore this store">{tabItems.map(({id, label, count}) => <button key={id} type="button" onClick={() => setActiveTab(id)} aria-pressed={activeTab === id}>{label}{count != null && count > 0 && <span>{count}</span>}</button>)}<span><Sparkles size={13} aria-hidden />A world of local possibility.</span></nav></div>
 
       <main className="pb-[80px] lg:pb-8">
+      {activeTab === "discover" && <StorefrontOverview store={store} products={products} services={services ?? []} events={events} wishlistProductIds={wishlistProductIds} preview={preview} openingHours={openingHours} socialLinks={socialLinks} onNavigate={setActiveTab} />}
+      {activeTab === "events" && <div className={TAB_CONTENT_CLASS}><StorefrontEvents events={events} /></div>}
       {activeTab === "about" ? (
-        <div className="bg-[#F7F5F2]">
+        <div className={styles.detailsBody}>
           <div className={TAB_CONTENT_CLASS}>
             <StoreAboutTab
+              preview={preview}
+              basePath={pathname}
               store={store}
               storeId={storeId}
               slug={store.slug}
@@ -511,6 +321,7 @@ export default function StorefrontTabs({
 
       {activeTab === "store" ? (
         <div className={TAB_CONTENT_CLASS}>
+        <div className={styles.catalogueHeader}><div><p className={styles.eyebrow}>THE FULL COLLECTION</p><h2>A little more to love.</h2><p aria-live="polite">{filteredProducts.length} {filteredProducts.length === 1 ? "find" : "finds"} from {store.name}</p></div><label className={styles.catalogueSearch}><Search size={17} aria-hidden /><input aria-label="Search this store" type="search" placeholder="Find your something…" value={search} onChange={event => setSearch(event.target.value)} /></label></div>
         <div className="flex flex-col gap-4">
           <div className="flex gap-2 overflow-x-auto lg:hidden">
             <button
@@ -559,7 +370,7 @@ export default function StorefrontTabs({
           </div>
 
           <div className="flex flex-col gap-6 lg:flex-row">
-            <aside className="hidden w-72 shrink-0 lg:block lg:sticky lg:top-[60px] lg:max-h-[calc(100vh-140px)] lg:overflow-y-auto">
+            <aside className={`${styles.filterAside} hidden lg:block`}>
               <StoreProductFiltersPanel
                 search={search}
                 setSearch={setSearch}
@@ -584,7 +395,7 @@ export default function StorefrontTabs({
               />
             </aside>
 
-            <div className="min-w-0 flex-1">
+            <div className={styles.catalogueResults}>
               {products.length === 0 ? (
                 <div className="rounded-xl border border-[0.5px] border-[var(--color-border-tertiary)] bg-white p-6 text-center">
                   <p className="text-sm text-[var(--text-muted)]">No products available yet.</p>
@@ -592,9 +403,9 @@ export default function StorefrontTabs({
               ) : filteredProducts.length === 0 ? (
                 <p className="py-12 text-center text-sm text-[var(--text-muted)]">No products found</p>
               ) : (
-                <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                <ul className={styles.catalogueGrid}>
                   {filteredProducts.map((product) => (
-                    <StoreTabProductCard key={product.id} product={product} wishlisted={wishlistProductIds.includes(product.id)} />
+                    <li key={product.id}><StorefrontListingCard item={product} preview={preview} wishlisted={wishlistProductIds.includes(product.id)} /></li>
                   ))}
                 </ul>
               )}
@@ -635,12 +446,22 @@ export default function StorefrontTabs({
         </div>
       ) : null}
 
-      {activeTab === "timeline" ? <div className="bg-[radial-gradient(circle_at_top,rgba(242,138,45,.14),transparent_32%),#F7F5F2]"><div className={TAB_CONTENT_CLASS}><section className="mb-6 rounded-[26px] bg-gradient-to-br from-zinc-950 to-[#3A1A0D] p-6 text-white shadow-xl"><p className="text-[10px] font-black uppercase tracking-[.2em] text-orange-300">Latest from {store.name}</p><h2 className="mt-2 text-2xl font-black">Store timeline</h2><p className="mt-2 max-w-xl text-sm text-white/60">New arrivals, offers, events and updates—straight from the business.</p></section>{timelinePosts.length ? <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{timelinePosts.map((post) => <Link href={`/timeline/${post.id}`} key={post.id} className="group overflow-hidden rounded-[24px] border border-white bg-white shadow-[0_14px_38px_rgba(70,43,26,.10)] transition hover:-translate-y-1 hover:shadow-xl">{post.images[0] ? <div className="relative aspect-square overflow-hidden bg-zinc-100"><img src={post.images[0]} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />{post.images.length > 1 ? <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-[10px] font-bold text-white"><Images className="size-3" /> {post.images.length}</span> : null}</div> : <div className="flex aspect-video items-center justify-center bg-gradient-to-br from-orange-50 to-amber-100 text-4xl">📣</div>}<div className="p-4"><p className="line-clamp-3 whitespace-pre-wrap text-sm leading-6 text-zinc-700">{post.caption || "Photo update"}</p><div className="mt-4 flex items-center gap-4 border-t border-zinc-100 pt-3 text-[11px] font-bold text-zinc-400"><span className="flex items-center gap-1"><Heart className="size-3.5" /> {post._count.likes}</span><span className="flex items-center gap-1"><MessageCircle className="size-3.5" /> {post._count.comments}</span><time className="ml-auto">{new Date(post.createdAt).toLocaleDateString("en-TT", { month: "short", day: "numeric" })}</time></div></div></Link>)}</div> : <div className="rounded-[26px] border border-dashed border-orange-200 bg-white/70 py-16 text-center"><span className="text-4xl">✨</span><p className="mt-3 text-sm font-semibold text-zinc-700">No timeline posts yet</p><p className="mt-1 text-xs text-zinc-400">Check back soon for updates from this store.</p></div>}</div></div> : null}
+      {activeTab === "timeline" && <div className={TAB_CONTENT_CLASS}>
+        <div className={styles.catalogueHeader}><div><p className={styles.eyebrow}>STRAIGHT FROM {store.name}</p><h2>The story keeps going.</h2><p>New arrivals, offers, events, and everyday moments from the business.</p></div></div>
+        {timelinePosts.length ? <div className={styles.timelineGrid}>{timelinePosts.map(post => <Link href={`/timeline/${post.id}`} key={post.id} className={styles.timelineCard}>
+          {post.images[0] ? <div className={styles.timelineMedia}><StorefrontImage src={post.images[0]} alt={post.caption ? post.caption.slice(0, 120) : `${store.name} update`} />{post.images.length > 1 && <span><Images size={14} aria-hidden /> {post.images.length}</span>}</div> : <div className={styles.timelinePlaceholder}><MessageCircle size={42} strokeWidth={1} aria-hidden /></div>}
+          <div className={styles.timelineCopy}><p>{post.caption || "Photo update"}</p><div><span><Heart size={14} aria-hidden />{post._count.likes}</span><span><MessageCircle size={14} aria-hidden />{post._count.comments}</span><time dateTime={post.createdAt}>{new Date(post.createdAt).toLocaleDateString("en-TT", { month: "short", day: "numeric" })}</time></div></div>
+        </Link>)}</div> : <div className={styles.emptyState}><Sparkles size={38} strokeWidth={1} aria-hidden /><h3>A new story is taking shape.</h3><p>Check back for the latest from {store.name}.</p></div>}
+      </div>}
 
-      {activeTab === "partners" ? <div className={TAB_CONTENT_CLASS}><section className="overflow-hidden rounded-[28px] border border-orange-100 bg-[radial-gradient(circle_at_top_right,rgba(242,122,61,.18),transparent_36%),linear-gradient(145deg,#fff,#fff8f3)] p-5 shadow-[0_18px_55px_rgba(212,69,10,.10)] sm:p-8"><p className="text-[10px] font-black uppercase tracking-[.2em] text-[#D4450A]">Trusted network</p><h2 className="mt-2 text-2xl font-black text-zinc-950">From partner stores</h2><p className="mb-6 mt-2 max-w-2xl text-sm leading-6 text-zinc-500">Discover products and services this store recommends from approved LinkWe partners.</p>{partnerItems.length ? <RelatedContentCards items={partnerItems.map((item)=>({id:item.id,name:item.name,image:item.image,price:item.price,href:item.href}))}/>:<div className="rounded-2xl border border-dashed border-orange-200 bg-white/70 py-14 text-center text-sm text-zinc-500">This store has not featured any partner items yet.</div>}</section></div> : null}
+      {activeTab === "partners" && <div className={TAB_CONTENT_CLASS}>
+        <div className={styles.catalogueHeader}><div><p className={styles.eyebrow}>GOOD COMPANY</p><h2>Meet the local circle.</h2><p>Products and services this store recommends from approved LinkWe partners.</p></div></div>
+        {partnerItems.length ? <RelatedContentCards items={partnerItems.map(item => ({ id: item.id, name: item.name, image: item.image, price: item.price, href: item.href }))} /> : <div className={styles.emptyState}><Heart size={38} strokeWidth={1} aria-hidden /><h3>Connections worth coming back for.</h3><p>This store has not featured any partner items yet.</p></div>}
+      </div>}
 
       {activeTab === "services" ? (
         <div className={TAB_CONTENT_CLASS}>
+        <div className={styles.catalogueHeader}><div><p className={styles.eyebrow}>GOOD PEOPLE. GREAT AT WHAT THEY DO.</p><h2>Let’s make it happen.</h2><p aria-live="polite">{filteredServices.length} {filteredServices.length === 1 ? "service" : "services"} from {store.name}</p></div><label className={styles.catalogueSearch}><Search size={17} aria-hidden /><input aria-label="Search this store’s services" type="search" placeholder="What can we help with?" value={serviceSearch} onChange={event => setServiceSearch(event.target.value)} /></label></div>
         {!services || services.length === 0 ? (
           <div className="mt-6 rounded-2xl border border-dashed border-zinc-200 bg-white py-16 text-center">
             <span className="mb-3 block text-4xl">🛎️</span>
@@ -690,7 +511,7 @@ export default function StorefrontTabs({
             </div>
 
             <div className="flex flex-col gap-6 lg:flex-row">
-              <aside className="hidden w-72 shrink-0 lg:block lg:sticky lg:top-[60px] lg:max-h-[calc(100vh-140px)] lg:overflow-y-auto">
+              <aside className={`${styles.filterAside} hidden lg:block`}>
                 <StoreServiceFiltersPanel
                   serviceSearch={serviceSearch}
                   setServiceSearch={setServiceSearch}
@@ -711,7 +532,7 @@ export default function StorefrontTabs({
                 />
               </aside>
 
-              <div className="min-w-0 flex-1">
+              <div className={styles.catalogueResults}>
               {filteredServices.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-zinc-200 bg-white py-16 text-center">
                   <span className="mb-3 block text-4xl">🛎️</span>
@@ -719,84 +540,8 @@ export default function StorefrontTabs({
                   <p className="mt-1 text-xs text-zinc-400">Try adjusting your filters.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {filteredServices.map((service) => {
-                    const typeConfig: Record<string, { label: string; color: string; icon: string }> = {
-                      BOOKABLE: { label: "Bookable", color: "bg-blue-50 text-blue-700", icon: "📅" },
-                      QUOTE: { label: "Get Quote", color: "bg-amber-50 text-amber-700", icon: "💬" },
-                      SUBSCRIPTION: { label: "Subscribe", color: "bg-purple-50 text-purple-700", icon: "🔄" },
-                      ON_DEMAND: { label: "On Demand", color: "bg-emerald-50 text-emerald-700", icon: "⚡" },
-                      VIRTUAL: { label: "Virtual", color: "bg-zinc-100 text-zinc-700", icon: "💻" },
-                    };
-                    const type = service.serviceType
-                      ? (typeConfig[service.serviceType] ?? {
-                          label: "Service",
-                          color: "bg-zinc-100 text-zinc-700",
-                          icon: "🛎️",
-                        })
-                      : { label: "Service", color: "bg-zinc-100 text-zinc-700", icon: "🛎️" };
-
-                    return (
-                      <Link
-                        key={service.id}
-                        href={`/service/${service.slug}`}
-                        className="group flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
-                      >
-                        <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-zinc-100 to-zinc-200">
-                          <div className="absolute right-2.5 top-2.5 z-20"><WishlistButton productId={service.id} initialWishlisted={wishlistProductIds.includes(service.id)} /></div>
-                          {service.images[0] ? (
-                            <img
-                              src={service.images[0]}
-                              alt={service.name}
-                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-3xl">🛎️</div>
-                          )}
-                          <div className="absolute left-2.5 top-2.5">
-                            <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${type.color}`}>
-                              {type.icon} {type.label}
-                            </span>
-                          </div>
-                          {service.isFeatured ? (
-                            <div className="absolute bottom-2.5 right-2.5">
-                              <span className="rounded-full bg-[#D4450A] px-2.5 py-1 text-[10px] font-bold text-white">
-                                Featured
-                              </span>
-                            </div>
-                          ) : null}
-                        </div>
-                        <div className="flex flex-1 flex-col gap-2 p-4">
-                          <p className="text-sm font-bold leading-snug text-zinc-900 transition-colors group-hover:text-[#D4450A]">
-                            {service.name}
-                          </p>
-                          <div className="mt-auto flex items-center justify-between border-t border-zinc-100 pt-2">
-                            <div>
-                              <p className="text-sm font-black text-[#D4450A]">
-                                {formatTTDPrice(service.price ?? 0)}
-                              </p>
-                              {service.serviceDuration ? (
-                                <p className="text-[10px] text-zinc-400">
-                                  {service.serviceDuration >= 60
-                                    ? `${Math.floor(service.serviceDuration / 60)}h${
-                                        service.serviceDuration % 60 > 0
-                                          ? ` ${service.serviceDuration % 60}m`
-                                          : ""
-                                      }`
-                                    : `${service.serviceDuration} min`}
-                                </p>
-                              ) : null}
-                            </div>
-                            {service.serviceLocation ? (
-                              <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[10px] font-medium capitalize text-zinc-500">
-                                {service.serviceLocation.replace("_", " ").toLowerCase()}
-                              </span>
-                            ) : null}
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  })}
+                <div className={styles.catalogueGrid}>
+                  {filteredServices.map(service => <StorefrontListingCard key={service.id} item={service} service availableNow={store.isAvailableNow} preview={preview} wishlisted={wishlistProductIds.includes(service.id)} />)}
                 </div>
               )}
             </div>
@@ -835,12 +580,13 @@ export default function StorefrontTabs({
 
       {activeTab === "reviews" ? (
         <div className={`flex flex-col gap-4 ${TAB_CONTENT_CLASS}`}>
-          <StoreWriteReviewSection
+          <div className={styles.catalogueHeader}><div><p className={styles.eyebrow}>WORD OF MOUTH</p><h2>What people are saying.</h2><p>Reviews and experiences from the LinkWe community.</p></div></div>
+          {!preview && <StoreWriteReviewSection
             storeId={storeId}
             storeName={store.name}
             isLoggedIn={isLoggedIn}
             userReview={userReview ?? null}
-          />
+          />}
           <ReviewsList
             reviews={(reviewData?.reviews ?? []) as never}
             count={reviewData?.count ?? 0}
@@ -851,13 +597,13 @@ export default function StorefrontTabs({
       ) : null}
 
       {relatedStores && relatedStores.length > 0 ? (
-        <div className="mt-12 border-t border-zinc-200 px-4 pt-8 md:px-7">
-          <h2 className="mb-4 text-lg font-bold text-zinc-900">Similar stores</h2>
+        <div className={`${styles.container} ${styles.relatedSection}`}>
+          <h2 className="mb-4 text-lg font-bold text-zinc-900">Keep it local.</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {relatedStores.map((s) => (
               <Link
                 key={s.id}
-                href={`/store/${s.slug}`}
+                href={`${preview ? "https://www.linkweonlinemall.com" : ""}/store/${s.slug}`}
                 className="group flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
               >
                 {/* Cover / logo area */}

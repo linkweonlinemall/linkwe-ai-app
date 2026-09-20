@@ -14,15 +14,7 @@ import { toggleFollowStore } from "@/app/actions/store";
 import { toastFormError } from "@/lib/feedback/toasts";
 import ShareActionButton from "@/components/ui/ShareActionButton";
 
-const SCARLET = "#D4450A";
-
-const glassBtn =
-  "inline-flex h-[34px] min-w-[34px] items-center justify-center gap-1.5 rounded-[9px] text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-60";
-const glassStyle = {
-  backgroundColor: "rgba(255,255,255,0.15)",
-  backdropFilter: "blur(8px)",
-  WebkitBackdropFilter: "blur(8px)",
-} as const;
+import styles from "./storefront.module.css";
 
 type Props = {
   storeId: string;
@@ -31,6 +23,7 @@ type Props = {
   canEditStore: boolean;
   isLoggedIn: boolean;
   initialFollowing: boolean;
+  preview?: boolean;
 };
 
 export default function StoreHeroActions({
@@ -40,6 +33,7 @@ export default function StoreHeroActions({
   canEditStore,
   isLoggedIn,
   initialFollowing,
+  preview = false,
 }: Props) {
   const router = useRouter();
   const [following, setFollowing] = useState(initialFollowing);
@@ -81,57 +75,10 @@ export default function StoreHeroActions({
     });
   }
 
-  return (
-    <div className="relative z-[70] flex w-full shrink-0 flex-row items-center gap-2 md:w-auto md:flex-wrap md:justify-end md:pb-0.5">
-      {canEditStore ? (
-        <Link
-          href="/dashboard/vendor/store/edit"
-          className="inline-flex h-[34px] flex-1 items-center justify-center gap-1.5 rounded-[9px] px-3 text-xs font-semibold text-white transition hover:opacity-90 md:flex-none"
-          style={{ backgroundColor: SCARLET }}
-        >
-          <IconEdit className="size-4" stroke={1.75} aria-hidden />
-          Edit store
-        </Link>
-      ) : (
-        <button
-          type="button"
-          disabled={followBusy}
-          onClick={() => void onFollow()}
-          className={`${glassBtn} min-w-0 flex-1 px-3 md:flex-none`}
-          style={glassStyle}
-        >
-          <IconBookmark className="size-4 shrink-0" stroke={1.75} aria-hidden />
-          {following ? "Following" : "Follow"}
-        </button>
-      )}
-
-      <ShareActionButton title={storeName} label="" className="!min-h-[34px] !h-[34px] !min-w-[34px] !rounded-[9px] !border-0 !bg-white/15 !px-0 !text-white !shadow-none backdrop-blur" />
-
-      {!canEditStore ? (
-        isLoggedIn ? (
-          <button
-            type="button"
-            disabled={messagePending}
-            className={`${glassBtn} shrink-0`}
-            style={glassStyle}
-            aria-label="Message store"
-            title="Message store"
-            onClick={handleMessageClick}
-          >
-            <IconMessage className="size-4" stroke={1.75} aria-hidden />
-          </button>
-        ) : (
-          <Link
-            href={loginHref}
-            className={`${glassBtn} shrink-0`}
-            style={glassStyle}
-            aria-label="Message store"
-            title="Message store"
-          >
-            <IconMessage className="size-4" stroke={1.75} aria-hidden />
-          </Link>
-        )
-      ) : null}
-    </div>
-  );
+  if (preview) return <div className={styles.heroActions}><Link href={`https://www.linkweonlinemall.com/store/${storeSlug}`}><IconBookmark size={17} aria-hidden />Follow store</Link><ShareActionButton title={storeName} label="Share" className={styles.shareButton} /><Link href={`https://www.linkweonlinemall.com/store/${storeSlug}`}><IconMessage size={17} aria-hidden />Message</Link></div>;
+  return <div className={styles.heroActions}>
+    {canEditStore ? <Link href="/dashboard/vendor/store/edit"><IconEdit size={17} aria-hidden />Edit store</Link> : <button type="button" disabled={followBusy} onClick={() => void onFollow()} aria-pressed={following}><IconBookmark size={17} aria-hidden />{following ? "Following" : "Follow store"}</button>}
+    <ShareActionButton title={storeName} label="Share" className={styles.shareButton} />
+    {!canEditStore && (isLoggedIn ? <button type="button" disabled={messagePending} onClick={handleMessageClick}><IconMessage size={17} aria-hidden />{messagePending ? "Opening…" : "Message"}</button> : <Link href={loginHref}><IconMessage size={17} aria-hidden />Message</Link>)}
+  </div>;
 }

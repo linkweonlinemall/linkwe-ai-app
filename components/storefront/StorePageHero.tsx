@@ -1,138 +1,44 @@
-import Image from "next/image";
-import { IconMapPin } from "@tabler/icons-react";
-
+import Link from "next/link";
+import { ArrowDown, ArrowLeft, ArrowUpRight, MapPin, ShieldCheck, Sparkles, Star } from "lucide-react";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
+import { getStoreLocation } from "@/lib/store/location";
 import { getStoreCategoryLabel } from "@/lib/categories";
-
 import StoreHeroActions from "./StoreHeroActions";
-
-const SCARLET = "#D4450A";
-
+import StorefrontImage from "./StorefrontImage";
+import type { StorefrontListing } from "./StorefrontListingCard";
+import styles from "./storefront.module.css";
 type Props = {
-  store: {
-    id: string;
-    name: string;
-    slug: string;
-    tagline: string | null;
-    logoUrl: string | null;
-    coverPhotoUrl: string | null;
-    categoryId: string;
-    region: string;
-  };
-  initials: string;
-  canEditStore: boolean;
-  isLoggedIn: boolean;
-  initialFollowing: boolean;
-  averageRating: number;
-  reviewCount: number;
+  store: { id: string; name: string; slug: string; tagline: string | null; logoUrl: string | null; coverPhotoUrl: string | null; categoryId: string; region: string; latitude?: number | null; longitude?: number | null; address?: string | null; };
+  initials: string; canEditStore: boolean; isLoggedIn: boolean; initialFollowing: boolean;
+  averageRating: number; reviewCount: number; isVerified?: boolean; serviceFirst?: boolean;
+  spotlight?: StorefrontListing; preview?: boolean; basePath?: string;
 };
-
-export default function StorePageHero({
-  store,
-  initials,
-  canEditStore,
-  isLoggedIn,
-  initialFollowing,
-  averageRating,
-  reviewCount,
-}: Props) {
-  const ratingChip =
-    reviewCount > 0 ? `★ ${averageRating.toFixed(1)} (${reviewCount})` : null;
-
-  return (
-    <section className="relative z-20 w-full overflow-visible">
-      <div className="relative aspect-[4/3] w-full overflow-visible md:aspect-auto md:h-[375px]">
-        {store.coverPhotoUrl ? (
-          <Image
-            src={store.coverPhotoUrl}
-            alt={`${store.name} cover`}
-            fill
-            priority
-            className="object-cover object-center"
-            sizes="100vw"
-          />
-        ) : (
-          <div className="absolute inset-0 bg-[#1C1C1A]" />
-        )}
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.72) 100%)",
-          }}
-        />
-        <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2.5 px-4 py-5 max-md:pb-4 md:flex-row md:items-end md:justify-between md:gap-4 md:px-7">
-          <div className="flex min-w-0 items-end gap-3 md:flex-1 md:gap-4">
-            <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-[14px] border-[3px] border-white/90 md:h-[68px] md:w-[68px]">
-              {store.logoUrl ? (
-                <Image
-                  src={store.logoUrl}
-                  alt={store.name}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 56px, 68px"
-                />
-              ) : (
-                <div
-                  className="flex h-full w-full items-center justify-center text-base font-bold text-white md:text-lg"
-                  style={{ backgroundColor: SCARLET }}
-                >
-                  {initials}
-                </div>
-              )}
-            </div>
-
-            <div className="min-w-0 pb-0.5">
-              <h1 className="truncate text-[18px] font-medium text-white md:text-[22px]">
-                {store.name}
-              </h1>
-              {store.tagline ? (
-                <p className="mt-[3px] line-clamp-2 text-[11px] text-white/[0.65] md:text-xs">
-                  {store.tagline}
-                </p>
-              ) : null}
-              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-white/80 md:text-[11px]">
-                {store.region ? (
-                  <span className="inline-flex items-center gap-1">
-                    <IconMapPin className="size-3.5 shrink-0" stroke={1.75} aria-hidden />
-                    {getRegionLabel(store.region)}
-                  </span>
-                ) : null}
-                {store.region && store.categoryId ? (
-                  <span className="text-white/40" aria-hidden>
-                    ·
-                  </span>
-                ) : null}
-                {store.categoryId ? (
-                  <span>{getStoreCategoryLabel(store.categoryId)}</span>
-                ) : null}
-                {ratingChip ? (
-                  <>
-                    <span className="text-white/40" aria-hidden>
-                      ·
-                    </span>
-                    <span
-                      className="inline-flex items-center rounded-[20px] px-2.5 py-[3px] text-[10px] font-medium text-white backdrop-blur-[8px] md:text-[11px]"
-                      style={{ backgroundColor: "rgba(255,255,255,0.15)" }}
-                    >
-                      {ratingChip}
-                    </span>
-                  </>
-                ) : null}
-              </div>
-            </div>
-          </div>
-
-          <StoreHeroActions
-            storeId={store.id}
-            storeSlug={store.slug}
-            storeName={store.name}
-            canEditStore={canEditStore}
-            isLoggedIn={isLoggedIn}
-            initialFollowing={initialFollowing}
-          />
+export default function StorePageHero({ store, initials, canEditStore, isLoggedIn, initialFollowing, averageRating, reviewCount, isVerified, serviceFirst = false, spotlight, preview = false, basePath }: Props) {
+  const path = basePath ?? `/store/${store.slug}`;
+  const location = getStoreLocation(store);
+  const category = getStoreCategoryLabel(store.categoryId);
+  return <section className={styles.hero} aria-labelledby="store-title">
+    <div className={styles.container}>
+      <div className={styles.breadcrumb}><Link href="/stores"><ArrowLeft size={15} aria-hidden /> All local stores</Link><span>THE PEOPLE BEHIND YOUR NEXT FAVOURITE.</span><Link href="/">Discover LinkWe <ArrowUpRight size={14} aria-hidden /></Link></div>
+      <div className={styles.heroGrid}>
+        <div className={styles.heroCopy}>
+          <div className={styles.storeEyebrow}><span /> {category && category.toLowerCase() !== "other" ? category : "Independent. Local. Full of possibility."}</div>
+          <div className={styles.brandLogo}>{store.logoUrl ? <StorefrontImage src={store.logoUrl} alt={`${store.name} logo`} eager /> : <span>{initials}</span>}</div>
+          <h1 id="store-title">{store.name}<span className={styles.titleDot}>.</span></h1>
+          <p className={styles.tagline}>{store.tagline || (serviceFirst ? "Local expertise. A personal touch." : "Good finds. Made to be discovered.")}</p>
+          <div className={styles.storeMeta}>{store.region && <a href={location.directionsHref} target="_blank" rel="noopener noreferrer" aria-label={`Get directions to ${store.name} from the store introduction`}><MapPin size={15} aria-hidden />{getRegionLabel(store.region)}</a>}{isVerified && <span className={styles.verified}><ShieldCheck size={15} aria-hidden />Verified business</span>}{reviewCount > 0 && <span><Star size={14} aria-hidden />{averageRating.toFixed(1)} · {reviewCount} reviews</span>}</div>
+          <div className={styles.heroPrimary}><Link href={`${path}?tab=${serviceFirst ? "services" : "store"}#store-content`}>{serviceFirst ? "Find your service" : "Explore the collection"}<ArrowUpRight size={20} aria-hidden /></Link></div>
+          <StoreHeroActions storeId={store.id} storeSlug={store.slug} storeName={store.name} canEditStore={canEditStore} isLoggedIn={isLoggedIn} initialFollowing={initialFollowing} preview={preview} />
+          <a className={styles.heroFoot} href="#store-content"><ArrowDown size={14} aria-hidden /> STEP INSIDE. FIND YOUR SOMETHING.</a>
+        </div>
+        <div className={styles.heroVisual}>
+          <div className={styles.heroOrbit} aria-hidden />
+          <div className={styles.coverFrame}><StorefrontImage src={store.coverPhotoUrl ?? spotlight?.images[0] ?? store.logoUrl} alt={`${store.name} cover`} eager /><div className={styles.coverLabel}><span>THE LOCAL SPOTLIGHT</span><a href={location.directionsHref} target="_blank" rel="noopener noreferrer" className={styles.coverDirections} aria-label={`${getRegionLabel(store.region)} — Google Maps directions to ${store.name}`}>{getRegionLabel(store.region)}<ArrowUpRight size={17} aria-hidden /></a></div></div>
+          <div className={styles.localSeal} aria-hidden><span>BIG LOCAL ENERGY</span><Sparkles size={32} strokeWidth={1.4} /><span>FOUND ON LINKWE</span></div>
+          {spotlight && <Link href={`${preview ? "https://www.linkweonlinemall.com" : ""}/${serviceFirst ? "service" : "products"}/${spotlight.slug}`} className={styles.heroPick}><div><StorefrontImage src={spotlight.images[0]} alt="" /></div><span><small>{serviceFirst ? "MEET YOUR NEXT EXPERT" : "A LITTLE INSPIRATION"}</small><strong>{spotlight.name}</strong><span>Take a closer look <ArrowUpRight size={15} aria-hidden /></span></span></Link>}
+          <span className={styles.visualCaption}>We people. We business. <strong>We local.</strong></span>
         </div>
       </div>
-    </section>
-  );
+    </div>
+  </section>;
 }
