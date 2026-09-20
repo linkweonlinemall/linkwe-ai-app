@@ -39,6 +39,7 @@ const SCARLET = "#D4450A";
 type TablerOutlineIcon = typeof IconHome;
 
 type Props = {
+  appearance?: "default" | "home";
   transparent?: boolean;
   /** Standard storefront mark; `/chat` uses AI logo glyph. */
   logoVariant?: "wordmark" | "ai";
@@ -85,12 +86,14 @@ function accountRoleLabel(dashboardHref: string | undefined, userHref: string | 
 }
 
 export default function PublicNav({
+  appearance = "default",
   transparent = false,
   logoVariant = "wordmark",
   user = null,
   dashboardHref,
   unreadCount = 0,
 }: Props) {
+  const isHomeAppearance = appearance === "home";
   const pathname = usePathname() ?? "";
   const hash = useHashFragment();
   const drawerOpen = useDrawerOpenControlled();
@@ -176,18 +179,20 @@ export default function PublicNav({
 
   function LogoMark({ desktop }: { desktop: boolean }) {
     // Asset names describe the logo artwork: "light" belongs on dark surfaces.
-    const surface = navScrolled ? "light" : "dark";
+    const surface = navScrolled || isHomeAppearance ? "light" : "dark";
     return (
       <img
         src={
-          logoVariant === "ai"
+          isHomeAppearance
+            ? "/linkwe-app-icon.png"
+            : logoVariant === "ai"
             ? `/linkwe-logo-mark-on-${surface}.png`
             : desktop
               ? `/linkwe-logo-on-${surface}.png`
               : `/linkwe-logo-mark-on-${surface}.png`
         }
         alt="LinkWe"
-        className={desktop ? "block h-11 w-auto shrink-0" : "block size-11 shrink-0 object-contain"}
+        className={`${desktop ? "block h-11 w-auto shrink-0" : "block size-11 shrink-0 object-contain"} ${isHomeAppearance ? "rounded-xl" : ""}`}
       />
     );
   }
@@ -195,7 +200,7 @@ export default function PublicNav({
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const storeNavAtTop = isStorePage && !navScrolled;
-  const navIsLight = navScrolled;
+  const navIsLight = !isHomeAppearance && navScrolled;
 
   const headerPosition = isStorePage
     ? "fixed inset-x-0 top-0 z-50"
@@ -371,12 +376,13 @@ export default function PublicNav({
         </>
       ) : null}
 
-      <header className={glassHeader}>
+      <header className={`${glassHeader} ${isHomeAppearance ? "home-public-nav" : ""}`}>
         {/* Mobile */}
         <nav aria-label="Primary mobile" className="flex px-3 py-3 md:hidden sm:px-4">
           <div className="flex w-full min-w-0 items-center justify-between gap-3">
-            <Link href="/" className="block shrink-0">
+            <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="LinkWe home">
               <LogoMark desktop={false} />
+              {isHomeAppearance && <span className="text-[23px] font-bold tracking-[-1px] text-white">Link<span className="text-[#ff8758]">We</span></span>}
             </Link>
             <div className="flex shrink-0 items-center gap-2">
               <button
@@ -440,17 +446,18 @@ export default function PublicNav({
 
         {/* Desktop */}
         <nav aria-label="Primary desktop" className="hidden h-[68px] w-full min-w-0 items-center gap-4 overflow-visible px-6 md:flex xl:px-8">
-          <Link href="/" className="shrink-0">
+          <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="LinkWe home">
             <LogoMark desktop />
+            {isHomeAppearance && <span className="text-[28px] font-bold tracking-[-1.5px] text-white">Link<span className="text-[#ff8758]">We</span></span>}
           </Link>
 
           <div className="flex min-h-0 min-w-0 flex-1 justify-center overflow-visible px-2 lg:px-6">
-            <div className="w-full max-w-[420px] min-w-[180px] overflow-visible">
+            <div className={`w-full min-w-[180px] overflow-visible ${isHomeAppearance ? "max-w-[600px]" : "max-w-[420px]"}`}>
               <NavSearchInput variant="desktop" inputId="public-nav-desktop-search" light={navIsLight} />
             </div>
           </div>
 
-          <div className="flex min-w-0 shrink-0 flex-nowrap items-center justify-end gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className={`${isHomeAppearance ? "hidden" : "flex"} min-w-0 shrink-0 flex-nowrap items-center justify-end gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}>
             <Link
               href="/shop"
               className={`${desktopNavLinkClass} ${
@@ -509,6 +516,11 @@ export default function PublicNav({
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
+            {isHomeAppearance && <Link href={user ? dashTarget : "/register?role=vendor"} className="home-seller-link mr-3 hidden min-h-11 items-center text-xs font-semibold text-white lg:inline-flex">{user ? "My workspace" : "Sell on LinkWe"}</Link>}
+            {isHomeAppearance && !user && <>
+              <Link href="/wishlist" aria-label="My wishlist" className="flex size-10 items-center justify-center rounded-full text-white hover:bg-white/10"><IconHeart className="size-5" stroke={1.75} aria-hidden /></Link>
+              <button type="button" aria-label="Open cart" onClick={toggleDrawerCart} className="relative mr-2 flex size-10 items-center justify-center rounded-full text-white hover:bg-white/10"><IconShoppingCart className="size-5" stroke={1.75} aria-hidden />{mounted && itemCount > 0 && <span className="absolute right-0 top-0 flex size-4 items-center justify-center rounded-full bg-[#D4450A] text-[9px] text-white">{itemCount > 9 ? "9+" : itemCount}</span>}</button>
+            </>}
             {user ? (
               <>
                 <MessageNavBadge href={messagesHref} enabled className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border-[0.5px] ${navIsLight ? "border-zinc-200 bg-zinc-100 text-zinc-800 hover:bg-zinc-200" : "border-white/[0.12] bg-white/[0.08] text-white hover:bg-white/[0.14]"}`} />

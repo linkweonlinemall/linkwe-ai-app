@@ -2,6 +2,8 @@ importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
 
 const CACHE_NAME = "linkwe-v8";
 const OFFLINE_URL = "/offline";
+// Development chunks reuse URLs: caching them mixes old styles with new markup.
+const IS_LOCAL_PREVIEW = ["localhost", "127.0.0.1", "[::1]"].includes(self.location.hostname);
 
 const STATIC_ASSETS = [
   "/",
@@ -17,6 +19,10 @@ const STATIC_ASSETS = [
 
 // Install — cache static assets
 self.addEventListener("install", (event) => {
+  if (IS_LOCAL_PREVIEW) {
+    self.skipWaiting();
+    return;
+  }
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(STATIC_ASSETS);
@@ -41,6 +47,7 @@ self.addEventListener("activate", (event) => {
 
 // Fetch — network first, fallback to cache, fallback to offline page
 self.addEventListener("fetch", (event) => {
+  if (IS_LOCAL_PREVIEW) return;
   const url = new URL(event.request.url);
 
   // /scan/ staff check-in — network-first, cache successful navigations for offline

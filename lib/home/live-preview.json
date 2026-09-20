@@ -1,0 +1,229 @@
+{
+  "capturedAt": "2026-09-19",
+  "source": "https://www.linkweonlinemall.com",
+  "products": [
+    {
+      "id": "maracas-is-calling-graphic-tee",
+      "name": "Maracas Is Calling Graphic Tee",
+      "brand": "Speak Loud Co.",
+      "href": "https://www.linkweonlinemall.com/products/maracas-is-calling-graphic-tee",
+      "image": "/images/home/live/products-maracas-is-calling-graphic-tee.webp",
+      "priceLabel": "TTD 150.00",
+      "group": "Style",
+      "preview": true
+    },
+    {
+      "id": "wind-me-down-sugar-scrub",
+      "name": "Wind Me Down Sugar Scrub",
+      "brand": "Hand-Crafted Fantasies",
+      "href": "https://www.linkweonlinemall.com/products/wind-me-down-sugar-scrub",
+      "image": "/images/home/live/products-wind-me-down-sugar-scrub.webp",
+      "priceLabel": "TTD 50.00",
+      "group": "Self-care",
+      "preview": true
+    },
+    {
+      "id": "bake-and-shark-with-everything",
+      "name": "Bake And Shark With Everything",
+      "brand": "Rk Creations",
+      "href": "https://www.linkweonlinemall.com/products/bake-and-shark-with-everything",
+      "image": "/images/home/live/products-bake-and-shark-with-everything.webp",
+      "priceLabel": "TTD 200.00",
+      "group": "Style",
+      "preview": true
+    },
+    {
+      "id": "custom-tumbler",
+      "name": "Custom Tumbler",
+      "brand": "Rk Creations",
+      "href": "https://www.linkweonlinemall.com/products/custom-tumbler",
+      "image": "/images/home/live/products-custom-tumbler.webp",
+      "priceLabel": "TTD 155.00",
+      "group": "Gifts",
+      "preview": true
+    },
+    {
+      "id": "yuh-war-sorrel-owa",
+      "name": "Yuh War Sorrel Owa",
+      "brand": "Rk Creations",
+      "href": "https://www.linkweonlinemall.com/products/yuh-war-sorrel-owa",
+      "image": "/images/home/live/products-yuh-war-sorrel-owa.webp",
+      "priceLabel": "TTD 200.00",
+      "group": "Style",
+      "preview": true
+    },
+    {
+      "id": "be-original-barcode-graphic-tee",
+      "name": "Be Original Barcode Graphic Tee",
+      "brand": "Speak Loud Co.",
+      "href": "https://www.linkweonlinemall.com/products/be-original-barcode-graphic-tee",
+      "image": "/images/home/live/products-be-original-barcode-graphic-tee.webp",
+      "priceLabel": "TTD 150.00",
+      "group": "Style",
+      "preview": true
+    },
+    {
+      "id": "be-kind-to-your-mind-graphic-tee",
+      "name": "Be Kind To Your Mind Graphic Tee",
+      "brand": "Speak Loud Co.",
+      "href": "https://www.linkweonlinemall.com/products/be-kind-to-your-mind-graphic-tee",
+      "image": "/images/home/live/products-be-kind-to-your-mind-graphic-tee.webp",
+      "priceLabel": "TTD 150.00",
+      "group": "Style",
+      "preview": true
+    },
+    {
+      "id": "full-print-t-shirt",
+      "name": "Full Print T-shirt",
+      "brand": "Rk Creations",
+      "href": "https://www.linkweonlinemall.com/products/full-print-t-shirt",
+      "image": "/images/home/live/products-full-print-t-shirt.webp",
+      "priceLabel": "TTD 160.00",
+      "group": "Style",
+      "preview": true
+    }
+  ],
+  "services": [
+    {
+      "id": "professional-portrait-photography",
+      "name": "Professional Portrait Photography",
+      "brand": "UDN Media",
+      "href": "https://www.linkweonlinemall.com/service/professional-portrait-photography",
+      "image": "/images/home/live/service-professional-portrait-photography.webp",
+      "priceLabel": "Request a quote",
+      "group": "Services",
+      "region": "Port of Spain",
+      "preview": true
+    },
+    {
+      "id": "sugar-coat-nails-services",
+      "name": "Sugar Coat Nails Services",
+      "brand": "Sugar Coat Nails",
+      "href": "https://www.linkweonlinemall.com/service/sugar-coat-nails-services",
+      "image": "/images/home/live/service-sugar-coat-nails-services.webp",
+      "priceLabel": "Request a quote",
+      "group": "Services",
+      "region": "Tunapuna",
+      "preview": true
+    },
+    {
+      "id": "baking-services",
+      "name": "Baking Services",
+      "brand": "The Best Treats",
+      "href": "https://www.linkweonlinemall.com/service/baking-services",
+      "image": "/images/home/live/service-baking-services.webp",
+      "priceLabel": "Request a quote",
+      "group": "Services",
+      "region": "Piarco",
+      "preview": true
+    },
+    {
+      "id": "event-wedding-photography",
+      "name": "Event & Wedding Photography",
+      "brand": "UDN Media",
+      "href": "https://www.linkweonlinemall.com/service/event-wedding-photography",
+      "image": "/images/home/live/service-event-wedding-photography.webp",
+      "priceLabel": "Request a quote",
+      "group": "Services",
+      "region": "Port of Spain",
+      "preview": true
+    },
+    {
+      "id": "couples-lifestyle-photography",
+      "name": "Couples & Lifestyle Photography",
+      "brand": "UDN Media",
+      "href": "https://www.linkweonlinemall.com/service/couples-lifestyle-photography",
+      "image": "/images/home/live/service-couples-lifestyle-photography.webp",
+      "priceLabel": "Request a quote",
+      "group": "Services",
+      "region": "Port of Spain",
+      "preview": true
+    },
+    {
+      "id": "d-weathershield-awnings-services",
+      "name": "D WeatherShield Awnings Services",
+      "brand": "D WeatherShield Awnings",
+      "href": "https://www.linkweonlinemall.com/service/d-weathershield-awnings-services",
+      "image": "/images/home/live/service-d-weathershield-awnings-services.webp",
+      "priceLabel": "Request a quote",
+      "group": "Services",
+      "region": "San Fernando",
+      "preview": true
+    }
+  ],
+  "stores": [
+    {
+      "id": "rk-creations-tt",
+      "name": "Rk Creations",
+      "href": "https://www.linkweonlinemall.com/store/rk-creations-tt",
+      "image": "/images/home/live/store-rk-creations-tt.webp",
+      "logo": "/images/home/live/store-rk-creations-tt-logo.webp",
+      "tagline": "You dream it. We print it.",
+      "region": "Claxton Bay",
+      "preview": true
+    },
+    {
+      "id": "handcrafted868",
+      "name": "Hand-Crafted Fantasies",
+      "href": "https://www.linkweonlinemall.com/store/handcrafted868",
+      "image": "/images/home/live/store-handcrafted868.webp",
+      "logo": "/images/home/live/store-handcrafted868-logo.webp",
+      "tagline": "We love happy customers!",
+      "region": "San Fernando",
+      "preview": true
+    },
+    {
+      "id": "udn-media",
+      "name": "UDN Media",
+      "href": "https://www.linkweonlinemall.com/store/udn-media",
+      "image": "/images/home/live/store-udn-media.webp",
+      "logo": "/images/home/live/store-udn-media-logo.webp",
+      "tagline": "Professional Photography & Videography Services",
+      "region": "Port of Spain",
+      "preview": true
+    },
+    {
+      "id": "frost-fairy",
+      "name": "TheFrostFairy",
+      "href": "https://www.linkweonlinemall.com/store/frost-fairy",
+      "image": "/images/home/live/store-frost-fairy.webp",
+      "logo": "/images/home/live/store-frost-fairy-logo.webp",
+      "tagline": "Serving your weakness for sweetness.",
+      "region": "Port of Spain",
+      "preview": true
+    },
+    {
+      "id": "sugar-coat-nails",
+      "name": "Sugar Coat Nails",
+      "href": "https://www.linkweonlinemall.com/store/sugar-coat-nails",
+      "image": "/images/home/live/store-sugar-coat-nails.webp",
+      "logo": "/images/home/live/store-sugar-coat-nails-logo.webp",
+      "tagline": "Book Your Appointment Today!",
+      "region": "Tunapuna",
+      "preview": true
+    },
+    {
+      "id": "d-weathershield-awnings",
+      "name": "D WeatherShield Awnings",
+      "href": "https://www.linkweonlinemall.com/store/d-weathershield-awnings",
+      "image": "/images/home/live/store-d-weathershield-awnings.webp",
+      "logo": "/images/home/live/store-d-weathershield-awnings-logo.webp",
+      "tagline": "No Awning to small No Distance to Far",
+      "region": "San Fernando",
+      "preview": true
+    }
+  ],
+  "events": [
+    {
+      "id": "aloha-mimosas-breakfast-party-experience",
+      "name": "Aloha & Mimosas Breakfast Party Experience",
+      "href": "https://www.linkweonlinemall.com/events/aloha-mimosas-breakfast-party-experience",
+      "image": "/images/home/live/events-aloha-mimosas-breakfast-party-experience.webp",
+      "dateLabel": "28 OCT",
+      "brand": "Speak Loud Co.",
+      "priceLabel": "View event details",
+      "group": "Events",
+      "preview": true
+    }
+  ]
+}
