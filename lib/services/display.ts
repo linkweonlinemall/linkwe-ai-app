@@ -34,6 +34,10 @@ export function serviceMinutes(minutes?: number | null) {
   if (minutes == null || minutes <= 0) return null;
   return minutes >= 60 ? `${Math.floor(minutes / 60)}h${minutes % 60 ? ` ${minutes % 60}m` : ""}` : `${minutes} min`;
 }
+export function serviceResponseTime(value?: string | null): string | null {
+  if (!value?.trim()) return null;
+  return ({ within_1_hour: "Within 1 hour", within_4_hours: "Within 4 hours", within_24_hours: "Within 24 hours", within_48_hours: "Within 48 hours", within_1_week: "Within 1 week" } as Record<string, string>)[value] ?? value;
+}
 export function serviceSpecifications(service: ServiceDisplayData): [string, string][] {
   const rows: [string, string][] = [];
   const booked = service.serviceType === "BOOKABLE" || service.serviceType === "VIRTUAL";
@@ -50,7 +54,8 @@ export function serviceSpecifications(service: ServiceDisplayData): [string, str
     if (service.cancellationHours != null) rows.push(["Cancellation notice", service.cancellationHours === 0 ? "No advance notice specified" : `${service.cancellationHours} hours`]);
   }
   if (service.serviceType === "QUOTE") {
-    if (service.responseTime) rows.push(["Typical response", service.responseTime]);
+    const response = serviceResponseTime(service.responseTime);
+    if (response) rows.push(["Typical response", response]);
     if (service.minimumQuoteAmount != null) rows.push(["Minimum job value", formatTTDPrice(service.minimumQuoteAmount)]);
     rows.push(["Site visit", service.siteVisitRequired ? "Required before the final quote" : "Not required to request a quote"]);
   }

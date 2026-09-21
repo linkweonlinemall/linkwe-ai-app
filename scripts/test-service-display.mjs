@@ -13,8 +13,16 @@ function load(file) {
   vm.runInNewContext(compiled, scope);
   return scope.exports;
 }
-const { servicePrice, serviceSpecifications, serviceMinutes, serviceTypeInfo } = load(fileURLToPath(new URL("../lib/services/display.ts", import.meta.url)));
+const { servicePrice, serviceSpecifications, serviceMinutes, serviceTypeInfo, serviceResponseTime } = load(fileURLToPath(new URL("../lib/services/display.ts", import.meta.url)));
 const rows = service => Object.fromEntries(serviceSpecifications(service));
+
+test("vendor response-time values display as readable labels and preserve custom text", () => {
+  assert.equal(serviceResponseTime("within_1_hour"), "Within 1 hour");
+  assert.equal(serviceResponseTime("within_48_hours"), "Within 48 hours");
+  assert.equal(serviceResponseTime("Weekdays only"), "Weekdays only");
+  assert.equal(serviceResponseTime(null), null);
+  assert.equal(rows({ serviceType: "QUOTE", responseTime: "within_48_hours" })["Typical response"], "Within 48 hours");
+});
 
 test("quote requests never describe an unpriced job as a free service", () => {
   assert.equal(servicePrice({ serviceType: "QUOTE", price: 0, quotePriceType: null }).label, "Request a quote");

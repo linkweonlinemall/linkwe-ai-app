@@ -9,7 +9,7 @@ import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { getServiceCategoryLabel } from "@/lib/categories";
 import { formatTTDPrice } from "@/lib/format/price";
 import { getStoreLocation } from "@/lib/store/location";
-import { serviceLocationLabel, serviceMinutes, servicePrice, serviceSpecifications, serviceTypeInfo, type ServiceDisplayData, type ServiceRecommendation } from "@/lib/services/display";
+import { serviceLocationLabel, serviceMinutes, servicePrice, serviceResponseTime, serviceSpecifications, serviceTypeInfo, type ServiceDisplayData, type ServiceRecommendation } from "@/lib/services/display";
 import shared from "@/components/product/product.module.css";
 import styles from "./service-detail.module.css";
 
@@ -32,7 +32,7 @@ export default function ServiceDetailView({ service, nav, bookingAction, contact
   const location = getStoreLocation(locationRecord);
   const showMap = service.serviceType !== "VIRTUAL" && service.serviceLocation !== "VIRTUAL" && (!!locationRecord.address || location.hasCoordinates);
   const TypeIcon = service.serviceType === "VIRTUAL" ? Video : service.serviceType === "ON_DEMAND" ? Zap : service.serviceType === "QUOTE" ? MessageCircle : CalendarDays;
-  const response = service.responseTime || (service.serviceType === "ON_DEMAND" ? serviceMinutes(service.estimatedResponseMins) : null);
+  const response = serviceResponseTime(service.responseTime) || (service.serviceType === "ON_DEMAND" ? serviceMinutes(service.estimatedResponseMins) : null);
   const hasPolicies = !!service.returnPolicy || !!store.policies;
 
   return <div className={`${shared.page} ${styles.page}`}>
