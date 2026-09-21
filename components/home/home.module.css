@@ -469,3 +469,135 @@
   .rexSpeech { left: 2%; font-size: 9px; }
   .sellerSection .sellerCard h2 { font-size: 31px; }
 }
+/* Coastal foundations with the same signature orange used by the shop. */
+.home {
+  --ink: #132e49;
+  --navy: #123758;
+  --aqua: #0b7c86;
+  --orange: var(--brand-red, #d4450a);
+  --orange-hover: #b83a09;
+  --paper: #fcfaf6;
+  --muted: #52687b;
+  --line: #d9e4e8;
+  background: var(--paper);
+}
+.announcement { background: #143b5b; color: #daeaf2; }
+.announcement strong { color: #ffcf9b; }
+.home :global(.home-public-nav) {
+  background: #fffefaed;
+  border-color: #153d5817;
+  color: var(--ink);
+  box-shadow: 0 4px 20px #12375804;
+}
+.home :global(.home-public-nav input) { background: #edf4f6; border-color: #d4e2e9; color: #173954; }
+.home :global(.home-public-nav nav[aria-label="Primary desktop"] > a > img) { height: 64px; width: 64px; }
+.home :global(.home-public-nav a[href^="/login"]) { background: var(--orange)!important; color: white; }
+.home :global(.home-public-nav a[href^="/login"]:hover) { background: var(--orange-hover)!important; }
+.browseBar { background: #fffefa; color: #49667a; border-color: #153d5817; }
+.browseBar a:hover, .rexNav, .navActive { color: var(--orange); }
+.navActive:after { background: var(--orange); }
+.navDivider { background: #153d5824; }
+.newDot { background: var(--orange); }
+.heroShell {
+  background: radial-gradient(ellipse at 92% 36%, #73dcd7a6, transparent 54%),
+    radial-gradient(ellipse at 17% 92%, #ffe0bc80, transparent 58%),
+    linear-gradient(115deg, #fcfaf6 15%, #e9f7f6 68%, #d2eeed);
+}
+.hero { color: #143956; }
+.heroAtmosphere > span:first-child { background: radial-gradient(ellipse, #20babb24, transparent 67%); }
+.heroAtmosphere > span:nth-child(2) { background: radial-gradient(ellipse, #f29c6429, transparent 70%); }
+.heroAtmosphere > span:nth-child(3) { border-color: #0879871a; }
+.heroEyebrow { color: #446b7c; }
+.heroEyebrowLine { background: #81b2b7; }
+.hero h1 > span { color: #087886; }
+.hero h1 em { background-image: linear-gradient(110deg, var(--orange-hover), var(--orange) 60%, #e96926); filter: none; }
+.headlineSpark { color: var(--orange); }
+.heroCopy > p { color: #456275; }
+.heroCopy > p strong { color: #143956; }
+.heroSecondary, .heroFoot { color: #355d73; }
+.heroSecondary:hover { color: var(--orange); }
+.primaryButton, .darkButton, .rexButton,
+.communityCopy .primaryButton, .eventCopy .darkButton {
+  background: var(--orange);
+  color: white;
+  box-shadow: 0 9px 28px #d4450a24;
+}
+.primaryButton:hover, .darkButton:hover, .rexButton:hover,
+.communityCopy .primaryButton:hover, .eventCopy .darkButton:hover {
+  background: var(--orange-hover);
+  box-shadow: 0 12px 30px #d4450a33;
+}
+.primaryButton:active, .darkButton:active, .rexButton:active,
+.communityCopy .primaryButton:active, .eventCopy .darkButton:active { background: #932f07; }
+.stageRing { border-color: #07889435; box-shadow: 0 0 0 38px #129cb008, 0 0 0 78px #129cb006; }
+.featureFrame { box-shadow: 0 30px 60px #144e5a30, 0 0 0 1px #ffffffb0; }
+.featureCaption { color: white; }
+.featureCaption > span:first-child { color: #baf5f0; }
+.heroSeal { background: #ffcf70; color: #503a18; box-shadow: 0 0 0 6px #ffcf7026; }
+.floatingFind { background: #fffefa; color: #143956; box-shadow: 0 18px 38px #14566826; }
+.findTwo { background: #d5f1f3; }
+.slideControls > button { color: #214f69; border-color: #30667b30; background: #ffffff70; }
+.slideControls > button:hover { background: white; }
+.slideDots button > span { background: #93b3bd; }
+.slideDots .activeDot > span { background: var(--orange); }
+.heroRexLink { border-color: #3e8a9e38; background: linear-gradient(115deg, #ffffffb0, #daf2f4b0); }
+.heroRexLink:hover { background: linear-gradient(115deg, white, #ceeff1); }
+.heroRexAvatar { background: linear-gradient(135deg, #65cfd1, #b1d8f4); }
+.heroRexLink strong { color: var(--orange); }
+.heroRexLink > span > span { color: #47697c; }
+.heroRexLink > svg { color: var(--orange); }
+.portalShell { background: linear-gradient(#e8f5f3 0 38%, var(--paper) 38%); }
+.portalCard { background: linear-gradient(125deg, #d8f5ef, #a6e1dc); }
+.portalCard[data-tone="peach"] { background: linear-gradient(125deg, #ffeadb, #ffc5a8); }
+.portalCard[data-tone="lilac"] { background: linear-gradient(125deg, #dfedfc, #b2d4f1); }
+.portalCard[data-tone="yellow"] { background: linear-gradient(125deg, #fff1ca, #f9d88b); }
+.portalCard[data-tone="lilac"] .portalIcon { color: #245a87; }
+.eyebrow, .productDetails p, .serviceCardCopy > span { color: #396b80; }
+.eyebrow > span { background: var(--orange); }
+.sectionHeading h2 > span, .serviceIntro h2 > span {
+  background-image: linear-gradient(110deg, var(--orange-hover), var(--orange));
+  color: var(--orange);
+}
+.editFilters .filterActive { background: var(--orange); border-color: var(--orange); }
+.editFilters > button:hover { background: #fff0e7; }
+.editFilters .filterActive:hover { background: var(--orange-hover); border-color: var(--orange-hover); }
+.textLink, .categoryTrigger, .moreProducts { color: var(--orange); }
+.textLink:hover, .categoryTrigger:hover, .moreProducts:hover { color: var(--orange-hover); }
+.textLink > svg { border-color: #d4450a40; background: #fff0e7; }
+.productArrow, .servicePhotoArrow { background: var(--orange); color: white; }
+.productArrow:hover, .serviceCard:hover .servicePhotoArrow { background: var(--orange-hover); }
+.productDetails h3 a:hover, .categoryFooter svg { color: var(--orange); }
+.productPhoto { background: #e9f0f3; }
+.productPhoto[data-tone="1"] { background: #e5f1ed; }
+.productPhoto[data-tone="2"] { background: #e5edf8; }
+.productPhoto[data-tone="3"] { background: #fae9dd; }
+.productDetails > strong, .serviceCardCopy > strong { color: var(--orange); }
+.cultureRibbon { background: linear-gradient(110deg, #0e7380, #175a89); color: #f8fffe; box-shadow: 0 0 0 9px #ddeef0; }
+.cultureRibbon > svg { color: #ffbd83; }
+.cultureRibbon .ribbonOutline { -webkit-text-stroke-color: #a8e4e6; }
+.serviceIntro { background: radial-gradient(ellipse at 100% 100%, #137f746b, transparent 65%), linear-gradient(155deg, #113d49, #082c37); color: #fffdf6; border: 1px solid #b9efe82b; border-radius: 24px 24px 38px 24px; }
+.serviceIntro h2 > span { background-image: linear-gradient(115deg, #dff7a4, #92e6c5); color: #c5f3ba; }
+.serviceIntro .eyebrow { color: #b4dcce; }
+.serviceIntro > p:not(.eyebrow) { color: #c5dce0; }
+.serviceIntroArt { color: #dbf4a6; }
+.serviceIntroArt > span { border-color: #6bbaa885; box-shadow: inset 3px 3px 5px #d9ffb630, 6px 7px 8px #021c2933; }
+.servicesSection { scroll-margin-top: 85px; }
+.serviceCard { border-color: #dce6ed; background: #fffefa; }
+.storesSection { background: radial-gradient(ellipse at 95% 20%, #13758a70, transparent 60%), linear-gradient(120deg, #133052, #124766); scroll-margin-top: 85px; }
+.storesSection h2 > span { background-image: linear-gradient(100deg, #ffce99, #ffe4b9); color: #ffcf9b; }
+.storesSection .eyebrow { color: #a1d9e5; }
+.storeCard { border-color: #bce3f02e; }
+.communityTag { color: var(--orange-hover); background: linear-gradient(110deg, #ffead9, #ffe1d5); border-color: #d4450a26; }
+.communityTag > span { background: var(--orange); }
+.communityCopy h2 > span { background-image: linear-gradient(105deg, var(--orange-hover), var(--orange)); color: var(--orange); }
+.communityFoot { color: #886046; }
+.communitySticker { background: #ffd578; color: #654323; }
+.eventCopy { background: linear-gradient(120deg, #ffe0a3, #ffbd87 55%, #ffa887); }
+.eventCopy h2 > span { color: #924227; }
+.eventFeature { background: linear-gradient(135deg, #165f80, #163959); }
+.sellerCard { background: linear-gradient(120deg, #fff0cf, #fbdba3 75%, #ffca9b); color: #3d4550; }
+.sellerCta { color: var(--orange-hover); border-color: #d4450a40; }
+.sellerCta:hover { color: #932f07; }
+.rexSection { background: radial-gradient(ellipse at 88% 25%, #1da8b06b, transparent 53%), linear-gradient(115deg, #143454 10%, #1b4c74 58%, #16758b); border-color: #7baeca45; }
+.rexWelcome h2 > span { background-image: linear-gradient(100deg, #8ce9e0, #ceefff 65%, #ffdcab); }
+.rexSpeech { background: linear-gradient(120deg, #fffefa, #e1f5f5); }

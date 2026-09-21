@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { IconAdjustments } from "@tabler/icons-react";
 
 import StoreAboutTab from "@/components/storefront/StoreAboutTab";
@@ -16,7 +16,7 @@ import type { PartnerContentItem } from "@/lib/cross-store/types";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { COLOUR_OPTIONS } from "@/lib/variant-options";
 import RelatedContentCards from "@/components/storefront/RelatedContentCards";
-import { Heart, Images, MessageCircle, Search, Sparkles } from "lucide-react";
+import { CalendarDays, Compass, Heart, Images, MessageCircle, Newspaper, Search, ShoppingBag, Sparkles, Star, Store, UsersRound, Wrench, type LucideIcon } from "lucide-react";
 
 import StorefrontListingCard from "./StorefrontListingCard";
 import StorefrontImage from "./StorefrontImage";
@@ -85,6 +85,17 @@ type StoreTimelinePost = { id: string; caption: string; images: string[]; attach
 const TAB_IDS = ["discover", "about", "timeline", "store", "services", "partners", "reviews", "events"] as const;
 type TabId = (typeof TAB_IDS)[number];
 
+const TAB_ICONS: Record<TabId, LucideIcon> = {
+  discover: Compass,
+  store: ShoppingBag,
+  services: Wrench,
+  events: CalendarDays,
+  about: Store,
+  timeline: Newspaper,
+  reviews: Star,
+  partners: UsersRound,
+};
+
 /** Constrains tab body width; hero, stats, and tab bar stay full width. */
 const TAB_CONTENT_CLASS = `${styles.container} ${styles.catalogueBody}`;
 
@@ -141,12 +152,21 @@ export default function StorefrontTabs({
   isLoggedIn,
 }: Props) {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const pathname = usePathname();
   const tabParam = searchParams.get("tab");
   const activeTab: TabId = TAB_IDS.includes(tabParam as TabId)
     ? (tabParam as TabId)
     : "discover";
+  const tabNav = useRef<HTMLElement>(null);
+  const selectedTab = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const nav = tabNav.current;
+    const selected = selectedTab.current;
+    if (!nav || !selected || nav.scrollWidth <= nav.clientWidth) return;
+    // Reveal the selected item on narrow screens without moving the page vertically.
+    nav.scrollTo({ left: nav.scrollLeft + selected.getBoundingClientRect().left - nav.getBoundingClientRect().left - (nav.clientWidth - selected.offsetWidth) / 2, behavior: "instant" });
+  }, [activeTab]);
 
   function setActiveTab(tab: TabId) {
     const sp = new URLSearchParams(searchParams.toString());
@@ -156,7 +176,8 @@ export default function StorefrontTabs({
       sp.set("tab", tab);
     }
     const qs = sp.toString();
-    router.push(`${qs ? `${pathname}?${qs}` : pathname}#store-content`);
+    window.history.pushState(null, "", `${qs ? `${pathname}?${qs}` : pathname}#store-content`);
+    document.getElementById("store-content")?.scrollIntoView({ block: "start", behavior: "instant" });
   }
 
   const [search, setSearch] = useState("");
@@ -293,7 +314,19 @@ export default function StorefrontTabs({
 
   return (
     <>
-      <div className={styles.tabBar} id="store-content"><nav className={`${styles.container} ${styles.tabInner}`} aria-label="Explore this store">{tabItems.map(({id, label, count}) => <button key={id} type="button" onClick={() => setActiveTab(id)} aria-pressed={activeTab === id}>{label}{count != null && count > 0 && <span>{count}</span>}</button>)}<span><Sparkles size={13} aria-hidden />A world of local possibility.</span></nav></div>
+      <div className={styles.tabAnchor} id="store-content" />
+      <div className={styles.tabBar}>
+        <nav ref={tabNav} className={`${styles.container} ${styles.tabInner}`} aria-label="Explore this store">
+          {tabItems.map(({ id, label, count }) => {
+            const Icon = TAB_ICONS[id];
+            return <button key={id} ref={activeTab === id ? selectedTab : undefined} type="button" onClick={() => setActiveTab(id)} aria-pressed={activeTab === id}>
+              <Icon size={18} strokeWidth={1.9} aria-hidden />
+              {label}
+              {count != null && count > 0 && <span>{count}</span>}
+            </button>;
+          })}
+        </nav>
+      </div>
 
       <main className="pb-[80px] lg:pb-8">
       {activeTab === "discover" && <StorefrontOverview store={store} products={products} services={services ?? []} events={events} wishlistProductIds={wishlistProductIds} preview={preview} openingHours={openingHours} socialLinks={socialLinks} onNavigate={setActiveTab} />}

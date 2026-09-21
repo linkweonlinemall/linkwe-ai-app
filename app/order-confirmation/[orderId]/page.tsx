@@ -160,9 +160,9 @@ export default async function OrderConfirmationPage({ params }: Props) {
         style={{ borderTop: "1px solid var(--card-border-subtle)" }}
       >
         <p className="text-xs" style={{ color: "var(--text-faint)" }}>
-          <a href="/" style={{ color: "var(--scarlet)" }}>
+          <Link href="/" style={{ color: "var(--scarlet)" }}>
             LinkWe
-          </a>{" "}
+          </Link>{" "}
           — We People. We Business. We Marketplace.
         </p>
       </footer>

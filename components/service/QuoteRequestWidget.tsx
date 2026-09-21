@@ -21,6 +21,7 @@ type Props = {
   isLoggedIn: boolean;
   isOwnStore: boolean;
   serviceSlug: string;
+  preview?: boolean;
 };
 
 export default function QuoteRequestWidget({
@@ -34,6 +35,7 @@ export default function QuoteRequestWidget({
   isLoggedIn,
   isOwnStore,
   serviceSlug,
+  preview = false,
 }: Props) {
   const [step, setStep] = useState<"form" | "submitted">("form");
   const [description, setDescription] = useState("");
@@ -48,6 +50,7 @@ export default function QuoteRequestWidget({
   const loginHref = `/login?callbackUrl=${encodeURIComponent(`/service/${serviceSlug}`)}`;
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    if (preview) return;
     const files = e.target.files;
     if (!files || files.length === 0) return;
     setUploadingPhotos(true);
@@ -64,6 +67,7 @@ export default function QuoteRequestWidget({
   }
 
   async function handleSubmit() {
+    if (preview) return;
     setError(null);
     if (!description.trim() || description.trim().length < 20) {
       setError("Please describe what you need in more detail.");
@@ -145,11 +149,13 @@ export default function QuoteRequestWidget({
   return (
     <div className="flex flex-col gap-4">
       {pricingNote ? <p className="text-xs text-zinc-500">{pricingNote}</p> : null}
+      {minimumQuoteAmount != null && <p className="text-xs text-zinc-500">Minimum job value: TTD {minimumQuoteAmount.toFixed(2)}</p>}
       <div>
         <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
           Describe what you need <span className="text-[#D4450A]">*</span>
         </label>
         <textarea
+          aria-label="Describe what you need"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder={`Describe your requirements for ${serviceName}.`}
@@ -198,7 +204,7 @@ export default function QuoteRequestWidget({
             />
             <button
               type="button"
-              disabled={uploadingPhotos}
+              disabled={preview || uploadingPhotos}
               onClick={() => fileRef.current?.click()}
               className="flex items-center gap-2 rounded-xl border-2 border-dashed border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-500 transition-colors hover:border-zinc-300 hover:bg-zinc-50 disabled:opacity-50"
             >
@@ -239,11 +245,11 @@ export default function QuoteRequestWidget({
       <button
         type="button"
         onClick={handleSubmit}
-        disabled={submitting || description.trim().length < 20}
+        disabled={preview || submitting || description.trim().length < 20}
         className="w-full rounded-xl py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
         style={{ background: "linear-gradient(135deg, #D4450A, #E8820C)" }}
       >
-        {submitting ? "Sending request..." : "Request quote →"}
+        {preview ? "Request quote · preview only" : submitting ? "Sending request..." : "Request quote →"}
       </button>
     </div>
   );

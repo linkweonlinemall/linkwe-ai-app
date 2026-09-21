@@ -2,6 +2,8 @@ export type HomeItem = {
   id: string;
   name: string;
   brand: string;
+  storeId?: string;
+  featured?: boolean;
   href: string;
   image: string | null;
   priceLabel: string;

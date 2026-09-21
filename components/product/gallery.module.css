@@ -1,0 +1,52 @@
+.gallery{min-width:0}
+.stage,.empty{position:relative;aspect-ratio:1.03;isolation:isolate;background:#f1f0e8;border-radius:28px;box-shadow:0 28px 55px -24px #213c3540,0 8px 20px -12px #263f3524}
+.empty{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:15px;color:#688073;font-size:13px}
+.mainPhoto{width:100%;height:100%;position:absolute;inset:0;padding:0;overflow:hidden;border:0;border-radius:inherit;background:none;cursor:zoom-in!important}
+.mainPhoto>img{height:100%;width:100%;object-fit:contain;transition:transform .6s ease}
+.mainPhoto:hover>img{transform:scale(1.025)}
+.counter{position:absolute;left:18px;top:18px;display:flex;align-items:center;gap:8px;border-radius:50px;padding:10px 15px;background:#fffff4ed;backdrop-filter:blur(12px);box-shadow:0 8px 24px #172f3312;font-size:11px;color:#7b8273;pointer-events:none}
+.counter strong{font-size:13px;font-weight:650;color:#234940}
+.openZoom{position:absolute;right:18px;bottom:18px;display:flex;align-items:center;gap:9px;min-height:44px;padding:10px 16px;border:0;border-radius:50px;background:#fffff5f0;color:#b93e0e;box-shadow:0 9px 26px #17342c26;backdrop-filter:blur(12px);font-size:12px;font-weight:600;transition:transform .2s,box-shadow .2s}
+.openZoom:hover{transform:translateY(-3px);box-shadow:0 13px 30px #17342c36}
+.photoArrow{position:absolute;top:50%;transform:translateY(-50%);width:46px;height:46px;display:grid;place-items:center;border:0;border-radius:50%;background:#fffff5f2;color:#bd400f;box-shadow:0 10px 26px #17352c26;backdrop-filter:blur(12px);transition:background .2s,color .2s,box-shadow .2s}
+.photoArrow:hover{background:#d4450a;color:white;box-shadow:0 12px 28px #ad380e40}
+.previous{left:16px}.next{right:16px}
+.thumbnails{display:flex;align-items:center;gap:18px;overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-width:thin;padding:24px 8px 28px;margin:0 -8px}
+.thumbnails>button{position:relative;flex:none;width:76px;height:76px;padding:0;border:0;border-radius:15px;background:white;box-shadow:0 14px 22px -10px #213c3559;transition:transform .25s,box-shadow .25s;opacity:.74}
+.thumbnails>button:hover{opacity:1;transform:translateY(-3px)}
+.thumbnails>button[aria-pressed=true]{opacity:1;transform:translateY(-4px);box-shadow:0 19px 26px -10px #b84c3652,0 8px 16px -10px #183d3d40}
+.thumbnails img{height:100%;width:100%;object-fit:contain;border-radius:inherit}
+.thumbnails>button>span{position:absolute;bottom:-13px;left:50%;width:5px;height:5px;border-radius:50%;background:#d4450a;opacity:0;transform:translateX(-50%)}
+.thumbnails>button[aria-pressed=true]>span{opacity:1}
+.lightbox{width:min(1180px,calc(100vw - 44px));max-width:none;max-height:96dvh;margin:auto;padding:20px 24px 0;border:0;border-radius:26px;background:#fafaf3;color:#183d3d;box-shadow:0 40px 120px #0006;overflow:auto;overscroll-behavior:contain}
+.lightbox::backdrop{background:#092321dc;backdrop-filter:blur(12px)}
+.lightbox:where(button,[tabindex]):focus-visible,.lightbox :where(button,[tabindex]):focus-visible{outline:3px solid #d4450a;outline-offset:4px}
+.viewerHeading{display:flex;justify-content:space-between;align-items:center;gap:24px;padding-bottom:18px}
+.viewerHeading>div{display:flex;flex-direction:column;gap:6px;min-width:0}
+.viewerHeading>div>span{font-size:8px;letter-spacing:.13em;color:#b64115;font-weight:600}
+.viewerHeading strong{font-size:17px;line-height:1.4;font-weight:600;letter-spacing:-.025em;overflow-wrap:anywhere}
+.viewerHeading>button{display:grid;place-items:center;width:44px;height:44px;flex:none;border:0;border-radius:50%;background:#efe9dd;color:#8e431e}
+.viewerStage{position:relative}.viewerStage>.photoArrow{top:calc(50% - 30px)}
+.zoomViewport{height:min(60dvh,660px);min-height:150px;overflow:hidden;position:relative;background:#efefe7;border-radius:18px;touch-action:none;user-select:none;cursor:zoom-in}
+.zoomViewport[data-zoomed=true]{cursor:grab}.zoomViewport[data-dragging=true][data-zoomed=true]{cursor:grabbing}
+.zoomPhoto{width:100%;height:100%;transform-origin:center;pointer-events:none;will-change:transform}
+.zoomPhoto>img{height:100%;width:100%;object-fit:contain;user-select:none;-webkit-user-drag:none}
+.zoomTools{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:14px}
+.zoomHint{display:flex;align-items:center;gap:8px;font-size:11px;color:#798175}
+.zoomButtons{display:flex;align-items:center;padding:4px;gap:3px;border-radius:50px;background:white;box-shadow:0 8px 25px #163c3212}
+.zoomButtons>button{min-width:40px;height:40px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:50%;border:0;background:none;color:#bc410f}
+.zoomButtons>button:disabled{opacity:.3;cursor:not-allowed}.zoomButtons>button:hover:not(:disabled){background:#fff0e4}
+.zoomButtons>output{font-size:12px;font-weight:600;text-align:center;width:48px;font-variant-numeric:tabular-nums;color:#264d40}
+.zoomButtons>.resetZoom{border-radius:50px;padding-inline:14px;background:#f5f3e9;font-size:11px;margin-left:6px}
+.viewerFooter{display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:52px}
+.viewerFooter>.thumbnails{padding:18px 8px 26px;gap:14px;flex:1;min-width:0}
+.viewerFooter .thumbnails>button{height:52px;width:52px;border-radius:10px}
+.viewerFooter>span{font-size:10px;color:#7b8376;flex:none}
+@media(max-width:767px){
+  .stage{aspect-ratio:1.08;border-radius:22px}.counter{top:13px;left:13px;padding:8px 12px;font-size:10px}.counter strong{font-size:12px}
+  .photoArrow{width:42px;height:42px}.previous{left:10px}.next{right:10px}.openZoom{right:13px;bottom:13px;font-size:11px;min-height:42px;padding:10px 14px}
+  .thumbnails{gap:16px;padding-top:22px;padding-bottom:25px}.thumbnails>button{width:64px;height:64px;border-radius:13px}
+  .lightbox{width:calc(100vw - 16px);padding:14px 12px 0;border-radius:20px;max-height:97dvh}.viewerHeading{gap:15px;padding-bottom:13px}.viewerHeading strong{font-size:13px}.viewerHeading>div>span{font-size:7px}
+  .zoomViewport{height:51dvh;border-radius:13px}.zoomTools{flex-direction:column-reverse;gap:10px;padding-top:12px}.zoomHint{font-size:9px}.viewerStage>.photoArrow{top:calc(25.5dvh);width:40px;height:40px}.viewerFooter{gap:10px}.viewerFooter>.thumbnails{gap:12px}.viewerFooter>span{font-size:9px}.viewerFooter .thumbnails>button{width:44px;height:44px}
+}
+@media(prefers-reduced-motion:reduce){.gallery *{transition:none!important}}

@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   IconBell,
@@ -15,7 +16,6 @@ import {
   IconHome,
   IconLogout,
   IconMenu2,
-  IconMessageCircle,
   IconNews,
   IconPackage,
   IconSearch,
@@ -27,6 +27,8 @@ import {
 } from "@tabler/icons-react";
 
 import { logoutAction } from "@/app/(auth)/auth-actions";
+import PublicBrowseBar from "./PublicBrowseBar";
+import styles from "./public-nav.module.css";
 import NavSearchInput, { MobileSearchOverlay } from "@/components/layout/NavSearchInput";
 import MessageNavBadge from "@/components/messages/MessageNavBadge";
 import NotificationBell from "@/components/ui/NotificationBell";
@@ -85,16 +87,21 @@ function accountRoleLabel(dashboardHref: string | undefined, userHref: string | 
   return "Customer";
 }
 
+const subscribeToHydration = () => () => {};
+const clientReady = () => true;
+const serverReady = () => false;
+
+function LogoMark({ desktop, home }: { desktop: boolean; home: boolean }) {
+  return <Image src={home ? "/linkwe-logo-mark-on-light.png" : "/linkwe-logo-mark-on-dark.png"} alt="LinkWe" width={64} height={64} priority className={`block shrink-0 object-contain ${desktop ? "h-[64px] w-[64px]" : "h-[52px] w-[52px]"}`} />;
+}
+
 export default function PublicNav({
   appearance = "default",
-  transparent = false,
-  logoVariant = "wordmark",
   user = null,
   dashboardHref,
   unreadCount = 0,
 }: Props) {
   const isHomeAppearance = appearance === "home";
-  const isBrandedAppearance = appearance !== "default";
   const pathname = usePathname() ?? "";
   const hash = useHashFragment();
   const drawerOpen = useDrawerOpenControlled();
@@ -102,9 +109,8 @@ export default function PublicNav({
   const toggleDrawerCart = useCartStore((s) => s.toggleDrawer);
   const cartBumpNonce = useCartStore((s) => s.cartBumpNonce);
   const itemCount = useCartStore((s) => s.itemCount());
-  const [cartBumpPlay, setCartBumpPlay] = useState(false);
-  const lastBumpRef = useRef(0);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(subscribeToHydration, clientReady, serverReady);
+  const cartBumpPlay = mounted && cartBumpNonce > 0;
 
   const { isInstalled } = usePWAInstall({
     onInstalled: () => toastPWAInstalled(),
@@ -112,8 +118,6 @@ export default function PublicNav({
 
   const isGetAppPage = pathname === "/get-app";
   const showSignIn = !user && !isGetAppPage;
-  const isStorePage = pathname.startsWith("/store/");
-  const [navScrolled, setNavScrolled] = useState(false);
 
   const currentPathEncoded = encodeURIComponent(pathname?.trim() ? pathname : "/");
   const loginHref = `/login?callbackUrl=${currentPathEncoded}`;
@@ -121,26 +125,6 @@ export default function PublicNav({
   const messagesHref = dashTarget.includes("/dashboard/vendor")
     ? "/dashboard/vendor/messages"
     : "/messages";
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    const update = () => setNavScrolled(window.scrollY > 20);
-    update();
-    window.addEventListener("scroll", update, { passive: true });
-    return () => window.removeEventListener("scroll", update);
-  }, [pathname]);
-
-  useEffect(() => {
-    if (cartBumpNonce === 0) return;
-    if (lastBumpRef.current === cartBumpNonce) return;
-    lastBumpRef.current = cartBumpNonce;
-    setCartBumpPlay(true);
-    const t = window.setTimeout(() => setCartBumpPlay(false), 620);
-    return () => window.clearTimeout(t);
-  }, [cartBumpNonce]);
 
   const mobileTabs: MobileTab[] = [
     {
@@ -166,7 +150,7 @@ export default function PublicNav({
       href: "/cart",
       label: "Cart",
       Icon: IconShoppingCart,
-      isActive: (p, h) => p.startsWith("/cart") || p.startsWith("/checkout"),
+      isActive: (p) => p.startsWith("/cart") || p.startsWith("/checkout"),
     },
     {
       label: "More",
@@ -178,53 +162,17 @@ export default function PublicNav({
 
   const roleLabel = user ? accountRoleLabel(dashboardHref, user.href) : "Customer";
 
-  function LogoMark({ desktop }: { desktop: boolean }) {
-    // Asset names describe the logo artwork: "light" belongs on dark surfaces.
-    const surface = navScrolled || isBrandedAppearance ? "light" : "dark";
-    return (
-      <img
-        src={
-          isBrandedAppearance
-            ? "/linkwe-app-icon.png"
-            : logoVariant === "ai"
-            ? `/linkwe-logo-mark-on-${surface}.png`
-            : desktop
-              ? `/linkwe-logo-on-${surface}.png`
-              : `/linkwe-logo-mark-on-${surface}.png`
-        }
-        alt="LinkWe"
-        className={`${desktop ? "block h-11 w-auto shrink-0" : "block size-11 shrink-0 object-contain"} ${isBrandedAppearance ? "rounded-xl" : ""}`}
-      />
-    );
-  }
 
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
-  const storeNavAtTop = isStorePage && !isBrandedAppearance && !navScrolled;
-  const navIsLight = !isBrandedAppearance && navScrolled;
-
-  const headerPosition = isStorePage && !isBrandedAppearance
-    ? "fixed inset-x-0 top-0 z-50"
-    : transparent
-      ? "sticky top-0 z-40"
-      : "sticky top-0 z-40";
-
+  const navIsLight = isHomeAppearance;
   const glassHeader = [
-    headerPosition,
+    "sticky top-0 z-40",
     "w-full overflow-visible transition-[background-color,backdrop-filter,border-color,box-shadow] duration-300",
-    navIsLight
+    isHomeAppearance
       ? "public-nav-light border-b border-zinc-200/70 bg-white/90 text-[#1C1C1A] shadow-[0_12px_35px_rgba(28,28,26,0.08)] backdrop-blur-[18px]"
-      : storeNavAtTop
-        ? "border-b-0 bg-transparent backdrop-blur-none"
-        : "border-b-[0.5px] border-white/10 bg-[rgba(28,28,26,0.95)] backdrop-blur-[12px] md:backdrop-blur-[16px]",
+      : styles.header,
   ].join(" ");
-
-  const desktopNavLinkClass = `flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors`;
-  function desktopBrowseActive(forPath: "/shop" | "/services" | "/stores"): boolean {
-    if (forPath === "/shop") return pathname.startsWith("/shop") || pathname.startsWith("/products");
-    if (forPath === "/services") return pathname.startsWith("/services") || pathname.startsWith("/service");
-    return pathname.startsWith("/stores") || pathname.startsWith("/store");
-  }
 
   return (
     <>
@@ -377,13 +325,12 @@ export default function PublicNav({
         </>
       ) : null}
 
-      <header className={`${glassHeader} ${isHomeAppearance ? "home-public-nav" : appearance === "storefront" ? "storefront-public-nav" : ""}`}>
+      <header className={`${glassHeader} ${isHomeAppearance ? "home-public-nav" : "marketplace-public-nav"}`}>
         {/* Mobile */}
         <nav aria-label="Primary mobile" className="flex px-3 py-3 md:hidden sm:px-4">
           <div className="flex w-full min-w-0 items-center justify-between gap-3">
             <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="LinkWe home">
-              <LogoMark desktop={false} />
-              {isBrandedAppearance && <span className="text-[23px] font-bold tracking-[-1px] text-white">Link<span className="text-[#ff8758]">We</span></span>}
+              <LogoMark desktop={false} home={isHomeAppearance} />
             </Link>
             <div className="flex shrink-0 items-center gap-2">
               <button
@@ -412,6 +359,7 @@ export default function PublicNav({
                     aria-label="Cart"
                   >
                     <IconShoppingCart
+                      key={cartBumpNonce}
                       className={`size-[20px] ${cartBumpPlay ? "lw-cart-icon-bump" : ""}`}
                       stroke={1.75}
                       aria-hidden
@@ -448,79 +396,20 @@ export default function PublicNav({
         {/* Desktop */}
         <nav aria-label="Primary desktop" className="hidden h-[68px] w-full min-w-0 items-center gap-4 overflow-visible px-6 md:flex xl:px-8">
           <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="LinkWe home">
-            <LogoMark desktop />
-            {isBrandedAppearance && <span className="text-[28px] font-bold tracking-[-1.5px] text-white">Link<span className="text-[#ff8758]">We</span></span>}
+            <LogoMark desktop home={isHomeAppearance} />
           </Link>
 
           <div className="flex min-h-0 min-w-0 flex-1 justify-center overflow-visible px-2 lg:px-6">
-            <div className={`w-full min-w-[180px] overflow-visible ${isHomeAppearance ? "max-w-[600px]" : "max-w-[420px]"}`}>
+            <div className={`w-full min-w-[180px] overflow-visible max-w-[600px]`}>
               <NavSearchInput variant="desktop" inputId="public-nav-desktop-search" light={navIsLight} />
             </div>
           </div>
 
-          <div className={`${isHomeAppearance ? "hidden" : "flex"} min-w-0 shrink-0 flex-nowrap items-center justify-end gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}>
-            <Link
-              href="/shop"
-              className={`${desktopNavLinkClass} ${
-                navIsLight ? (desktopBrowseActive("/shop") ? "bg-zinc-100 text-[#1C1C1A]" : "text-zinc-600 hover:bg-zinc-100 hover:text-[#1C1C1A]") : (desktopBrowseActive("/shop") ? "bg-white/[0.12] text-white" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white")
-              }`}
-            >
-              <IconShoppingBag className="size-4 shrink-0" stroke={1.75} aria-hidden /> Shop
-            </Link>
-            <Link
-              href="/services"
-              className={`${desktopNavLinkClass} ${
-                pathname.startsWith("/services") || pathname.startsWith("/service")
-                  ? (navIsLight ? "bg-zinc-100 text-[#1C1C1A]" : "bg-white/[0.12] text-white")
-                  : (navIsLight ? "text-zinc-600 hover:bg-zinc-100 hover:text-[#1C1C1A]" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white")
-              }`}
-            >
-              <IconTools className="size-4 shrink-0" stroke={1.75} aria-hidden /> Services
-            </Link>
-            <Link
-              href="/stores"
-              className={`${desktopNavLinkClass} ${
-                navIsLight ? (desktopBrowseActive("/stores") ? "bg-zinc-100 text-[#1C1C1A]" : "text-zinc-600 hover:bg-zinc-100 hover:text-[#1C1C1A]") : (desktopBrowseActive("/stores") ? "bg-white/[0.12] text-white" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white")
-              }`}
-            >
-              <IconBuildingStore className="size-4 shrink-0" stroke={1.75} aria-hidden /> Stores
-            </Link>
-            <Link
-              href="/events"
-              className={`${desktopNavLinkClass} ${
-                navIsLight ? (pathname.startsWith("/events") ? "bg-zinc-100 text-[#1C1C1A]" : "text-zinc-600 hover:bg-zinc-100 hover:text-[#1C1C1A]") : (pathname.startsWith("/events") ? "bg-white/[0.12] text-white" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white")
-              }`}
-            >
-              <IconCalendarEvent className="size-4 shrink-0" stroke={1.75} aria-hidden /> Events
-            </Link>
-            <Link
-              href={user ? "/timeline" : "/login?callbackUrl=/timeline"}
-              className={`${desktopNavLinkClass} ${
-                navIsLight ? (pathname.startsWith("/timeline") ? "bg-zinc-100 text-[#1C1C1A]" : "text-zinc-600 hover:bg-zinc-100 hover:text-[#1C1C1A]") : (pathname.startsWith("/timeline") ? "bg-white/[0.12] text-white" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white")
-              }`}
-            >
-              <IconNews className="size-4 shrink-0" stroke={1.75} aria-hidden /> Timeline
-            </Link>
-            <Link
-              href="/pricing"
-              className={`${desktopNavLinkClass} ${
-                navIsLight ? (pathname.startsWith("/pricing") ? "bg-zinc-100 text-[#1C1C1A]" : "text-zinc-600 hover:bg-zinc-100 hover:text-[#1C1C1A]") : (pathname.startsWith("/pricing") ? "bg-white/[0.12] text-white" : "text-white/[0.7] hover:bg-white/[0.08] hover:text-white")
-              }`}
-            >
-              <IconTag className="size-4 shrink-0" stroke={1.75} aria-hidden /> Pricing
-            </Link>
-            {mounted && !isInstalled ? (
-              <Link href="/get-app" className={`ml-1 shrink-0 text-[11px] font-semibold ${navIsLight ? "text-zinc-500 hover:text-zinc-900" : "text-white/[0.55] hover:text-white"}`}>
-                Get app
-              </Link>
-            ) : null}
-          </div>
-
           <div className="flex shrink-0 items-center gap-2">
-            {isHomeAppearance && <Link href={user ? dashTarget : "/register?role=vendor"} className="home-seller-link mr-3 hidden min-h-11 items-center text-xs font-semibold text-white lg:inline-flex">{user ? "My workspace" : "Sell on LinkWe"}</Link>}
-            {isHomeAppearance && !user && <>
-              <Link href="/wishlist" aria-label="My wishlist" className="flex size-10 items-center justify-center rounded-full text-white hover:bg-white/10"><IconHeart className="size-5" stroke={1.75} aria-hidden /></Link>
-              <button type="button" aria-label="Open cart" onClick={toggleDrawerCart} className="relative mr-2 flex size-10 items-center justify-center rounded-full text-white hover:bg-white/10"><IconShoppingCart className="size-5" stroke={1.75} aria-hidden />{mounted && itemCount > 0 && <span className="absolute right-0 top-0 flex size-4 items-center justify-center rounded-full bg-[#D4450A] text-[9px] text-white">{itemCount > 9 ? "9+" : itemCount}</span>}</button>
+            <Link href={user ? dashTarget : "/register?role=vendor"} className="home-seller-link mr-3 hidden min-h-11 items-center text-xs font-semibold text-[#183e59] lg:inline-flex">{user ? "My workspace" : "Sell on LinkWe"}</Link>
+            {!user && <>
+              <Link href="/wishlist" aria-label="My wishlist" className={`flex size-10 items-center justify-center rounded-full ${isHomeAppearance ? "text-[#183e59] hover:bg-[#e5eff3]" : styles.utility}`}><IconHeart className="size-5" stroke={1.75} aria-hidden /></Link>
+              <button type="button" aria-label="Open cart" onClick={toggleDrawerCart} className={`relative mr-2 flex size-10 items-center justify-center rounded-full ${isHomeAppearance ? "text-[#183e59] hover:bg-[#e5eff3]" : styles.utility}`}><IconShoppingCart key={cartBumpNonce} className="size-5" stroke={1.75} aria-hidden />{mounted && itemCount > 0 && <span className="absolute right-0 top-0 flex size-4 items-center justify-center rounded-full bg-[#D4450A] text-[9px] text-white">{itemCount > 9 ? "9+" : itemCount}</span>}</button>
             </>}
             {user ? (
               <>
@@ -535,6 +424,7 @@ export default function PublicNav({
                   className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border-[0.5px] ${navIsLight ? "border-zinc-200 bg-zinc-100 text-zinc-800 hover:bg-zinc-200" : "border-white/[0.12] bg-white/[0.08] text-white hover:bg-white/[0.14]"}`}
                 >
                   <IconShoppingCart
+                      key={cartBumpNonce}
                     className={`size-5 shrink-0 ${cartBumpPlay ? "lw-cart-icon-bump" : ""}`}
                     stroke={1.75}
                     aria-hidden
@@ -565,6 +455,7 @@ export default function PublicNav({
           </div>
         </nav>
       </header>
+      {!isHomeAppearance && <PublicBrowseBar />}
 
       <MobileSearchOverlay
         open={mobileSearchOpen}
@@ -606,6 +497,7 @@ export default function PublicNav({
                 )}
                 <span className="relative inline-flex">
                   <tab.Icon
+                    key={tab.label === "Cart" ? cartBumpNonce : tab.label}
                     className={`size-[22px] shrink-0 transition-colors duration-150 ${
                       tab.label === "Cart" && cartBumpPlay ? "lw-cart-icon-bump" : ""
                     } ${active ? "text-[#D4450A]" : "text-[var(--color-text-secondary)]"}`}

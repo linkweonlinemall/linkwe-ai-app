@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
-import { ArrowRight, ArrowUpRight, Bookmark, CalendarDays, Check, Heart, MapPin, MessageCircle, Package, Scissors, ShieldCheck, ShoppingBag, Smartphone, Sparkles, Store, Ticket, Truck } from "lucide-react";
+import { ArrowUpRight, Bookmark, CalendarDays, Check, Heart, MessageCircle, Package, Scissors, ShieldCheck, ShoppingBag, Smartphone, Sparkles, Store, Ticket, Truck } from "lucide-react";
 import { getWishlistProductIds } from "@/app/actions/wishlist";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
@@ -12,12 +12,16 @@ import { sellableStoreWhere } from "@/lib/store/sellable-store";
 import { formatTTDPrice } from "@/lib/format/price";
 import { formatEventCalendarDay } from "@/lib/events/format-datetime";
 import type { HomeItem, HomeStore } from "@/lib/home/types";
+import { homepageImage, selectHomeItems } from "@/lib/home/selection";
 import PublicNav from "@/components/layout/PublicNav";
+import PublicBrowseBar from "@/components/layout/PublicBrowseBar";
 import HomeCategoryBrowser from "@/components/home/HomeCategoryBrowser";
 import HomeListingImage from "@/components/home/HomeListingImage";
 import HomeShowcase from "@/components/home/HomeShowcase";
 import HomeProductEdit from "@/components/home/HomeProductEdit";
 import HomeRex from "@/components/home/HomeRex";
+import HomeServiceCard from "@/components/home/HomeServiceCard";
+import HomeStoreCard from "@/components/home/HomeStoreCard";
 import styles from "@/components/home/home.module.css";
 
 export const metadata: Metadata = {
@@ -37,18 +41,26 @@ export default async function Home() {
   const user = session ? await prisma.user.findUnique({ where: { id: session.userId } }) : null;
   const continueHref = user ? getRoleDashboardPath(user.role) : null;
   const rexHref = user?.role === "VENDOR" ? "/dashboard/vendor/ai-assistant" : "/pricing";
-  const [unreadCount, wishlistIds, productRows, serviceRows, storeRows, eventRows] = await Promise.all([
+  const [unreadCount, wishlistIds, productStores, serviceStores, storeRows, eventRows] = await Promise.all([
     getNavUnreadCount(),
     getWishlistProductIds(),
-    prisma.product.findMany({
-      where: { isPublished: true, isService: false, store: sellableStoreWhere() },
-      select: { id: true, name: true, slug: true, price: true, images: true, hasVariants: true, category: true, store: { select: { name: true } } },
-      orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }], take: 12,
+    prisma.store.findMany({
+      where: { ...sellableStoreWhere(), products: { some: { isPublished: true, isArchived: false, isService: false, images: { isEmpty: false } } } },
+      select: { id: true, name: true, products: {
+        where: { isPublished: true, isArchived: false, isService: false, images: { isEmpty: false } },
+        select: { id: true, name: true, slug: true, price: true, images: true, hasVariants: true, category: true, isFeatured: true },
+        orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }, { id: "asc" }], take: 12,
+      } },
+      orderBy: { id: "asc" },
     }),
-    prisma.product.findMany({
-      where: { isPublished: true, isService: true, store: sellableStoreWhere() },
-      select: { id: true, name: true, slug: true, price: true, images: true, serviceType: true, store: { select: { name: true, region: true } } },
-      orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }], take: 6,
+    prisma.store.findMany({
+      where: { ...sellableStoreWhere(), products: { some: { isPublished: true, isArchived: false, isService: true, images: { isEmpty: false } } } },
+      select: { id: true, name: true, region: true, products: {
+        where: { isPublished: true, isArchived: false, isService: true, images: { isEmpty: false } },
+        select: { id: true, name: true, slug: true, price: true, images: true, serviceType: true, isFeatured: true },
+        orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }, { id: "asc" }], take: 12,
+      } },
+      orderBy: { id: "asc" },
     }),
     prisma.store.findMany({
       where: sellableStoreWhere(),
@@ -62,14 +74,14 @@ export default async function Home() {
     }),
   ]);
 
-  let products: HomeItem[] = productRows.map((p) => ({
-    id: p.id, name: p.name, brand: p.store.name, href: `/products/${p.slug}`, image: p.images[0] ?? null,
+  let products: HomeItem[] = productStores.flatMap((store) => store.products.map((p) => ({
+    id: p.id, name: p.name, brand: store.name, storeId: store.id, featured: p.isFeatured, href: `/products/${p.slug}`, image: homepageImage(p.images),
     priceLabel: `${p.hasVariants ? "From " : ""}${formatTTDPrice(p.price)}`, group: productGroup(p.category), saved: wishlistIds.includes(p.id),
-  }));
-  let services: HomeItem[] = serviceRows.map((s) => ({
-    id: s.id, name: s.name, brand: s.store.name, href: `/service/${s.slug}`, image: s.images[0] ?? null,
-    priceLabel: s.serviceType === "QUOTE" ? "Request a quote" : formatTTDPrice(s.price), group: "Services", region: getRegionLabel(s.store.region),
-  }));
+  })));
+  let services: HomeItem[] = serviceStores.flatMap((store) => store.products.map((s) => ({
+    id: s.id, name: s.name, brand: store.name, storeId: store.id, featured: s.isFeatured, href: `/service/${s.slug}`, image: homepageImage(s.images),
+    priceLabel: s.serviceType === "QUOTE" ? "Request a quote" : formatTTDPrice(s.price), group: "Services", region: getRegionLabel(store.region),
+  })));
   let stores: HomeStore[] = storeRows.map((s) => ({
     id: s.id, name: s.name, href: `/store/${s.slug}`, image: s.coverPhotoUrl, logo: s.logoUrl, tagline: s.tagline, region: getRegionLabel(s.region),
   }));
@@ -88,22 +100,25 @@ export default async function Home() {
     if (!events.length) events = preview.events;
   }
 
-  const portrait = services.find((s) => /portrait/i.test(s.name)) ?? services.find((s) => s.image);
-  const islandTee = products.find((p) => /maracas/i.test(p.name)) ?? products.find((p) => p.image);
-  const selfCare = products.find((p) => p.group === "Self-care") ?? products.find((p) => p.image && p.id !== islandTee?.id);
-  const thirdSpotlight = services.find((s) => /nails/i.test(s.name)) ?? selfCare;
+  products = selectHomeItems(products, 12);
+  services = selectHomeItems(services, 6);
+
+  const portrait = services[0];
+  const islandTee = products[0];
+  const selfCare = products.find((p) => p.group === "Self-care" && p.id !== islandTee?.id) ?? products[1];
+  const thirdSpotlight = services.find((s) => s.id !== portrait?.id && s.brand !== islandTee?.brand) ?? selfCare;
   const spotlights = [portrait, islandTee, thirdSpotlight].filter((item): item is HomeItem => !!item?.image).filter((item, index, items) => items.findIndex((i) => i.id === item.id) === index);
   const floatingFinds = [islandTee, selfCare].filter((item): item is HomeItem => !!item?.image);
   const featuredServices = services.slice(0, 3);
   const featuredEvent = events[0];
-  const socialItems = [products[0], services.find((s) => /couples/i.test(s.name)) ?? services[0], products.find((p) => /sorrel/i.test(p.name)) ?? products[1]].filter((item): item is HomeItem => !!item?.image);
+  const socialItems = [products[2] ?? products[0], services[1] ?? services[0], products[3] ?? products[1]].filter((item): item is HomeItem => !!item?.image).filter((item, index, items) => items.findIndex((i) => i.id === item.id) === index);
 
   return (
     <div className={styles.home}>
       <a className={styles.skipLink} href="#home-content">Skip to content</a>
       <div className={styles.announcement}><div className={styles.container}><span><span className={styles.flag} aria-hidden /> THE ISLANDS. CONNECTED.</span><p>We people. We business. <strong>We marketplace.</strong></p><Link href="/get-app">Take LinkWe with you <ArrowUpRight size={12} aria-hidden /></Link></div></div>
       <PublicNav appearance="home" logoVariant="wordmark" user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null} dashboardHref={continueHref ?? undefined} unreadCount={unreadCount} />
-      <div className={styles.browseBar}><nav className={styles.container} aria-label="Explore LinkWe"><HomeCategoryBrowser compact /><span className={styles.navDivider} aria-hidden /><Link href="/" aria-current="page" className={styles.navActive}>Discover</Link><Link href="/shop">Shop</Link><Link href="/services">Services</Link><Link href="/events">Events</Link><Link href="/stores">Our stores</Link><Link href="/timeline">Timeline<span className={styles.newDot} /></Link><a href="#meet-rex" className={styles.rexNav}><Sparkles size={14} aria-hidden /> Meet Rex</a></nav></div>
+      <PublicBrowseBar home />
 
       <main id="home-content" tabIndex={-1}>
         <div className={styles.heroShell}><div className={styles.container}><HomeShowcase items={spotlights} extras={floatingFinds} /></div></div>
@@ -124,16 +139,16 @@ export default async function Home() {
 
         <div className={styles.cultureRibbon} aria-label="We people. We business. We marketplace."><span>WE PEOPLE.</span><Sparkles aria-hidden /><span>WE BUSINESS.</span><Sparkles aria-hidden /><span>WE MARKETPLACE.</span><Sparkles aria-hidden /><span className={styles.ribbonOutline} aria-hidden>ALL LOCAL.</span></div>
 
-        <section className={`${styles.container} ${styles.servicesSection}`} aria-labelledby="services-title">
+        <section className={`${styles.container} ${styles.servicesSection}`} id="local-services" aria-labelledby="services-title">
           <div className={styles.serviceIntro}><p className={styles.eyebrow}>LOCAL TALENT. REAL POSSIBILITIES.</p><h2 id="services-title">Good people.<br /><span>Great at <br />what they do.</span></h2><p>Get the look. Capture the moment. Leave it to someone who knows.</p><Link href="/services" className={styles.darkButton}>Find your person <ArrowUpRight size={18} aria-hidden /></Link><div className={styles.serviceIntroArt} aria-hidden><span /><Scissors size={43} strokeWidth={1.2} /><Sparkles size={25} /></div></div>
-          {featuredServices.map((service, index) => <Link href={service.href} className={styles.serviceCard} key={service.id}><div className={styles.servicePhoto}><HomeListingImage src={service.image} alt={service.name} /><span className={styles.serviceNumber}>0{index + 1}</span><span className={styles.servicePhotoArrow}><ArrowUpRight size={21} aria-hidden /></span></div><div className={styles.serviceCardCopy}><span>{service.brand}</span><h3>{service.name}</h3><p><MapPin size={12} aria-hidden />{service.region}</p><strong>{service.priceLabel}<ArrowRight size={16} aria-hidden /></strong></div></Link>)}
+          {featuredServices.map((service, index) => <HomeServiceCard service={service} index={index} key={service.id} />)}
         </section>
 
         <HomeRex href={rexHref} isVendor={user?.role === "VENDOR"} />
 
-        <section className={styles.storesSection} aria-labelledby="stores-title"><div className={styles.container}>
+        <section className={styles.storesSection} id="local-stores" aria-labelledby="stores-title"><div className={styles.container}>
           <div className={styles.sectionHeading}><div><p className={styles.eyebrow}><span /> THE HEART OF LINKWE</p><h2 id="stores-title">Big on passion.<br /><span>Brilliantly local.</span></h2></div><div className={styles.storeIntro}><p>Behind every great find is someone <br />building something of their own.</p><Link href="/stores" className={styles.lightTextLink}>Meet all our stores <ArrowUpRight size={18} aria-hidden /></Link></div></div>
-          <div className={styles.storeGrid}>{stores.slice(0, 3).map((store, index) => <Link href={store.href} key={store.id} className={styles.storeCard} data-store-tone={index}><div className={styles.storeCover}><HomeListingImage src={store.image} alt={`${store.name} storefront`} /></div><div className={styles.storeIdentity}><div className={styles.storeLogo}><HomeListingImage src={store.logo} alt={`${store.name} logo`} /></div><span><small><MapPin size={11} aria-hidden />{store.region}</small><h3>{store.name}</h3></span><span className={styles.storeArrow}><ArrowUpRight size={23} aria-hidden /></span></div><p>{store.tagline}</p></Link>)}</div>
+          <div className={styles.storeGrid}>{stores.slice(0, 3).map((store, index) => <HomeStoreCard store={store} index={index} key={store.id} />)}</div>
           {stores.length > 3 && <div className={styles.moreStores}><span>MORE PEOPLE TO KNOW</span>{stores.slice(3, 6).map((store) => <Link key={store.id} href={store.href}>{store.logo && <Image src={store.logo} alt="" width={32} height={32} />}<span>{store.name}</span><ArrowUpRight size={13} aria-hidden /></Link>)}</div>}
         </div></section>
 

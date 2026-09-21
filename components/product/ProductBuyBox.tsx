@@ -1,310 +1,53 @@
 "use client";
 
-import Link from "next/link";
-import { ChevronDown, ChevronRight, Minus, Plus } from "lucide-react";
+import { Heart, Minus, Plus, ArrowUpRight, ShieldCheck } from "lucide-react";
 import { useState } from "react";
-
-import AddToCartButton from "@/components/product/AddToCartButton";
-import ProductTrustSignals from "@/components/product/ProductTrustSignals";
-import VariantSelector, { type VariantAttribute } from "@/components/product/VariantSelector";
+import AddToCartButton from "./AddToCartButton";
+import VariantSelector from "./VariantSelector";
 import WishlistButton from "@/components/ui/WishlistButton";
 import { formatTTDPrice } from "@/lib/format/price";
-
-type Variant = {
-  id: string;
-  name: string;
-  attributes: VariantAttribute[];
-  price: number | null;
-  stock: number | null;
-  images: string[];
-};
-
-export type PurchaseStoreSummary = {
-  name: string;
-  slug: string;
-  logoUrl: string | null;
-  region: string;
-};
-
-type DigitalMeta = {
-  fileType: string | null;
-  fileSizeKb: number | null;
-  downloadLimit: number | null;
-  licenceType: string | null;
-};
+import { productPurchaseState, type ProductOption } from "@/lib/product/display";
+import styles from "./product.module.css";
 
 type Props = {
-  productId: string;
-  productName: string;
-  basePrice: number;
-  compareAtPrice: number | null;
-  baseStock: number | null;
-  hasVariants: boolean;
-  variants: Variant[];
-  store: PurchaseStoreSummary;
-  storeRegionLabel: string;
-  allowDelivery: boolean;
-  allowPickup: boolean;
-  deliveryFeeSuffix?: string | null;
-  isDigital: boolean;
-  digitalMeta: DigitalMeta | null;
-  initialWishlisted: boolean;
-  /** Fixed bottom bar on small screens with price + add to cart */
-  mobileStickyBar?: boolean;
+  productId: string; productName: string; basePrice: number; compareAtPrice: number | null;
+  baseStock: number | null; sku?: string | null; hasVariants: boolean; variants: ProductOption[];
+  initialWishlisted: boolean; mobileStickyBar?: boolean; preview?: boolean;
+  onVariantChange?: (variant: ProductOption | null) => void;
 };
 
-export default function ProductBuyBox({
-  productId,
-  productName,
-  basePrice,
-  compareAtPrice,
-  baseStock,
-  hasVariants,
-  variants,
-  store,
-  storeRegionLabel,
-  allowDelivery,
-  allowPickup,
-  deliveryFeeSuffix,
-  isDigital,
-  digitalMeta,
-  initialWishlisted,
-  mobileStickyBar = false,
-}: Props) {
-  const [activeVariant, setActiveVariant] = useState<Variant | null>(null);
-  const [allSelected, setAllSelected] = useState(!hasVariants);
+export default function ProductBuyBox({ productId, productName, basePrice, compareAtPrice, baseStock, sku, hasVariants, variants, initialWishlisted, mobileStickyBar = false, preview = false, onVariantChange }: Props) {
+  const [activeVariant, setActiveVariant] = useState<ProductOption | null>(null);
   const [qty, setQty] = useState(1);
+  const purchase = productPurchaseState(basePrice, baseStock, hasVariants, variants, activeVariant);
+  const { minPrice, maxPrice, stock, canPurchase } = purchase;
+  const needsOptions = hasVariants && !activeVariant;
+  const cap = stock == null ? 999 : Math.max(0, stock);
+  const quantity = cap === 0 ? 1 : Math.min(Math.max(1, qty), cap);
+  const discount = compareAtPrice != null && compareAtPrice > maxPrice ? Math.round((1 - maxPrice / compareAtPrice) * 100) : null;
+  const priceLabel = minPrice === maxPrice ? formatTTDPrice(minPrice) : `${formatTTDPrice(minPrice)} – ${formatTTDPrice(maxPrice)}`;
+  const stockLabel = needsOptions ? "Choose options to see availability" : stock === 0 ? "Out of stock" : stock != null ? stock <= 10 ? `Only ${stock} left` : `${stock} available` : "Available to order";
 
-  const price = activeVariant?.price ?? basePrice;
-  const stock = hasVariants ? (activeVariant?.stock ?? null) : baseStock;
-  const cap = stock === null ? 999 : Math.max(0, stock);
-  const effectiveQty = cap === 0 ? 1 : Math.min(Math.max(1, qty), cap);
+  const cartButton = preview ? <button className={styles.previewCart} disabled title="Purchasing is disabled in this local design preview">{needsOptions ? "Select options" : stock === 0 ? "Out of stock" : "Add to cart"}</button> : <AddToCartButton productId={productId} productName={productName} variantId={activeVariant?.id} stock={stock} quantity={quantity} disabled={needsOptions} />;
 
-  const discount =
-    compareAtPrice && compareAtPrice > price ? Math.round((1 - price / compareAtPrice) * 100) : null;
-
-  const stockStatus =
-    stock === null || stock > 10
-      ? { text: "In stock", dot: "bg-emerald-500" }
-      : stock >= 1
-        ? { text: `Only ${stock} left`, dot: "bg-amber-500" }
-        : { text: "Out of stock", dot: "bg-red-500" };
-
-  function setQuantity(next: number) {
-    if (cap === 0) {
-      setQty(1);
-      return;
-    }
-    const v = Math.floor(next);
-    setQty(Math.min(Math.max(1, Number.isNaN(v) ? 1 : v), cap));
-  }
-
-  return (
-    <div id="product-options" className="flex w-full scroll-mt-24 flex-col font-sans">
-      {/* 1 Price — duplicated in mobile sticky bar when enabled */}
-      <div className={`mb-3 ${mobileStickyBar ? "max-md:hidden" : ""}`}>
-        <p className="bg-gradient-to-r from-[#D4450A] via-[#F06A2A] to-[#1A7FB5] bg-clip-text text-[38px] font-black leading-none tracking-[-.04em] text-transparent">
-          {formatTTDPrice(price)}
-        </p>
-        {compareAtPrice && compareAtPrice > price ? (
-          <p className="mt-2 font-sans text-sm text-zinc-400 line-through">TTD {compareAtPrice.toFixed(2)}</p>
-        ) : null}
-        {discount != null ? (
-          <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-0.5 font-sans text-xs font-bold text-emerald-700">
-            <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden />
-            {discount}% off
-          </p>
-        ) : null}
-      </div>
-
-      {/* 2 Stock */}
-      <div className="mb-6 flex w-fit items-center gap-2 rounded-full border border-zinc-100 bg-white px-3 py-1.5 font-sans text-xs font-bold text-zinc-700 shadow-sm">
-        <span className={`size-2 shrink-0 rounded-full ${stockStatus.dot} shadow-[0_0_0_4px_rgba(16,185,129,.10)]`} aria-hidden />
-        {stockStatus.text}
-      </div>
-
-      {/* 3–4 Variants */}
-      {hasVariants && variants.length > 0 ? (
-        <VariantSelector
-          variants={variants}
-          onVariantChange={(variant, allSel) => {
-            setActiveVariant(variant);
-            setAllSelected(allSel);
-          }}
-        />
-      ) : null}
-
-      {/* 5 Quantity */}
-      <div className={`mb-3 flex w-full min-w-0 items-end gap-2 ${mobileStickyBar ? "max-md:hidden" : ""}`}>
-      <div className="w-36 shrink-0">
-        <label
-          htmlFor="product-qty-pdp"
-          className="mb-2 block font-sans text-xs font-semibold uppercase tracking-wide text-zinc-500"
-        >
-          Quantity
-        </label>
-        <div className="flex h-12 w-full min-w-0 overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-sm">
-          <button
-            type="button"
-            aria-label="Decrease quantity"
-            disabled={cap === 0 || effectiveQty <= 1}
-            className="flex h-12 w-12 shrink-0 items-center justify-center text-zinc-600 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
-            onClick={() => setQuantity(effectiveQty - 1)}
-          >
-            <Minus className="size-4" strokeWidth={2} aria-hidden />
-          </button>
-          <input
-            id="product-qty-pdp"
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={cap === 0 ? 1 : cap}
-            value={effectiveQty}
-            disabled={cap === 0}
-            onChange={(e) => {
-              const raw = Number.parseInt(e.target.value, 10);
-              if (Number.isNaN(raw)) {
-                setQty(1);
-                return;
-              }
-              setQuantity(raw);
-            }}
-            className="min-w-0 flex-1 border-0 bg-transparent text-center font-sans text-base font-semibold tabular-nums text-zinc-900 outline-none [appearance:textfield] focus:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-          />
-          <button
-            type="button"
-            aria-label="Increase quantity"
-            disabled={cap === 0 || effectiveQty >= cap}
-            className="flex h-12 w-12 shrink-0 items-center justify-center text-zinc-600 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
-            onClick={() => setQuantity(effectiveQty + 1)}
-          >
-            <Plus className="size-4" strokeWidth={2} aria-hidden />
-          </button>
-        </div>
-      </div>
-
-      {/* 6 Add to cart */}
-      <div className="min-w-0 flex-1">
-        <AddToCartButton
-          productId={productId}
-          productName={productName}
-          variantId={activeVariant?.id}
-          stock={stock}
-          quantity={effectiveQty}
-          disabled={hasVariants && !allSelected}
-        />
-      </div>
-      </div>
-
-      {mobileStickyBar ? (
-        <div className="fixed bottom-[calc(60px+env(safe-area-inset-bottom,0px))] left-0 right-0 z-50 border-t border-white/80 bg-white/90 px-3 py-3 shadow-[0_-12px_35px_rgba(26,52,70,.13)] backdrop-blur-xl md:hidden">
-          <div className="mx-auto flex w-full max-w-lg items-center gap-2">
-            {hasVariants && variants.length > 0 && !allSelected ? (
-              <a
-                href="#product-options"
-                className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[#1C1C1A] px-3 text-xs font-semibold text-[#1C1C1A]"
-              >
-                Choose options
-                <ChevronDown className="size-4" strokeWidth={2} aria-hidden />
-              </a>
-            ) : (
-              <p className="shrink-0 text-sm font-semibold text-[#D4450A]">{formatTTDPrice(price)}</p>
-            )}
-            {allSelected ? <div className="flex h-11 w-[84px] shrink-0 overflow-hidden rounded-xl border border-sky-100 bg-white shadow-sm">
-              <button type="button" aria-label="Decrease quantity" disabled={cap === 0 || effectiveQty <= 1} onClick={() => setQuantity(effectiveQty - 1)} className="flex w-7 items-center justify-center text-zinc-700 disabled:opacity-30"><Minus className="size-3.5" /></button>
-              <span className="flex min-w-0 flex-1 items-center justify-center border-x border-zinc-100 text-sm font-bold tabular-nums">{effectiveQty}</span>
-              <button type="button" aria-label="Increase quantity" disabled={cap === 0 || effectiveQty >= cap} onClick={() => setQuantity(effectiveQty + 1)} className="flex w-7 items-center justify-center text-zinc-700 disabled:opacity-30"><Plus className="size-3.5" /></button>
-            </div> : null}
-            <div className="min-w-0 flex-1">
-              <AddToCartButton
-                productId={productId}
-                productName={productName}
-                variantId={activeVariant?.id}
-                stock={stock}
-                quantity={effectiveQty}
-                disabled={hasVariants && !allSelected}
-              />
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {isDigital && digitalMeta ? (
-        <div className="mb-6 space-y-2 rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50 to-white p-4 font-sans text-sm text-zinc-600 shadow-sm">
-          <p className="font-black text-[#1A7FB5]">Instant digital download</p>
-          {digitalMeta.fileType ? (
-            <p>
-              {digitalMeta.fileType.toUpperCase()} file
-              {digitalMeta.fileSizeKb != null
-                ? ` · ${
-                    digitalMeta.fileSizeKb >= 1024
-                      ? `${(digitalMeta.fileSizeKb / 1024).toFixed(1)} MB`
-                      : `${digitalMeta.fileSizeKb} KB`
-                  }`
-                : ""}
-            </p>
-          ) : null}
-          {digitalMeta.downloadLimit != null ? (
-            <p>
-              {digitalMeta.downloadLimit} download{digitalMeta.downloadLimit > 1 ? "s" : ""} included
-            </p>
-          ) : null}
-          {digitalMeta.licenceType ? (
-            <p>
-              {digitalMeta.licenceType === "PERSONAL"
-                ? "Personal use licence"
-                : digitalMeta.licenceType === "COMMERCIAL"
-                  ? "Commercial use licence"
-                  : "Extended commercial licence"}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-
-      {/* 7 Save */}
-      <div className="mb-6 w-full">
-        <WishlistButton productId={productId} initialWishlisted={initialWishlisted} variant="outline" />
-      </div>
-
-      {/* 8 Trust */}
-      <div className="mb-6 rounded-2xl border border-zinc-100 bg-white/75 p-4 shadow-sm">
-        <ProductTrustSignals
-          allowPickup={Boolean(allowPickup) && !isDigital}
-          allowDelivery={Boolean(allowDelivery) && !isDigital}
-          deliveryFeeSuffix={allowDelivery && !isDigital ? deliveryFeeSuffix ?? null : null}
-        />
-      </div>
-
-      {/* 9 Sold by */}
-      <div className="mb-4 border-t border-sky-100 pt-6">
-        <p className="mb-3 font-sans text-xs font-semibold uppercase tracking-wide text-zinc-500">Sold by</p>
-        <div className="mb-4 flex gap-3">
-          {store.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={store.logoUrl}
-              alt=""
-              className="size-11 shrink-0 rounded-2xl border border-white object-cover shadow-md ring-1 ring-sky-100"
-            />
-          ) : (
-            <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-white bg-gradient-to-br from-sky-100 to-orange-100 text-sm font-black text-[#D4450A] shadow-md ring-1 ring-sky-100">
-              {store.name[0]?.toUpperCase() ?? "?"}
-            </div>
-          )}
-          <div className="min-w-0">
-            <p className="font-sans text-base font-semibold text-zinc-900">{store.name}</p>
-            <p className="mt-0.5 font-sans text-[13px] text-zinc-500">{storeRegionLabel}</p>
-          </div>
-        </div>
-      </div>
-
-      <Link
-        href={`/store/${store.slug}`}
-        className="flex h-12 w-full min-w-0 items-center justify-between rounded-2xl border border-sky-100 bg-white px-4 font-sans text-sm font-black text-zinc-900 shadow-sm transition-all hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md"
-      >
-        Visit store
-        <ChevronRight className="size-4 shrink-0 text-zinc-500" strokeWidth={2} aria-hidden />
-      </Link>
+  return <div id="product-options" className={styles.buyBox}>
+    <div className={styles.priceRow} aria-live="polite">
+      <strong>{priceLabel}</strong>
+      {discount != null && <><del>{formatTTDPrice(compareAtPrice!)}</del><span>Save {discount}%</span></>}
     </div>
-  );
+    <p className={styles.stock} data-unavailable={!canPurchase} aria-live="polite"><span />{stockLabel}</p>
+    {hasVariants && variants.length > 0 && <VariantSelector variants={variants} onVariantChange={variant => { setActiveVariant(variant); setQty(1); onVariantChange?.(variant); }} />}
+    {activeVariant?.name && <p className={styles.productCode}>Selected option <strong>{activeVariant.name}</strong></p>}
+    {(activeVariant?.sku || sku) && <p className={styles.productCode}>Product code <strong>{activeVariant?.sku || sku}</strong></p>}
+    <div className={styles.purchaseRow}>
+      <div className={styles.quantity}><label htmlFor="product-quantity">Quantity</label><div>
+        <button type="button" aria-label="Decrease quantity" disabled={!canPurchase || quantity <= 1} onClick={() => setQty(quantity - 1)}><Minus size={16} aria-hidden /></button>
+        <input id="product-quantity" type="number" inputMode="numeric" min={1} max={Math.max(1, cap)} value={quantity} disabled={!canPurchase} onChange={event => setQty(Math.min(Math.max(1, Number.parseInt(event.target.value, 10) || 1), Math.max(1, cap)))} />
+        <button type="button" aria-label="Increase quantity" disabled={!canPurchase || quantity >= cap} onClick={() => setQty(quantity + 1)}><Plus size={16} aria-hidden /></button>
+      </div></div>
+      <div className={styles.cartAction}>{cartButton}</div>
+    </div>
+    <div className={styles.saveRow}>{preview ? <button disabled><Heart size={17} aria-hidden />Save for later</button> : <WishlistButton productId={productId} initialWishlisted={initialWishlisted} variant="outline" />}<span><ShieldCheck size={15} aria-hidden />Secure checkout</span></div>
+    {mobileStickyBar && <div className={styles.mobilePurchase}><div><small>{needsOptions ? "Choose your options" : quantity > 1 ? `${quantity} selected · price each` : "Your selection"}</small><strong>{minPrice !== maxPrice ? `From ${formatTTDPrice(minPrice)}` : formatTTDPrice(minPrice)}</strong></div>{needsOptions ? <a href="#product-options">Choose options<ArrowUpRight size={17} aria-hidden /></a> : <div className={`${styles.cartAction} ${styles.mobileCart}`}>{cartButton}</div>}</div>}
+  </div>;
 }

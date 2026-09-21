@@ -1,0 +1,87 @@
+.card {
+  --tropic: #45d5bb;
+  --tropic-light: #bcf5dd;
+  --tropic-ink: #164f46;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid #ffffff60;
+  border-radius: 26px;
+  background: var(--tropic);
+  color: #122f40;
+  box-shadow: 0 10px 30px #061b3026;
+  isolation: isolate;
+  transition: transform .3s ease, box-shadow .3s ease;
+}
+.card[data-store-tone="1"] {
+  --tropic: #ffc14e;
+  --tropic-light: #ffe4a5;
+  --tropic-ink: #674415;
+}
+.card[data-store-tone="2"] {
+  --tropic: #ff8f99;
+  --tropic-light: #ffd3c1;
+  --tropic-ink: #733649;
+}
+.card:hover, .card:focus-visible { transform: translateY(-8px); box-shadow: 0 22px 45px #061b304a; }
+.card:focus-visible { outline: 3px solid #ffd180; outline-offset: 6px; }
+.cover { position: relative; margin: 9px 9px 0; aspect-ratio: 2.5; overflow: hidden; border-radius: 18px 18px 0 0; background: #fffaf1; }
+.cover img { width: 100%; height: 100%; object-fit: cover; transition: transform .65s ease; }
+.card[data-store-tone="2"] .cover img { object-position: center 44%; }
+.card:hover .cover img, .card:focus-visible .cover img { transform: scale(1.045); }
+.content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 0 23px 20px;
+  border-radius: 0 0 25px 25px;
+  background: radial-gradient(ellipse at 0 0, var(--tropic-light), transparent 95%), var(--tropic);
+}
+.content::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: 0;
+  bottom: 0;
+  width: 150px;
+  height: 150px;
+  border-radius: 100% 0 25px 0;
+  background: repeating-radial-gradient(circle at 100% 100%, transparent 0 22px, #ffffff30 23px 24px, transparent 25px 45px);
+  pointer-events: none;
+}
+.identity { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-top: -29px; }
+.logo { display: grid; place-items: center; flex: none; width: 76px; height: 76px; padding: 5px; overflow: hidden; border: 1px solid #163b4510; border-radius: 21px; background: #fffefa; box-shadow: 0 7px 15px #123f3820; transform: rotate(-4deg); transition: transform .3s ease; }
+.logo img { width: 100%; height: 100%; object-fit: contain; border-radius: 14px; }
+.card:hover .logo, .card:focus-visible .logo { transform: rotate(0); }
+.region { display: inline-flex; align-items: center; gap: 5px; min-width: 0; margin-bottom: 4px; padding: 6px 9px; border: 1px solid #ffffff60; border-radius: 100px; background: #ffffff45; color: var(--tropic-ink); font-size: 11px; font-weight: 500; line-height: 1.4; }
+.region svg { flex: none; }
+.content h3 { margin-top: 20px; font-size: clamp(21px, 2vw, 28px); font-weight: 750; line-height: 1.15; letter-spacing: -.04em; overflow-wrap: anywhere; }
+.tagline { margin-top: 12px; padding-bottom: 25px; color: var(--tropic-ink); font-size: 14px; line-height: 1.65; overflow-wrap: anywhere; }
+.footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: auto; padding-top: 16px; border-top: 1px solid #173e4329; }
+.localLabel { display: inline-flex; align-items: center; gap: 6px; color: var(--tropic-ink); font-size: 8px; font-weight: 700; letter-spacing: .09em; }
+.localLabel > span { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.action { display: inline-flex; align-items: center; gap: 10px; color: #173747; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.action > span { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--brand-red, #d4450a); color: white; box-shadow: 0 4px 10px #a144191a; transition: background .25s, transform .25s; }
+.card:hover .action > span, .card:focus-visible .action > span { background: #b83a09; transform: rotate(8deg); }
+@media (min-width: 701px) and (max-width: 1000px) {
+  .content { padding-inline: 17px; }
+  .identity { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .region { margin: 0; }
+  .content h3 { margin-top: 16px; }
+}
+@media (max-width: 700px) {
+  .cover { aspect-ratio: 2.4; }
+  .content { padding: 0 22px 21px; }
+  .content h3 { font-size: 27px; }
+  .tagline { font-size: 15px; }
+  .action { font-size: 14px; }
+  .action > span { width: 44px; height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card, .cover img, .logo, .action > span { transition: none; }
+  .card:hover, .card:focus-visible, .card:hover .cover img, .card:focus-visible .cover img,
+  .card:hover .logo, .card:focus-visible .logo, .card:hover .action > span, .card:focus-visible .action > span { transform: none; }
+}

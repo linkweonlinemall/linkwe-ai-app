@@ -2,6 +2,7 @@
 
 import { Info } from "lucide-react";
 import { useState } from "react";
+import { selectProductAttribute, type ProductOption } from "@/lib/product/display";
 
 export type VariantAttribute = {
   name: string;
@@ -9,14 +10,7 @@ export type VariantAttribute = {
   hex?: string;
 };
 
-type Variant = {
-  id: string;
-  name: string;
-  attributes: VariantAttribute[];
-  price: number | null;
-  stock: number | null;
-  images: string[];
-};
+type Variant = ProductOption;
 
 type Props = {
   variants: Variant[];
@@ -45,6 +39,7 @@ function chooseMessage(attributeNames: string[], selected: Record<string, string
 }
 
 export default function VariantSelector({ variants, onVariantChange }: Props) {
+  const [chosenId, setChosenId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Record<string, string>>({});
 
   const attributeNames = Array.from(new Set(variants.flatMap((v) => v.attributes.map((a) => a.name))));
@@ -62,35 +57,16 @@ export default function VariantSelector({ variants, onVariantChange }: Props) {
     return values;
   }
 
-  function findVariant(selections: Record<string, string>): Variant | null {
-    if (Object.keys(selections).length < attributeNames.length) return null;
-    return variants.find((v) => v.attributes.every((a) => selections[a.name] === a.value)) ?? null;
-  }
-
-  function isValueAvailable(attrName: string, value: string): boolean {
-    const testSelections = { ...selected, [attrName]: value };
-    return variants.some(
-      (v) =>
-        Object.entries(testSelections).every(([name, val]) => {
-          if (name === attrName) return true;
-          const attr = v.attributes.find((a) => a.name === name);
-          return attr?.value === val;
-        }) && v.attributes.find((a) => a.name === attrName)?.value === value,
-    );
-  }
-
   function handleSelect(attrName: string, value: string) {
-    const newSelected = { ...selected, [attrName]: value };
-    setSelected(newSelected);
-    const variant = findVariant(newSelected);
-    const allSel = attributeNames.every((n) => newSelected[n] !== undefined);
-    onVariantChange?.(variant, allSel);
+    const next = selectProductAttribute(variants, selected, attrName, value);
+    setSelected(next.selected);
+    onVariantChange?.(next.variant, next.complete);
   }
 
   const selectionComplete =
     attributeNames.length === 0 || attributeNames.every((n) => Boolean(selected[n]));
 
-  if (attributeNames.length === 0) return null;
+  if (attributeNames.length === 0) return <div className="mb-5 flex flex-wrap gap-2" aria-label="Product options">{variants.map(variant => <button key={variant.id} type="button" aria-pressed={chosenId === variant.id} onClick={() => { setChosenId(variant.id); onVariantChange?.(variant, true); }} className={`min-h-11 rounded-xl border px-4 text-sm ${chosenId === variant.id ? "border-[#D4450A] bg-[#D4450A] text-white" : "border-stone-200 bg-white text-zinc-800"}`}>{variant.name}</button>)}</div>;
 
   return (
     <div className={`w-full font-sans ${selectionComplete ? "mb-6" : ""}`}>
@@ -102,21 +78,18 @@ export default function VariantSelector({ variants, onVariantChange }: Props) {
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">{attributeLabel(attrName)}</p>
             <div className="mb-3 flex flex-wrap gap-2">
               {values.map((attr) => {
-                const available = isValueAvailable(attrName, attr.value);
                 const isSelected = selected[attrName] === attr.value;
                 const swatchBg = colour && attr.hex ? attr.hex : undefined;
                 return (
                   <button
                     key={attr.value}
                     type="button"
-                    disabled={!available}
+                    aria-pressed={isSelected}
                     onClick={() => handleSelect(attrName, attr.value)}
                     className={`relative inline-flex min-h-11 items-center gap-2 overflow-hidden rounded-2xl border px-4 py-2 text-sm font-bold transition-all ${
                       isSelected
-                        ? "border-[#D4450A] bg-gradient-to-r from-[#D4450A] to-[#F06A2A] text-white shadow-[0_9px_24px_rgba(212,69,10,.22)]"
-                        : available
-                          ? "border-sky-100 bg-white text-zinc-800 shadow-sm hover:-translate-y-0.5 hover:border-sky-300 hover:shadow-md"
-                          : "cursor-not-allowed border-zinc-100 bg-zinc-50 text-zinc-300"
+                        ? "border-[#D4450A] bg-[#D4450A] text-white shadow-[0_9px_24px_rgba(212,69,10,.22)]"
+                        : "border-stone-200 bg-white text-zinc-800 shadow-sm hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md"
                     }`}
                   >
                     {colour && swatchBg ? (
@@ -133,11 +106,6 @@ export default function VariantSelector({ variants, onVariantChange }: Props) {
                       />
                     ) : null}
                     <span>{attr.value}</span>
-                    {!available ? (
-                      <span className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden rounded-full">
-                        <span className="absolute h-px w-full rotate-[-12deg] bg-zinc-300" />
-                      </span>
-                    ) : null}
                   </button>
                 );
               })}
