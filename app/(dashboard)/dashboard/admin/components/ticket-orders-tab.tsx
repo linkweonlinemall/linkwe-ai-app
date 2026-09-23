@@ -40,7 +40,8 @@ function refundPolicyGuidance(event: TicketOrder["event"]): {
     return {
       label: "No refunds (event policy)",
       pastCutoff: true,
-      detail: "Event policy says no refunds — admin may still refund at discretion.",
+      detail:
+        "Event policy says no refunds — admin may still refund at discretion.",
     };
   }
 
@@ -88,6 +89,9 @@ function ticketStatusBadge(status: string) {
 export default function TicketOrdersTab() {
   const [orders, setOrders] = useState<TicketOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -101,14 +105,37 @@ export default function TicketOrdersTab() {
   const [refundError, setRefundError] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoading(true);
-    getAdminTicketOrders({ search: search || undefined })
-      .then((data) => {
-        setOrders(data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [refreshKey, search]);
+    let current = true;
+    const timer = setTimeout(
+      () => {
+        setLoading(true);
+        setLoadError("");
+        getAdminTicketOrders({
+          search: search || undefined,
+          limit: 26,
+          offset: (page - 1) * 25,
+        })
+          .then((data) => {
+            if (current) {
+              setOrders(data.slice(0, 25));
+              setHasMore(data.length > 25);
+            }
+          })
+          .catch(() => {
+            if (current)
+              setLoadError("Ticket orders could not load. Please try again.");
+          })
+          .finally(() => {
+            if (current) setLoading(false);
+          });
+      },
+      search ? 250 : 0,
+    );
+    return () => {
+      current = false;
+      clearTimeout(timer);
+    };
+  }, [refreshKey, search, page]);
 
   const filtered = useMemo(() => orders, [orders]);
 
@@ -134,7 +161,9 @@ export default function TicketOrdersTab() {
     const amountMinor = Math.round(parsed * 100);
     const maxMinor = ticketPaidMinor(refundTarget.ticket);
     if (amountMinor > maxMinor) {
-      setRefundError(`Amount cannot exceed ticket price (${formatTTD(maxMinor)}).`);
+      setRefundError(
+        `Amount cannot exceed ticket price (${formatTTD(maxMinor)}).`,
+      );
       return;
     }
 
@@ -152,13 +181,16 @@ export default function TicketOrdersTab() {
     setRefreshKey((k) => k + 1);
   }
 
-  const policy = refundTarget ? refundPolicyGuidance(refundTarget.order.event) : null;
+  const policy = refundTarget
+    ? refundPolicyGuidance(refundTarget.order.event)
+    : null;
 
   return (
     <div>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold text-zinc-900">Ticket orders</h1>
+          <p className="admin-eyebrow">Event operations</p>
+          <h1 className="admin-title">Ticket orders</h1>
           <p className="mt-1 text-sm text-zinc-500">
             Paid event ticket orders — issue full-order refunds through WiPay.
           </p>
@@ -167,20 +199,60 @@ export default function TicketOrdersTab() {
           type="search"
           placeholder="Search ref, buyer, event…"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
           className="w-full max-w-xs rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#D4450A]/30 sm:ml-auto"
         />
       </div>
 
+      {loadError && (
+        <div className="admin-alert" role="alert">
+          {loadError}
+          <button
+            className="admin-button ml-2"
+            onClick={() => setRefreshKey((k) => k + 1)}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+      <nav
+        aria-label="Ticket order pages"
+        className="mb-5 flex flex-wrap items-center justify-between gap-3"
+      >
+        <p className="admin-muted">
+          Page {page} · Search covers all paid ticket orders
+        </p>
+        <div className="flex gap-2">
+          <button
+            className="admin-button"
+            disabled={loading || page <= 1}
+            onClick={() => setPage((p) => p - 1)}
+          >
+            Previous
+          </button>
+          <button
+            className="admin-button"
+            disabled={loading || !hasMore}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next
+          </button>
+        </div>
+      </nav>
       {loading ? (
         <p className="text-sm text-zinc-500">Loading ticket orders…</p>
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-zinc-200 bg-white p-12 text-center shadow-sm">
-          <p className="font-semibold text-zinc-900">No paid ticket orders found</p>
+          <p className="font-semibold text-zinc-900">
+            No paid ticket orders found
+          </p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
-          <table className="w-full text-left text-sm">
+          <table className="admin-responsive-table w-full text-left text-sm">
             <thead className="border-b border-zinc-100 bg-zinc-50/80 text-xs font-semibold uppercase tracking-wide text-zinc-500">
               <tr>
                 <th className="px-4 py-3">Reference</th>
@@ -194,14 +266,28 @@ export default function TicketOrdersTab() {
             <tbody>
               {filtered.map((order) => {
                 const expanded = expandedId === order.id;
-                const refundedCount = order.tickets.filter((t) => t.status === "REFUNDED").length;
+                const refundedCount = order.tickets.filter(
+                  (t) => t.status === "REFUNDED",
+                ).length;
                 return (
                   <Fragment key={order.id}>
                     <tr
                       className="cursor-pointer border-b border-zinc-50 transition-colors hover:bg-zinc-50/50"
+                      tabIndex={0}
+                      aria-expanded={expanded}
+                      aria-label={`Order ${order.reference}`}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setExpandedId(expanded ? null : order.id);
+                        }
+                      }}
                       onClick={() => setExpandedId(expanded ? null : order.id)}
                     >
-                      <td className="px-4 py-3 font-mono text-xs font-semibold text-zinc-800">
+                      <td
+                        data-label="Reference"
+                        className="px-4 py-3 font-mono text-xs font-semibold text-zinc-800"
+                      >
                         {order.reference}
                         {refundedCount > 0 ? (
                           <span className="ml-2 text-amber-600">
@@ -209,27 +295,51 @@ export default function TicketOrdersTab() {
                           </span>
                         ) : null}
                       </td>
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-zinc-900">{order.user.fullName}</p>
-                        <p className="text-xs text-zinc-500">{order.user.email}</p>
+                      <td data-label="Buyer" className="px-4 py-3">
+                        <p className="font-medium text-zinc-900">
+                          {order.user.fullName}
+                        </p>
+                        <p className="text-xs text-zinc-500">
+                          {order.user.email}
+                        </p>
                       </td>
-                      <td className="px-4 py-3 text-zinc-700">{order.event.title}</td>
-                      <td className="px-4 py-3 font-semibold text-zinc-900">
+                      <td
+                        data-label="Event"
+                        className="px-4 py-3 text-zinc-700"
+                      >
+                        {order.event.title}
+                      </td>
+                      <td
+                        data-label="Total"
+                        className="px-4 py-3 font-semibold text-zinc-900"
+                      >
                         {formatTTD(order.total)}
                       </td>
-                      <td className="px-4 py-3 text-zinc-500">
+                      <td
+                        data-label="Placed"
+                        className="px-4 py-3 text-zinc-500"
+                      >
                         {relativeTime(order.createdAt)}
                       </td>
-                      <td className="px-4 py-3 text-zinc-400">{expanded ? "▾" : "▸"}</td>
+                      <td className="px-4 py-3 text-orange-700">
+                        <span className="mr-2 md:hidden">
+                          {expanded ? "Hide tickets" : "View tickets"}
+                        </span>
+                        {expanded ? "▾" : "▸"}
+                      </td>
                     </tr>
                     {expanded ? (
-                      <tr key={`${order.id}-detail`} className="border-b border-zinc-100 bg-zinc-50/40">
+                      <tr
+                        key={`${order.id}-detail`}
+                        className="border-b border-zinc-100 bg-zinc-50/40"
+                      >
                         <td colSpan={6} className="px-4 py-4">
                           <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                             Tickets in this order
                             {order.earningsReleased ? (
                               <span className="ml-2 font-normal normal-case text-amber-700">
-                                · Vendor earnings released (refunds claw back net share)
+                                · Vendor earnings released (refunds claw back
+                                net share)
                               </span>
                             ) : (
                               <span className="ml-2 font-normal normal-case text-zinc-500">
@@ -240,7 +350,8 @@ export default function TicketOrdersTab() {
                           <ul className="space-y-2">
                             {order.tickets.map((ticket) => {
                               const canRefund =
-                                ticket.status === "VALID" || ticket.status === "USED";
+                                ticket.status === "VALID" ||
+                                ticket.status === "USED";
                               return (
                                 <li
                                   key={ticket.id}
@@ -251,15 +362,23 @@ export default function TicketOrdersTab() {
                                       {ticket.ticketNumber}
                                     </p>
                                     <p className="font-semibold text-zinc-900">
-                                      {ticket.ticketType.name} · {formatTTD(ticketPaidMinor(ticket))}
+                                      {ticket.ticketType.name} ·{" "}
+                                      {formatTTD(ticketPaidMinor(ticket))}
                                     </p>
                                     <p className="text-xs text-zinc-500">
                                       {ticket.holderName} · {ticket.holderEmail}
                                     </p>
-                                    {ticket.status === "REFUNDED" && ticket.refundedAt ? (
+                                    {ticket.status === "REFUNDED" &&
+                                    ticket.refundedAt ? (
                                       <p className="mt-1 text-xs text-amber-800">
-                                        Refunded {formatTTD(ticket.refundAmountMinor ?? 0)} on{" "}
-                                        {new Date(ticket.refundedAt).toLocaleString("en-TT", {
+                                        Refunded{" "}
+                                        {formatTTD(
+                                          ticket.refundAmountMinor ?? 0,
+                                        )}{" "}
+                                        on{" "}
+                                        {new Date(
+                                          ticket.refundedAt,
+                                        ).toLocaleString("en-TT", {
                                           dateStyle: "medium",
                                           timeStyle: "short",
                                         })}
@@ -297,10 +416,12 @@ export default function TicketOrdersTab() {
       )}
 
       {refundTarget && policy ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm">
+          <div className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
             <h3 className="text-lg font-bold text-zinc-900">Refund ticket</h3>
-            <p className="mt-1 font-mono text-xs text-zinc-500">{refundTarget.ticket.ticketNumber}</p>
+            <p className="mt-1 font-mono text-xs text-zinc-500">
+              {refundTarget.ticket.ticketNumber}
+            </p>
             <p className="mt-2 text-sm text-zinc-700">
               {refundTarget.ticket.ticketType.name} — max{" "}
               {formatTTD(ticketPaidMinor(refundTarget.ticket))}
@@ -331,7 +452,9 @@ export default function TicketOrdersTab() {
             </label>
 
             {refundError ? (
-              <p className="mt-3 text-sm font-medium text-red-600">{refundError}</p>
+              <p className="mt-3 text-sm font-medium text-red-600">
+                {refundError}
+              </p>
             ) : null}
 
             <div className="mt-6 flex gap-3">

@@ -45,7 +45,7 @@ export default async function AdminProductsPage({
   const pageRaw = parseInt(pickString(sp, "page") ?? "1", 10);
 
   const status =
-    statusRaw === "active" || statusRaw === "draft" || statusRaw === "all"
+    statusRaw === "active" || statusRaw === "draft" || statusRaw === "archived" || statusRaw === "all"
       ? statusRaw
       : "all";
 

@@ -256,11 +256,13 @@ export async function getAdminOrders(filters?: {
   status?: MainOrderStatus;
   search?: string;
   limit?: number;
+  offset?: number;
 }) {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/");
 
-  const limit = filters?.limit ?? 50;
+  const limit = Math.min(100,Math.max(1,Math.floor(filters?.limit ?? 50)));
+  const offset = Math.max(0,Math.floor(filters?.offset ?? 0));
 
   return prisma.mainOrder.findMany({
     where: {
@@ -270,7 +272,8 @@ export async function getAdminOrders(filters?: {
       ...(filters?.search
         ? {
             OR: [
-              { referenceNumber: { contains: filters.search, mode: "insensitive" } },
+              { id: filters.search },
+              { referenceNumber: { contains: filters.search.slice(0,100), mode: "insensitive" } },
               { buyer: { fullName: { contains: filters.search, mode: "insensitive" } } },
               { buyer: { email: { contains: filters.search, mode: "insensitive" } } },
             ],
@@ -320,6 +323,7 @@ export async function getAdminOrders(filters?: {
     },
     orderBy: { createdAt: "desc" },
     take: limit,
+    skip: offset,
   });
 }
 

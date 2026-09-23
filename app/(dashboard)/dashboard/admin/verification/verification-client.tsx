@@ -5,8 +5,11 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { adminVerifyId } from "@/app/actions/vendor-verification";
-import { colors, tw } from "@/lib/design-system";
-import { getVendorReadiness, type VendorReadinessCheck } from "@/lib/vendor/readiness";
+import { tw } from "@/lib/design-system";
+import {
+  getVendorReadiness,
+  type VendorReadinessCheck,
+} from "@/lib/vendor/readiness";
 
 export type VerificationVendor = {
   id: string;
@@ -47,9 +50,22 @@ type Props = {
 
 // ── Display helpers ───────────────────────────────────────────────────────────
 
-const STORE_STATUS_CONFIG: Record<string, { label: string; bg: string; color: string; border: string }> = {
-  ACTIVE: { label: "Active", bg: "#F0FDF4", color: "#1B8C5A", border: "#BBF7D0" },
-  PENDING_APPROVAL: { label: "Pending approval", bg: "#FFFBEB", color: "#92400E", border: "#FCD34D" },
+const STORE_STATUS_CONFIG: Record<
+  string,
+  { label: string; bg: string; color: string; border: string }
+> = {
+  ACTIVE: {
+    label: "Active",
+    bg: "#F0FDF4",
+    color: "#1B8C5A",
+    border: "#BBF7D0",
+  },
+  PENDING_APPROVAL: {
+    label: "Pending approval",
+    bg: "#FFFBEB",
+    color: "#92400E",
+    border: "#FCD34D",
+  },
   DRAFT: { label: "Draft", bg: "#F4F4F5", color: "#71717A", border: "#E4E4E7" },
 };
 
@@ -58,21 +74,39 @@ function StoreStatusPill({ status }: { status: string }) {
   return (
     <span
       className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold"
-      style={{ backgroundColor: cfg.bg, color: cfg.color, borderColor: cfg.border }}
+      style={{
+        backgroundColor: cfg.bg,
+        color: cfg.color,
+        borderColor: cfg.border,
+      }}
     >
       {cfg.label}
     </span>
   );
 }
 
-const DAYS_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+const DAYS_ORDER = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
 const DAY_SHORT: Record<string, string> = {
-  monday: "Mon", tuesday: "Tue", wednesday: "Wed",
-  thursday: "Thu", friday: "Fri", saturday: "Sat", sunday: "Sun",
+  monday: "Mon",
+  tuesday: "Tue",
+  wednesday: "Wed",
+  thursday: "Thu",
+  friday: "Fri",
+  saturday: "Sat",
+  sunday: "Sun",
 };
 
 function OpeningHours({ hours }: { hours: unknown }) {
-  if (!hours) return <p className="text-xs italic text-zinc-400">No opening hours set</p>;
+  if (!hours)
+    return <p className="text-xs italic text-zinc-400">No opening hours set</p>;
 
   if (typeof hours === "object" && !Array.isArray(hours) && hours !== null) {
     const h = hours as Record<string, unknown>;
@@ -87,9 +121,17 @@ function OpeningHours({ hours }: { hours: unknown }) {
             const close = typeof slot?.close === "string" ? slot.close : null;
             return (
               <div key={day} className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-zinc-600">{DAY_SHORT[day]}</span>
-                <span className={`text-[11px] ${closed ? "text-zinc-300" : "text-zinc-500"}`}>
-                  {closed ? "Closed" : open && close ? `${open}–${close}` : "Open"}
+                <span className="text-[11px] font-medium text-zinc-600">
+                  {DAY_SHORT[day]}
+                </span>
+                <span
+                  className={`text-[11px] ${closed ? "text-zinc-300" : "text-zinc-500"}`}
+                >
+                  {closed
+                    ? "Closed"
+                    : open && close
+                      ? `${open}–${close}`
+                      : "Open"}
                 </span>
               </div>
             );
@@ -121,7 +163,9 @@ function readinessForVendor(vendor: VerificationVendor) {
           accountNumber: vendor.bankDetails.accountNumber,
         }
       : null,
-    store: store ? { logoUrl: store.logoUrl, description: store.description } : null,
+    store: store
+      ? { logoUrl: store.logoUrl, description: store.description }
+      : null,
   });
 }
 
@@ -155,7 +199,9 @@ function ReadinessStrip({
   readiness: ReturnType<typeof getVendorReadiness>;
 }) {
   return (
-    <div className={`mt-3 rounded-xl border border-zinc-200 ${tw.bgPage} px-3 py-2.5`}>
+    <div
+      className={`mt-3 rounded-xl border border-zinc-200 ${tw.bgPage} px-3 py-2.5`}
+    >
       <p className={`text-xs font-semibold ${tw.textPrimary}`}>
         {readiness.pass} of {readiness.total} ready
       </p>
@@ -164,7 +210,9 @@ function ReadinessStrip({
           <span
             key={check.id}
             className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-              check.ok ? `${tw.bgSuccessSoft} ${tw.textSuccessSoft}` : "bg-amber-50 text-[#E8820C]"
+              check.ok
+                ? `${tw.bgSuccessSoft} ${tw.textSuccessSoft}`
+                : "bg-amber-50 text-[#E8820C]"
             }`}
           >
             <span aria-hidden>{check.ok ? "✓" : "○"}</span>
@@ -207,8 +255,11 @@ export default function VerificationClient({ pending, reviewed }: Props) {
       : pending;
   const readyCount = pending.filter((v) => readinessForVendor(v).ready).length;
 
-  const selectedVendor = filteredPending.find((v) => v.id === selectedVendorId) ?? null;
-  const selectedReadiness = selectedVendor ? readinessForVendor(selectedVendor) : null;
+  const selectedVendor =
+    filteredPending.find((v) => v.id === selectedVendorId) ?? null;
+  const selectedReadiness = selectedVendor
+    ? readinessForVendor(selectedVendor)
+    : null;
   // Convenience: first (and only) store for the selected vendor
   const store = selectedVendor?.storesOwned[0] ?? null;
 
@@ -217,18 +268,15 @@ export default function VerificationClient({ pending, reviewed }: Props) {
   // into dossier mode; on mobile the user explicitly taps a row to drill down.
   const firstId = filteredPending[0]?.id ?? null;
   const hasSelection = selectedVendor !== null;
-  useEffect(() => {
-    if (!hasSelection && firstId) {
-      setSelectedVendorId(firstId);
-      setRevealAccountNumber(false);
-      setZoomUrl(null);
-      setFullProfileOpen(false);
-      // intentionally NO setMobileView("dossier") — mobile stays on the queue
-    } else if (!hasSelection && !firstId) {
-      // All vendors processed — snap mobile back to queue (nothing left to show)
-      setMobileView("queue");
-    }
-  }, [firstId, hasSelection]);
+  // Reset selection before painting a different vendor's evidence.
+  if (!hasSelection && firstId && selectedVendorId !== firstId) {
+    setSelectedVendorId(firstId);
+    setRevealAccountNumber(false);
+    setZoomUrl(null);
+    setFullProfileOpen(false);
+  } else if (!hasSelection && !firstId && mobileView !== "queue") {
+    setMobileView("queue");
+  }
 
   // Zoom overlay: ESC to close
   useEffect(() => {
@@ -243,17 +291,23 @@ export default function VerificationClient({ pending, reviewed }: Props) {
   // Zoom overlay: prevent body scroll while open
   useEffect(() => {
     document.body.style.overflow = zoomUrl ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [zoomUrl]);
 
   // ── existing logic — UNCHANGED ────────────────────────────────────
   function toggleSelect(id: string) {
-    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
   }
 
   function toggleAll() {
     setSelected((prev) =>
-      prev.length === filteredPending.length ? [] : filteredPending.map((v) => v.id),
+      prev.length === filteredPending.length
+        ? []
+        : filteredPending.map((v) => v.id),
     );
   }
 
@@ -262,7 +316,9 @@ export default function VerificationClient({ pending, reviewed }: Props) {
 
     if (approve) {
       const selectedVendors = pending.filter((v) => selected.includes(v.id));
-      const notReady = selectedVendors.filter((v) => !readinessForVendor(v).ready);
+      const notReady = selectedVendors.filter(
+        (v) => !readinessForVendor(v).ready,
+      );
       if (notReady.length > 0) {
         const lines = notReady.map((v) => {
           const missing = readinessForVendor(v)
@@ -296,7 +352,9 @@ export default function VerificationClient({ pending, reviewed }: Props) {
       if (vendor) {
         const readiness = readinessForVendor(vendor);
         if (!readiness.ready) {
-          const missing = readiness.checks.filter((c) => !c.ok).map((c) => c.label);
+          const missing = readiness.checks
+            .filter((c) => !c.ok)
+            .map((c) => c.label);
           window.alert(`Approval is blocked. Missing: ${missing.join(", ")}.`);
           return;
         }
@@ -353,7 +411,9 @@ export default function VerificationClient({ pending, reviewed }: Props) {
       ]),
     ];
     const csv = rows
-      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","),
+      )
       .join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -510,16 +570,24 @@ export default function VerificationClient({ pending, reviewed }: Props) {
           />
           <div
             className={`flex shrink-0 items-center justify-center rounded-full font-bold ${tw.textScarlet} ${tw.bgScarletMuted10}`}
-            style={{ width: compact ? 32 : 36, height: compact ? 32 : 36, fontSize: compact ? 10 : 11 }}
+            style={{
+              width: compact ? 32 : 36,
+              height: compact ? 32 : 36,
+              fontSize: compact ? 10 : 11,
+            }}
           >
             {vendorInitials(vendor.fullName)}
           </div>
           <div className="min-w-0 flex-1">
-            <p className={`truncate font-semibold ${tw.textPrimary} ${compact ? "text-xs" : "text-sm"}`}>
+            <p
+              className={`truncate font-semibold ${tw.textPrimary} ${compact ? "text-xs" : "text-sm"}`}
+            >
               {vendor.fullName}
             </p>
             {vendor.storesOwned[0] ? (
-              <p className="truncate text-[10px] text-zinc-500">{vendor.storesOwned[0].name}</p>
+              <p className="truncate text-[10px] text-zinc-500">
+                {vendor.storesOwned[0].name}
+              </p>
             ) : null}
             <p className="mt-0.5 text-[10px] text-zinc-400">
               {new Date(vendor.createdAt).toLocaleDateString("en-TT", {
@@ -531,7 +599,9 @@ export default function VerificationClient({ pending, reviewed }: Props) {
         </div>
         <span
           className={`self-start rounded-full px-2 py-0.5 text-[9px] font-bold ${
-            readiness.ready ? `${tw.bgSuccessSoft} ${tw.textSuccessSoft}` : "bg-amber-50 text-[#E8820C]"
+            readiness.ready
+              ? `${tw.bgSuccessSoft} ${tw.textSuccessSoft}`
+              : "bg-amber-50 text-[#E8820C]"
           }`}
         >
           {readiness.pass}/{readiness.total}
@@ -545,9 +615,11 @@ export default function VerificationClient({ pending, reviewed }: Props) {
       {/* ── Top bar: title + export actions ── */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-zinc-900">ID Verification</h2>
+          <p className="admin-eyebrow">Trust & readiness</p>
+          <h1 className="admin-title">Vendor verification</h1>
           <p className="mt-0.5 text-sm text-zinc-500">
-            {pending.length} pending · {readyCount} evidence-complete for manual review
+            {pending.length} pending · {readyCount} evidence-complete for manual
+            review
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -556,7 +628,14 @@ export default function VerificationClient({ pending, reviewed }: Props) {
             className="flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
             onClick={exportCSV}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
@@ -568,7 +647,14 @@ export default function VerificationClient({ pending, reviewed }: Props) {
             className="flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
             onClick={exportPDF}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
               <polyline points="14 2 14 8 20 8" />
             </svg>
@@ -580,8 +666,12 @@ export default function VerificationClient({ pending, reviewed }: Props) {
       {/* ── Queue + Review two-column layout ── */}
       {pending.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-zinc-200 bg-white p-12 text-center shadow-sm">
-          <p className="text-base font-semibold text-zinc-900">No pending verifications</p>
-          <p className="mt-1 text-sm text-zinc-500">New vendor ID submissions will appear here.</p>
+          <p className="text-base font-semibold text-zinc-900">
+            No pending verifications
+          </p>
+          <p className="mt-1 text-sm text-zinc-500">
+            New vendor ID submissions will appear here.
+          </p>
         </div>
       ) : (
         <div
@@ -591,7 +681,9 @@ export default function VerificationClient({ pending, reviewed }: Props) {
           {/* ── Left queue (~220px) ── */}
           <div
             className={`shrink-0 flex-col border-zinc-200 md:flex md:w-[220px] md:border-r ${
-              mobileView === "dossier" ? "hidden" : "flex w-full border-b md:border-b-0"
+              mobileView === "dossier"
+                ? "hidden"
+                : "flex w-full border-b md:border-b-0"
             }`}
           >
             {/* Filter tabs */}
@@ -601,7 +693,9 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                   type="button"
                   onClick={() => setFilter("eligible")}
                   className={`flex-1 rounded-lg px-2 py-1.5 text-[11px] font-semibold transition-colors ${
-                    filter === "eligible" ? `${tw.bgScarlet} text-white` : "text-zinc-500 hover:bg-zinc-100"
+                    filter === "eligible"
+                      ? `${tw.bgScarlet} text-white`
+                      : "text-zinc-500 hover:bg-zinc-100"
                   }`}
                 >
                   Evidence complete ({readyCount})
@@ -610,7 +704,9 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                   type="button"
                   onClick={() => setFilter("all")}
                   className={`flex-1 rounded-lg px-2 py-1.5 text-[11px] font-semibold transition-colors ${
-                    filter === "all" ? `${tw.bgScarlet} text-white` : "text-zinc-500 hover:bg-zinc-100"
+                    filter === "all"
+                      ? `${tw.bgScarlet} text-white`
+                      : "text-zinc-500 hover:bg-zinc-100"
                   }`}
                 >
                   All ({pending.length})
@@ -621,7 +717,9 @@ export default function VerificationClient({ pending, reviewed }: Props) {
             {/* Mobile: horizontal scroll strip */}
             <div className="flex gap-2 overflow-x-auto p-3 scrollbar-hide md:hidden">
               {filteredPending.length === 0 ? (
-                <p className="text-[11px] text-zinc-400">No vendors match this filter</p>
+                <p className="text-[11px] text-zinc-400">
+                  No vendors match this filter
+                </p>
               ) : (
                 filteredPending.map((vendor) => renderQueueCard(vendor, true))
               )}
@@ -630,7 +728,9 @@ export default function VerificationClient({ pending, reviewed }: Props) {
             {/* Desktop: vertical card list */}
             <div className="hidden min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2 md:flex">
               {filteredPending.length === 0 ? (
-                <p className="p-2 text-center text-[11px] text-zinc-400">No vendors match this filter</p>
+                <p className="p-2 text-center text-[11px] text-zinc-400">
+                  No vendors match this filter
+                </p>
               ) : (
                 filteredPending.map((vendor) => renderQueueCard(vendor))
               )}
@@ -641,11 +741,16 @@ export default function VerificationClient({ pending, reviewed }: Props) {
               <label className="flex cursor-pointer items-center gap-2 text-[11px] text-zinc-500">
                 <input
                   type="checkbox"
-                  checked={selected.length === filteredPending.length && filteredPending.length > 0}
+                  checked={
+                    selected.length === filteredPending.length &&
+                    filteredPending.length > 0
+                  }
                   onChange={toggleAll}
                   className="rounded"
                 />
-                {selected.length > 0 ? `${selected.length} selected` : "Select all"}
+                {selected.length > 0
+                  ? `${selected.length} selected`
+                  : "Select all"}
               </label>
               {selected.length > 0 ? (
                 <div className="mt-2 flex gap-1.5">
@@ -685,7 +790,15 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                     className={`mb-3 flex items-center gap-1.5 text-sm font-semibold ${tw.textScarlet} md:hidden`}
                     onClick={() => setMobileView("queue")}
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      aria-hidden
+                    >
                       <polyline points="15 18 9 12 15 6" />
                     </svg>
                     Back to queue
@@ -699,7 +812,9 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className={`text-base font-bold ${tw.textPrimary}`}>{selectedVendor.fullName}</h3>
+                        <h3 className={`text-base font-bold ${tw.textPrimary}`}>
+                          {selectedVendor.fullName}
+                        </h3>
                         <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-[#E8820C]">
                           Pending
                         </span>
@@ -712,7 +827,9 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                       <button
                         type="button"
                         disabled={loading}
-                        onClick={() => void handleSingle(selectedVendor.id, false)}
+                        onClick={() =>
+                          void handleSingle(selectedVendor.id, false)
+                        }
                         className="min-h-[44px] flex-1 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50 sm:flex-none sm:min-h-0"
                       >
                         Reject
@@ -720,7 +837,9 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                       <button
                         type="button"
                         disabled={loading}
-                        onClick={() => void handleSingle(selectedVendor.id, true)}
+                        onClick={() =>
+                          void handleSingle(selectedVendor.id, true)
+                        }
                         className={`min-h-[44px] flex-1 rounded-xl px-4 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50 sm:flex-none sm:min-h-0 ${tw.bgSuccessSolid}`}
                       >
                         ✓ Approve
@@ -731,7 +850,8 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                   <ReadinessStrip readiness={selectedReadiness} />
                   {selectedReadiness.ready ? (
                     <p className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-medium text-sky-800">
-                      Documents complete — manual authenticity and face-match review required before approval.
+                      Documents complete — manual authenticity and face-match
+                      review required before approval.
                     </p>
                   ) : null}
                 </div>
@@ -745,65 +865,87 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                     </p>
                     <div className="grid gap-5 lg:grid-cols-3">
                       <div>
-                        <p className="mb-2 text-[10px] font-medium text-zinc-500">ID document</p>
-                      {selectedVendor.idDocumentUrl ? (
-                        selectedVendor.idDocumentUrl.startsWith("http") ? (
-                          selectedVendor.idDocumentUrl.toLowerCase().endsWith(".pdf") ? (
-                            <a
-                              href={selectedVendor.idDocumentUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium text-[#1A7FB5] transition-colors hover:bg-zinc-100"
-                            >
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                <polyline points="14 2 14 8 20 8" />
-                              </svg>
-                              View PDF document →
-                            </a>
-                          ) : (
-                            <div
-                              className="group relative cursor-zoom-in overflow-hidden rounded-xl border border-zinc-200"
-                              onClick={() => setZoomUrl(selectedVendor.idDocumentUrl ?? null)}
-                            >
-                              {/* eslint-disable-next-line @next/next/no-img-element -- admin reviews arbitrary upload URLs */}
-                              <img
-                                alt="ID Document"
-                                src={selectedVendor.idDocumentUrl}
-                                className="max-h-[380px] w-full object-contain transition-opacity group-hover:opacity-95"
-                              />
-                              <div className="pointer-events-none absolute bottom-3 right-3 opacity-0 transition-opacity group-hover:opacity-100">
-                                <span className="rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-medium text-white backdrop-blur-sm">
-                                  🔍 Click to zoom
-                                </span>
+                        <p className="mb-2 text-[10px] font-medium text-zinc-500">
+                          ID document
+                        </p>
+                        {selectedVendor.idDocumentUrl ? (
+                          selectedVendor.idDocumentUrl.startsWith("http") ? (
+                            selectedVendor.idDocumentUrl
+                              .toLowerCase()
+                              .endsWith(".pdf") ? (
+                              <a
+                                href={selectedVendor.idDocumentUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium text-[#1A7FB5] transition-colors hover:bg-zinc-100"
+                              >
+                                <svg
+                                  width="16"
+                                  height="16"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                  <polyline points="14 2 14 8 20 8" />
+                                </svg>
+                                View PDF document →
+                              </a>
+                            ) : (
+                              <div
+                                className="group relative cursor-zoom-in overflow-hidden rounded-xl border border-zinc-200"
+                                onClick={() =>
+                                  setZoomUrl(
+                                    selectedVendor.idDocumentUrl ?? null,
+                                  )
+                                }
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element -- admin reviews arbitrary upload URLs */}
+                                <img
+                                  alt="ID Document"
+                                  src={selectedVendor.idDocumentUrl}
+                                  className="max-h-[380px] w-full object-contain transition-opacity group-hover:opacity-95"
+                                />
+                                <div className="pointer-events-none absolute bottom-3 right-3 opacity-0 transition-opacity group-hover:opacity-100">
+                                  <span className="rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-medium text-white backdrop-blur-sm">
+                                    🔍 Click to zoom
+                                  </span>
+                                </div>
                               </div>
+                            )
+                          ) : (
+                            <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
+                              <p className="text-xs font-semibold text-amber-700">
+                                ⚠️ Document uploaded with old system — file may
+                                not be accessible.
+                              </p>
+                              <p className="mt-1 text-xs text-amber-600">
+                                Path: {selectedVendor.idDocumentUrl}
+                              </p>
+                              <p className="mt-1 text-xs text-amber-600">
+                                Ask vendor to re-upload their ID document.
+                              </p>
                             </div>
                           )
                         ) : (
-                          <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
-                            <p className="text-xs font-semibold text-amber-700">
-                              ⚠️ Document uploaded with old system — file may not be accessible.
-                            </p>
-                            <p className="mt-1 text-xs text-amber-600">
-                              Path: {selectedVendor.idDocumentUrl}
-                            </p>
-                            <p className="mt-1 text-xs text-amber-600">
-                              Ask vendor to re-upload their ID document.
+                          <div className="rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-8 text-center">
+                            <p className="text-sm text-zinc-400">
+                              No document submitted yet
                             </p>
                           </div>
-                        )
-                      ) : (
-                        <div className="rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-8 text-center">
-                          <p className="text-sm text-zinc-400">No document submitted yet</p>
-                        </div>
-                      )}
+                        )}
                       </div>
                       <div>
-                        <p className="mb-2 text-[10px] font-medium text-zinc-500">Selfie holding ID</p>
+                        <p className="mb-2 text-[10px] font-medium text-zinc-500">
+                          Selfie holding ID
+                        </p>
                         {selectedVendor.selfieWithIdUrl ? (
                           <div
                             className="group relative cursor-zoom-in overflow-hidden rounded-xl border border-zinc-200"
-                            onClick={() => setZoomUrl(selectedVendor.selfieWithIdUrl)}
+                            onClick={() =>
+                              setZoomUrl(selectedVendor.selfieWithIdUrl)
+                            }
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element -- admin reviews vendor KYC uploads */}
                             <img
@@ -819,7 +961,9 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                           </div>
                         ) : (
                           <div className="rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-8 text-center">
-                            <p className="text-sm text-zinc-400">No selfie submitted yet</p>
+                            <p className="text-sm text-zinc-400">
+                              No selfie submitted yet
+                            </p>
                           </div>
                         )}
                       </div>
@@ -830,7 +974,10 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                           </p>
                           <dl className="space-y-2.5">
                             {[
-                              { label: "Full name", value: selectedVendor.fullName },
+                              {
+                                label: "Full name",
+                                value: selectedVendor.fullName,
+                              },
                               { label: "Email", value: selectedVendor.email },
                               {
                                 label: "Phone",
@@ -839,7 +986,9 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                               },
                               {
                                 label: "Registered",
-                                value: new Date(selectedVendor.createdAt).toLocaleDateString("en-TT", {
+                                value: new Date(
+                                  selectedVendor.createdAt,
+                                ).toLocaleDateString("en-TT", {
                                   day: "numeric",
                                   month: "short",
                                   year: "numeric",
@@ -847,7 +996,9 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                               },
                             ].map((row) => (
                               <div key={row.label}>
-                                <dt className="text-[10px] text-zinc-400">{row.label}</dt>
+                                <dt className="text-[10px] text-zinc-400">
+                                  {row.label}
+                                </dt>
                                 <dd
                                   className={`mt-0.5 break-all text-xs ${
                                     row.value
@@ -882,20 +1033,38 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                                 </p>
                                 <button
                                   type="button"
-                                  onClick={() => setRevealAccountNumber((v) => !v)}
+                                  onClick={() =>
+                                    setRevealAccountNumber((v) => !v)
+                                  }
                                   className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-zinc-400 transition-colors hover:bg-zinc-200 hover:text-zinc-700"
                                   aria-label={
-                                    revealAccountNumber ? "Hide account number" : "Reveal account number"
+                                    revealAccountNumber
+                                      ? "Hide account number"
+                                      : "Reveal account number"
                                   }
                                 >
                                   {revealAccountNumber ? (
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                    <svg
+                                      width="11"
+                                      height="11"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2.5"
+                                    >
                                       <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
                                       <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
                                       <line x1="1" y1="1" x2="23" y2="23" />
                                     </svg>
                                   ) : (
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                    <svg
+                                      width="11"
+                                      height="11"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2.5"
+                                    >
                                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                                       <circle cx="12" cy="12" r="3" />
                                     </svg>
@@ -915,7 +1084,9 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                               </p>
                             </>
                           ) : (
-                            <p className="text-xs text-[#E8820C]">No bank details submitted yet</p>
+                            <p className="text-xs text-[#E8820C]">
+                              No bank details submitted yet
+                            </p>
                           )}
                         </div>
                       </div>
@@ -972,7 +1143,9 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                       className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-zinc-50"
                       aria-expanded={fullProfileOpen}
                     >
-                      <span className="text-sm font-semibold text-zinc-800">View full profile</span>
+                      <span className="text-sm font-semibold text-zinc-800">
+                        View full profile
+                      </span>
                       <svg
                         width="16"
                         height="16"
@@ -1005,46 +1178,68 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                               )}
                               <div className="min-w-0">
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <p className="text-sm font-bold text-zinc-900">{store.name}</p>
+                                  <p className="text-sm font-bold text-zinc-900">
+                                    {store.name}
+                                  </p>
                                   <StoreStatusPill status={store.status} />
                                 </div>
-                                <p className="text-xs text-zinc-400">/{store.slug}</p>
+                                <p className="text-xs text-zinc-400">
+                                  /{store.slug}
+                                </p>
                                 {store.tagline ? (
-                                  <p className="mt-1 text-xs italic text-zinc-500">{store.tagline}</p>
+                                  <p className="mt-1 text-xs italic text-zinc-500">
+                                    {store.tagline}
+                                  </p>
                                 ) : (
-                                  <p className="mt-1 text-xs italic text-zinc-300">No tagline</p>
+                                  <p className="mt-1 text-xs italic text-zinc-300">
+                                    No tagline
+                                  </p>
                                 )}
                               </div>
                             </div>
 
                             <div>
-                              <p className="mb-1 text-[10px] font-medium text-zinc-400">Description</p>
+                              <p className="mb-1 text-[10px] font-medium text-zinc-400">
+                                Description
+                              </p>
                               {store.description?.trim() ? (
-                                <p className="text-xs leading-relaxed text-zinc-700">{store.description}</p>
+                                <p className="text-xs leading-relaxed text-zinc-700">
+                                  {store.description}
+                                </p>
                               ) : (
-                                <p className="text-xs italic text-zinc-400">No description</p>
+                                <p className="text-xs italic text-zinc-400">
+                                  No description
+                                </p>
                               )}
                             </div>
 
                             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                               <div>
-                                <p className="mb-1 text-[10px] font-medium text-zinc-400">Category</p>
+                                <p className="mb-1 text-[10px] font-medium text-zinc-400">
+                                  Category
+                                </p>
                                 {store.categoryId ? (
                                   <span className="inline-flex rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-700">
                                     {store.categoryId}
                                   </span>
                                 ) : (
-                                  <p className="text-xs italic text-zinc-400">No category</p>
+                                  <p className="text-xs italic text-zinc-400">
+                                    No category
+                                  </p>
                                 )}
                               </div>
                               <div>
-                                <p className="mb-1 text-[10px] font-medium text-zinc-400">Region</p>
+                                <p className="mb-1 text-[10px] font-medium text-zinc-400">
+                                  Region
+                                </p>
                                 <p className="text-xs font-medium capitalize text-zinc-700">
                                   {store.region.replace(/_/g, " ")}
                                 </p>
                               </div>
                               <div>
-                                <p className="mb-1 text-[10px] font-medium text-zinc-400">Tags</p>
+                                <p className="mb-1 text-[10px] font-medium text-zinc-400">
+                                  Tags
+                                </p>
                                 {store.tags.length > 0 ? (
                                   <div className="flex flex-wrap gap-1">
                                     {store.tags.slice(0, 8).map((tag) => (
@@ -1057,13 +1252,17 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                                     ))}
                                   </div>
                                 ) : (
-                                  <p className="text-xs italic text-zinc-400">No tags</p>
+                                  <p className="text-xs italic text-zinc-400">
+                                    No tags
+                                  </p>
                                 )}
                               </div>
                             </div>
 
                             <div>
-                              <p className="mb-2 text-[10px] font-medium text-zinc-400">Opening hours</p>
+                              <p className="mb-2 text-[10px] font-medium text-zinc-400">
+                                Opening hours
+                              </p>
                               <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-3">
                                 <OpeningHours hours={store.openingHours} />
                               </div>
@@ -1097,7 +1296,9 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                                 </div>
                               ) : (
                                 <div className="rounded-xl border border-dashed border-zinc-200 px-4 py-6 text-center">
-                                  <p className="text-sm text-zinc-400">No gallery images uploaded</p>
+                                  <p className="text-sm text-zinc-400">
+                                    No gallery images uploaded
+                                  </p>
                                 </div>
                               )}
                             </div>
@@ -1120,7 +1321,9 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                                       key={p.id}
                                       className="flex items-center justify-between rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2"
                                     >
-                                      <p className="text-xs font-medium text-zinc-800">{p.name}</p>
+                                      <p className="text-xs font-medium text-zinc-800">
+                                        {p.name}
+                                      </p>
                                       <span
                                         className={`rounded-full px-2 py-0.5 text-[9px] font-medium ${
                                           p.isPublished
@@ -1132,22 +1335,30 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                                       </span>
                                     </li>
                                   ))}
-                                  {store._count.products > store.products.length ? (
+                                  {store._count.products >
+                                  store.products.length ? (
                                     <li className="py-1 text-center text-[10px] text-zinc-400">
-                                      +{store._count.products - store.products.length} more not shown
+                                      +
+                                      {store._count.products -
+                                        store.products.length}{" "}
+                                      more not shown
                                     </li>
                                   ) : null}
                                 </ul>
                               ) : (
                                 <div className="rounded-xl border border-dashed border-zinc-200 px-4 py-6 text-center">
-                                  <p className="text-sm text-zinc-400">No products listed</p>
+                                  <p className="text-sm text-zinc-400">
+                                    No products listed
+                                  </p>
                                 </div>
                               )}
                             </div>
                           </>
                         ) : (
                           <div className="rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-6 text-center">
-                            <p className="text-sm text-zinc-400">No store found for this vendor</p>
+                            <p className="text-sm text-zinc-400">
+                              No store found for this vendor
+                            </p>
                           </div>
                         )}
                       </div>
@@ -1157,7 +1368,9 @@ export default function VerificationClient({ pending, reviewed }: Props) {
               </div>
             ) : (
               <div className="flex flex-1 items-center justify-center p-8 md:p-12">
-                <p className="text-sm text-zinc-400">Select a vendor from the queue to review</p>
+                <p className="text-sm text-zinc-400">
+                  Select a vendor from the queue to review
+                </p>
               </div>
             )}
           </div>
@@ -1177,7 +1390,9 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                 className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-100 bg-zinc-50/50 px-4 py-3"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-zinc-900">{vendor.fullName}</p>
+                  <p className="text-sm font-semibold text-zinc-900">
+                    {vendor.fullName}
+                  </p>
                   <p className="text-xs text-zinc-400">{vendor.email}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
@@ -1195,10 +1410,15 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                     disabled={loading}
                     className="text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-800 disabled:opacity-50"
                     onClick={() =>
-                      void handleSingle(vendor.id, vendor.idVerificationStatus === "REJECTED")
+                      void handleSingle(
+                        vendor.id,
+                        vendor.idVerificationStatus === "REJECTED",
+                      )
                     }
                   >
-                    {vendor.idVerificationStatus === "APPROVED" ? "Revoke" : "Approve"}
+                    {vendor.idVerificationStatus === "APPROVED"
+                      ? "Revoke"
+                      : "Approve"}
                   </button>
                 </div>
               </div>
@@ -1209,7 +1429,6 @@ export default function VerificationClient({ pending, reviewed }: Props) {
 
       {/* ── Document zoom overlay ── */}
       {zoomUrl && (
-        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
         <div
           className="fixed inset-0 z-50 flex cursor-pointer items-center justify-center bg-black/90"
           onClick={() => setZoomUrl(null)}
@@ -1217,7 +1436,6 @@ export default function VerificationClient({ pending, reviewed }: Props) {
           role="dialog"
           aria-label="Image enlarged view"
         >
-          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
           <div
             className="relative h-[87vh] w-[87vw] cursor-default overflow-hidden rounded-2xl"
             onClick={(e) => e.stopPropagation()}
@@ -1234,7 +1452,15 @@ export default function VerificationClient({ pending, reviewed }: Props) {
               onClick={() => setZoomUrl(null)}
               aria-label="Close zoom"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              >
                 <line x1="18" y1="6" x2="6" y2="18" />
                 <line x1="6" y1="6" x2="18" y2="18" />
               </svg>

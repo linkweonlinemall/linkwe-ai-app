@@ -12,7 +12,7 @@ export default async function AdminDashboardPage() {
 
   return (
     <Suspense fallback={<div className="p-8 text-sm text-zinc-400">Loading…</div>}>
-      <AdminDashboard adminName={session.fullName ?? "Admin"} />
+      <AdminDashboard />
     </Suspense>
   );
 }

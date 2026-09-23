@@ -1,32 +1,329 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowUpRight, Banknote, CheckCircle2, Package, ShieldCheck, Store, Users, RefreshCw, Clock3, Warehouse } from "lucide-react";
+import {
+  ArrowUpRight,
+  Banknote,
+  Package,
+  ShieldCheck,
+  Store,
+  Users,
+  RefreshCw,
+  Clock3,
+  Truck,
+  Plus,
+  Sparkles,
+  ChevronRight,
+  CheckCircle2,
+} from "lucide-react";
 import { getAdminOverviewMetrics } from "@/app/actions/admin-metrics";
-import OperationsAssistant from "./operations-assistant";
-
 type Metrics = Awaited<ReturnType<typeof getAdminOverviewMetrics>>;
-const money = (minor: number) => `TTD ${(minor / 100).toLocaleString("en-TT", { maximumFractionDigits: 0 })}`;
+const money = (minor: number) =>
+  `TTD ${(minor / 100).toLocaleString("en-TT", { maximumFractionDigits: 0 })}`;
 export default function OverviewTab() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [error, setError] = useState("");
   const [updated, setUpdated] = useState<Date | null>(null);
-  async function load() { try { setMetrics(await getAdminOverviewMetrics()); setUpdated(new Date()); setError(""); } catch { setError("Unable to refresh your dashboard. Please retry."); } }
-  useEffect(() => { void load(); const timer = setInterval(() => { if (!document.hidden) void load(); }, 30_000); return () => clearInterval(timer); }, []);
-  if (!metrics) return <div className="space-y-5">{error ? <div role="alert" className="rounded-2xl bg-white p-6">{error}<button className="ml-3 underline" onClick={() => void load()}>Retry</button></div> : <><div className="h-48 animate-pulse rounded-3xl bg-zinc-200"/><div className="h-96 animate-pulse rounded-3xl bg-zinc-100"/></>}</div>;
+  const [busy, setBusy] = useState(false);
+  async function load() {
+    setBusy(true);
+    try {
+      setMetrics(await getAdminOverviewMetrics());
+      setUpdated(new Date());
+      setError("");
+    } catch {
+      setError(
+        "The dashboard could not refresh. Your last loaded figures are still shown.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  useEffect(() => {
+    void load();
+    const timer = setInterval(() => {
+      if (!document.hidden) void load();
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
+  if (!metrics)
+    return (
+      <div className="space-y-5">
+        {error ? (
+          <div className="admin-alert" role="alert">
+            {error}
+            <button className="admin-button ml-3" onClick={() => void load()}>
+              Try again
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="h-52 animate-pulse rounded-3xl bg-[#dce7e4]" />
+            <div className="h-28 animate-pulse rounded-3xl bg-white" />
+            <div className="h-72 animate-pulse rounded-3xl bg-white" />
+          </>
+        )}
+      </div>
+    );
   const tasks = [
-    { name: "Vendor verification", count: metrics.alerts.pendingVerification, detail: "Review identity evidence and onboarding readiness", href: "/dashboard/admin/verification", icon: ShieldCheck },
-    { name: "Vendor follow-ups", count: metrics.alerts.vendorDelays, detail: "Orders awaiting a vendor for more than 24 hours", href: "/dashboard/admin?tab=linkwe-delivery", icon: Clock3 },
-    { name: "Store approvals", count: metrics.alerts.pendingStoreApprovals, detail: "Review storefronts before they go live", href: "/dashboard/admin/stores", icon: Store },
-    { name: "Payout review", count: metrics.pendingPayouts, detail: `${metrics.alerts.payoutPending} requests waiting over 48 hours`, href: "/dashboard/admin?tab=payouts", icon: Banknote },
+    {
+      name: "Vendor verification",
+      count: metrics.alerts.pendingVerification,
+      detail: "Applications awaiting review",
+      href: "/dashboard/admin/verification",
+      icon: ShieldCheck,
+    },
+    {
+      name: "Store approvals",
+      count: metrics.alerts.pendingStoreApprovals,
+      detail: "New businesses waiting to open",
+      href: "/dashboard/admin/stores?status=PENDING_APPROVAL",
+      icon: Store,
+    },
+    {
+      name: "Vendor follow-ups",
+      count: metrics.alerts.vendorDelays,
+      detail: "Orders waiting more than 24 hours",
+      href: "/dashboard/admin?tab=linkwe-delivery",
+      icon: Clock3,
+    },
+    {
+      name: "Payout requests",
+      count: metrics.pendingPayouts,
+      detail: `${metrics.alerts.payoutPending} waiting over 48 hours`,
+      href: "/dashboard/admin?tab=payouts",
+      icon: Banknote,
+    },
   ];
-  return <div className="mx-auto max-w-[1600px] space-y-6 pb-6">
-    <header className="relative overflow-hidden rounded-3xl bg-[#172b2a] p-6 text-white sm:p-8"><div className="pointer-events-none absolute -right-20 -top-40 h-[460px] w-[460px] rounded-full border-[65px] border-white/[0.035]"/><div className="relative flex flex-col justify-between gap-5 lg:flex-row lg:items-end"><div><p className="text-[10px] font-bold uppercase tracking-[0.24em] text-emerald-300">LinkWe / staff workspace</p><h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Your marketplace, in focus.</h1><p className="mt-3 max-w-xl text-sm leading-6 text-white/55">The people, parcels and decisions that keep LinkWe moving. Start with the work that needs you.</p></div><Link href="/dashboard/admin?tab=linkwe-delivery" className="inline-flex min-h-12 items-center justify-center gap-3 rounded-xl bg-[#e65d2d] px-5 text-sm font-semibold text-white">Open warehouse desk <ArrowUpRight size={18}/></Link></div><div className="relative mt-8 grid grid-cols-2 gap-6 border-t border-white/10 pt-6 lg:grid-cols-4">{[{ label: "Paid orders today", value: metrics.ordersToday }, { label: "Sales today", value: money(metrics.revenueTodayMinor) }, { label: "Active stores", value: metrics.totals.activeVendors }, { label: "Parcels at warehouse", value: metrics.pipeline.atWarehouse }].map((m) => <div key={m.label}><p className="text-xs text-white/50">{m.label}</p><p className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">{m.value}</p></div>)}</div></header>
-    <div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="text-lg font-semibold text-zinc-900">Your action desk</h2><p className="text-xs text-zinc-500">Clear decisions. Fewer handoffs.</p></div><button onClick={() => void load()} className="flex min-h-10 items-center gap-2 text-xs text-zinc-500"><RefreshCw size={14}/> {updated?.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</button></div>
-    {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{tasks.map((task) => <Link key={task.name} href={task.href} className="group rounded-2xl border border-zinc-200 bg-white p-5 transition hover:border-orange-200 hover:shadow-md"><div className="flex items-center justify-between"><span className={`rounded-xl p-2.5 ${task.count ? "bg-orange-50 text-orange-700" : "bg-emerald-50 text-emerald-700"}`}><task.icon size={20}/></span><span className="text-3xl font-semibold text-zinc-900">{task.count}</span></div><h3 className="mt-5 text-sm font-semibold">{task.name}</h3><p className="mt-1 min-h-10 text-xs leading-5 text-zinc-500">{task.detail}</p><p className="mt-4 flex items-center gap-2 text-xs font-semibold text-orange-700">{task.count ? "Review queue" : "View workspace"}<ArrowUpRight size={14}/></p></Link>)}</div>
-    <div className="grid items-start gap-5 xl:grid-cols-[1.15fr_1fr]"><section className="rounded-2xl border border-zinc-200 bg-white p-5 sm:p-6"><div className="mb-5 flex items-center justify-between"><div><p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-700">Warehouse flow</p><h2 className="mt-1 text-lg font-semibold">Every parcel has a next step</h2></div><Warehouse className="text-zinc-300" size={24}/></div><div className="space-y-3">{[{ label: "Vendor preparation", count: metrics.pipeline.awaitingVendor, detail: "Choose drop-off or TTD 40 collection" }, { label: "Inbound collections", count: metrics.pipeline.inTransit, detail: "Vendor parcels travelling to LinkWe" }, { label: "Warehouse receiving", count: metrics.pipeline.atWarehouse, detail: "Check quantities and combine customer orders" }, { label: "Ready for dispatch", count: metrics.pipeline.readyToShip, detail: "Book the combined delivery with CSF" }].map((p, i) => <Link key={p.label} href="/dashboard/admin?tab=linkwe-delivery" className="flex items-center gap-3 rounded-xl bg-zinc-50 p-3 hover:bg-orange-50"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-xs font-semibold text-zinc-400">{i + 1}</span><div className="flex-1"><p className="text-sm font-semibold text-zinc-800">{p.label}</p><p className="mt-0.5 text-[11px] text-zinc-500">{p.detail}</p></div><strong className="text-xl font-semibold">{p.count}</strong></Link>)}</div><p className="mt-4 text-xs leading-5 text-zinc-400">CSF bookings are actioned by staff. Customer delivery is priced once for the combined order.</p></section><OperationsAssistant/></div>
-    <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white"><div className="flex items-center justify-between gap-3 p-5"><h2 className="text-lg font-semibold">Recent orders</h2><Link href="/dashboard/admin?tab=orders" className="text-xs font-semibold text-orange-700">All orders →</Link></div>{!metrics.recentOrders.length ? <div className="p-8 text-center text-sm text-zinc-500"><CheckCircle2 className="mx-auto mb-3 text-emerald-600"/>Your paid orders will appear here.</div> : metrics.recentOrders.map((o) => <Link href="/dashboard/admin?tab=orders" key={o.id} className="flex flex-wrap items-center gap-3 border-t border-zinc-100 px-5 py-4 hover:bg-zinc-50"><Package size={18} className="text-zinc-400"/><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{o.referenceNumber ?? o.id}</p><p className="mt-1 text-xs text-zinc-500">{o.buyer.fullName}</p></div><span className="rounded-full bg-zinc-100 px-2 py-1 text-[10px] font-semibold text-zinc-600">{o.status.replaceAll("_", " ")}</span><span className="text-sm font-semibold">{money(o.totalMinor)}</span></Link>)}</section>
-    <div className="grid gap-3 sm:grid-cols-3">{[{ label: "Catalog & stores", detail: `${metrics.totals.publishedProducts} published products`, href: "/dashboard/admin/products", icon: Store }, { label: "People & access", detail: `${metrics.totals.totalCustomers} customers`, href: "/dashboard/admin/users", icon: Users }, { label: "Finance", detail: `${money(metrics.totals.lifetimeRevenueMinor)} lifetime sales`, href: "/dashboard/admin?tab=payouts", icon: Banknote }].map((x) => <Link key={x.label} href={x.href} className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-4"><x.icon size={20} className="text-zinc-400"/><div><p className="text-sm font-semibold">{x.label}</p><p className="mt-1 text-xs text-zinc-500">{x.detail}</p></div><ArrowUpRight size={16} className="ml-auto text-zinc-400"/></Link>)}</div>
-  </div>;
+  return (
+    <div className="space-y-6">
+      <header className="admin-hero flex flex-wrap items-center justify-between gap-6">
+        <div>
+          <p className="admin-eyebrow">Your marketplace. In good hands.</p>
+          <h1>
+            A clearer view.
+            <br />A better working day.
+          </h1>
+          <p>
+            Keep the people, businesses and daily decisions moving. Your next
+            task is just a click away.
+          </p>
+        </div>
+        <div className="relative z-10">
+          <Link
+            href="/dashboard/admin/onboarding"
+            className="admin-button admin-button-primary"
+          >
+            <Plus size={18} />
+            Open Creation Studio
+            <ArrowUpRight size={17} />
+          </Link>
+          <Link
+            href="/"
+            target="_blank"
+            className="mt-4 flex items-center justify-center gap-2 text-xs text-white/70"
+          >
+            Visit the marketplace
+            <ArrowUpRight size={13} />
+          </Link>
+        </div>
+      </header>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="admin-muted">A live snapshot of LinkWe</p>
+        <button
+          className="flex min-h-9 items-center gap-2 text-[11px] text-[#6d8289]"
+          disabled={busy}
+          onClick={() => void load()}
+        >
+          <RefreshCw size={13} className={busy ? "animate-spin" : ""} />
+          {busy
+            ? "Refreshing…"
+            : `Updated ${updated?.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+        </button>
+      </div>
+      {error && (
+        <p className="admin-alert" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="admin-stat-grid">
+        {[
+          {
+            label: "Paid orders today",
+            value: metrics.ordersToday,
+            note: "Today's customer orders",
+            icon: Package,
+          },
+          {
+            label: "Sales today",
+            value: money(metrics.revenueTodayMinor),
+            note: "Paid order value",
+            icon: Banknote,
+          },
+          {
+            label: "Active stores",
+            value: metrics.totals.activeVendors,
+            note: "Local businesses open for discovery",
+            icon: Store,
+          },
+          {
+            label: "Parcels in warehouse",
+            value: metrics.pipeline.atWarehouse,
+            note: "Ready for their next step",
+            icon: Truck,
+          },
+        ].map((stat) => (
+          <div className="admin-stat" key={stat.label}>
+            <div className="flex items-center justify-between">
+              <small>{stat.label}</small>
+              <stat.icon size={17} className="text-[#7c9897]" />
+            </div>
+            <strong>{stat.value}</strong>
+            <p>{stat.note}</p>
+          </div>
+        ))}
+      </div>
+      <section>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="admin-panel-title">Create & manage</h2>
+          <span className="admin-muted">Your everyday tools</span>
+        </div>
+        <div className="admin-quicklinks">
+          {[
+            { name: "Create a store", kind: "store", icon: Store },
+            { name: "Add a product", kind: "product", icon: Package },
+            { name: "Add a service", kind: "service", icon: Sparkles },
+            { name: "Add a person", kind: "user", icon: Users },
+          ].map((item) => (
+            <Link
+              href={`/dashboard/admin/records/${item.kind}/new`}
+              key={item.kind}
+            >
+              <item.icon size={20} />
+              {item.name}
+              <Plus size={13} className="ml-auto" />
+            </Link>
+          ))}
+          <Link href="/dashboard/admin/onboarding">
+            <Plus size={20} />
+            All creation tools
+            <ArrowUpRight size={13} className="ml-auto" />
+          </Link>
+        </div>
+      </section>
+      <div className="grid gap-5 xl:grid-cols-[1.05fr_1fr]">
+        <section className="admin-panel">
+          <div className="mb-6 flex items-start justify-between">
+            <div>
+              <p className="admin-eyebrow">Action desk</p>
+              <h2 className="admin-panel-title">What needs your attention</h2>
+            </div>
+            <span className="admin-badge admin-badge-orange">
+              {tasks.reduce((sum, t) => sum + t.count, 0)} tasks
+            </span>
+          </div>
+          <div className="space-y-2">
+            {tasks.map((task) => (
+              <Link
+                href={task.href}
+                key={task.name}
+                className="flex items-center gap-3 rounded-xl border border-[#edf0f0] px-4 py-4 transition hover:bg-[#fff8f3]"
+              >
+                <span
+                  className={`rounded-xl p-2.5 ${task.count ? "bg-orange-50 text-orange-700" : "bg-[#eff5f2] text-[#668578]"}`}
+                >
+                  <task.icon size={18} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-xs font-semibold">{task.name}</h3>
+                  <p className="mt-1 text-[10px] text-[#7e8f95]">
+                    {task.detail}
+                  </p>
+                </div>
+                <strong className="text-xl font-semibold">{task.count}</strong>
+                <ChevronRight size={15} className="text-[#a3b0b3]" />
+              </Link>
+            ))}
+          </div>
+        </section>
+        <section className="admin-panel">
+          <p className="admin-eyebrow">Fulfilment flow</p>
+          <h2 className="admin-panel-title">From local store to front door</h2>
+          <p className="admin-muted mt-2 mb-5">Every parcel has a next step.</p>
+          {[
+            {
+              name: "Vendor preparation",
+              count: metrics.pipeline.awaitingVendor,
+            },
+            { name: "Inbound collections", count: metrics.pipeline.inTransit },
+            {
+              name: "Warehouse receiving",
+              count: metrics.pipeline.atWarehouse,
+            },
+            { name: "Ready for dispatch", count: metrics.pipeline.readyToShip },
+          ].map((stage, index) => (
+            <Link
+              key={stage.name}
+              href="/dashboard/admin?tab=linkwe-delivery"
+              className="flex items-center gap-3 border-b border-[#edf1f1] py-4"
+            >
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#edf4f2] text-[10px] text-[#5d8075]">
+                0{index + 1}
+              </span>
+              <span className="flex-1 text-xs font-medium">{stage.name}</span>
+              <strong className="text-lg font-semibold">{stage.count}</strong>
+            </Link>
+          ))}
+          <Link
+            href="/dashboard/admin?tab=linkwe-delivery"
+            className="admin-button mt-5 w-full"
+          >
+            Open warehouse & delivery
+            <ArrowUpRight size={15} />
+          </Link>
+        </section>
+      </div>
+      <section className="admin-panel">
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="admin-panel-title">Recent orders</h2>
+          <Link
+            className="text-xs font-semibold text-[#c14a1d]"
+            href="/dashboard/admin?tab=orders"
+          >
+            View all
+            <ArrowUpRight size={13} className="ml-1 inline" />
+          </Link>
+        </div>
+        {!metrics.recentOrders.length ? (
+          <div className="admin-empty">
+            <CheckCircle2 size={25} className="mx-auto mb-3 text-[#6f9684]" />
+            New paid orders will appear here.
+          </div>
+        ) : (
+          metrics.recentOrders.map((order) => (
+            <Link
+              href={`/dashboard/admin?tab=orders&q=${encodeURIComponent(order.referenceNumber || order.id)}`}
+              key={order.id}
+              className="flex flex-wrap items-center gap-3 border-t border-[#edf0f0] py-4"
+            >
+              <Package size={18} className="text-[#90a5aa]" />
+              <div className="min-w-0 flex-1">
+                <strong className="block truncate text-xs">
+                  {order.referenceNumber || order.id}
+                </strong>
+                <span className="mt-1 block text-[10px] text-[#82939a]">
+                  {order.buyer.fullName}
+                </span>
+              </div>
+              <span className="admin-badge">
+                {order.status.replaceAll("_", " ")}
+              </span>
+              <strong className="text-xs">{money(order.totalMinor)}</strong>
+              <ChevronRight size={15} />
+            </Link>
+          ))
+        )}
+      </section>
+    </div>
+  );
 }

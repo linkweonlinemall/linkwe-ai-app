@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { UserRole } from "@prisma/client";
@@ -53,6 +54,7 @@ type Props = {
   totalPages: number;
   currentQ: string;
   currentRole: string;
+  currentStatus:string;
 };
 
 export default function AdminUsersClient({
@@ -62,6 +64,7 @@ export default function AdminUsersClient({
   totalPages,
   currentQ,
   currentRole,
+  currentStatus,
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -85,7 +88,7 @@ export default function AdminUsersClient({
   // ── Navigation ──────────────────────────────────────────────────────────────
 
   function navigate(params: Record<string, string>) {
-    const sp = new URLSearchParams({ q: currentQ, role: currentRole, page: String(page) });
+    const sp = new URLSearchParams({ q: currentQ, role: currentRole, status:currentStatus, page: String(page) });
     Object.entries(params).forEach(([k, v]) => sp.set(k, v));
     router.push(`/dashboard/admin/users?${sp.toString()}`);
   }
@@ -189,7 +192,8 @@ export default function AdminUsersClient({
             name="q"
             defaultValue={currentQ}
             placeholder="Search by name or email…"
-            className="w-64 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-[#D4450A] focus:outline-none focus:ring-1 focus:ring-[#D4450A]"
+            aria-label="Search people"
+            className="min-w-0 flex-1 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-[#D4450A] focus:outline-none focus:ring-1 focus:ring-[#D4450A]"
           />
           <button
             type="submit"
@@ -217,6 +221,7 @@ export default function AdminUsersClient({
         </div>
       </div>
 
+      <div className="mb-5 flex flex-wrap items-center gap-3"><label className="text-xs font-semibold text-zinc-500" htmlFor="people-status">Account status</label><select id="people-status" value={currentStatus} className="admin-input !w-auto" onChange={e=>navigate({status:e.target.value,page:"1"})}><option value="all">All accounts</option><option value="active">Active</option><option value="suspended">Suspended</option><option value="inactive">Inactive</option></select></div>
       {/* Single action error */}
       {actionError && (
         <div className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{actionError}</div>
@@ -341,7 +346,7 @@ export default function AdminUsersClient({
                   <p className="mt-0.5 truncate text-xs text-zinc-500">{u.email}</p>
                   <div className="mt-1 flex items-center gap-2">
                     <span className="text-[10px] text-zinc-400">Joined {formatDate(u.createdAt)}</span>
-                    {u.suspended ? (
+                    {!u.isActive ? <span className="admin-badge admin-badge-orange">Inactive</span> : u.suspended ? (
                       <span className="rounded-full bg-[#FFF1ED] px-1.5 py-0.5 text-[9px] font-semibold text-[#D4450A]">
                         Suspended
                       </span>
@@ -354,6 +359,7 @@ export default function AdminUsersClient({
                 </div>
               </div>
 
+              <div className="px-4 pb-3"><Link className="admin-button w-full" href={`/dashboard/admin/records/user/${u.id}`}>Manage account →</Link></div>
               {/* Action buttons — click-isolated row, non-admins only */}
               {u.role !== "ADMIN" && (
                 <div
@@ -489,7 +495,7 @@ export default function AdminUsersClient({
 
                 {/* Status */}
                 <td className="px-4 py-3">
-                  {u.suspended ? (
+                  {!u.isActive ? <span className="admin-badge admin-badge-orange">Inactive</span> : u.suspended ? (
                     <span className="rounded-full bg-[#FFF1ED] px-2 py-0.5 text-xs font-semibold text-[#D4450A]">
                       Suspended
                     </span>
@@ -502,7 +508,7 @@ export default function AdminUsersClient({
 
                 {/* Actions */}
                 <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2"><Link href={`/dashboard/admin/records/user/${u.id}`} className="admin-button">Edit</Link>
                     {u.role !== "ADMIN" && (
                       <button
                         type="button"

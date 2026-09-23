@@ -19,19 +19,21 @@ async function assertAdmin() {
 export async function getAdminUsers({
   search = "",
   role = "all",
+  status = "all",
   page = 1,
 }: {
   search?: string;
   role?: string;
+  status?: string;
   page?: number;
 }) {
   await assertAdmin();
 
   const PAGE_SIZE = 20;
-  const skip = (page - 1) * PAGE_SIZE;
+  const skip = (Math.max(1,Math.floor(page)) - 1) * PAGE_SIZE;
 
   const where = {
-    isActive: true,
+    ...(status === "active" ? {isActive:true,suspended:false} : status === "suspended" ? {isActive:true,suspended:true} : status === "inactive" ? {isActive:false} : {}),
     ...(search.trim()
       ? {
           OR: [
@@ -40,7 +42,7 @@ export async function getAdminUsers({
           ],
         }
       : {}),
-    ...(role && role !== "all" ? { role: { in: role.toUpperCase() === "CUSTOMER" ? ["CUSTOMER", "COURIER"] as UserRole[] : [role.toUpperCase() as UserRole] } } : {}),
+    ...(["CUSTOMER","VENDOR","ADMIN","COURIER"].includes(role.toUpperCase()) ? { role: { in: role.toUpperCase() === "CUSTOMER" ? ["CUSTOMER", "COURIER"] as UserRole[] : [role.toUpperCase() as UserRole] } } : {}),
   };
 
   const [users, total] = await Promise.all([
@@ -50,7 +52,7 @@ export async function getAdminUsers({
       take: PAGE_SIZE,
       orderBy: { createdAt: "desc" },
       select: {
-        id: true, fullName: true, email: true, role: true, createdAt: true, suspended: true,
+        id: true, fullName: true, email: true, role: true, createdAt: true, suspended: true, isActive:true,
         storesOwned: {
           select: {
             id: true,

@@ -1,5 +1,6 @@
 "use client";
 
+import AdminPageHeader from "../components/admin-page-header";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -45,6 +46,8 @@ function statusBadgeClass(status: AdminProductStatus) {
   switch (status) {
     case "active":
       return "bg-emerald-50 text-emerald-800 ring-emerald-700/20";
+    case "archived":
+      return "bg-amber-50 text-amber-800 ring-amber-700/20";
     case "draft":
       return "bg-zinc-100 text-zinc-700 ring-zinc-700/20";
   }
@@ -64,7 +67,6 @@ function toQueryString(full: Props["query"]): string {
 }
 
 export default function AdminProductsClient({
-  adminName: _adminName,
   stores,
   initial,
   query,
@@ -157,16 +159,8 @@ export default function AdminProductsClient({
   };
 
   return (
-    <div className="mx-auto max-w-7xl p-6">
-        <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-lg font-semibold text-zinc-900">All products</h1>
-            <p className="text-sm text-zinc-500">
-              {initial.total} product{initial.total !== 1 ? "s" : ""} • Page{" "}
-              {initial.page} of {initial.totalPages}
-            </p>
-          </div>
-        </div>
+    <div className="admin-page admin-legacy">
+        <AdminPageHeader title="Products" description={`${initial.total} products across the marketplace. Manage photos, prices, stock, variations and publication.`} createHref={`/dashboard/admin/records/product/new${query.storeId ? `?storeId=${query.storeId}` : ""}`} createLabel="Add product"/>
 
         {error ? (
           <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
@@ -180,13 +174,13 @@ export default function AdminProductsClient({
         >
           <div className="min-w-[12rem] flex-1">
             <label className="block text-xs font-medium text-zinc-600">
-              Search name
+              Search products
             </label>
             <input
               name="q"
               type="search"
               defaultValue={query.q}
-              placeholder="Product name..."
+              placeholder="Name, SKU or store…"
               className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
             />
           </div>
@@ -216,7 +210,7 @@ export default function AdminProductsClient({
             >
               <option value="all">All</option>
               <option value="active">Active</option>
-              <option value="draft">Draft</option>
+              <option value="draft">Draft</option><option value="archived">Archived</option>
             </select>
           </div>
           <div className="min-w-[11rem]">
@@ -335,8 +329,9 @@ export default function AdminProductsClient({
                           className="flex max-w-[18rem] items-center gap-3 text-left"
                         >
                           <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-zinc-100 ring-1 ring-zinc-200">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             {row.thumbnailUrl ? (
+                              // Staff previews use vendor-hosted image URLs.
+                              // eslint-disable-next-line @next/next/no-img-element
                               <img
                                 src={row.thumbnailUrl}
                                 alt=""
@@ -389,8 +384,8 @@ export default function AdminProductsClient({
                           }
                           className="max-w-[7rem] rounded border border-zinc-200 px-1 py-1 text-xs"
                         >
-                          <option value="active">active</option>
-                          <option value="draft">draft</option>
+                          <option value="active">Published</option>
+                          <option value="draft">Draft</option><option value="archived">Archived</option>
                         </select>
                         <Link
                           href={`/dashboard/admin/records/product/${row.id}`}

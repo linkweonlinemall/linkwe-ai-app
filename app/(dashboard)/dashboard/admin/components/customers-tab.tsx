@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Fragment, useEffect, useMemo, useState } from "react";
 
 import { getAdminCustomers } from "@/app/actions/admin-customers";
@@ -62,16 +63,31 @@ function getSpendBorderColor(spendMinor: number): string {
 export default function CustomersTab() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
   const [search, setSearch] = useState("");
   const [expandedCustomer, setExpandedCustomer] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<"newest" | "most_orders" | "highest_spend">("newest");
+  const [sortBy, setSortBy] = useState<
+    "newest" | "most_orders" | "highest_spend"
+  >("newest");
 
   useEffect(() => {
-    getAdminCustomers().then((c) => {
-      setCustomers(c);
-      setLoading(false);
-    });
-  }, []);
+    let cancelled = false;
+    getAdminCustomers()
+      .then((c) => {
+        if (!cancelled) setCustomers(c);
+      })
+      .catch(() => {
+        if (!cancelled)
+          setLoadError("Customers could not load. Please try again.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
 
   const filtered = useMemo(() => {
     let data = customers;
@@ -87,8 +103,10 @@ export default function CustomersTab() {
     }
 
     return [...data].sort((a, b) => {
-      if (sortBy === "most_orders") return b.mainOrders.length - a.mainOrders.length;
-      if (sortBy === "highest_spend") return getTotalSpend(b) - getTotalSpend(a);
+      if (sortBy === "most_orders")
+        return b.mainOrders.length - a.mainOrders.length;
+      if (sortBy === "highest_spend")
+        return getTotalSpend(b) - getTotalSpend(a);
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   }, [customers, search, sortBy]);
@@ -107,8 +125,11 @@ export default function CustomersTab() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-zinc-900">Customers</h2>
-          <p className="mt-0.5 text-sm text-zinc-500">All registered customer accounts</p>
+          <p className="admin-eyebrow">People & support</p>
+          <h1 className="admin-title">Customers</h1>
+          <p className="mt-0.5 text-sm text-zinc-500">
+            All registered customer accounts
+          </p>
         </div>
         <div className="text-right">
           <p className="text-2xl font-bold text-zinc-900">{customers.length}</p>
@@ -116,7 +137,22 @@ export default function CustomersTab() {
         </div>
       </div>
 
-      <div className="mb-4 grid grid-cols-3 gap-4">
+      {loadError && (
+        <div role="alert" className="admin-alert">
+          {loadError}
+          <button
+            className="admin-button ml-3"
+            onClick={() => {
+              setLoading(true);
+              setLoadError("");
+              setRefreshKey((k) => k + 1);
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         {[
           { label: "Total customers", value: customers.length },
           { label: "Total orders", value: totalOrders },
@@ -125,10 +161,21 @@ export default function CustomersTab() {
             value: formatTTD(totalRevenue),
           },
         ].map((s) => (
-          <div key={s.label} className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">{s.label}</p>
+          <div
+            key={s.label}
+            className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm"
+          >
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+              {s.label}
+            </p>
             <p className="mt-1 text-2xl font-bold text-zinc-900">
-              {typeof s.value === "number" ? (loading ? "—" : s.value) : loading ? "—" : s.value}
+              {typeof s.value === "number"
+                ? loading
+                  ? "—"
+                  : s.value
+                : loading
+                  ? "—"
+                  : s.value}
             </p>
           </div>
         ))}
@@ -158,13 +205,18 @@ export default function CustomersTab() {
           <div className="p-6">
             <div className="flex flex-col gap-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-20 rounded-xl animate-pulse bg-zinc-200" />
+                <div
+                  key={i}
+                  className="h-20 rounded-xl animate-pulse bg-zinc-200"
+                />
               ))}
             </div>
           </div>
         ) : filtered.length === 0 ? (
           <div className="px-6 py-16 text-center text-sm text-zinc-500">
-            No customers yet. Customers will appear here when they register.
+            {search
+              ? "No customers match this search."
+              : "No customers yet. Customers will appear here when they register."}
           </div>
         ) : (
           <>
@@ -191,30 +243,51 @@ export default function CustomersTab() {
                         <tr
                           role="button"
                           tabIndex={0}
-                          onClick={() => setExpandedCustomer((prev) => (prev === c.id ? null : c.id))}
+                          onClick={() =>
+                            setExpandedCustomer((prev) =>
+                              prev === c.id ? null : c.id,
+                            )
+                          }
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ")
-                              setExpandedCustomer((prev) => (prev === c.id ? null : c.id));
+                              setExpandedCustomer((prev) =>
+                                prev === c.id ? null : c.id,
+                              );
                           }}
                           className="cursor-pointer border-b border-zinc-100 transition-colors hover:bg-zinc-50"
-                          style={{ borderLeftWidth: 4, borderLeftColor: border, borderLeftStyle: "solid" }}
+                          style={{
+                            borderLeftWidth: 4,
+                            borderLeftColor: border,
+                            borderLeftStyle: "solid",
+                          }}
                         >
                           <td className="px-4 py-3">
-                            <p className="font-semibold text-zinc-900">{c.fullName}</p>
+                            <p className="font-semibold text-zinc-900">
+                              {c.fullName}
+                            </p>
                             <p className="text-xs text-zinc-500">{c.email}</p>
                           </td>
-                          <td className="px-4 py-3 capitalize text-zinc-700">{c.region?.replace(/_/g, " ") ?? "—"}</td>
-                          <td className="px-4 py-3 text-right font-mono text-zinc-900">{c.mainOrders.length}</td>
+                          <td className="px-4 py-3 capitalize text-zinc-700">
+                            {c.region?.replace(/_/g, " ") ?? "—"}
+                          </td>
+                          <td className="px-4 py-3 text-right font-mono text-zinc-900">
+                            {c.mainOrders.length}
+                          </td>
                           <td className="px-4 py-3 text-right font-mono font-semibold text-zinc-900">
                             {formatTTD(spend)}
                           </td>
-                          <td className="px-4 py-3 text-zinc-600">{formatJoined(c.createdAt)}</td>
+                          <td className="px-4 py-3 text-zinc-600">
+                            {formatJoined(c.createdAt)}
+                          </td>
                           <td className="px-4 py-3 text-zinc-600">
                             {lastOrder ? (
                               <>
-                                <span className="text-zinc-900">{relativeTime(lastOrder.createdAt)}</span>
+                                <span className="text-zinc-900">
+                                  {relativeTime(lastOrder.createdAt)}
+                                </span>
                                 <p className="text-xs text-zinc-400">
-                                  {lastOrder.referenceNumber ?? `#${lastOrder.id.slice(-8).toUpperCase()}`}
+                                  {lastOrder.referenceNumber ??
+                                    `#${lastOrder.id.slice(-8).toUpperCase()}`}
                                 </p>
                               </>
                             ) : (
@@ -225,11 +298,19 @@ export default function CustomersTab() {
                         {expandedCustomer === c.id ? (
                           <tr className="bg-zinc-50">
                             <td colSpan={6} className="px-4 pb-4 pt-0">
+                              <Link
+                                className="admin-button my-3"
+                                href={`/dashboard/admin/records/user/${c.id}`}
+                              >
+                                Manage customer account →
+                              </Link>
                               <p className="mb-2 mt-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">
                                 Order history
                               </p>
                               {c.mainOrders.length === 0 ? (
-                                <p className="text-xs text-zinc-500">No completed orders yet.</p>
+                                <p className="text-xs text-zinc-500">
+                                  No completed orders yet.
+                                </p>
                               ) : (
                                 <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
                                   <table className="w-full text-xs">
@@ -237,7 +318,9 @@ export default function CustomersTab() {
                                       <tr className="border-b border-zinc-100 bg-zinc-50 text-left text-zinc-500">
                                         <th className="px-3 py-2">Ref</th>
                                         <th className="px-3 py-2">Status</th>
-                                        <th className="px-3 py-2 text-right">Total</th>
+                                        <th className="px-3 py-2 text-right">
+                                          Total
+                                        </th>
                                         <th className="px-3 py-2">Date</th>
                                       </tr>
                                     </thead>
@@ -245,13 +328,22 @@ export default function CustomersTab() {
                                       {c.mainOrders.map((o) => {
                                         const col = getStatusColor(o.status);
                                         return (
-                                          <tr key={o.id} className="border-b border-zinc-50 last:border-0">
+                                          <tr
+                                            key={o.id}
+                                            className="border-b border-zinc-50 last:border-0"
+                                          >
                                             <td className="px-3 py-2">
                                               <span
                                                 className="mr-2 inline-block h-2 w-2 rounded-full"
                                                 style={{ backgroundColor: col }}
                                               />
-                                              {o.referenceNumber ?? o.id.slice(-8).toUpperCase()}
+                                              <Link
+                                                className="underline underline-offset-2"
+                                                href={`/dashboard/admin?tab=orders&q=${encodeURIComponent(o.referenceNumber || o.id)}`}
+                                              >
+                                                {o.referenceNumber ??
+                                                  o.id.slice(-8).toUpperCase()}
+                                              </Link>
                                             </td>
                                             <td className="px-3 py-2">
                                               <span
@@ -264,9 +356,13 @@ export default function CustomersTab() {
                                                 {o.status.replace(/_/g, " ")}
                                               </span>
                                             </td>
-                                            <td className="px-3 py-2 text-right font-mono">{formatTTD(o.totalMinor)}</td>
+                                            <td className="px-3 py-2 text-right font-mono">
+                                              {formatTTD(o.totalMinor)}
+                                            </td>
                                             <td className="px-3 py-2 text-zinc-600">
-                                              {new Date(o.createdAt).toLocaleString("en-TT", {
+                                              {new Date(
+                                                o.createdAt,
+                                              ).toLocaleString("en-TT", {
                                                 day: "numeric",
                                                 month: "short",
                                                 year: "numeric",
@@ -302,18 +398,25 @@ export default function CustomersTab() {
                     {/* Card row */}
                     <button
                       type="button"
-                      onClick={() => setExpandedCustomer((prev) => (prev === c.id ? null : c.id))}
+                      onClick={() =>
+                        setExpandedCustomer((prev) =>
+                          prev === c.id ? null : c.id,
+                        )
+                      }
                       className="w-full border-b border-zinc-100 px-4 py-3 text-left transition-colors hover:bg-zinc-50"
                       style={{ borderLeft: `4px solid ${border}` }}
                     >
-                      <p className="font-semibold text-zinc-900">{c.fullName}</p>
+                      <p className="font-semibold text-zinc-900">
+                        {c.fullName}
+                      </p>
                       <p className="text-xs text-zinc-500">{c.email}</p>
                       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                         <span className="capitalize text-zinc-600">
                           {c.region?.replace(/_/g, " ") ?? "—"}
                         </span>
                         <span className="text-zinc-500">
-                          {c.mainOrders.length} order{c.mainOrders.length !== 1 ? "s" : ""}
+                          {c.mainOrders.length} order
+                          {c.mainOrders.length !== 1 ? "s" : ""}
                         </span>
                         <span className="font-mono font-semibold text-zinc-900">
                           {formatTTD(spend)}
@@ -321,6 +424,14 @@ export default function CustomersTab() {
                       </div>
                     </button>
 
+                    <div className="px-4 py-2">
+                      <Link
+                        className="admin-button w-full"
+                        href={`/dashboard/admin/records/user/${c.id}`}
+                      >
+                        Manage account →
+                      </Link>
+                    </div>
                     {/* Expanded order history — stacked cards, no inner table */}
                     {isExpanded ? (
                       <div className="border-b border-zinc-100 bg-zinc-50 px-4 pb-4 pt-3">
@@ -328,7 +439,9 @@ export default function CustomersTab() {
                           Order history
                         </p>
                         {c.mainOrders.length === 0 ? (
-                          <p className="text-xs text-zinc-500">No completed orders yet.</p>
+                          <p className="text-xs text-zinc-500">
+                            No completed orders yet.
+                          </p>
                         ) : (
                           <div className="flex flex-col gap-2">
                             {c.mainOrders.map((o) => {
@@ -345,7 +458,13 @@ export default function CustomersTab() {
                                         style={{ backgroundColor: col }}
                                       />
                                       <span className="text-xs font-medium text-zinc-700">
-                                        {o.referenceNumber ?? o.id.slice(-8).toUpperCase()}
+                                        <Link
+                                          className="underline underline-offset-2"
+                                          href={`/dashboard/admin?tab=orders&q=${encodeURIComponent(o.referenceNumber || o.id)}`}
+                                        >
+                                          {o.referenceNumber ??
+                                            o.id.slice(-8).toUpperCase()}
+                                        </Link>
                                       </span>
                                     </div>
                                     <span className="font-mono text-xs font-semibold text-zinc-900">
@@ -355,16 +474,22 @@ export default function CustomersTab() {
                                   <div className="mt-1.5 flex flex-wrap items-center gap-2">
                                     <span
                                       className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                                      style={{ color: col, backgroundColor: `${col}18` }}
+                                      style={{
+                                        color: col,
+                                        backgroundColor: `${col}18`,
+                                      }}
                                     >
                                       {o.status.replace(/_/g, " ")}
                                     </span>
                                     <span className="text-[11px] text-zinc-400">
-                                      {new Date(o.createdAt).toLocaleString("en-TT", {
-                                        day: "numeric",
-                                        month: "short",
-                                        year: "numeric",
-                                      })}
+                                      {new Date(o.createdAt).toLocaleString(
+                                        "en-TT",
+                                        {
+                                          day: "numeric",
+                                          month: "short",
+                                          year: "numeric",
+                                        },
+                                      )}
                                     </span>
                                   </div>
                                 </div>

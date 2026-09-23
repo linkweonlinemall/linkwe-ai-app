@@ -1,34 +1,27 @@
 "use client";
-
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { IdVerificationStatus, StoreStatus } from "@prisma/client";
 import { useState } from "react";
-
+import {
+  ArrowUpRight,
+  MapPin,
+  Package,
+  Store,
+  UserRound,
+  Settings2,
+  Search,
+  Wallet,
+} from "lucide-react";
+import { toast } from "sonner";
 import {
   adminDeleteStore,
   chargeVendorSubscriptionFromBalance,
   setVendorPlan,
   updateStoreStatus,
+  type getAdminStores,
 } from "@/app/actions/admin-stores";
-
-type StoreRow = {
-  id: string;
-  name: string;
-  slug: string;
-  status: StoreStatus;
-  subscriptionPlan: "STARTER" | "GROWTH" | "PRO";
-  region: string;
-  logoUrl: string | null;
-  createdAt: Date;
-  owner: {
-    fullName: string;
-    email: string;
-    idVerificationStatus: IdVerificationStatus;
-  };
-  _count: { products: number };
-};
-
+import { optionLabel } from "@/lib/admin/record-design";
+type StoreRow = Awaited<ReturnType<typeof getAdminStores>>["stores"][number];
 type Props = {
   stores: StoreRow[];
   page: number;
@@ -37,20 +30,6 @@ type Props = {
   currentStatus: string;
   currentSort: string;
 };
-
-const STATUS_COLORS: Record<string, string> = {
-  DRAFT: "bg-zinc-100 text-zinc-600",
-  ACTIVE: "bg-emerald-50 text-emerald-700",
-  PENDING_APPROVAL: "bg-amber-50 text-amber-700",
-};
-
-const ID_STATUS_COLORS: Record<string, string> = {
-  UNSUBMITTED: "bg-zinc-100 text-zinc-500",
-  PENDING: "bg-amber-50 text-amber-700",
-  APPROVED: "bg-emerald-50 text-emerald-700",
-  REJECTED: "bg-[#FFF1ED] text-[#D4450A]",
-};
-
 export default function AdminStoresClient({
   stores,
   page,
@@ -60,151 +39,103 @@ export default function AdminStoresClient({
   currentSort,
 }: Props) {
   const router = useRouter();
-  const [loading, setLoading] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
-
-  function toggleSelect(id: string) {
-    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  }
-
-  function toggleAll() {
-    setSelected((prev) => (prev.length === stores.length ? [] : stores.map((s) => s.id)));
-  }
-
-  async function handleBulkStatus(status: string) {
-    if (selected.length === 0) return;
-    if (!window.confirm(`Change ${selected.length} stores to ${status}? This affects their storefront access.`)) return;
-    setLoading("bulk");
-    for (const id of selected) {
-      await updateStoreStatus(id, status);
-    }
+  const [errors, setErrors] = useState<string[]>([]);
+  function navigate(params: Record<string, string>) {
     setSelected([]);
-    setLoading(null);
-    router.refresh();
+    router.push(
+      `/dashboard/admin/stores?${new URLSearchParams({ q: currentQ, status: currentStatus, sort: currentSort, page: "1", ...params })}`,
+    );
   }
-
-  async function handleBulkDelete() {
-    if (selected.length === 0) return;
-    if (!confirm(`Delete ${selected.length} stores? This cannot be undone.`)) return;
-    setLoading("bulk");
-    for (const id of selected) {
-      await adminDeleteStore(id);
-    }
-    setSelected([]);
-    setLoading(null);
-    router.refresh();
-  }
-
-  function updateUrl(params: Record<string, string>) {
-    const qs = new URLSearchParams({
-      q: currentQ,
-      status: currentStatus,
-      sort: currentSort,
-      page: "1",
-      ...params,
-    });
-    router.push(`/dashboard/admin/stores?${qs}`);
-  }
-
-  async function handleStatusChange(id: string, status: string) {
-    if (!window.confirm(`Change this store to ${status}? This affects storefront access.`)) return;
-    if (loading === "bulk") return;
-    setLoading(id);
-    await updateStoreStatus(id, status);
-    setLoading(null);
-    router.refresh();
-  }
-
-  async function handlePlanChange(id: string, plan: string) {
-    if (!window.confirm(`Change this vendor’s package to ${plan}? This can change fees and plan access.`)) return;
-    if (loading === "bulk") return;
-    setLoading(id);
-    await setVendorPlan(id, plan);
-    setLoading(null);
-    router.refresh();
-  }
-
-  async function handleChargeSubscription(id: string) {
-    if (!window.confirm("Charge the vendor’s subscription from their earnings balance? This deducts money if eligible.")) return;
-    if (loading === "bulk") return;
-    setLoading(id);
-    const result = await chargeVendorSubscriptionFromBalance(id);
-    setLoading(null);
-    router.refresh();
-    if (result.ok) {
-      if (result.charged) {
-        alert("Charged from balance");
-      } else {
-        alert(`Not charged: ${result.reason ?? "unknown"}`);
+  async function run(
+    ids: string[],
+    action: "status" | "plan" | "delete" | "charge",
+    value?: string,
+  ) {
+    const summary =
+      action === "status"
+        ? `Set ${ids.length} store(s) to ${optionLabel(value!)}? Storefront visibility changes immediately.`
+        : action === "plan"
+          ? `Change this store to ${optionLabel(value!)}? This changes plan access and fees.`
+          : action === "charge"
+            ? "Charge the vendor's subscription from their earnings balance? This deducts money if eligible."
+            : `Permanently delete ${ids.length} empty store(s)? Stores with catalogue or customer history must be kept as drafts.`;
+    if (!window.confirm(summary)) return;
+    setBusy(true);
+    setErrors([]);
+    const failures: string[] = [];
+    let completed = 0;
+    try {
+      for (const id of ids) {
+        try {
+          const result =
+            action === "status"
+              ? await updateStoreStatus(id, value!)
+              : action === "plan"
+                ? await setVendorPlan(id, value!)
+                : action === "charge"
+                  ? await chargeVendorSubscriptionFromBalance(id)
+                  : await adminDeleteStore(id);
+          if (!result.ok) {
+            failures.push(
+              `${stores.find((s) => s.id === id)?.name || id}: ${"error" in result ? result.error : "Unable to complete"}`,
+            );
+          } else if (
+            action === "charge" &&
+            "charged" in result &&
+            !result.charged
+          ) {
+            failures.push(
+              `Not charged: ${"reason" in result ? result.reason : "Not eligible"}`,
+            );
+          } else completed++;
+        } catch {
+          failures.push(
+            `${stores.find((s) => s.id === id)?.name || id}: could not complete the action.`,
+          );
+        }
       }
-    } else {
-      alert(`Not charged: ${result.error ?? "unknown"}`);
+      if (completed)
+        toast.success(
+          `${completed} store${completed === 1 ? "" : "s"} updated`,
+        );
+      setErrors(failures);
+      setSelected([]);
+      router.refresh();
+    } finally {
+      setBusy(false);
     }
   }
-
-  async function handleDelete(id: string, name: string) {
-    if (
-      !confirm(
-        `Delete "${name}"? This will remove all products and data. Cannot be undone.`,
-      )
-    )
-      return;
-    if (loading === "bulk") return;
-    setLoading(id);
-    await adminDeleteStore(id);
-    setLoading(null);
-    router.refresh();
-  }
-
-  function formatDate(date: Date): string {
-    const d = new Date(date);
-    const day = d.getUTCDate();
-    const months = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-    const month = months[d.getUTCMonth()];
-    const year = d.getUTCFullYear();
-    return `${day} ${month} ${year}`;
-  }
-
   return (
     <div>
-      <div
-        className="
-          mb-4 flex flex-wrap gap-3 rounded-2xl border border-zinc-200 bg-white
-          p-4 shadow-sm
-        "
+      <form
+        className="admin-filterbar"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const form = new FormData(e.currentTarget);
+          navigate({
+            q: String(form.get("q") || ""),
+            status: String(form.get("status") || "all"),
+            sort: String(form.get("sort") || "newest"),
+          });
+        }}
       >
-        <input
-          defaultValue={currentQ}
-          placeholder="Search stores, vendors, emails..."
-          className="
-            min-w-48 flex-1 rounded-xl border border-zinc-200 px-3 py-2 text-sm
-            focus:border-[#D4450A] focus:outline-none
-          "
-          onKeyDown={(e) => {
-            if (e.key === "Enter")
-              updateUrl({ q: (e.target as HTMLInputElement).value });
-          }}
-        />
+        <div className="relative min-w-44 flex-1">
+          <Search size={16} className="absolute left-3 top-4 text-zinc-400" />
+          <input
+            className="admin-input pl-10"
+            name="q"
+            defaultValue={currentQ}
+            placeholder="Store, owner or email…"
+            aria-label="Search stores"
+          />
+        </div>
         <select
-          value={currentStatus}
-          className="
-            rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm
-            focus:outline-none
-          "
-          onChange={(e) => updateUrl({ status: e.target.value })}
+          name="status"
+          className="admin-input"
+          defaultValue={currentStatus}
+          aria-label="Store status"
         >
           <option value="all">All statuses</option>
           <option value="ACTIVE">Active</option>
@@ -212,345 +143,296 @@ export default function AdminStoresClient({
           <option value="PENDING_APPROVAL">Pending approval</option>
         </select>
         <select
-          value={currentSort}
-          className="
-            rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm
-            focus:outline-none
-          "
-          onChange={(e) => updateUrl({ sort: e.target.value })}
+          name="sort"
+          className="admin-input"
+          defaultValue={currentSort}
+          aria-label="Sort stores"
         >
           <option value="newest">Newest first</option>
           <option value="oldest">Oldest first</option>
-          <option value="name_asc">Name A-Z</option>
+          <option value="name_asc">Name A–Z</option>
         </select>
+        <button className="admin-button admin-button-primary">
+          Apply filters
+        </button>
+        {(currentQ || currentStatus !== "all") && (
+          <Link className="admin-button" href="/dashboard/admin/stores">
+            Clear
+          </Link>
+        )}
+      </form>
+      {errors.length > 0 && (
+        <div role="alert" className="admin-alert">
+          {errors.map((error) => (
+            <p key={error}>{error}</p>
+          ))}
+        </div>
+      )}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <label className="flex min-h-10 items-center gap-2 text-xs text-[#718890]">
+          <input
+            type="checkbox"
+            checked={
+              stores.length > 0 && stores.every((s) => selected.includes(s.id))
+            }
+            disabled={busy || !stores.length}
+            onChange={(e) =>
+              setSelected(e.target.checked ? stores.map((s) => s.id) : [])
+            }
+          />
+          Select this page
+        </label>
+        <span className="admin-muted">
+          Page {page} of {Math.max(1, totalPages)}
+        </span>
       </div>
-
-      {selected.length > 0 ? (
-        <div
-          className="
-            mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-[#D4450A]/20
-            bg-[#D4450A]/10 p-3
-          "
-        >
-          <span className="text-sm font-medium text-[#D4450A]">
-            {selected.length} store{selected.length !== 1 ? "s" : ""} selected
-          </span>
+      {selected.length > 0 && (
+        <div className="admin-context">
+          <strong>{selected.length} selected</strong>
           <button
-            type="button"
-            disabled={loading === "bulk"}
-            className="
-              rounded-lg bg-emerald-500 px-3 py-1.5 text-xs text-white
-              hover:opacity-90 disabled:opacity-50
-            "
-            onClick={() => handleBulkStatus("ACTIVE")}
+            className="admin-button"
+            disabled={busy}
+            onClick={() => void run(selected, "status", "ACTIVE")}
           >
-            Activate
+            Publish
           </button>
           <button
-            type="button"
-            disabled={loading === "bulk"}
-            className="
-              rounded-lg bg-amber-500 px-3 py-1.5 text-xs text-white
-              hover:opacity-90 disabled:opacity-50
-            "
-            onClick={() => handleBulkStatus("SUSPENDED")}
+            className="admin-button"
+            disabled={busy}
+            onClick={() => void run(selected, "status", "PENDING_APPROVAL")}
           >
-            Suspend
+            Send for review
           </button>
           <button
-            type="button"
-            disabled={loading === "bulk"}
-            className="
-              rounded-lg bg-zinc-500 px-3 py-1.5 text-xs text-white
-              hover:opacity-90 disabled:opacity-50
-            "
-            onClick={() => handleBulkStatus("DRAFT")}
+            className="admin-button"
+            disabled={busy}
+            onClick={() => void run(selected, "status", "DRAFT")}
           >
-            Set to Draft
+            Set to draft
           </button>
           <button
-            type="button"
-            disabled={loading === "bulk"}
-            className="
-              rounded-lg bg-red-500 px-3 py-1.5 text-xs text-white
-              hover:opacity-90 disabled:opacity-50
-            "
-            onClick={() => void handleBulkDelete()}
+            className="admin-button"
+            disabled={busy}
+            onClick={() => void run(selected, "delete")}
           >
-            Delete
+            Delete empty stores
           </button>
           <button
-            type="button"
-            disabled={loading === "bulk"}
-            className="
-              ml-auto text-xs text-zinc-500
-              hover:text-zinc-800 disabled:opacity-50
-            "
+            className="ml-auto text-xs underline"
+            disabled={busy}
             onClick={() => setSelected([])}
           >
             Clear selection
           </button>
         </div>
-      ) : null}
-
-      {stores.length > 0 ? (
-        <div className="mb-3 flex items-center gap-2 px-1">
-          <input
-            checked={selected.length === stores.length && stores.length > 0}
-            className="rounded"
-            disabled={loading === "bulk"}
-            type="checkbox"
-            onChange={toggleAll}
-          />
-          <span className="text-xs text-zinc-500">Select all</span>
-        </div>
-      ) : null}
-
-      <div className="flex flex-col gap-3">
-        {stores.length === 0 ? (
-          <div className="rounded-2xl border border-zinc-200 bg-white p-12 text-center">
-            <p className="text-sm text-zinc-400">No stores found</p>
-          </div>
-        ) : (
-          stores.map((store) => (
-            <div
-              key={store.id}
-              className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm"
-            >
-              {/* ── Top row: checkbox + logo + name (+ pills/metadata/actions inline on desktop) ── */}
-              <div className="flex items-start gap-3 md:gap-4">
-                <input
-                  checked={selected.includes(store.id)}
-                  className="mt-1 rounded"
-                  disabled={loading === "bulk" || loading === store.id}
-                  type="checkbox"
-                  onChange={() => toggleSelect(store.id)}
+      )}
+      <div className="grid gap-5 xl:grid-cols-2">
+        {stores.map((store) => (
+          <article
+            className="overflow-hidden rounded-[20px] border border-[#dfe7e7] bg-white shadow-sm"
+            key={store.id}
+          >
+            <div className="relative h-32 bg-[#dfece7]">
+              {store.coverPhotoUrl ? (
+                <img
+                  src={store.coverPhotoUrl}
+                  className="h-full w-full object-cover"
+                  alt=""
+                  loading="lazy"
                 />
-                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-zinc-100">
+              ) : (
+                <div className="flex h-full items-center justify-center bg-gradient-to-br from-[#caddd5] to-[#eaf1df]">
+                  <Store size={38} className="text-[#6a9685]" />
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/15 to-transparent" />
+              <label className="absolute left-4 top-4 rounded-lg bg-white/95 p-2">
+                <input
+                  aria-label={`Select ${store.name}`}
+                  className="block h-4 w-4"
+                  type="checkbox"
+                  disabled={busy}
+                  checked={selected.includes(store.id)}
+                  onChange={(e) =>
+                    setSelected((ids) =>
+                      e.target.checked
+                        ? [...ids, store.id]
+                        : ids.filter((id) => id !== store.id),
+                    )
+                  }
+                />
+              </label>
+              <span className="admin-badge absolute right-4 top-4 bg-white/95">
+                {optionLabel(store.status)}
+              </span>
+            </div>
+            <div className="p-5">
+              <div className="flex items-start gap-3">
+                <div className="-mt-10 flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-white shadow-sm">
                   {store.logoUrl ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img
-                      alt=""
-                      className="h-full w-full object-cover"
                       src={store.logoUrl}
+                      alt=""
+                      className="h-full w-full object-contain"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center">
-                      <span className="font-bold text-zinc-400">{store.name[0]}</span>
-                    </div>
+                    <Store size={28} className="text-[#749789]" />
                   )}
                 </div>
-
                 <div className="min-w-0 flex-1">
-                  {/* Name — max 2 lines on mobile so it never crowds the row */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="line-clamp-2 font-semibold text-zinc-900 md:line-clamp-none">
-                      {store.name}
-                    </p>
-                    {/* Status pills — desktop only; mobile renders them in the block below */}
-                    <span
-                      className={`hidden rounded-full px-2 py-0.5 text-[10px] font-bold md:inline-flex ${STATUS_COLORS[store.status] ?? "bg-zinc-100 text-zinc-600"}`}
-                    >
-                      {store.status.replace(/_/g, " ")}
-                    </span>
-                    <span
-                      className={`hidden rounded-full px-2 py-0.5 text-[10px] md:inline-flex ${ID_STATUS_COLORS[store.owner.idVerificationStatus] ?? "bg-zinc-100 text-zinc-500"}`}
-                    >
-                      ID: {store.owner.idVerificationStatus.replace(/_/g, " ")}
-                    </span>
-                  </div>
-                  {/* Desktop-only: owner/email + metadata below name */}
-                  <p className="mt-0.5 hidden text-xs text-zinc-500 md:block">
-                    {store.owner.fullName} · {store.owner.email}
+                  <h2 className="text-lg font-semibold leading-snug tracking-[-.6px]">
+                    {store.name}
+                  </h2>
+                  <p className="mt-1 truncate text-[10px] text-[#8a9a9e]">
+                    /{store.slug}
                   </p>
-                  <div className="mt-1.5 hidden flex-wrap items-center gap-4 text-xs text-zinc-400 md:flex">
-                    <span>/{store.slug}</span>
-                    {store.region ? <span>📍 {store.region}</span> : null}
-                    <span>📦 {store._count.products} products</span>
-                    <span>📅 {formatDate(store.createdAt)}</span>
-                  </div>
                 </div>
-
-                {/* Desktop-only: actions right column */}
-                <div className="hidden shrink-0 flex-wrap items-center gap-2 md:flex">
-                  <Link
-                    href={`/dashboard/admin/records/store/${store.id}`}
-                    target="_blank"
-                    className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs text-zinc-600 transition-colors hover:bg-zinc-50"
-                  >
-                    Edit store
-                  </Link>
-                  <select
-                    title="Plan"
-                    aria-label="Plan"
-                    value={store.subscriptionPlan}
-                    disabled={loading === store.id || loading === "bulk"}
-                    className="rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs focus:outline-none"
-                    onChange={(e) => handlePlanChange(store.id, e.target.value)}
-                  >
-                    <option value="STARTER">Starter</option>
-                    <option value="GROWTH">Growth</option>
-                    <option value="PRO">Pro</option>
-                  </select>
-                  <button
-                    type="button"
-                    title="Charge subscription from balance"
-                    disabled={loading === store.id || loading === "bulk"}
-                    className="rounded-lg border border-zinc-200 px-2 py-1.5 text-xs text-zinc-600 transition-colors hover:bg-zinc-50 disabled:opacity-50"
-                    onClick={() => void handleChargeSubscription(store.id)}
-                  >
-                    Charge sub (balance)
-                  </button>
-                  <select
-                    value={store.status}
-                    disabled={loading === store.id || loading === "bulk"}
-                    className="rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs focus:outline-none"
-                    onChange={(e) => handleStatusChange(store.id, e.target.value)}
-                  >
-                    <option value="DRAFT">Draft</option>
-                    <option value="PENDING_APPROVAL">Pending approval</option>
-                    <option value="ACTIVE">Active</option>
-                  </select>
-                  <button
-                    type="button"
-                    title="Delete store"
-                    disabled={loading === store.id || loading === "bulk"}
-                    className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-500"
-                    onClick={() => handleDelete(store.id, store.name)}
-                  >
-                    <svg
-                      aria-hidden
-                      fill="none"
-                      height="14"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                      width="14"
-                    >
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6l-1 14H6L5 6" />
-                      <path d="M10 11v6M14 11v6" />
-                      <path d="M9 6V4h6v2" />
-                    </svg>
-                  </button>
+                <span className="admin-badge admin-badge-orange">
+                  {optionLabel(store.subscriptionPlan)}
+                </span>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <Link
+                  href={`/dashboard/admin/records/user/${store.owner.id}`}
+                  className="flex min-w-0 items-start gap-2 text-xs"
+                >
+                  <UserRound
+                    size={16}
+                    className="mt-0.5 shrink-0 text-[#86a29d]"
+                  />
+                  <span className="min-w-0">
+                    <strong className="block font-medium">
+                      {store.owner.fullName}
+                    </strong>
+                    <span className="mt-1 block truncate text-[10px] text-[#85979d]">
+                      {store.owner.email}
+                    </span>
+                  </span>
+                </Link>
+                <div className="space-y-2 text-xs text-[#70878e]">
+                  <p className="flex items-center gap-2">
+                    <MapPin size={14} />
+                    {store.region}
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <Package size={14} />
+                    {store._count.products} catalogue items
+                  </p>
                 </div>
               </div>
-
-              {/* ── Mobile-only: pills + metadata block + actions row ── */}
-              <div className="mt-2 md:hidden">
-                {/* Status pills */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${STATUS_COLORS[store.status] ?? "bg-zinc-100 text-zinc-600"}`}
-                  >
-                    {store.status.replace(/_/g, " ")}
-                  </span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] ${ID_STATUS_COLORS[store.owner.idVerificationStatus] ?? "bg-zinc-100 text-zinc-500"}`}
-                  >
-                    ID: {store.owner.idVerificationStatus.replace(/_/g, " ")}
-                  </span>
-                </div>
-
-                {/* Metadata — clean stacked block */}
-                <div className="mt-2 text-xs">
-                  <p className="font-medium text-zinc-700">{store.owner.fullName}</p>
-                  <p className="text-zinc-400">{store.owner.email}</p>
-                  <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-zinc-400">
-                    <span>/{store.slug}</span>
-                    {store.region ? <span>📍 {store.region}</span> : null}
-                    <span>📦 {store._count.products} products</span>
-                    <span>📅 {formatDate(store.createdAt)}</span>
+              <div className="mt-5 flex gap-2">
+                <Link
+                  href={`/dashboard/admin/records/store/${store.id}`}
+                  className="admin-button admin-button-primary flex-1"
+                >
+                  Manage store
+                  <ArrowUpRight size={15} />
+                </Link>
+                <Link
+                  href={`/store/${store.slug}`}
+                  target="_blank"
+                  className="admin-button"
+                >
+                  View
+                  <ArrowUpRight size={14} />
+                </Link>
+              </div>
+              <details className="mt-3">
+                <summary className="flex min-h-10 cursor-pointer items-center gap-2 text-[11px] text-[#7b9197]">
+                  <Settings2 size={14} />
+                  Publication, plan & advanced actions
+                </summary>
+                <div className="mt-2 space-y-4 rounded-xl bg-[#f5f8f7] p-4">
+                  <div className="admin-form-grid">
+                    <label className="admin-field">
+                      <span className="admin-field-label">Store status</span>
+                      <select
+                        className="admin-input"
+                        value={store.status}
+                        disabled={busy}
+                        onChange={(e) =>
+                          void run([store.id], "status", e.target.value)
+                        }
+                      >
+                        {["DRAFT", "PENDING_APPROVAL", "ACTIVE"].map(
+                          (status) => (
+                            <option key={status} value={status}>
+                              {optionLabel(status)}
+                            </option>
+                          ),
+                        )}
+                      </select>
+                    </label>
+                    <label className="admin-field">
+                      <span className="admin-field-label">
+                        Subscription plan
+                      </span>
+                      <select
+                        className="admin-input"
+                        value={store.subscriptionPlan}
+                        disabled={busy}
+                        onChange={(e) =>
+                          void run([store.id], "plan", e.target.value)
+                        }
+                      >
+                        {["STARTER", "GROWTH", "PRO"].map((plan) => (
+                          <option key={plan} value={plan}>
+                            {optionLabel(plan)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <p className="admin-muted">
+                    Identity verification:{" "}
+                    {optionLabel(store.owner.idVerificationStatus)}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      className="admin-button"
+                      disabled={busy}
+                      onClick={() => void run([store.id], "charge")}
+                    >
+                      <Wallet size={14} />
+                      Charge subscription from balance
+                    </button>
+                    <button
+                      className="admin-button text-red-700"
+                      disabled={busy}
+                      onClick={() => void run([store.id], "delete")}
+                    >
+                      Delete empty store
+                    </button>
                   </div>
                 </div>
-
-                {/* Actions row — full-width, delete visually separated */}
-                <div className="mt-3 flex items-center gap-2 border-t border-zinc-100 pt-3">
-                  <Link
-                    href={`/dashboard/admin/records/store/${store.id}`}
-                    target="_blank"
-                    className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-center text-xs text-zinc-600 transition-colors hover:bg-zinc-50"
-                  >
-                    Edit store
-                  </Link>
-                  <select
-                    title="Plan"
-                    aria-label="Plan"
-                    value={store.subscriptionPlan}
-                    disabled={loading === store.id || loading === "bulk"}
-                    className="flex-1 rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs focus:outline-none"
-                    onChange={(e) => handlePlanChange(store.id, e.target.value)}
-                  >
-                    <option value="STARTER">Starter</option>
-                    <option value="GROWTH">Growth</option>
-                    <option value="PRO">Pro</option>
-                  </select>
-                  <select
-                    value={store.status}
-                    disabled={loading === store.id || loading === "bulk"}
-                    className="flex-1 rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs focus:outline-none"
-                    onChange={(e) => handleStatusChange(store.id, e.target.value)}
-                  >
-                    <option value="DRAFT">Draft</option>
-                    <option value="PENDING_APPROVAL">Pending approval</option>
-                    <option value="ACTIVE">Active</option>
-                  </select>
-                  <button
-                    type="button"
-                    title="Delete store"
-                    disabled={loading === store.id || loading === "bulk"}
-                    className="ml-1 rounded-lg border border-red-100 bg-red-50 p-2.5 text-red-400 transition-colors hover:bg-red-100 hover:text-red-600 disabled:opacity-50"
-                    onClick={() => handleDelete(store.id, store.name)}
-                  >
-                    <svg
-                      aria-hidden
-                      fill="none"
-                      height="14"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                      width="14"
-                    >
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6l-1 14H6L5 6" />
-                      <path d="M10 11v6M14 11v6" />
-                      <path d="M9 6V4h6v2" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
+              </details>
             </div>
-          ))
-        )}
+          </article>
+        ))}
       </div>
-
-      {totalPages > 1 ? (
-        <div className="mt-4 flex items-center justify-between">
-          <p className="text-xs text-zinc-400">
-            Page {page} of {totalPages}
-          </p>
-          <div className="flex gap-2">
-            {page > 1 ? (
-              <button
-                type="button"
-                className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs hover:bg-zinc-50"
-                onClick={() => updateUrl({ page: String(page - 1) })}
-              >
-                Previous
-              </button>
-            ) : null}
-            {page < totalPages ? (
-              <button
-                type="button"
-                className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs hover:bg-zinc-50"
-                onClick={() => updateUrl({ page: String(page + 1) })}
-              >
-                Next
-              </button>
-            ) : null}
-          </div>
+      {!stores.length && (
+        <div className="admin-empty">
+          <Store className="mx-auto mb-3" />
+          <strong>No stores match these filters.</strong>
+          <p>Try another name, owner or publication status.</p>
         </div>
-      ) : null}
+      )}
+      <nav className="mt-6 flex justify-between gap-3" aria-label="Store pages">
+        <button
+          className="admin-button"
+          disabled={page <= 1}
+          onClick={() => navigate({ page: String(page - 1) })}
+        >
+          ← Previous
+        </button>
+        <button
+          className="admin-button"
+          disabled={page >= totalPages}
+          onClick={() => navigate({ page: String(page + 1) })}
+        >
+          Next →
+        </button>
+      </nav>
     </div>
   );
 }

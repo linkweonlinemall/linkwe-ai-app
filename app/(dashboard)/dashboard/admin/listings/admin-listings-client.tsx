@@ -1,9 +1,15 @@
 "use client";
 
+import Link from "next/link";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { bulkUpdateListingStatus, deleteListing, updateListingStatus } from "@/app/actions/admin-listings";
+import {
+  bulkUpdateListingStatus,
+  deleteListing,
+  updateListingStatus,
+} from "@/app/actions/admin-listings";
 
 type ListingRow = {
   id: string;
@@ -79,48 +85,81 @@ export default function AdminListingsClient({
   }
 
   function toggleSelect(id: string) {
-    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
   }
 
   function toggleAll() {
-    setSelected((prev) => (prev.length === listings.length ? [] : listings.map((l) => l.id)));
+    setSelected((prev) =>
+      prev.length === listings.length ? [] : listings.map((l) => l.id),
+    );
   }
 
   async function handleStatusChange(id: string, status: string) {
     setLoading(id);
-    await updateListingStatus(id, status);
-    setLoading(null);
-    router.refresh();
+    try {
+      await updateListingStatus(id, status);
+      router.refresh();
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "The status could not be saved.",
+      );
+    } finally {
+      setLoading(null);
+    }
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this listing? This cannot be undone.")) return;
     setLoading(id);
-    await deleteListing(id);
-    setLoading(null);
-    router.refresh();
+    try {
+      await deleteListing(id);
+      router.refresh();
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "The listing could not be deleted.",
+      );
+    } finally {
+      setLoading(null);
+    }
   }
 
   async function handleBulkAction(action: string) {
     if (selected.length === 0) return;
     if (action === "delete") {
-      if (!confirm(`Delete ${selected.length} listings? This cannot be undone.`)) return;
+      if (
+        !confirm(`Delete ${selected.length} listings? This cannot be undone.`)
+      )
+        return;
     }
     setLoading("bulk");
-    if (action === "delete") {
-      for (const id of selected) {
-        await deleteListing(id);
-      }
-    } else {
-      await bulkUpdateListingStatus(selected, action);
+    try {
+      if (action === "delete") {
+        for (const id of selected) await deleteListing(id);
+      } else await bulkUpdateListingStatus(selected, action);
+      setSelected([]);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Some changes could not be completed. Review the refreshed list before retrying.",
+      );
+    } finally {
+      setLoading(null);
+      router.refresh();
     }
-    setSelected([]);
-    setLoading(null);
-    router.refresh();
   }
 
   return (
     <div>
+      <p className="admin-muted mb-4">
+        {total} listings · Page {page} of {Math.max(1, totalPages)}
+      </p>
       <div className="mb-4 flex flex-wrap gap-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
         <input
           defaultValue={currentQ}
@@ -130,7 +169,8 @@ export default function AdminListingsClient({
               updateUrl({ q: (e.target as HTMLInputElement).value, page: "1" });
             }
           }}
-          className="min-w-48 flex-1 rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:border-[#D4450A] focus:outline-none"
+          aria-label="Search listings"
+          className="min-w-0 flex-1 rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:border-[#D4450A] focus:outline-none"
         />
         <select
           value={currentStatus}
@@ -140,7 +180,9 @@ export default function AdminListingsClient({
           <option value="all">All statuses</option>
           {STATUS_OPTIONS.map((s) => (
             <option key={s} value={s}>
-              {s === "SUSPENDED" ? "Suspended" : s.charAt(0) + s.slice(1).toLowerCase()}
+              {s === "SUSPENDED"
+                ? "Suspended"
+                : s.charAt(0) + s.slice(1).toLowerCase()}
             </option>
           ))}
         </select>
@@ -170,8 +212,10 @@ export default function AdminListingsClient({
       </div>
 
       {selected.length > 0 ? (
-        <div className="mb-4 flex items-center gap-3 rounded-xl border border-[#D4450A]/20 bg-[#D4450A]/10 p-3">
-          <span className="text-sm font-medium text-[#D4450A]">{selected.length} selected</span>
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-[#D4450A]/20 bg-[#D4450A]/10 p-3">
+          <span className="text-sm font-medium text-[#D4450A]">
+            {selected.length} selected
+          </span>
           <button
             type="button"
             onClick={() => handleBulkAction("PUBLISHED")}
@@ -203,32 +247,120 @@ export default function AdminListingsClient({
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
-        <table className="w-full text-sm">
+      <div className="mb-4 grid gap-4 md:hidden">
+        {listings.length === 0 ? (
+          <div className="admin-empty">No listings match these filters.</div>
+        ) : (
+          listings.map((listing) => (
+            <article key={listing.id} className="admin-panel">
+              <div className="flex items-start gap-3">
+                <input
+                  className="mt-1 h-5 w-5 shrink-0"
+                  type="checkbox"
+                  checked={selected.includes(listing.id)}
+                  onChange={() => toggleSelect(listing.id)}
+                  aria-label={`Select ${listing.title}`}
+                />
+                <div className="min-w-0">
+                  <span className="admin-badge">
+                    {TYPE_LABELS[listing.type] || listing.type}
+                  </span>
+                  <h2 className="admin-panel-title mt-3 break-words">
+                    {listing.title}
+                  </h2>
+                  <p className="admin-muted mt-2">{listing.store.name}</p>
+                </div>
+              </div>
+              <div className="my-4 flex justify-between gap-3 border-y border-zinc-100 py-4">
+                <strong>
+                  {listing.currency} {(listing.priceMinor / 100).toFixed(2)}
+                </strong>
+                <span className="admin-badge">{listing.status}</span>
+              </div>
+              <Link
+                className="admin-button admin-button-primary w-full"
+                href={`/dashboard/admin/records/listing/${listing.id}`}
+              >
+                Manage listing →
+              </Link>
+              <details className="mt-4 text-xs">
+                <summary className="cursor-pointer py-2 font-semibold">
+                  Status & removal
+                </summary>
+                <div className="mt-3 flex gap-3">
+                  <select
+                    className="admin-input"
+                    aria-label={`Status for ${listing.title}`}
+                    value={listing.status}
+                    disabled={loading !== null}
+                    onChange={(e) =>
+                      void handleStatusChange(listing.id, e.target.value)
+                    }
+                  >
+                    {STATUS_OPTIONS.map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className="admin-button text-red-700"
+                    disabled={loading !== null}
+                    onClick={() => void handleDelete(listing.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </details>
+            </article>
+          ))
+        )}
+      </div>
+      <div className="overflow-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
+        <table className="hidden w-full text-sm md:table">
           <thead className="border-b border-zinc-100 bg-zinc-50">
             <tr>
               <th className="w-10 px-4 py-3 text-left">
                 <input
                   type="checkbox"
-                  checked={selected.length === listings.length && listings.length > 0}
+                  checked={
+                    selected.length === listings.length && listings.length > 0
+                  }
                   onChange={toggleAll}
                   aria-label="Select all"
                   className="rounded"
                 />
               </th>
-              <th className="px-4 py-3 text-left font-medium text-zinc-500">Listing</th>
-              <th className="px-4 py-3 text-left font-medium text-zinc-500">Type</th>
-              <th className="px-4 py-3 text-left font-medium text-zinc-500">Store</th>
-              <th className="px-4 py-3 text-left font-medium text-zinc-500">Price</th>
-              <th className="px-4 py-3 text-left font-medium text-zinc-500">Status</th>
-              <th className="px-4 py-3 text-left font-medium text-zinc-500">Date</th>
-              <th className="px-4 py-3 text-left font-medium text-zinc-500">Actions</th>
+              <th className="px-4 py-3 text-left font-medium text-zinc-500">
+                Listing
+              </th>
+              <th className="px-4 py-3 text-left font-medium text-zinc-500">
+                Type
+              </th>
+              <th className="px-4 py-3 text-left font-medium text-zinc-500">
+                Store
+              </th>
+              <th className="px-4 py-3 text-left font-medium text-zinc-500">
+                Price
+              </th>
+              <th className="px-4 py-3 text-left font-medium text-zinc-500">
+                Status
+              </th>
+              <th className="px-4 py-3 text-left font-medium text-zinc-500">
+                Date
+              </th>
+              <th className="px-4 py-3 text-left font-medium text-zinc-500">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
             {listings.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-12 text-center text-sm text-zinc-400">
+                <td
+                  colSpan={8}
+                  className="px-4 py-12 text-center text-sm text-zinc-400"
+                >
                   No listings found
                 </td>
               </tr>
@@ -254,7 +386,11 @@ export default function AdminListingsClient({
                       <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-zinc-100">
                         {listing.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={listing.imageUrl} alt="" className="h-full w-full object-cover" />
+                          <img
+                            src={listing.imageUrl}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center">
                             <span className="text-lg text-zinc-300">📋</span>
@@ -262,8 +398,12 @@ export default function AdminListingsClient({
                         )}
                       </div>
                       <div className="min-w-0">
-                        <p className="max-w-48 truncate font-medium text-zinc-900">{listing.title}</p>
-                        <p className="truncate text-xs text-zinc-400">{listing.slug}</p>
+                        <p className="max-w-48 truncate font-medium text-zinc-900">
+                          {listing.title}
+                        </p>
+                        <p className="truncate text-xs text-zinc-400">
+                          {listing.slug}
+                        </p>
                       </div>
                     </div>
                   </td>
@@ -273,7 +413,9 @@ export default function AdminListingsClient({
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <p className="max-w-32 truncate text-sm text-zinc-700">{listing.store.name}</p>
+                    <p className="max-w-32 truncate text-sm text-zinc-700">
+                      {listing.store.name}
+                    </p>
                   </td>
                   <td className="px-4 py-3 font-medium text-zinc-900">
                     {listing.currency} {(listing.priceMinor / 100).toFixed(2)}
@@ -281,7 +423,8 @@ export default function AdminListingsClient({
                   <td className="px-4 py-3">
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        STATUS_COLORS[listing.status] ?? "bg-zinc-100 text-zinc-600"
+                        STATUS_COLORS[listing.status] ??
+                        "bg-zinc-100 text-zinc-600"
                       }`}
                     >
                       {listing.status}
@@ -291,16 +434,26 @@ export default function AdminListingsClient({
                     {new Date(listing.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-2">
+                      <Link
+                        className="admin-button"
+                        href={`/dashboard/admin/records/listing/${listing.id}`}
+                      >
+                        Edit
+                      </Link>
                       <select
                         value={listing.status}
-                        onChange={(e) => handleStatusChange(listing.id, e.target.value)}
+                        onChange={(e) =>
+                          handleStatusChange(listing.id, e.target.value)
+                        }
                         disabled={loading === listing.id}
                         className="rounded-lg border border-zinc-200 bg-white px-2 py-1 text-xs focus:border-[#D4450A] focus:outline-none"
                       >
                         {STATUS_OPTIONS.map((s) => (
                           <option key={s} value={s}>
-                            {s === "DRAFT" ? "Draft" : s.charAt(0) + s.slice(1).toLowerCase()}
+                            {s === "DRAFT"
+                              ? "Draft"
+                              : s.charAt(0) + s.slice(1).toLowerCase()}
                           </option>
                         ))}
                       </select>
@@ -311,7 +464,14 @@ export default function AdminListingsClient({
                         className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-500"
                         title="Delete"
                       >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
                           <polyline points="3 6 5 6 21 6" />
                           <path d="M19 6l-1 14H6L5 6" />
                           <path d="M10 11v6M14 11v6" />

@@ -69,7 +69,7 @@ export default async function AdminVerificationPage() {
   const reviewed = vendors.filter((v) => v.idVerificationStatus !== "PENDING");
 
   return (
-    <div className="p-6">
+    <div className="admin-page admin-legacy">
       <VerificationClient pending={pending} reviewed={reviewed} />
     </div>
   );

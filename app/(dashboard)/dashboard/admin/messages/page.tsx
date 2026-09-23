@@ -1,3 +1,4 @@
+import AdminPageHeader from "../components/admin-page-header";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { IconMessage } from "@tabler/icons-react";
@@ -33,16 +34,8 @@ export default async function AdminMessagesInboxPage() {
   const conversations = result.conversations;
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-        <div>
-        <h1 className="text-xl font-semibold text-[#1C1C1A]">Messages</h1>
-        <p className="mt-0.5 text-[13px] text-[#7c7b77]">
-          All customer ↔ store conversations — {conversations.length} total
-        </p>
-        </div>
-        <div className="flex flex-wrap gap-2">{recipients.ok&&<NewMessage people={recipients.people} stores={recipients.stores}/>}<a href="/api/admin/messages/export" className="inline-flex min-h-11 items-center rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold hover:border-orange-200">Export CSV</a></div>
-      </div>
+    <div className="admin-page admin-legacy">
+      <AdminPageHeader eyebrow="People & support" title="Messages" description={`${conversations.length} conversations between customers and local businesses. Search, review and support each connection.`}><div className="flex flex-wrap gap-2">{recipients.ok&&<NewMessage people={recipients.people} stores={recipients.stores}/>}<a href="/api/admin/messages/export" className="admin-button">Export conversations</a></div></AdminPageHeader>
 
       <MessageExport/>
       {conversations.length === 0 ? (

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import type { ListingStatus, ListingType, Prisma } from "@prisma/client";
+import { ListingStatus, ListingType, type Prisma } from "@prisma/client";
 
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -21,7 +21,7 @@ export async function getAdminListings(filters: AdminListingFilters) {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/login");
 
-  const page = filters.page ?? 1;
+  const page = Math.max(1, Math.floor(filters.page || 1));
   const take = 20;
   const skip = (page - 1) * take;
 
@@ -34,10 +34,16 @@ export async function getAdminListings(filters: AdminListingFilters) {
       { store: { name: { contains: filters.q, mode: "insensitive" } } },
     ];
   }
-  if (filters.status && filters.status !== "all") {
+  if (
+    filters.status &&
+    Object.values(ListingStatus).includes(filters.status as ListingStatus)
+  ) {
     where.status = filters.status as ListingStatus;
   }
-  if (filters.type && filters.type !== "all") {
+  if (
+    filters.type &&
+    Object.values(ListingType).includes(filters.type as ListingType)
+  ) {
     where.type = filters.type as ListingType;
   }
   if (filters.storeId && filters.storeId !== "all") {
@@ -86,6 +92,8 @@ export async function updateListingStatus(listingId: string, status: string) {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/login");
 
+  if (!Object.values(ListingStatus).includes(status as ListingStatus))
+    throw new Error("Choose a valid status.");
   await prisma.listing.update({
     where: { id: listingId },
     data: { status: status as ListingStatus },
@@ -98,15 +106,43 @@ export async function deleteListing(listingId: string) {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/login");
 
-  await prisma.listing.delete({ where: { id: listingId } });
+  await prisma.$transaction(
+    async (tx) => {
+      const record = await tx.listing.findUnique({
+        where: { id: listingId },
+        select: {
+          _count: {
+            select: {
+              orderItems: true,
+              splitOrderItems: true,
+              reviews: true,
+              cartItems: true,
+            },
+          },
+        },
+      });
+      if (!record) throw new Error("This listing no longer exists.");
+      if (Object.values(record._count).some((count) => count > 0))
+        throw new Error(
+          "This listing has customer activity. Archive it to preserve its history.",
+        );
+      await tx.listing.delete({ where: { id: listingId } });
+    },
+    { isolationLevel: "Serializable" },
+  );
   revalidatePath("/dashboard/admin/listings");
   return { ok: true as const };
 }
 
-export async function bulkUpdateListingStatus(listingIds: string[], status: string) {
+export async function bulkUpdateListingStatus(
+  listingIds: string[],
+  status: string,
+) {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/login");
 
+  if (!Object.values(ListingStatus).includes(status as ListingStatus))
+    throw new Error("Choose a valid status.");
   await prisma.listing.updateMany({
     where: { id: { in: listingIds } },
     data: { status: status as ListingStatus },

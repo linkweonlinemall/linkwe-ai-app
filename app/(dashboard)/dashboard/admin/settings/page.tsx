@@ -1,3 +1,4 @@
+import AdminPageHeader from "../components/admin-page-header";
 import { redirect } from "next/navigation";
 
 import { logoutAction } from "@/app/(auth)/auth-actions";
@@ -32,19 +33,14 @@ export default async function AdminSettingsPage() {
       isActive: true,
     },
     orderBy: { createdAt: "desc" },
-    take: 100,
+
   });
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-zinc-900">Admin settings</h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            Manage your account and all platform users
-          </p>
-        </div>
+    <div className="admin-page admin-legacy">
+        <AdminPageHeader eyebrow="Administration" title="Settings" description="Manage account security, staff passwords and the warehouse details used for fulfilment."/>
 
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+        <div className="grid items-start gap-6 xl:grid-cols-2">
           <WarehouseSettings initial={{ name: warehouse?.name ?? "LinkWe warehouse", line1: warehouse?.address?.line1 ?? "", city: warehouse?.address?.city ?? "", region: warehouse?.address?.region ?? "", phone: warehouse?.address?.phone ?? "", latitude: warehouse?.address?.latitude?.toString() ?? "", longitude: warehouse?.address?.longitude?.toString() ?? "" }}/>
           {/* Admin profile */}
           <div className="rounded-2xl border border-zinc-200 bg-white p-6">

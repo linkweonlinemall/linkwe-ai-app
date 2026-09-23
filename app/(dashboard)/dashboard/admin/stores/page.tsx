@@ -1,3 +1,4 @@
+import AdminPageHeader from "../components/admin-page-header";
 import { redirect } from "next/navigation";
 
 import { getAdminStores } from "@/app/actions/admin-stores";
@@ -33,11 +34,8 @@ export default async function AdminStoresPage({
   const { stores, total, totalPages } = await getAdminStores({ q, status, sort, page });
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-zinc-900">All Stores</h1>
-        <p className="mt-1 text-sm text-zinc-500">{total} stores on LinkWe</p>
-      </div>
+    <div className="admin-page admin-legacy">
+      <AdminPageHeader title="Stores" description={`${total} local businesses. Manage storefronts, review publication and open every owner's account.`} createHref="/dashboard/admin/records/store/new" createLabel="Add store"/>
 
       <AdminStoresClient
         stores={stores}

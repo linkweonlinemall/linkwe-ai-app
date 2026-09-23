@@ -1,11 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
-/**
- * Product listings only expose `isPublished` on Product (no separate archive flag).
- * — active: live on storefront
- * — draft: not published
- */
-export type AdminProductStatus = "active" | "draft";
+/** Publication and archive are separate states; archived items are never labelled as drafts. */
+export type AdminProductStatus = "active" | "draft" | "archived";
 
 export type AdminProductFilters = {
   search?: string;
@@ -34,19 +30,20 @@ export type AdminProductRow = {
   createdAt: string;
 };
 
-export function rowStatus(p: { isPublished: boolean }): AdminProductStatus {
-  return p.isPublished ? "active" : "draft";
+export function rowStatus(p: { isPublished: boolean; isArchived?: boolean }): AdminProductStatus {
+  return p.isArchived ? "archived" : p.isPublished ? "active" : "draft";
 }
 
 export function statusWhere(
   status: AdminProductFilters["status"]
 ): Prisma.ProductWhereInput {
   if (status === "active") {
-    return { isPublished: true };
+    return { isPublished: true, isArchived:false };
   }
   if (status === "draft") {
-    return { isPublished: false };
+    return { isPublished: false, isArchived:false };
   }
+  if (status === "archived") return { isArchived:true };
   return {};
 }
 
@@ -73,8 +70,10 @@ export function orderByFromSort(
 export function dataForStatus(status: AdminProductStatus) {
   switch (status) {
     case "active":
-      return { isPublished: true };
+      return { isPublished: true, isArchived:false };
     case "draft":
-      return { isPublished: false };
+      return { isPublished: false, isArchived:false };
+    case "archived":
+      return {isPublished:false,isArchived:true};
   }
 }

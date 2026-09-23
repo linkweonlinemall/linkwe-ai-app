@@ -1,9 +1,13 @@
 "use client";
+import { useSearchParams } from "next/navigation";
 import OrderControls from "./order-controls";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 
-import { cleanupAbandonedOrders, deleteAllOrders } from "@/app/actions/admin-delete";
+import {
+  cleanupAbandonedOrders,
+  deleteAllOrders,
+} from "@/app/actions/admin-delete";
 import UndoDeleteToast from "./undo-delete-toast";
 import {
   cancelOrders,
@@ -19,17 +23,30 @@ type Order = Awaited<ReturnType<typeof getAdminOrders>>[number];
 type Stats = Awaited<ReturnType<typeof getAdminOrderStats>>;
 
 function isSandboxPayment(order: Order): boolean {
-  const data = order.paymentAttempts[0]?.providerData as { environment?: unknown } | null;
+  const data = order.paymentAttempts[0]?.providerData as {
+    environment?: unknown;
+  } | null;
   return data?.environment === "sandbox";
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  PENDING_PAYMENT: { label: "Pending payment", color: "#B45309", bg: "#FFFBEB" },
+const STATUS_CONFIG: Record<
+  string,
+  { label: string; color: string; bg: string }
+> = {
+  PENDING_PAYMENT: {
+    label: "Pending payment",
+    color: "#B45309",
+    bg: "#FFFBEB",
+  },
   PAID: { label: "Order placed", color: "#1A7FB5", bg: "#EFF8FF" },
   PROCESSING: { label: "Processing", color: "#E8820C", bg: "#FFF7ED" },
   SHIPPED: { label: "Shipped", color: "#1A7FB5", bg: "#EFF8FF" },
   DELIVERED: { label: "Delivered", color: "#1B8C5A", bg: "#F0FDF4" },
-  CUSTOMER_RECEIVED: { label: "Customer Received", color: "#059669", bg: "#F0FDF4" },
+  CUSTOMER_RECEIVED: {
+    label: "Customer Received",
+    color: "#059669",
+    bg: "#F0FDF4",
+  },
   COMPLETED: { label: "Completed", color: "#1B8C5A", bg: "#F0FDF4" },
   CANCELLED: { label: "Cancelled", color: "#DC2626", bg: "#FEF2F2" },
   REFUNDED: { label: "Refunded", color: "#DC2626", bg: "#FEF2F2" },
@@ -65,68 +82,30 @@ function relativeTime(date: Date | string): string {
   return `${mins}m ago`;
 }
 
-function getRowAccentColor(status: string): string {
-  switch (status) {
-    case "PAID":
-      return "#1A7FB5";
-    case "PROCESSING":
-      return "#E8820C";
-    case "PARTIALLY_IN_HOUSE":
-      return "#7F77DD";
-    case "READY_TO_SHIP":
-      return "#1B8C5A";
-    case "PACKING_COMPLETE":
-      return "#0D9488";
-    case "SHIPPED":
-      return "#1A7FB5";
-    case "CUSTOMER_RECEIVED":
-      return "#059669";
-    case "DELIVERED":
-    case "COMPLETED":
-      return "#059669";
-    case "CANCELLED":
-    case "REFUNDED":
-      return "#DC2626";
-    default:
-      return "#E4E4E7";
-  }
-}
-
-function getRowBgColor(status: string): string {
-  switch (status) {
-    case "PAID":
-      return "#DBEAFE";
-    case "PROCESSING":
-      return "#FEF3C7";
-    case "PARTIALLY_IN_HOUSE":
-      return "#EDE9FE";
-    case "READY_TO_SHIP":
-      return "#D1FAE5";
-    case "PACKING_COMPLETE":
-      return "#CCFBF1";
-    case "SHIPPED":
-      return "#BFDBFE";
-    case "DELIVERED":
-    case "COMPLETED":
-      return "#A7F3D0";
-    case "CUSTOMER_RECEIVED":
-      return "#BBF7D0";
-    case "CANCELLED":
-    case "REFUNDED":
-      return "#FEE2E2";
-    default:
-      return "#FFFFFF";
-  }
-}
-
 // Part 3 token pill colors for split-order statuses in the expand panel.
 function splitStatusPill(status: string): { color: string; bg: string } {
-  if (status === "AWAITING_VENDOR_ACTION") return { color: "#1A7FB5", bg: "#EFF8FF" };
-  if (["PREPARING", "VENDOR_PREPARING", "AWAITING_COURIER_PICKUP"].includes(status))
+  if (status === "AWAITING_VENDOR_ACTION")
+    return { color: "#1A7FB5", bg: "#EFF8FF" };
+  if (
+    ["PREPARING", "VENDOR_PREPARING", "AWAITING_COURIER_PICKUP"].includes(
+      status,
+    )
+  )
     return { color: "#E8820C", bg: "#FFF7ED" };
-  if (["COURIER_ASSIGNED", "COURIER_PICKED_UP", "VENDOR_DROPPED_OFF"].includes(status))
+  if (
+    ["COURIER_ASSIGNED", "COURIER_PICKED_UP", "VENDOR_DROPPED_OFF"].includes(
+      status,
+    )
+  )
     return { color: "#E8820C", bg: "#FFF7ED" };
-  if (["READY_FOR_LINKWE", "AT_WAREHOUSE", "PACKAGED", "BUNDLED_FOR_DISPATCH"].includes(status))
+  if (
+    [
+      "READY_FOR_LINKWE",
+      "AT_WAREHOUSE",
+      "PACKAGED",
+      "BUNDLED_FOR_DISPATCH",
+    ].includes(status)
+  )
     return { color: "#1B8C5A", bg: "#F0FDF4" };
   if (["SHIPPED", "OUT_FOR_DELIVERY", "DISPATCHED"].includes(status))
     return { color: "#1D4ED8", bg: "#EFF6FF" };
@@ -172,7 +151,8 @@ function SplitStoreFulfillmentCard({
 }) {
   const pill = splitStatusPill(split.status);
   const splitRef = split.referenceNumber ?? split.id.slice(-8).toUpperCase();
-  const showPayoutButton = split.status === "DELIVERED" && !split.earningsReleased;
+  const showPayoutButton =
+    split.status === "DELIVERED" && !split.earningsReleased;
   const showPaidOut = split.status === "COMPLETED" || split.earningsReleased;
 
   return (
@@ -183,7 +163,9 @@ function SplitStoreFulfillmentCard({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-semibold text-zinc-900">{split.store.name}</p>
+            <p className="text-sm font-semibold text-zinc-900">
+              {split.store.name}
+            </p>
             <span
               className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold"
               style={{ color: pill.color, backgroundColor: pill.bg }}
@@ -209,7 +191,9 @@ function SplitStoreFulfillmentCard({
             Complete & release payout
           </button>
         ) : showPaidOut ? (
-          <p className="shrink-0 text-sm font-semibold text-emerald-700">Paid out ✓</p>
+          <p className="shrink-0 text-sm font-semibold text-emerald-700">
+            Paid out ✓
+          </p>
         ) : null}
       </div>
     </div>
@@ -234,9 +218,17 @@ function VendorFulfillmentCards({
           key={split.id}
           split={split}
           onComplete={async () => {
-            if (!window.confirm("Complete this delivered vendor order and release its earnings?")) return;
+            if (
+              !window.confirm(
+                "Complete this delivered vendor order and release its earnings?",
+              )
+            )
+              return;
             const result = await completeSplitOrder(split.id);
-            if (!result.ok) { window.alert(result.error); return; }
+            if (!result.ok) {
+              window.alert(result.error);
+              return;
+            }
             onRefresh();
           }}
         />
@@ -272,7 +264,10 @@ function receivedCount(order: Order): number {
 }
 
 function fullyReceived(order: Order): boolean {
-  return order.splitOrders.length > 0 && receivedCount(order) === order.splitOrders.length;
+  return (
+    order.splitOrders.length > 0 &&
+    receivedCount(order) === order.splitOrders.length
+  );
 }
 
 function orderIsStale(order: Order): boolean {
@@ -326,8 +321,18 @@ function makeRowItem(order: Order, isDone: boolean): RowMeta {
           ? "#1B8C5A"
           : "#E8820C";
 
-  const pillColor = recvd === total && total > 0 ? "#1B8C5A" : recvd > 0 ? "#E8820C" : "#1A7FB5";
-  const pillBg = recvd === total && total > 0 ? "#F0FDF4" : recvd > 0 ? "#FFF7ED" : "#EFF8FF";
+  const pillColor =
+    recvd === total && total > 0
+      ? "#1B8C5A"
+      : recvd > 0
+        ? "#E8820C"
+        : "#1A7FB5";
+  const pillBg =
+    recvd === total && total > 0
+      ? "#F0FDF4"
+      : recvd > 0
+        ? "#FFF7ED"
+        : "#EFF8FF";
 
   const firstItem = order.items[0];
   const itemsLabel =
@@ -347,7 +352,10 @@ function makeRowItem(order: Order, isDone: boolean): RowMeta {
           ? { text: `Waiting ${staleAge(order)}`, color: "#D4450A" }
           : pending === total
             ? {
-                text: total === 1 ? "Awaiting vendor" : `Waiting on ${total} vendors`,
+                text:
+                  total === 1
+                    ? "Awaiting vendor"
+                    : `Waiting on ${total} vendors`,
                 color: "#71717a",
               }
             : pending === 1
@@ -374,11 +382,17 @@ function makeRowItem(order: Order, isDone: boolean): RowMeta {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function OrdersTab() {
+  const params = useSearchParams();
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const [orders, setOrders] = useState<Order[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<MainOrderStatus | "ALL">("ALL");
+  const [search, setSearch] = useState(params.get("q") || "");
+  const [statusFilter, setStatusFilter] = useState<MainOrderStatus | "ALL">(
+    "ALL",
+  );
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
@@ -390,34 +404,42 @@ export default function OrdersTab() {
   const [cleanedCount, setCleanedCount] = useState<number | null>(null);
 
   useEffect(() => {
+    let current = true;
     setLoading(true);
-    Promise.all([getAdminOrders(), getAdminOrderStats()])
-      .then(([o, s]) => {
-        setOrders(o);
-        setStats(s);
-        setLoading(false);
-      })
-      .catch(() => {
-        setLoading(false);
-      });
-  }, [refreshKey]);
-
-  const filtered = useMemo(() => {
-    let data = orders;
-    if (statusFilter !== "ALL") {
-      data = data.filter((o) => o.status === statusFilter);
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      data = data.filter(
-        (o) =>
-          (o.referenceNumber ?? "").toLowerCase().includes(q) ||
-          o.buyer.fullName.toLowerCase().includes(q) ||
-          o.buyer.email.toLowerCase().includes(q),
-      );
-    }
-    return data;
-  }, [orders, statusFilter, search]);
+    setLoadError("");
+    const timer = setTimeout(
+      () => {
+        Promise.all([
+          getAdminOrders({
+            search: search.trim(),
+            status: statusFilter === "ALL" ? undefined : statusFilter,
+            limit: 26,
+            offset: (page - 1) * 25,
+          }),
+          getAdminOrderStats(),
+        ])
+          .then(([o, s]) => {
+            if (!current) return;
+            setOrders(o.slice(0, 25));
+            setHasMore(o.length > 25);
+            setStats(s);
+            setLoading(false);
+          })
+          .catch(() => {
+            if (current) {
+              setLoading(false);
+              setLoadError("Orders could not load. Please try again.");
+            }
+          });
+      },
+      search ? 250 : 0,
+    );
+    return () => {
+      current = false;
+      clearTimeout(timer);
+    };
+  }, [refreshKey, page, search, statusFilter]);
+  const filtered = orders;
 
   const visibleIds = filtered.map((o) => o.id);
   const allSelected =
@@ -428,14 +450,19 @@ export default function OrdersTab() {
   const hasDeliveredSplitsToComplete = filtered
     .filter((o) => selectedRows.has(o.id))
     .some((o) =>
-      o.splitOrders.some((s) => s.status === "DELIVERED" && !s.earningsReleased),
+      o.splitOrders.some(
+        (s) => s.status === "DELIVERED" && !s.earningsReleased,
+      ),
     );
 
   const deliveredSplitCount = filtered
     .filter((o) => selectedRows.has(o.id))
     .reduce(
       (n, o) =>
-        n + o.splitOrders.filter((s) => s.status === "DELIVERED" && !s.earningsReleased).length,
+        n +
+        o.splitOrders.filter(
+          (s) => s.status === "DELIVERED" && !s.earningsReleased,
+        ).length,
       0,
     );
 
@@ -469,12 +496,25 @@ export default function OrdersTab() {
     .sort((a, b) => sortOldest(a, b, true));
 
   type TableItem =
-    | { kind: "header"; label: string; sublabel?: string; color: string; bg: string; count: number }
+    | {
+        kind: "header";
+        label: string;
+        sublabel?: string;
+        color: string;
+        bg: string;
+        count: number;
+      }
     | RowMeta;
 
   const tableItems: TableItem[] = [];
   if (pendingPaymentGroup.length > 0) {
-    tableItems.push({ kind: "header", label: "Pending payment — review required", color: "#B45309", bg: "#FFFBEB", count: pendingPaymentGroup.length });
+    tableItems.push({
+      kind: "header",
+      label: "Pending payment — review required",
+      color: "#B45309",
+      bg: "#FFFBEB",
+      count: pendingPaymentGroup.length,
+    });
     pendingPaymentGroup.forEach((o) => tableItems.push(makeRowItem(o, false)));
   }
   if (awaitingGroup.length > 0) {
@@ -545,11 +585,10 @@ export default function OrdersTab() {
 
   return (
     <div>
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
-            Orders
-          </h2>
+          <p className="admin-eyebrow">Daily operations</p>
+          <h1 className="admin-title">Orders</h1>
           <p className="mt-0.5 text-sm" style={{ color: "var(--text-muted)" }}>
             All customer orders across the platform
           </p>
@@ -557,49 +596,127 @@ export default function OrdersTab() {
         <div className="flex flex-wrap items-center gap-3">
           <div className="text-right">
             <p className="text-2xl font-bold text-zinc-900">{orders.length}</p>
-            <p className="text-xs text-zinc-400">total loaded</p>
+            <p className="text-xs text-zinc-400">shown on this page</p>
           </div>
-          <button
-            type="button"
-            onClick={async () => {
-              if (!window.confirm("Delete abandoned unpaid checkouts older than one hour? This also clears their customers’ saved carts.")) return;
-              setCleaning(true);
-              const result = await cleanupAbandonedOrders();
-              setCleanedCount(result.deleted);
-              setCleaning(false);
-              setRefreshKey((k) => k + 1);
-              setTimeout(() => setCleanedCount(null), 3000);
-            }}
-            disabled={cleaning}
-            className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-50 disabled:opacity-50"
-          >
-            {cleaning ? "Cleaning..." : "Clean abandoned"}
-          </button>
-          {cleanedCount !== null ? (
-            <span className="text-xs font-medium text-emerald-600">✓ {cleanedCount} removed</span>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => { if (window.prompt("This deletes ALL orders, vendor/courier ledgers, payouts, reviews and carts. Type DELETE ALL to continue.") === "DELETE ALL") setPendingDelete(true); }}
-            className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50"
-          >
-            Delete all
-          </button>
+          <details className="relative">
+            <summary className="admin-button">Maintenance</summary>
+            <div className="absolute right-0 z-30 mt-2 grid min-w-56 gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-xl">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (
+                    !window.confirm(
+                      "Delete abandoned unpaid checkouts older than one hour? This also clears their customers’ saved carts.",
+                    )
+                  )
+                    return;
+                  setCleaning(true);
+                  try {
+                    const result = await cleanupAbandonedOrders();
+                    setCleanedCount(result.deleted);
+                    setRefreshKey((k) => k + 1);
+                    setTimeout(() => setCleanedCount(null), 3000);
+                  } catch {
+                    setLoadError(
+                      "Cleanup could not complete. Reload the orders before trying again.",
+                    );
+                  } finally {
+                    setCleaning(false);
+                  }
+                }}
+                disabled={cleaning}
+                className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-50 disabled:opacity-50"
+              >
+                {cleaning ? "Cleaning..." : "Clean abandoned"}
+              </button>
+              {cleanedCount !== null ? (
+                <span className="text-xs font-medium text-emerald-600">
+                  ✓ {cleanedCount} removed
+                </span>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => {
+                  if (
+                    window.prompt(
+                      "This deletes ALL orders, vendor/courier ledgers, payouts, reviews and carts. Type DELETE ALL to continue.",
+                    ) === "DELETE ALL"
+                  )
+                    setPendingDelete(true);
+                }}
+                className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50"
+              >
+                Delete all orders
+              </button>
+            </div>
+          </details>
         </div>
       </div>
 
+      {loadError && (
+        <div className="admin-alert" role="alert">
+          {loadError}
+          <button
+            type="button"
+            className="admin-button ml-3"
+            onClick={() => setRefreshKey((k) => k + 1)}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+      <nav
+        aria-label="Order pages"
+        className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#dfe8e6] bg-white p-3"
+      >
+        <p className="admin-muted">
+          Page {page} · {loading ? "Loading…" : `${orders.length} orders shown`}{" "}
+          · Search covers all orders
+        </p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className="admin-button"
+            disabled={loading || page <= 1}
+            onClick={() => {
+              setPage((p) => p - 1);
+              setSelectedRows(new Set());
+            }}
+          >
+            ← Previous
+          </button>
+          <button
+            type="button"
+            className="admin-button"
+            disabled={loading || !hasMore}
+            onClick={() => {
+              setPage((p) => p + 1);
+              setSelectedRows(new Set());
+            }}
+          >
+            Next →
+          </button>
+        </div>
+      </nav>
       <div className="mb-4 flex gap-2 overflow-x-auto pb-2">
         <button
           type="button"
-          onClick={() => setStatusFilter("ALL")}
+          onClick={() => {
+            setStatusFilter("ALL");
+            setPage(1);
+            setSelectedRows(new Set());
+          }}
           className="shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
           style={{
-            backgroundColor: statusFilter === "ALL" ? "var(--scarlet)" : "white",
+            backgroundColor:
+              statusFilter === "ALL" ? "var(--scarlet)" : "white",
             color: statusFilter === "ALL" ? "white" : "var(--text-secondary)",
-            border: statusFilter === "ALL" ? "none" : "1px solid var(--card-border)",
+            border:
+              statusFilter === "ALL" ? "none" : "1px solid var(--card-border)",
           }}
         >
-          All ({orders.length})
+          All (
+          {stats ? Object.values(stats).reduce((sum, n) => sum + n, 0) : "…"})
         </button>
         {stats
           ? Object.entries(STATUS_CONFIG).map(([status, config]) => {
@@ -610,7 +727,11 @@ export default function OrdersTab() {
                 <button
                   key={status}
                   type="button"
-                  onClick={() => setStatusFilter(status as MainOrderStatus)}
+                  onClick={() => {
+                    setStatusFilter(status as MainOrderStatus);
+                    setPage(1);
+                    setSelectedRows(new Set());
+                  }}
                   className="shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
                   style={{
                     backgroundColor: active ? "var(--scarlet)" : "white",
@@ -628,7 +749,11 @@ export default function OrdersTab() {
       <input
         type="text"
         value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        onChange={(e) => {
+          setSearch(e.target.value);
+          setPage(1);
+          setSelectedRows(new Set());
+        }}
         placeholder="Search by order ref, customer name or email..."
         className="mb-4 w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm shadow-sm outline-none ring-zinc-300 focus:ring-2"
       />
@@ -636,7 +761,8 @@ export default function OrdersTab() {
       {selectedRows.size > 0 ? (
         <div className="mb-4 flex items-center gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 shadow-sm">
           <span className="text-sm font-medium text-zinc-700">
-            {selectedRows.size} order{selectedRows.size !== 1 ? "s" : ""} selected
+            {selectedRows.size} order{selectedRows.size !== 1 ? "s" : ""}{" "}
+            selected
           </span>
           <div className="h-4 w-px bg-zinc-200" />
 
@@ -656,10 +782,20 @@ export default function OrdersTab() {
               onClick={async () => {
                 setBulkProcessing(true);
                 try {
-                  for (const order of filtered.filter((o) => selectedRows.has(o.id))) {
-                    if (!window.confirm("Complete delivered parcels and release vendor earnings?")) return;
+                  for (const order of filtered.filter((o) =>
+                    selectedRows.has(o.id),
+                  )) {
+                    if (
+                      !window.confirm(
+                        "Complete delivered parcels and release vendor earnings?",
+                      )
+                    )
+                      return;
                     const result = await completeAllDeliveredSplits(order.id);
-                    if (!result.ok) { window.alert(result.error); return; }
+                    if (!result.ok) {
+                      window.alert(result.error);
+                      return;
+                    }
                   }
                   setRefreshKey((k) => k + 1);
                 } finally {
@@ -714,7 +850,10 @@ export default function OrdersTab() {
       {loading ? (
         <>
           {/* Loading — desktop table skeleton */}
-          <div className="hidden overflow-hidden rounded-xl bg-white md:block" style={{ border: "1px solid var(--card-border)" }}>
+          <div
+            className="hidden overflow-hidden rounded-xl bg-white md:block"
+            style={{ border: "1px solid var(--card-border)" }}
+          >
             <table className="w-full text-sm">
               <thead>
                 <tr
@@ -777,7 +916,10 @@ export default function OrdersTab() {
       ) : (
         <>
           {/* ── Mobile card list (<md) ─────────────────────────────────── */}
-          <div className="overflow-hidden rounded-xl md:hidden" style={{ border: "1px solid var(--card-border)" }}>
+          <div
+            className="overflow-hidden rounded-xl md:hidden"
+            style={{ border: "1px solid var(--card-border)" }}
+          >
             {tableItems.map((item) => {
               if (item.kind === "header") {
                 return (
@@ -786,15 +928,24 @@ export default function OrdersTab() {
                     className="border-b border-zinc-100 px-4 py-1.5"
                     style={{ backgroundColor: item.bg }}
                   >
-                    <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: item.color }}>
+                    <span
+                      className="text-[10px] font-semibold uppercase tracking-widest"
+                      style={{ color: item.color }}
+                    >
                       {item.label}
                     </span>
                     {item.sublabel ? (
-                      <span className="ml-1 text-[10px] font-normal normal-case tracking-normal" style={{ color: item.color, opacity: 0.65 }}>
+                      <span
+                        className="ml-1 text-[10px] font-normal normal-case tracking-normal"
+                        style={{ color: item.color, opacity: 0.65 }}
+                      >
                         · {item.sublabel}
                       </span>
                     ) : null}
-                    <span className="ml-1.5 text-[10px] font-normal normal-case tracking-normal" style={{ color: item.color, opacity: 0.5 }}>
+                    <span
+                      className="ml-1.5 text-[10px] font-normal normal-case tracking-normal"
+                      style={{ color: item.color, opacity: 0.5 }}
+                    >
                       · {item.count}
                     </span>
                   </div>
@@ -802,8 +953,16 @@ export default function OrdersTab() {
               }
 
               const {
-                order: row, isDone, recvd, total, ready, stale,
-                edgeColor, pillColor, pillBg, itemsLabel, panelReadiness,
+                order: row,
+                isDone,
+                recvd,
+                total,
+                stale,
+                edgeColor,
+                pillColor,
+                pillBg,
+                itemsLabel,
+                panelReadiness,
               } = item;
               const sCfg = STATUS_CONFIG[row.status];
 
@@ -814,9 +973,17 @@ export default function OrdersTab() {
                     className={`relative border-b border-zinc-100 px-4 py-3 transition-colors${isDone ? " opacity-70" : ""}`}
                     style={{
                       borderLeft: `3px solid ${edgeColor}`,
-                      backgroundColor: selectedRows.has(row.id) ? "#EFF6FF" : isDone ? "#FAFAFA" : "#FFFFFF",
+                      backgroundColor: selectedRows.has(row.id)
+                        ? "#EFF6FF"
+                        : isDone
+                          ? "#FAFAFA"
+                          : "#FFFFFF",
                     }}
-                    onClick={() => setExpandedRow((prev) => (prev === row.id ? null : row.id))}
+                    onClick={() =>
+                      setExpandedRow((prev) =>
+                        prev === row.id ? null : row.id,
+                      )
+                    }
                   >
                     {/* Line 1: checkbox + ref + caret  ·  status pill */}
                     <div className="mb-1.5 flex items-center justify-between gap-2">
@@ -830,11 +997,16 @@ export default function OrdersTab() {
                           />
                         </div>
                         <span className="font-mono text-xs font-semibold text-zinc-800">
-                          {row.referenceNumber ?? row.id.slice(-8).toUpperCase()}
+                          {row.referenceNumber ??
+                            row.id.slice(-8).toUpperCase()}
                         </span>
                         <svg
-                          width="12" height="12" viewBox="0 0 24 24" fill="none"
-                          stroke="currentColor" strokeWidth="2"
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
                           className={`shrink-0 text-zinc-400 transition-transform duration-150 ${expandedRow === row.id ? "rotate-180" : ""}`}
                           aria-hidden
                         >
@@ -843,15 +1015,22 @@ export default function OrdersTab() {
                       </div>
                       <span
                         className="shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                        style={{ color: sCfg?.color ?? panelReadiness.color, backgroundColor: sCfg?.bg ?? "#F4F4F5" }}
+                        style={{
+                          color: sCfg?.color ?? panelReadiness.color,
+                          backgroundColor: sCfg?.bg ?? "#F4F4F5",
+                        }}
                       >
                         {panelReadiness.text}
                       </span>
                     </div>
                     {/* Line 2: customer name + region */}
                     <div className="mb-1 flex items-center gap-2 pl-5">
-                      <span className="text-xs font-medium text-zinc-900">{row.buyer.fullName}</span>
-                      <span className="text-[10px] capitalize text-zinc-400">{row.region.replace(/_/g, " ")}</span>
+                      <span className="text-xs font-medium text-zinc-900">
+                        {row.buyer.fullName}
+                      </span>
+                      <span className="text-[10px] capitalize text-zinc-400">
+                        {row.region.replace(/_/g, " ")}
+                      </span>
                     </div>
                     {/* Line 3: received pill + items summary */}
                     <div className="flex flex-wrap items-center gap-2 pl-5">
@@ -863,11 +1042,16 @@ export default function OrdersTab() {
                           {recvd}/{total} recv
                         </span>
                       ) : null}
-                      <span className="line-clamp-1 min-w-0 text-[10px] text-zinc-500">{itemsLabel}</span>
+                      <span className="line-clamp-1 min-w-0 text-[10px] text-zinc-500">
+                        {itemsLabel}
+                      </span>
                     </div>
                     {/* Staleness flag */}
                     {stale ? (
-                      <p className="mt-1 pl-5 text-[10px] font-semibold" style={{ color: "#D4450A" }}>
+                      <p
+                        className="mt-1 pl-5 text-[10px] font-semibold"
+                        style={{ color: "#D4450A" }}
+                      >
                         Waiting {staleAge(row)}
                       </p>
                     ) : null}
@@ -876,18 +1060,23 @@ export default function OrdersTab() {
                   {/* Mobile expand panel — fully stacked, no inner tables */}
                   {expandedRow === row.id ? (
                     <div className="border-b border-zinc-200 bg-zinc-50 px-4 py-4">
-
                       {/* Panel header */}
                       <div className="mb-4 flex flex-wrap items-center gap-2 border-b border-zinc-100 pb-3">
                         {total > 0 ? (
                           <span
                             className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-                            style={{ color: pillColor, backgroundColor: pillBg }}
+                            style={{
+                              color: pillColor,
+                              backgroundColor: pillBg,
+                            }}
                           >
                             {recvd} of {total} received
                           </span>
                         ) : null}
-                        <span className="text-xs font-medium" style={{ color: panelReadiness.color }}>
+                        <span
+                          className="text-xs font-medium"
+                          style={{ color: panelReadiness.color }}
+                        >
                           {panelReadiness.text}
                         </span>
                         <span className="ml-auto font-mono text-sm font-semibold text-zinc-900">
@@ -896,13 +1085,22 @@ export default function OrdersTab() {
                       </div>
 
                       {/* Line items */}
-                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Line items</p>
+                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                        Line items
+                      </p>
                       <ul className="mb-4 flex flex-col gap-1.5">
                         {row.items.map((li) => (
-                          <li key={li.id} className="flex items-start justify-between gap-3 rounded-lg border border-zinc-100 bg-white px-3 py-2">
+                          <li
+                            key={li.id}
+                            className="flex items-start justify-between gap-3 rounded-lg border border-zinc-100 bg-white px-3 py-2"
+                          >
                             <div className="min-w-0">
-                              <p className="text-xs font-medium text-zinc-800">{li.titleSnapshot}</p>
-                              <p className="text-[10px] text-zinc-500">{li.store.name} · qty {li.quantity}</p>
+                              <p className="text-xs font-medium text-zinc-800">
+                                {li.titleSnapshot}
+                              </p>
+                              <p className="text-[10px] text-zinc-500">
+                                {li.store.name} · qty {li.quantity}
+                              </p>
                             </div>
                             <span className="shrink-0 font-mono text-xs text-zinc-900">
                               {formatTTD(li.priceMinor * li.quantity)}
@@ -912,9 +1110,18 @@ export default function OrdersTab() {
                       </ul>
 
                       {/* Vendor fulfillment */}
-                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Vendor fulfillment</p>
+                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                        Vendor fulfillment
+                      </p>
                       <div className="mb-4">
-                        <OrderControls orderId={row.id} status={row.status} splits={row.splitOrders} sandboxPayment={isSandboxPayment(row)} hasShippingAddress={Boolean(row.shippingAddressId)} onRefresh={() => setRefreshKey(k => k + 1)}/>
+                        <OrderControls
+                          orderId={row.id}
+                          status={row.status}
+                          splits={row.splitOrders}
+                          sandboxPayment={isSandboxPayment(row)}
+                          hasShippingAddress={Boolean(row.shippingAddressId)}
+                          onRefresh={() => setRefreshKey((k) => k + 1)}
+                        />
                         <VendorFulfillmentCards
                           splits={row.splitOrders}
                           onRefresh={() => setRefreshKey((k) => k + 1)}
@@ -922,25 +1129,41 @@ export default function OrdersTab() {
                       </div>
 
                       {/* Order financials */}
-                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Order financials</p>
+                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                        Order financials
+                      </p>
                       <div className="mb-3 space-y-2 rounded-xl border border-zinc-200 bg-white p-3 text-sm">
                         <div className="flex justify-between">
                           <span className="text-zinc-500">Subtotal</span>
-                          <span className="font-mono text-zinc-900">{formatTTD(row.subtotalMinor)}</span>
+                          <span className="font-mono text-zinc-900">
+                            {formatTTD(row.subtotalMinor)}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-zinc-500">Shipping</span>
-                          <span className="font-mono text-zinc-900">{formatTTD(row.shippingMinor)}</span>
+                          <span className="font-mono text-zinc-900">
+                            {formatTTD(row.shippingMinor)}
+                          </span>
                         </div>
                         <div className="flex justify-between border-t border-zinc-100 pt-2 font-semibold">
                           <span className="text-zinc-900">Total</span>
-                          <span className="font-mono" style={{ color: "#D4450A" }}>{formatTTD(row.totalMinor)}</span>
+                          <span
+                            className="font-mono"
+                            style={{ color: "#D4450A" }}
+                          >
+                            {formatTTD(row.totalMinor)}
+                          </span>
                         </div>
                       </div>
-                      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Customer</p>
-                      <p className="text-sm font-medium text-zinc-900">{row.buyer.fullName}</p>
-                      <p className="mb-4 text-sm text-zinc-500">{row.buyer.email}</p>
-
+                      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                        Customer
+                      </p>
+                      <p className="text-sm font-medium text-zinc-900">
+                        {row.buyer.fullName}
+                      </p>
+                      <p className="mb-4 text-sm text-zinc-500">
+                        {row.buyer.email}
+                      </p>
                     </div>
                   ) : null}
                 </Fragment>
@@ -949,272 +1172,355 @@ export default function OrdersTab() {
           </div>
 
           {/* ── Desktop table (md+) ───────────────────────────────────── */}
-          <div className="hidden overflow-hidden rounded-xl bg-white md:block" style={{ border: "1px solid var(--card-border)" }}>
+          <div
+            className="hidden overflow-hidden rounded-xl bg-white md:block"
+            style={{ border: "1px solid var(--card-border)" }}
+          >
             <div className="overflow-x-auto">
               <table className="w-full min-w-[960px] text-sm">
                 <thead>
-                <tr
-                  className="text-xs font-semibold uppercase tracking-wide"
-                  style={{
-                    color: "var(--text-muted)",
-                    backgroundColor: "#F7F7F6",
-                    borderBottom: "1px solid var(--card-border-subtle)",
-                  }}
-                >
-                  <th className="w-9 py-3 pl-5">
-                    <input
-                      type="checkbox"
-                      checked={allSelected}
-                      ref={(el) => {
-                        if (el) el.indeterminate = someSelected;
-                      }}
-                      onChange={toggleAll}
-                      className="rounded"
-                    />
-                  </th>
-                  <th className="px-5 py-3 text-left">Ref</th>
-                  <th className="px-5 py-3 text-left">Customer</th>
-                  <th className="px-5 py-3 text-left">Items</th>
-                  <th className="px-5 py-3 text-right">Total</th>
-                  <th className="px-5 py-3 text-left">Received</th>
-                  <th className="px-5 py-3 text-left">Readiness</th>
-                  <th className="px-5 py-3 text-right">Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tableItems.map((item) => {
-                  if (item.kind === "header") {
-                    return (
-                      <tr key={`grp-${item.label}`}>
-                        <td
-                          colSpan={8}
-                          className="border-b border-zinc-100 px-5 py-1.5"
-                          style={{ backgroundColor: item.bg }}
-                        >
-                          <span
-                            className="text-[10px] font-semibold uppercase tracking-widest"
-                            style={{ color: item.color }}
-                          >
-                            {item.label}
-                          </span>
-                          {item.sublabel ? (
-                            <span
-                              className="ml-1 text-[10px] font-normal normal-case tracking-normal"
-                              style={{ color: item.color, opacity: 0.65 }}
-                            >
-                              · {item.sublabel}
-                            </span>
-                          ) : null}
-                          <span
-                            className="ml-1.5 text-[10px] font-normal normal-case tracking-normal"
-                            style={{ color: item.color, opacity: 0.5 }}
-                          >
-                            · {item.count}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  }
-
-                  // All display values pre-computed by makeRowItem — read from item
-                  const {
-                    order: row, isDone, recvd, total, ready, stale,
-                    edgeColor, pillColor, pillBg, itemsLabel, panelReadiness,
-                  } = item;
-
-                  return (
-                    <Fragment key={row.id}>
-                      <tr
-                        onClick={() => setExpandedRow((prev) => (prev === row.id ? null : row.id))}
-                        style={{
-                          borderLeft: `3px solid ${edgeColor}`,
-                          backgroundColor: selectedRows.has(row.id) ? "#EFF6FF" : isDone ? "#FAFAFA" : "#FFFFFF",
+                  <tr
+                    className="text-xs font-semibold uppercase tracking-wide"
+                    style={{
+                      color: "var(--text-muted)",
+                      backgroundColor: "#F7F7F6",
+                      borderBottom: "1px solid var(--card-border-subtle)",
+                    }}
+                  >
+                    <th className="w-9 py-3 pl-5">
+                      <input
+                        type="checkbox"
+                        checked={allSelected}
+                        ref={(el) => {
+                          if (el) el.indeterminate = someSelected;
                         }}
-                        className={`cursor-pointer border-b border-zinc-100 text-zinc-800 transition-colors hover:brightness-[0.985]${isDone ? " opacity-70" : ""}`}
-                      >
-                        <td
-                          className="py-3 pl-4"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedRows.has(row.id)}
-                            onChange={() => toggleRow(row.id)}
-                            className="rounded"
-                          />
-                        </td>
-                        <td className="px-3 py-3">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-mono text-xs text-zinc-800">
-                              {row.referenceNumber ?? row.id.slice(-8).toUpperCase()}
-                            </span>
-                            <svg
-                              width="12"
-                              height="12"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              className={`shrink-0 text-zinc-400 transition-transform duration-150 ${
-                                expandedRow === row.id ? "rotate-180" : ""
-                              }`}
-                            >
-                              <polyline points="6 9 12 15 18 9" />
-                            </svg>
-                          </div>
-                        </td>
-                        <td className="px-3 py-3">
-                          <p className="text-xs font-medium text-zinc-900">{row.buyer.fullName}</p>
-                          <p className="text-[11px] text-zinc-400 capitalize">{row.region.replace(/_/g, " ")}</p>
-                        </td>
-                        <td className="max-w-[180px] px-3 py-3">
-                          <span className="line-clamp-2 text-xs text-zinc-600">{itemsLabel}</span>
-                        </td>
-                        <td className="px-3 py-3 text-right font-mono text-xs font-medium text-zinc-900">
-                          {formatTTD(row.totalMinor)}
-                        </td>
-                        <td className="px-3 py-3">
-                          {total === 0 ? (
-                            <span className="text-xs text-zinc-300">—</span>
-                          ) : (
-                            <span
-                              className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-                              style={{ color: pillColor, backgroundColor: pillBg }}
-                            >
-                              {recvd} of {total}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-3 py-3">
-                          <span
-                            className="text-xs font-medium"
-                            style={{ color: panelReadiness.color }}
+                        onChange={toggleAll}
+                        className="rounded"
+                      />
+                    </th>
+                    <th className="px-5 py-3 text-left">Ref</th>
+                    <th className="px-5 py-3 text-left">Customer</th>
+                    <th className="px-5 py-3 text-left">Items</th>
+                    <th className="px-5 py-3 text-right">Total</th>
+                    <th className="px-5 py-3 text-left">Received</th>
+                    <th className="px-5 py-3 text-left">Readiness</th>
+                    <th className="px-5 py-3 text-right">Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tableItems.map((item) => {
+                    if (item.kind === "header") {
+                      return (
+                        <tr key={`grp-${item.label}`}>
+                          <td
+                            colSpan={8}
+                            className="border-b border-zinc-100 px-5 py-1.5"
+                            style={{ backgroundColor: item.bg }}
                           >
-                            {panelReadiness.text}
-                          </span>
-                        </td>
-                        <td className="px-3 py-3 text-right text-xs text-zinc-500">
-                          {relativeTime(row.createdAt)}
-                        </td>
-                      </tr>
-                      {expandedRow === row.id ? (
-                        <tr className="border-b border-zinc-200 bg-zinc-50">
-                          <td colSpan={8} className="px-6 py-5">
-
-                            {/* ── Panel header ────────────────────────────────── */}
-                            <div className="mb-4 flex items-center gap-3 border-b border-zinc-100 pb-3">
-                              {total > 0 ? (
-                                <span
-                                  className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-                                  style={{ color: pillColor, backgroundColor: pillBg }}
-                                >
-                                  {recvd} of {total} received
-                                </span>
-                              ) : null}
-                              <span className="text-xs font-medium" style={{ color: panelReadiness.color }}>
-                                {panelReadiness.text}
+                            <span
+                              className="text-[10px] font-semibold uppercase tracking-widest"
+                              style={{ color: item.color }}
+                            >
+                              {item.label}
+                            </span>
+                            {item.sublabel ? (
+                              <span
+                                className="ml-1 text-[10px] font-normal normal-case tracking-normal"
+                                style={{ color: item.color, opacity: 0.65 }}
+                              >
+                                · {item.sublabel}
                               </span>
-                              <span className="ml-auto font-mono text-sm font-semibold text-zinc-900">
-                                {formatTTD(row.totalMinor)}
-                              </span>
-                            </div>
-
-                            {/* ── Main grid ───────────────────────────────────── */}
-                            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-
-                              {/* Line items */}
-                              <div>
-                                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-                                  Line items
-                                </p>
-                                <table className="w-full text-xs">
-                                  <thead>
-                                    <tr className="border-b border-zinc-200">
-                                      <th className="py-1.5 text-left text-zinc-400">Item</th>
-                                      <th className="py-1.5 text-left text-zinc-400">Store</th>
-                                      <th className="py-1.5 text-center text-zinc-400">Qty</th>
-                                      <th className="py-1.5 text-right text-zinc-400">Total</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {row.items.map((item) => (
-                                      <tr key={item.id} className="border-b border-zinc-100">
-                                        <td className="py-2 text-zinc-800">{item.titleSnapshot}</td>
-                                        <td className="py-2 text-zinc-600">{item.store.name}</td>
-                                        <td className="py-2 text-center text-zinc-600">{item.quantity}</td>
-                                        <td className="py-2 text-right font-mono text-zinc-900">
-                                          {formatTTD(item.priceMinor * item.quantity)}
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-
-                              {/* Vendor fulfillment */}
-                              <div>
-                                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-                                  Vendor fulfillment
-                                </p>
-                                <OrderControls orderId={row.id} status={row.status} splits={row.splitOrders} sandboxPayment={isSandboxPayment(row)} hasShippingAddress={Boolean(row.shippingAddressId)} onRefresh={() => setRefreshKey(k => k + 1)}/>
-                        <VendorFulfillmentCards
-                                  splits={row.splitOrders}
-                                  onRefresh={() => setRefreshKey((k) => k + 1)}
-                                />
-                              </div>
-
-                              {/* Order financials + customer */}
-                              <div>
-                                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-                                  Order financials
-                                </p>
-                                <div className="mb-4 space-y-2 rounded-xl border border-zinc-200 bg-white p-3 text-sm">
-                                  <div className="flex justify-between">
-                                    <span className="text-zinc-500">Subtotal</span>
-                                    <span className="font-mono text-zinc-900">{formatTTD(row.subtotalMinor)}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-zinc-500">Shipping</span>
-                                    <span className="font-mono text-zinc-900">{formatTTD(row.shippingMinor)}</span>
-                                  </div>
-                                  <div className="flex justify-between border-t border-zinc-100 pt-2 font-semibold">
-                                    <span className="text-zinc-900">Total</span>
-                                    <span className="font-mono" style={{ color: "#D4450A" }}>
-                                      {formatTTD(row.totalMinor)}
-                                    </span>
-                                  </div>
-                                </div>
-                                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-                                  Customer
-                                </p>
-                                <p className="text-sm font-medium text-zinc-900">{row.buyer.fullName}</p>
-                                <p className="text-sm text-zinc-500">{row.buyer.email}</p>
-                              </div>
-                            </div>
-
+                            ) : null}
+                            <span
+                              className="ml-1.5 text-[10px] font-normal normal-case tracking-normal"
+                              style={{ color: item.color, opacity: 0.5 }}
+                            >
+                              · {item.count}
+                            </span>
                           </td>
                         </tr>
-                      ) : null}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
+                      );
+                    }
 
-            </table>
+                    // All display values pre-computed by makeRowItem — read from item
+                    const {
+                      order: row,
+                      isDone,
+                      recvd,
+                      total,
+                      edgeColor,
+                      pillColor,
+                      pillBg,
+                      itemsLabel,
+                      panelReadiness,
+                    } = item;
+
+                    return (
+                      <Fragment key={row.id}>
+                        <tr
+                          onClick={() =>
+                            setExpandedRow((prev) =>
+                              prev === row.id ? null : row.id,
+                            )
+                          }
+                          style={{
+                            borderLeft: `3px solid ${edgeColor}`,
+                            backgroundColor: selectedRows.has(row.id)
+                              ? "#EFF6FF"
+                              : isDone
+                                ? "#FAFAFA"
+                                : "#FFFFFF",
+                          }}
+                          className={`cursor-pointer border-b border-zinc-100 text-zinc-800 transition-colors hover:brightness-[0.985]${isDone ? " opacity-70" : ""}`}
+                        >
+                          <td
+                            className="py-3 pl-4"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedRows.has(row.id)}
+                              onChange={() => toggleRow(row.id)}
+                              className="rounded"
+                            />
+                          </td>
+                          <td className="px-3 py-3">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-xs text-zinc-800">
+                                {row.referenceNumber ??
+                                  row.id.slice(-8).toUpperCase()}
+                              </span>
+                              <svg
+                                width="12"
+                                height="12"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                className={`shrink-0 text-zinc-400 transition-transform duration-150 ${
+                                  expandedRow === row.id ? "rotate-180" : ""
+                                }`}
+                              >
+                                <polyline points="6 9 12 15 18 9" />
+                              </svg>
+                            </div>
+                          </td>
+                          <td className="px-3 py-3">
+                            <p className="text-xs font-medium text-zinc-900">
+                              {row.buyer.fullName}
+                            </p>
+                            <p className="text-[11px] text-zinc-400 capitalize">
+                              {row.region.replace(/_/g, " ")}
+                            </p>
+                          </td>
+                          <td className="max-w-[180px] px-3 py-3">
+                            <span className="line-clamp-2 text-xs text-zinc-600">
+                              {itemsLabel}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 text-right font-mono text-xs font-medium text-zinc-900">
+                            {formatTTD(row.totalMinor)}
+                          </td>
+                          <td className="px-3 py-3">
+                            {total === 0 ? (
+                              <span className="text-xs text-zinc-300">—</span>
+                            ) : (
+                              <span
+                                className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                                style={{
+                                  color: pillColor,
+                                  backgroundColor: pillBg,
+                                }}
+                              >
+                                {recvd} of {total}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3">
+                            <span
+                              className="text-xs font-medium"
+                              style={{ color: panelReadiness.color }}
+                            >
+                              {panelReadiness.text}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 text-right text-xs text-zinc-500">
+                            {relativeTime(row.createdAt)}
+                          </td>
+                        </tr>
+                        {expandedRow === row.id ? (
+                          <tr className="border-b border-zinc-200 bg-zinc-50">
+                            <td colSpan={8} className="px-6 py-5">
+                              {/* ── Panel header ────────────────────────────────── */}
+                              <div className="mb-4 flex items-center gap-3 border-b border-zinc-100 pb-3">
+                                {total > 0 ? (
+                                  <span
+                                    className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                                    style={{
+                                      color: pillColor,
+                                      backgroundColor: pillBg,
+                                    }}
+                                  >
+                                    {recvd} of {total} received
+                                  </span>
+                                ) : null}
+                                <span
+                                  className="text-xs font-medium"
+                                  style={{ color: panelReadiness.color }}
+                                >
+                                  {panelReadiness.text}
+                                </span>
+                                <span className="ml-auto font-mono text-sm font-semibold text-zinc-900">
+                                  {formatTTD(row.totalMinor)}
+                                </span>
+                              </div>
+
+                              {/* ── Main grid ───────────────────────────────────── */}
+                              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                                {/* Line items */}
+                                <div>
+                                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                                    Line items
+                                  </p>
+                                  <table className="w-full text-xs">
+                                    <thead>
+                                      <tr className="border-b border-zinc-200">
+                                        <th className="py-1.5 text-left text-zinc-400">
+                                          Item
+                                        </th>
+                                        <th className="py-1.5 text-left text-zinc-400">
+                                          Store
+                                        </th>
+                                        <th className="py-1.5 text-center text-zinc-400">
+                                          Qty
+                                        </th>
+                                        <th className="py-1.5 text-right text-zinc-400">
+                                          Total
+                                        </th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {row.items.map((item) => (
+                                        <tr
+                                          key={item.id}
+                                          className="border-b border-zinc-100"
+                                        >
+                                          <td className="py-2 text-zinc-800">
+                                            {item.titleSnapshot}
+                                          </td>
+                                          <td className="py-2 text-zinc-600">
+                                            {item.store.name}
+                                          </td>
+                                          <td className="py-2 text-center text-zinc-600">
+                                            {item.quantity}
+                                          </td>
+                                          <td className="py-2 text-right font-mono text-zinc-900">
+                                            {formatTTD(
+                                              item.priceMinor * item.quantity,
+                                            )}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+
+                                {/* Vendor fulfillment */}
+                                <div>
+                                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                                    Vendor fulfillment
+                                  </p>
+                                  <OrderControls
+                                    orderId={row.id}
+                                    status={row.status}
+                                    splits={row.splitOrders}
+                                    sandboxPayment={isSandboxPayment(row)}
+                                    hasShippingAddress={Boolean(
+                                      row.shippingAddressId,
+                                    )}
+                                    onRefresh={() =>
+                                      setRefreshKey((k) => k + 1)
+                                    }
+                                  />
+                                  <VendorFulfillmentCards
+                                    splits={row.splitOrders}
+                                    onRefresh={() =>
+                                      setRefreshKey((k) => k + 1)
+                                    }
+                                  />
+                                </div>
+
+                                {/* Order financials + customer */}
+                                <div>
+                                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                                    Order financials
+                                  </p>
+                                  <div className="mb-4 space-y-2 rounded-xl border border-zinc-200 bg-white p-3 text-sm">
+                                    <div className="flex justify-between">
+                                      <span className="text-zinc-500">
+                                        Subtotal
+                                      </span>
+                                      <span className="font-mono text-zinc-900">
+                                        {formatTTD(row.subtotalMinor)}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-zinc-500">
+                                        Shipping
+                                      </span>
+                                      <span className="font-mono text-zinc-900">
+                                        {formatTTD(row.shippingMinor)}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between border-t border-zinc-100 pt-2 font-semibold">
+                                      <span className="text-zinc-900">
+                                        Total
+                                      </span>
+                                      <span
+                                        className="font-mono"
+                                        style={{ color: "#D4450A" }}
+                                      >
+                                        {formatTTD(row.totalMinor)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                                    Customer
+                                  </p>
+                                  <p className="text-sm font-medium text-zinc-900">
+                                    {row.buyer.fullName}
+                                  </p>
+                                  <p className="text-sm text-zinc-500">
+                                    {row.buyer.email}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : null}
+                      </Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
         </>
       )}
 
       {showCancelConfirm ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-            <h3 className="mb-2 text-lg font-bold text-zinc-900">Cancel selected orders</h3>
+            <h3 className="mb-2 text-lg font-bold text-zinc-900">
+              Cancel selected orders
+            </h3>
             <p className="mb-4 text-sm text-zinc-600">
-              Cancel {selectedRows.size} order{selectedRows.size !== 1 ? "s" : ""}? Only orders
-              still at <span className="font-semibold">Order placed</span> or{" "}
-              <span className="font-semibold">Processing</span> (not yet shipped, no payouts
-              released) will be cancelled. Others are skipped.
+              Cancel {selectedRows.size} order
+              {selectedRows.size !== 1 ? "s" : ""}? Only orders still at{" "}
+              <span className="font-semibold">Order placed</span> or{" "}
+              <span className="font-semibold">Processing</span> (not yet
+              shipped, no payouts released) will be cancelled. Others are
+              skipped.
               <span className="mt-2 block font-medium text-red-600">
                 This cannot be undone. Refunds, if any, are handled separately.
               </span>
@@ -1231,7 +1537,9 @@ export default function OrdersTab() {
                     <span className="font-mono text-xs text-zinc-500">
                       {o.referenceNumber ?? o.id.slice(-8).toUpperCase()}
                     </span>
-                    <span className="text-xs text-zinc-700">{o.buyer.fullName}</span>
+                    <span className="text-xs text-zinc-700">
+                      {o.buyer.fullName}
+                    </span>
                   </div>
                 ))}
             </div>
@@ -1276,7 +1584,7 @@ export default function OrdersTab() {
 
       {pendingDelete ? (
         <UndoDeleteToast
-          message={`Delete all ${orders.length} orders`}
+          message="Delete ALL orders and associated records across the marketplace"
           onConfirm={async () => {
             await deleteAllOrders();
             setPendingDelete(false);

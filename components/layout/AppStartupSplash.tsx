@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import StartupSplashVisual from "@/components/layout/StartupSplashVisual";
 
@@ -7,9 +8,12 @@ const DISPLAY_MS = 2300;
 const FADE_MS = 650;
 
 export default function AppStartupSplash() {
+  const pathname = usePathname();
+  const isAdmin = pathname?.startsWith("/dashboard/admin") ?? false;
   const [phase, setPhase] = useState<"showing" | "leaving" | "gone">("showing");
 
   useEffect(() => {
+    if (isAdmin) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const leaveTimer = window.setTimeout(() => setPhase("leaving"), DISPLAY_MS);
@@ -19,13 +23,13 @@ export default function AppStartupSplash() {
       window.clearTimeout(removeTimer);
       document.body.style.overflow = previousOverflow;
     };
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
     if (phase === "gone") document.body.style.overflow = "";
   }, [phase]);
 
-  if (phase === "gone") return null;
+  if (isAdmin || phase === "gone") return null;
 
   return (
     <div

@@ -3,7 +3,6 @@
 import CharacterCount from "@tiptap/extension-character-count";
 import Placeholder from "@tiptap/extension-placeholder";
 import TextAlign from "@tiptap/extension-text-align";
-import Underline from "@tiptap/extension-underline";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import type { ReactNode } from "react";
@@ -70,7 +69,6 @@ export default function RichTextEditor({
         codeBlock: false,
         horizontalRule: false,
       }),
-      Underline,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Placeholder.configure({ placeholder }),
       CharacterCount.configure({ limit: maxLength }),

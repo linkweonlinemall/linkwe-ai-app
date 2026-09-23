@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Fragment, useEffect, useMemo, useState } from "react";
 
 import { deleteAllPayouts } from "@/app/actions/admin-delete";
@@ -91,14 +92,22 @@ export default function VendorsTab({
   const [payoutRequests, setPayoutRequests] = useState<PayoutRequest[]>([]);
   const [payoutHistory, setPayoutHistory] = useState<PayoutHistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeView, setActiveView] = useState<"vendors" | "payouts" | "history">(initialView);
+  const [loadError, setLoadError] = useState("");
+  const [activeView, setActiveView] = useState<
+    "vendors" | "payouts" | "history"
+  >(initialView);
   const [search, setSearch] = useState("");
   const [expandedVendor, setExpandedVendor] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
-  const [approveError, setApproveError] = useState<{ id: string; message: string } | null>(null);
-  const [selectedPayouts, setSelectedPayouts] = useState<Set<string>>(new Set());
+  const [approveError, setApproveError] = useState<{
+    id: string;
+    message: string;
+  } | null>(null);
+  const [selectedPayouts, setSelectedPayouts] = useState<Set<string>>(
+    new Set(),
+  );
   const [approvalTargets, setApprovalTargets] = useState<PayoutRequest[]>([]);
   const [confirmingApproval, setConfirmingApproval] = useState(false);
   const [expandedPayout, setExpandedPayout] = useState<string | null>(null);
@@ -111,7 +120,10 @@ export default function VendorsTab({
       for (const req of approvalTargets) {
         const result = await approvePayoutRequest(req.id);
         if (!result.ok) {
-          setApproveError({ id: req.id, message: approveErrorMessage(result.error) });
+          setApproveError({
+            id: req.id,
+            message: approveErrorMessage(result.error),
+          });
           return;
         }
       }
@@ -126,16 +138,23 @@ export default function VendorsTab({
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([getAdminVendors(), getAdminPayoutRequests(), getPayoutHistory()])
+    setLoadError("");
+    Promise.all([
+      getAdminVendors(),
+      getAdminPayoutRequests(),
+      getPayoutHistory(),
+    ])
       .then(([v, p, h]) => {
         setVendors(v);
         setPayoutRequests(p);
         setPayoutHistory(h);
         setLoading(false);
-        if (initialView === "payouts" || p.length > 0) setActiveView("payouts");
-        else setActiveView(initialView);
+        setActiveView(initialView);
       })
       .catch(() => {
+        setLoadError(
+          "Vendor and payout records could not load. Please try again.",
+        );
         setLoading(false);
       });
   }, [initialView, refreshKey]);
@@ -155,9 +174,12 @@ export default function VendorsTab({
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-zinc-900">Vendor finance</h2>
+          <p className="admin-eyebrow">Business operations</p>
+          <h1 className="admin-title">
+            {initialView === "vendors" ? "Vendors" : "Finance & payouts"}
+          </h1>
           <p className="mt-0.5 text-sm text-zinc-500">
             Review vendor balances, bank details and payout requests
           </p>
@@ -179,6 +201,17 @@ export default function VendorsTab({
         </div>
       </div>
 
+      {loadError && (
+        <div role="alert" className="admin-alert">
+          {loadError}
+          <button
+            className="admin-button ml-3"
+            onClick={() => setRefreshKey((k) => k + 1)}
+          >
+            Retry
+          </button>
+        </div>
+      )}
       <div className="mb-6 flex overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
         {(["payouts", "vendors", "history"] as const).map((view) => (
           <button
@@ -186,7 +219,9 @@ export default function VendorsTab({
             type="button"
             onClick={() => setActiveView(view)}
             className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
-              activeView === view ? "bg-zinc-900 text-white" : "text-zinc-600 hover:bg-zinc-50"
+              activeView === view
+                ? "bg-zinc-900 text-white"
+                : "text-zinc-600 hover:bg-zinc-50"
             }`}
           >
             {view === "payouts"
@@ -201,15 +236,21 @@ export default function VendorsTab({
       {loading ? (
         <div className="flex flex-col gap-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-20 rounded-xl animate-pulse bg-zinc-200" />
+            <div
+              key={i}
+              className="h-20 rounded-xl animate-pulse bg-zinc-200"
+            />
           ))}
         </div>
       ) : activeView === "payouts" ? (
         payoutRequests.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-zinc-200 bg-white p-12 text-center shadow-sm">
-            <p className="text-base font-semibold text-zinc-900">No pending payout requests</p>
+            <p className="text-base font-semibold text-zinc-900">
+              No pending payout requests
+            </p>
             <p className="mt-1 text-sm text-zinc-500">
-              Nothing needs approval. A request appears here after a vendor requests money from their available balance.
+              Nothing needs approval. A request appears here after a vendor
+              requests money from their available balance.
             </p>
           </div>
         ) : (
@@ -218,19 +259,24 @@ export default function VendorsTab({
               <input
                 type="checkbox"
                 checked={
-                  selectedPayouts.size === payoutRequests.length && payoutRequests.length > 0
+                  selectedPayouts.size === payoutRequests.length &&
+                  payoutRequests.length > 0
                 }
                 onChange={() => {
                   if (selectedPayouts.size === payoutRequests.length) {
                     setSelectedPayouts(new Set());
                   } else {
-                    setSelectedPayouts(new Set(payoutRequests.map((p) => p.id)));
+                    setSelectedPayouts(
+                      new Set(payoutRequests.map((p) => p.id)),
+                    );
                   }
                 }}
                 className="rounded"
               />
               <span className="text-sm text-zinc-600">
-                {selectedPayouts.size > 0 ? `${selectedPayouts.size} selected` : "Select all"}
+                {selectedPayouts.size > 0
+                  ? `${selectedPayouts.size} selected`
+                  : "Select all"}
               </span>
 
               {selectedPayouts.size > 0 ? (
@@ -239,7 +285,9 @@ export default function VendorsTab({
                   <button
                     type="button"
                     onClick={() =>
-                      setApprovalTargets(payoutRequests.filter((p) => selectedPayouts.has(p.id)))
+                      setApprovalTargets(
+                        payoutRequests.filter((p) => selectedPayouts.has(p.id)),
+                      )
                     }
                     className="rounded-lg px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
                     style={{ backgroundColor: "#1B8C5A" }}
@@ -249,7 +297,9 @@ export default function VendorsTab({
                   <button
                     type="button"
                     onClick={() => {
-                      const selected = payoutRequests.filter((p) => selectedPayouts.has(p.id));
+                      const selected = payoutRequests.filter((p) =>
+                        selectedPayouts.has(p.id),
+                      );
                       const rows = selected
                         .map((p) =>
                           [
@@ -263,7 +313,8 @@ export default function VendorsTab({
                           ].join(","),
                         )
                         .join("\n");
-                      const header = "Store,Bank,Account Name,Account Number,Type,Amount,Requested";
+                      const header =
+                        "Store,Bank,Account Name,Account Number,Type,Amount,Requested";
                       const csv = `${header}\n${rows}`;
                       const blob = new Blob([csv], { type: "text/csv" });
                       const url = URL.createObjectURL(blob);
@@ -281,7 +332,14 @@ export default function VendorsTab({
               ) : null}
               <button
                 type="button"
-                onClick={() => { if (window.confirm("Delete all payout records? This permanently removes financial history.")) setPendingDeletePayouts(true); }}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      "Delete all payout records? This permanently removes financial history.",
+                    )
+                  )
+                    setPendingDeletePayouts(true);
+                }}
                 className="ml-auto rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50"
               >
                 Clear all payouts
@@ -300,11 +358,12 @@ export default function VendorsTab({
                   <div
                     key={req.id}
                     className="rounded-2xl border border-zinc-200 bg-white shadow-sm"
-                    style={{ borderLeft: `4px solid ${canApprove ? "#1B8C5A" : "#D4450A"}` }}
+                    style={{
+                      borderLeft: `4px solid ${canApprove ? "#1B8C5A" : "#D4450A"}`,
+                    }}
                   >
                     {/* ── Card body ────────────────────────────────────── */}
                     <div className="px-5 pb-4 pt-5">
-
                       {/* Row 1: Identity (left) + Amount (right) */}
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex min-w-0 items-start gap-3">
@@ -329,17 +388,26 @@ export default function VendorsTab({
                             {req.store.name.charAt(0).toUpperCase()}
                           </div>
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-bold text-zinc-900">{req.store.name}</p>
+                            <p className="truncate text-sm font-bold text-zinc-900">
+                              {req.store.name}
+                            </p>
                             <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-zinc-400">
                               <span>{relativeTime(req.requestedAt)}</span>
                               <span className="text-zinc-300">·</span>
-                              <span className="capitalize">{req.store.region?.replace(/_/g, " ")}</span>
+                              <span className="capitalize">
+                                {req.store.region?.replace(/_/g, " ")}
+                              </span>
                             </div>
                           </div>
                         </div>
                         <div className="shrink-0 text-right">
-                          <p className="text-[11px] font-medium text-zinc-400">Payout requested</p>
-                          <p className="mt-0.5 text-2xl font-bold" style={{ color: "#D4450A" }}>
+                          <p className="text-[11px] font-medium text-zinc-400">
+                            Payout requested
+                          </p>
+                          <p
+                            className="mt-0.5 text-2xl font-bold"
+                            style={{ color: "#D4450A" }}
+                          >
                             {formatTTD(req.amountMinor)}
                           </p>
                         </div>
@@ -350,29 +418,44 @@ export default function VendorsTab({
                         {balanceCovered ? (
                           <span
                             className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
-                            style={{ backgroundColor: "#F0FDF4", color: "#1B8C5A" }}
+                            style={{
+                              backgroundColor: "#F0FDF4",
+                              color: "#1B8C5A",
+                            }}
                           >
-                            ✓ Covered by balance · {formatTTD(req.amountMinor)} of {formatTTD(bal.available)} available · {formatTTD(remaining)} remaining
+                            ✓ Covered by balance · {formatTTD(req.amountMinor)}{" "}
+                            of {formatTTD(bal.available)} available ·{" "}
+                            {formatTTD(remaining)} remaining
                           </span>
                         ) : (
                           <span
                             className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
-                            style={{ backgroundColor: "#FEF0EC", color: "#D4450A" }}
+                            style={{
+                              backgroundColor: "#FEF0EC",
+                              color: "#D4450A",
+                            }}
                           >
-                            ✗ Exceeds balance — only {formatTTD(bal.available)} available
+                            ✗ Exceeds balance — only {formatTTD(bal.available)}{" "}
+                            available
                           </span>
                         )}
                         {hasBankDetails ? (
                           <span
                             className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
-                            style={{ backgroundColor: "#F0FDF4", color: "#1B8C5A" }}
+                            style={{
+                              backgroundColor: "#F0FDF4",
+                              color: "#1B8C5A",
+                            }}
                           >
                             ✓ Bank details valid
                           </span>
                         ) : (
                           <span
                             className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
-                            style={{ backgroundColor: "#FEF0EC", color: "#D4450A" }}
+                            style={{
+                              backgroundColor: "#FEF0EC",
+                              color: "#D4450A",
+                            }}
                           >
                             ✗ Bank details missing
                           </span>
@@ -384,17 +467,28 @@ export default function VendorsTab({
                         <div className="flex items-center gap-3">
                           {req.store.owner?.bankDetails?.accountNumber ? (
                             <span className="text-xs text-zinc-500">
-                              {req.store.owner.bankDetails.bankName} · ••••{req.store.owner.bankDetails.accountNumber.slice(-4)}
+                              {req.store.owner.bankDetails.bankName} · ••••
+                              {req.store.owner.bankDetails.accountNumber.slice(
+                                -4,
+                              )}
                             </span>
                           ) : (
-                            <span className="text-xs text-zinc-400">No bank on file</span>
+                            <span className="text-xs text-zinc-400">
+                              No bank on file
+                            </span>
                           )}
                           <button
                             type="button"
-                            onClick={() => setExpandedPayout(expandedPayout === req.id ? null : req.id)}
+                            onClick={() =>
+                              setExpandedPayout(
+                                expandedPayout === req.id ? null : req.id,
+                              )
+                            }
                             className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-700"
                           >
-                            {expandedPayout === req.id ? "Hide details ↑" : "View details ↓"}
+                            {expandedPayout === req.id
+                              ? "Hide details ↑"
+                              : "View details ↓"}
                           </button>
                         </div>
                         <div className="flex items-center gap-2">
@@ -419,7 +513,9 @@ export default function VendorsTab({
 
                       {/* Approve error */}
                       {approveError?.id === req.id ? (
-                        <p className="mt-2 text-xs text-red-600">{approveError.message}</p>
+                        <p className="mt-2 text-xs text-red-600">
+                          {approveError.message}
+                        </p>
                       ) : null}
 
                       {/* Rejection input — inline below action row */}
@@ -448,7 +544,10 @@ export default function VendorsTab({
                               type="button"
                               disabled={!rejectReason.trim()}
                               onClick={async () => {
-                                await rejectPayoutRequest(req.id, rejectReason.trim());
+                                await rejectPayoutRequest(
+                                  req.id,
+                                  rejectReason.trim(),
+                                );
                                 setRejectingId(null);
                                 setRejectReason("");
                                 setExpandedPayout(null);
@@ -481,14 +580,20 @@ export default function VendorsTab({
                                   {req.store.owner.bankDetails.accountName}
                                 </p>
                                 <p className="font-mono text-sm text-zinc-600">
-                                  ****{req.store.owner.bankDetails.accountNumber?.slice(-4)}
+                                  ****
+                                  {req.store.owner.bankDetails.accountNumber?.slice(
+                                    -4,
+                                  )}
                                 </p>
                                 <span className="mt-1 inline-flex w-fit rounded-full bg-zinc-200 px-2 py-0.5 text-xs font-medium uppercase text-zinc-600">
-                                  {req.store.owner.bankDetails.accountType ?? "Unknown"}
+                                  {req.store.owner.bankDetails.accountType ??
+                                    "Unknown"}
                                 </span>
                               </div>
                             ) : (
-                              <p className="text-sm text-red-500">No bank details on file</p>
+                              <p className="text-sm text-red-500">
+                                No bank details on file
+                              </p>
                             )}
                           </div>
 
@@ -498,28 +603,38 @@ export default function VendorsTab({
                             </p>
                             <div className="flex flex-col gap-2">
                               <div className="flex justify-between text-xs">
-                                <span className="text-zinc-500">Total earned</span>
+                                <span className="text-zinc-500">
+                                  Total earned
+                                </span>
                                 <span className="font-medium text-emerald-600">
                                   +{formatTTD(bal.credits)}
                                 </span>
                               </div>
                               <div className="flex justify-between text-xs">
-                                <span className="text-zinc-500">Deductions</span>
+                                <span className="text-zinc-500">
+                                  Deductions
+                                </span>
                                 <span className="font-medium text-red-500">
                                   -{formatTTD(bal.debits)}
                                 </span>
                               </div>
                               <div className="mt-1 flex justify-between border-t border-zinc-200 pt-2 text-xs">
-                                <span className="font-semibold text-zinc-700">Available</span>
+                                <span className="font-semibold text-zinc-700">
+                                  Available
+                                </span>
                                 <span className="font-bold text-zinc-900">
                                   {formatTTD(bal.available)}
                                 </span>
                               </div>
                               <div className="flex justify-between text-xs">
-                                <span className="text-zinc-500">After payout</span>
+                                <span className="text-zinc-500">
+                                  After payout
+                                </span>
                                 <span
                                   className={`font-medium ${
-                                    remaining >= 0 ? "text-zinc-600" : "text-red-500"
+                                    remaining >= 0
+                                      ? "text-zinc-600"
+                                      : "text-red-500"
                                   }`}
                                 >
                                   {formatTTD(Math.max(0, remaining))}
@@ -531,7 +646,8 @@ export default function VendorsTab({
 
                         <details className="mb-4">
                           <summary className="cursor-pointer text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-900">
-                            View ledger breakdown ({req.store.ledgerEntries.length} entries)
+                            View ledger breakdown (
+                            {req.store.ledgerEntries.length} entries)
                           </summary>
                           <div className="mt-3 overflow-hidden rounded-xl border border-zinc-100">
                             <table className="w-full text-xs">
@@ -549,28 +665,41 @@ export default function VendorsTab({
                                 </tr>
                               </thead>
                               <tbody>
-                                {req.store.ledgerEntries.slice(0, 5).map((entry) => {
-                                  const isCredit = entry.entryType === "CREDIT_ORDER_SETTLEMENT";
-                                  return (
-                                    <tr key={entry.id} className="border-b border-zinc-50">
-                                      <td className="px-3 py-2 text-zinc-400">
-                                        {new Date(entry.createdAt).toLocaleDateString("en-TT", {
-                                          day: "numeric",
-                                          month: "short",
-                                        })}
-                                      </td>
-                                      <td className="px-3 py-2 text-zinc-600">{entry.description ?? "—"}</td>
-                                      <td
-                                        className={`px-3 py-2 text-right font-mono font-medium ${
-                                          isCredit ? "text-emerald-600" : "text-red-500"
-                                        }`}
+                                {req.store.ledgerEntries
+                                  .slice(0, 5)
+                                  .map((entry) => {
+                                    const isCredit =
+                                      entry.entryType ===
+                                      "CREDIT_ORDER_SETTLEMENT";
+                                    return (
+                                      <tr
+                                        key={entry.id}
+                                        className="border-b border-zinc-50"
                                       >
-                                        {isCredit ? "+" : "-"}
-                                        {formatTTD(entry.amountMinor)}
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
+                                        <td className="px-3 py-2 text-zinc-400">
+                                          {new Date(
+                                            entry.createdAt,
+                                          ).toLocaleDateString("en-TT", {
+                                            day: "numeric",
+                                            month: "short",
+                                          })}
+                                        </td>
+                                        <td className="px-3 py-2 text-zinc-600">
+                                          {entry.description ?? "—"}
+                                        </td>
+                                        <td
+                                          className={`px-3 py-2 text-right font-mono font-medium ${
+                                            isCredit
+                                              ? "text-emerald-600"
+                                              : "text-red-500"
+                                          }`}
+                                        >
+                                          {isCredit ? "+" : "-"}
+                                          {formatTTD(entry.amountMinor)}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
                               </tbody>
                             </table>
                           </div>
@@ -578,15 +707,28 @@ export default function VendorsTab({
 
                         <div className="flex items-center gap-4 rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-3">
                           {[
-                            { ok: hasBankDetails, label: "Bank details on file" },
-                            { ok: balanceCovered, label: "Balance covers request" },
+                            {
+                              ok: hasBankDetails,
+                              label: "Bank details on file",
+                            },
+                            {
+                              ok: balanceCovered,
+                              label: "Balance covers request",
+                            },
                             { ok: true, label: "Oldest pending first (FIFO)" },
                           ].map((check) => (
-                            <div key={check.label} className="flex items-center gap-1.5">
-                              <span className={`text-sm ${check.ok ? "text-emerald-500" : "text-red-500"}`}>
+                            <div
+                              key={check.label}
+                              className="flex items-center gap-1.5"
+                            >
+                              <span
+                                className={`text-sm ${check.ok ? "text-emerald-500" : "text-red-500"}`}
+                              >
                                 {check.ok ? "✓" : "✗"}
                               </span>
-                              <span className={`text-xs ${check.ok ? "text-zinc-600" : "font-medium text-red-600"}`}>
+                              <span
+                                className={`text-xs ${check.ok ? "text-zinc-600" : "font-medium text-red-600"}`}
+                              >
                                 {check.label}
                               </span>
                             </div>
@@ -616,80 +758,127 @@ export default function VendorsTab({
         <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
           {payoutHistory.length === 0 ? (
             <div className="p-12 text-center">
-              <p className="text-base font-semibold text-zinc-900">No payout history yet</p>
+              <p className="text-base font-semibold text-zinc-900">
+                No payout history yet
+              </p>
               <p className="mt-1 text-sm text-zinc-500">
                 Approved and rejected payouts will appear here.
               </p>
             </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-zinc-200 bg-zinc-50">
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                    Store
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                    Requested
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                    Processed
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                    Amount
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                    Note
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {payoutHistory.map((p, i) => (
-                  <tr
-                    key={p.id}
-                    className={`border-b border-zinc-50 ${i % 2 === 0 ? "bg-white" : "bg-zinc-50/30"}`}
-                    style={{
-                      borderLeft: `3px solid ${p.status === "APPROVED" ? "#1B8C5A" : "#DC2626"}`,
-                    }}
-                  >
-                    <td className="px-4 py-3 font-medium text-zinc-900">{p.store.name}</td>
-                    <td className="px-4 py-3 text-xs text-zinc-500">
-                      {new Date(p.requestedAt).toLocaleDateString("en-TT", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-zinc-500">
-                      {p.processedAt
-                        ? new Date(p.processedAt).toLocaleDateString("en-TT", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })
-                        : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono text-sm font-semibold text-zinc-900">
-                      {formatTTD(p.amountMinor)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${
-                          p.status === "APPROVED"
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                            : "border-[#FECFBE] bg-[#FFF1ED] text-[#D4450A]"
-                        }`}
-                      >
-                        {p.status === "APPROVED" ? "Approved" : "Rejected"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-zinc-500">{p.failureReason ?? "—"}</td>
-                  </tr>
+            <>
+              <div className="divide-y divide-zinc-100 md:hidden">
+                {payoutHistory.map((p) => (
+                  <article className="p-5" key={p.id}>
+                    <div className="flex justify-between gap-3">
+                      <h2 className="font-semibold">{p.store.name}</h2>
+                      <strong className="shrink-0">
+                        {formatTTD(p.amountMinor)}
+                      </strong>
+                    </div>
+                    <span className="admin-badge my-3">
+                      {p.status === "APPROVED" ? "Approved" : "Rejected"}
+                    </span>
+                    <dl className="space-y-2 text-xs text-zinc-500">
+                      <div className="flex justify-between">
+                        <dt>Requested</dt>
+                        <dd>
+                          {new Date(p.requestedAt).toLocaleDateString("en-TT")}
+                        </dd>
+                      </div>
+                      <div className="flex justify-between">
+                        <dt>Processed</dt>
+                        <dd>
+                          {p.processedAt
+                            ? new Date(p.processedAt).toLocaleDateString(
+                                "en-TT",
+                              )
+                            : "—"}
+                        </dd>
+                      </div>
+                    </dl>
+                    {p.failureReason && (
+                      <p className="admin-muted mt-3">{p.failureReason}</p>
+                    )}
+                  </article>
                 ))}
-              </tbody>
-            </table>
+              </div>
+              <table className="hidden w-full text-sm md:table">
+                <thead>
+                  <tr className="border-b border-zinc-200 bg-zinc-50">
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                      Store
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                      Requested
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                      Processed
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                      Amount
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                      Note
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payoutHistory.map((p, i) => (
+                    <tr
+                      key={p.id}
+                      className={`border-b border-zinc-50 ${i % 2 === 0 ? "bg-white" : "bg-zinc-50/30"}`}
+                      style={{
+                        borderLeft: `3px solid ${p.status === "APPROVED" ? "#1B8C5A" : "#DC2626"}`,
+                      }}
+                    >
+                      <td className="px-4 py-3 font-medium text-zinc-900">
+                        {p.store.name}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-zinc-500">
+                        {new Date(p.requestedAt).toLocaleDateString("en-TT", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-zinc-500">
+                        {p.processedAt
+                          ? new Date(p.processedAt).toLocaleDateString(
+                              "en-TT",
+                              {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              },
+                            )
+                          : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono text-sm font-semibold text-zinc-900">
+                        {formatTTD(p.amountMinor)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${
+                            p.status === "APPROVED"
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              : "border-[#FECFBE] bg-[#FFF1ED] text-[#D4450A]"
+                          }`}
+                        >
+                          {p.status === "APPROVED" ? "Approved" : "Rejected"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-zinc-500">
+                        {p.failureReason ?? "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
           )}
         </div>
       ) : (
@@ -702,7 +891,120 @@ export default function VendorsTab({
             className="mb-4 w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm shadow-sm outline-none ring-zinc-300 focus:ring-2"
           />
 
-          <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+          {filteredVendors.length === 0 && (
+            <div className="admin-empty">No vendors match this search.</div>
+          )}
+          <div className="grid gap-4 md:hidden">
+            {filteredVendors.map((v) => (
+              <article key={v.id} className="admin-panel">
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h2 className="admin-panel-title break-words">{v.name}</h2>
+                    <p className="admin-muted mt-1">
+                      {v.region.replaceAll("_", " ")}
+                    </p>
+                  </div>
+                  <span className="admin-badge">
+                    {v.status === "ACTIVE"
+                      ? "Live"
+                      : v.status.replaceAll("_", " ")}
+                  </span>
+                </div>
+                <p className="text-sm font-semibold">{v.owner.fullName}</p>
+                <p className="admin-muted break-all">{v.owner.email}</p>
+                <div className="my-5 grid grid-cols-2 gap-3 rounded-xl bg-[#f1f6f4] p-4">
+                  <div>
+                    <span className="admin-muted">Available balance</span>
+                    <strong className="mt-1 block text-lg">
+                      {formatTTD(calcBalance(v))}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="admin-muted">Payouts pending</span>
+                    <strong className="mt-1 block text-lg">
+                      {
+                        v.payoutRequests.filter((p) => p.status === "PENDING")
+                          .length
+                      }
+                    </strong>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Link
+                    className="admin-button admin-button-primary"
+                    href={`/dashboard/admin/records/store/${v.id}`}
+                  >
+                    Manage store
+                  </Link>
+                  <Link
+                    className="admin-button"
+                    href={`/dashboard/admin/records/user/${v.owner.id}`}
+                  >
+                    Edit owner
+                  </Link>
+                </div>
+                <details className="mt-5 border-t border-zinc-100 pt-4">
+                  <summary className="cursor-pointer text-sm font-semibold">
+                    Bank & ledger details
+                  </summary>
+                  <div className="mt-4 space-y-3">
+                    {v.owner.bankDetails ? (
+                      <dl className="grid gap-2 text-xs">
+                        {[
+                          ["Bank", v.owner.bankDetails.bankName],
+                          ["Account name", v.owner.bankDetails.accountName],
+                          ["Account number", v.owner.bankDetails.accountNumber],
+                          [
+                            "Account type",
+                            v.owner.bankDetails.accountType || "—",
+                          ],
+                        ].map(([label, value]) => (
+                          <div key={label}>
+                            <dt className="text-zinc-500">{label}</dt>
+                            <dd className="break-all font-medium">{value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    ) : (
+                      <p className="admin-muted">
+                        Bank details have not been added. Use Edit owner to
+                        complete them.
+                      </p>
+                    )}
+                    <h3 className="pt-3 text-xs font-semibold">
+                      Ledger history
+                    </h3>
+                    {v.ledgerEntries.length ? (
+                      v.ledgerEntries.map((entry) => (
+                        <div
+                          key={entry.id}
+                          className="flex justify-between gap-3 border-t border-zinc-100 pt-3 text-xs"
+                        >
+                          <div>
+                            <p>{entryTypeLabel(entry.entryType)}</p>
+                            <p className="admin-muted">
+                              {new Date(entry.createdAt).toLocaleDateString(
+                                "en-TT",
+                              )}
+                            </p>
+                          </div>
+                          <strong className="shrink-0">
+                            {entry.entryType === "CREDIT_ORDER_SETTLEMENT"
+                              ? "+"
+                              : "−"}
+                            {formatTTD(entry.amountMinor)}
+                          </strong>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="admin-muted">No ledger entries yet.</p>
+                    )}
+                  </div>
+                </details>
+              </article>
+            ))}
+          </div>
+          <div className="hidden overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm md:block">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[960px] text-sm">
                 <thead>
@@ -736,7 +1038,9 @@ export default function VendorsTab({
                 <tbody>
                   {filteredVendors.map((v) => {
                     const balance = calcBalance(v);
-                    const pendingCount = v.payoutRequests.filter((p) => p.status === "PENDING").length;
+                    const pendingCount = v.payoutRequests.filter(
+                      (p) => p.status === "PENDING",
+                    ).length;
                     const bank = v.owner.bankDetails;
                     const expanded = expandedVendor === v.id;
 
@@ -746,12 +1050,22 @@ export default function VendorsTab({
                           className={`cursor-pointer border-b border-zinc-100 transition-colors hover:bg-zinc-50 ${
                             expanded ? "bg-zinc-50/80" : ""
                           }`}
-                          onClick={() => setExpandedVendor((id) => (id === v.id ? null : v.id))}
+                          onClick={() =>
+                            setExpandedVendor((id) =>
+                              id === v.id ? null : v.id,
+                            )
+                          }
                         >
-                          <td className="px-3 py-3 font-medium text-zinc-900">{v.name}</td>
+                          <td className="px-3 py-3 font-medium text-zinc-900">
+                            {v.name}
+                          </td>
                           <td className="px-3 py-3">
-                            <p className="text-xs font-medium text-zinc-800">{v.owner.fullName}</p>
-                            <p className="text-xs text-zinc-400">{v.owner.email}</p>
+                            <p className="text-xs font-medium text-zinc-800">
+                              {v.owner.fullName}
+                            </p>
+                            <p className="text-xs text-zinc-400">
+                              {v.owner.email}
+                            </p>
                           </td>
                           <td className="px-3 py-3 text-xs capitalize text-zinc-600">
                             {v.region.replace(/_/g, " ")}
@@ -773,14 +1087,34 @@ export default function VendorsTab({
                                     : "bg-zinc-100 text-zinc-600"
                               }`}
                             >
-                              {v.status === "ACTIVE" ? "Live" : v.status.replace(/_/g, " ")}
+                              {v.status === "ACTIVE"
+                                ? "Live"
+                                : v.status.replace(/_/g, " ")}
                             </span>
                           </td>
                           <td className="px-3 py-3 text-xs text-zinc-600">
                             {bank ? bank.bankName : "—"}
                           </td>
-                          <td className="px-3 py-3 text-center text-xs text-zinc-700">{pendingCount}</td>
+                          <td className="px-3 py-3 text-center text-xs text-zinc-700">
+                            {pendingCount}
+                          </td>
                           <td className="px-3 py-3 text-right">
+                            <div className="mb-2 flex justify-end gap-3">
+                              <Link
+                                className="text-xs font-semibold text-orange-700 hover:underline"
+                                onClick={(e) => e.stopPropagation()}
+                                href={`/dashboard/admin/records/store/${v.id}`}
+                              >
+                                Manage store
+                              </Link>
+                              <Link
+                                className="text-xs font-semibold text-orange-700 hover:underline"
+                                onClick={(e) => e.stopPropagation()}
+                                href={`/dashboard/admin/records/user/${v.owner.id}`}
+                              >
+                                Edit owner
+                              </Link>
+                            </div>
                             <a
                               href={`/store/${v.slug}`}
                               target="_blank"
@@ -817,18 +1151,27 @@ export default function VendorsTab({
                                       </thead>
                                       <tbody>
                                         {v.ledgerEntries.map((e) => {
-                                          const isCredit = e.entryType === "CREDIT_ORDER_SETTLEMENT";
+                                          const isCredit =
+                                            e.entryType ===
+                                            "CREDIT_ORDER_SETTLEMENT";
                                           return (
-                                            <tr key={e.id} className="border-b border-zinc-50">
+                                            <tr
+                                              key={e.id}
+                                              className="border-b border-zinc-50"
+                                            >
                                               <td className="px-2 py-1.5 text-zinc-600">
-                                                {new Date(e.createdAt).toLocaleDateString("en-TT")}
+                                                {new Date(
+                                                  e.createdAt,
+                                                ).toLocaleDateString("en-TT")}
                                               </td>
                                               <td className="px-2 py-1.5 text-zinc-700">
                                                 {entryTypeLabel(e.entryType)}
                                               </td>
                                               <td
                                                 className={`px-2 py-1.5 text-right font-mono ${
-                                                  isCredit ? "text-emerald-600" : "text-red-600"
+                                                  isCredit
+                                                    ? "text-emerald-600"
+                                                    : "text-red-600"
                                                 }`}
                                               >
                                                 {isCredit ? "+" : "−"}
@@ -847,19 +1190,29 @@ export default function VendorsTab({
                                   </p>
                                   {bank ? (
                                     <div className="rounded-xl border border-zinc-100 bg-white p-3 text-xs">
-                                      <p className="font-semibold">{bank.bankName}</p>
-                                      <p className="text-zinc-600">{bank.accountName}</p>
-                                      <p className="font-mono">****{bank.accountNumber.slice(-4)}</p>
+                                      <p className="font-semibold">
+                                        {bank.bankName}
+                                      </p>
+                                      <p className="text-zinc-600">
+                                        {bank.accountName}
+                                      </p>
+                                      <p className="font-mono">
+                                        ****{bank.accountNumber.slice(-4)}
+                                      </p>
                                     </div>
                                   ) : (
-                                    <p className="text-xs text-zinc-500">No bank details.</p>
+                                    <p className="text-xs text-zinc-500">
+                                      No bank details.
+                                    </p>
                                   )}
                                   <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wide text-zinc-400">
                                     Payout history
                                   </p>
                                   <ul className="space-y-2 text-xs">
                                     {v.payoutRequests.length === 0 ? (
-                                      <li className="text-zinc-500">No payout requests yet.</li>
+                                      <li className="text-zinc-500">
+                                        No payout requests yet.
+                                      </li>
                                     ) : (
                                       v.payoutRequests.map((p) => (
                                         <li
@@ -867,9 +1220,14 @@ export default function VendorsTab({
                                           className="flex justify-between rounded-lg border border-zinc-100 bg-white px-3 py-2"
                                         >
                                           <span className="text-zinc-600">
-                                            {new Date(p.requestedAt).toLocaleDateString("en-TT")} · {p.status}
+                                            {new Date(
+                                              p.requestedAt,
+                                            ).toLocaleDateString("en-TT")}{" "}
+                                            · {p.status}
                                           </span>
-                                          <span className="font-mono font-medium">{formatTTD(p.amountMinor)}</span>
+                                          <span className="font-mono font-medium">
+                                            {formatTTD(p.amountMinor)}
+                                          </span>
                                         </li>
                                       ))
                                     )}
@@ -886,7 +1244,9 @@ export default function VendorsTab({
               </table>
             </div>
             {filteredVendors.length === 0 ? (
-              <p className="p-8 text-center text-sm text-zinc-500">No vendors match your search.</p>
+              <p className="p-8 text-center text-sm text-zinc-500">
+                No vendors match your search.
+              </p>
             ) : null}
           </div>
         </>
@@ -900,12 +1260,16 @@ export default function VendorsTab({
           aria-labelledby="approve-payout-title"
         >
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
-            <h3 id="approve-payout-title" className="text-lg font-bold text-zinc-900">
+            <h3
+              id="approve-payout-title"
+              className="text-lg font-bold text-zinc-900"
+            >
               Confirm payout approval
             </h3>
             <p className="mt-1 text-sm text-zinc-500">
-              Approval immediately deducts the amount from each vendor&apos;s available balance.
-              Bank transfers must still be processed separately.
+              Approval immediately deducts the amount from each vendor&apos;s
+              available balance. Bank transfers must still be processed
+              separately.
             </p>
 
             <div className="mt-4 max-h-72 space-y-3 overflow-y-auto">
@@ -913,18 +1277,26 @@ export default function VendorsTab({
                 const balance = calcPayoutBalance(req).available;
                 const bank = req.store.owner?.bankDetails;
                 return (
-                  <div key={req.id} className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                  <div
+                    key={req.id}
+                    className="rounded-xl border border-zinc-200 bg-zinc-50 p-4"
+                  >
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className="font-semibold text-zinc-900">{req.store.name}</p>
+                        <p className="font-semibold text-zinc-900">
+                          {req.store.name}
+                        </p>
                         <p className="mt-1 text-xs text-zinc-500">
                           {bank?.bankName} · ••••{bank?.accountNumber.slice(-4)}
                         </p>
                       </div>
-                      <p className="font-bold tabular-nums text-zinc-900">{formatTTD(req.amountMinor)}</p>
+                      <p className="font-bold tabular-nums text-zinc-900">
+                        {formatTTD(req.amountMinor)}
+                      </p>
                     </div>
                     <p className="mt-3 text-xs text-zinc-600">
-                      Balance after approval: <strong>{formatTTD(balance - req.amountMinor)}</strong>
+                      Balance after approval:{" "}
+                      <strong>{formatTTD(balance - req.amountMinor)}</strong>
                     </p>
                   </div>
                 );

@@ -1,78 +1,599 @@
 "use client";
-
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useState } from "react";
 import Papa from "papaparse";
-import { Download, FileUp, Plus, Store, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Download,
+  FileUp,
+  Store,
+  UserRound,
+  Package,
+  ClipboardCheck,
+  Eye,
+} from "lucide-react";
 import { toast } from "sonner";
-import { importAdminOnboardingRows, type OnboardingResult, type OnboardingRow } from "@/app/actions/admin-onboarding";
-
-const HEADERS = ["fullName","email","phone","password","storeName","storeSlug","categoryId","region","storeDescription","storeStatus","itemType","itemName","itemDescription","price","stock","publish"];
-const field = "mt-1 min-h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100";
-
-export default function OnboardingStudio() {
-  const [mode, setMode] = useState<"single" | "csv">("single");
+import {
+  importAdminOnboardingRows,
+  type OnboardingResult,
+  type OnboardingRow,
+} from "@/app/actions/admin-onboarding";
+import { STORE_CATEGORIES } from "@/lib/categories";
+import { TT_REGIONS } from "@/lib/regions/tt-regions";
+const HEADERS = [
+  "fullName",
+  "email",
+  "phone",
+  "password",
+  "storeName",
+  "storeSlug",
+  "categoryId",
+  "region",
+  "storeDescription",
+  "storeStatus",
+  "itemType",
+  "itemName",
+  "itemDescription",
+  "price",
+  "stock",
+  "publish",
+];
+const steps = [
+  { name: "Owner", icon: UserRound },
+  { name: "Store", icon: Store },
+  { name: "First offering", icon: Package },
+  { name: "Review", icon: ClipboardCheck },
+];
+export default function OnboardingStudio({
+  mode = "single",
+}: {
+  mode?: "single" | "csv";
+}) {
+  const [step, setStep] = useState(0);
+  const [values, setValues] = useState<Record<string, string>>({
+    categoryId: "other",
+    storeStatus: "DRAFT",
+    itemType: "product",
+    publish: "false",
+  });
   const [busy, setBusy] = useState(false);
   const [rows, setRows] = useState<OnboardingRow[]>([]);
   const [fileName, setFileName] = useState("");
+  const [error, setError] = useState("");
   const [result, setResult] = useState<OnboardingResult | null>(null);
-  const preview = useMemo(() => rows.slice(0, 6), [rows]);
-
-  async function run(nextRows: OnboardingRow[]) {
-    setBusy(true); setResult(null);
-    try { const response = await importAdminOnboardingRows(nextRows); setResult(response); if (response.ok) toast.success("Onboarding import completed"); else toast.error("Import completed with items to review"); }
-    catch { toast.error("Could not complete onboarding."); }
-    finally { setBusy(false); }
+  const [showCredentials, setShowCredentials] = useState(false);
+  const set = (key: string, value: string) =>
+    setValues((v) => ({ ...v, [key]: value }));
+  async function run(input: OnboardingRow[]) {
+    setBusy(true);
+    setError("");
+    try {
+      const response = await importAdminOnboardingRows(input);
+      setResult(response);
+      if (response.ok) toast.success("Vendor setup completed");
+      else toast.error("Some rows need attention. Review the results below.");
+    } catch {
+      setError(
+        "The request could not complete. Check the records before retrying.",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
-
-  function downloadCsv(data: OnboardingRow[], name: string) {
-    const blob = new Blob([Papa.unparse(data, { columns: HEADERS })], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
+  function download(data: OnboardingRow[], name: string) {
+    const url = URL.createObjectURL(
+      new Blob(
+        [Papa.unparse(data, { columns: HEADERS, escapeFormulae: true })],
+        { type: "text/csv;charset=utf-8" },
+      ),
+    );
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
   }
-
-  function downloadTemplate() {
-    downloadCsv([], "linkwe-vendor-onboarding-template.csv");
+  function next() {
+    const required =
+      step === 0
+        ? ["fullName", "email"]
+        : step === 1
+          ? ["storeName", "region"]
+          : [];
+    if (required.some((key) => !values[key]?.trim())) {
+      setError("Complete the required fields before continuing.");
+      return;
+    }
+    if (step === 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) {
+      setError("Enter a valid owner email address.");
+      return;
+    }
+    if (step === 0 && values.password && values.password.length < 12) {
+      setError("Use at least 12 characters for the temporary password.");
+      return;
+    }
+    setError("");
+    setStep((s) => s + 1);
   }
-
-  function downloadSample() {
-    downloadCsv([
-      { fullName:"Jane Doe", email:"jane@example.com", phone:"868-555-0100", password:"", storeName:"Jane's Shop", storeSlug:"janes-shop", categoryId:"other", region:"San Juan-Laventille", storeDescription:"Local products made in Trinidad and Tobago", storeStatus:"DRAFT", itemType:"product", itemName:"Cocoa body butter", itemDescription:"Handmade cocoa body butter, 200 ml", price:"125", stock:"10", publish:"false" },
-      { fullName:"Jane Doe", email:"jane@example.com", phone:"868-555-0100", password:"", storeName:"Jane's Shop", storeSlug:"janes-shop", categoryId:"other", region:"San Juan-Laventille", storeDescription:"Local products made in Trinidad and Tobago", storeStatus:"DRAFT", itemType:"service", itemName:"Gift consultation", itemDescription:"Thirty-minute virtual gift consultation", price:"75", stock:"", publish:"false" },
-      { fullName:"Marcus Ali", email:"marcus@example.com", phone:"868-555-0199", password:"StrongPassword123!", storeName:"Marcus Home Services", storeSlug:"marcus-home-services", categoryId:"home_services", region:"Chaguanas", storeDescription:"Reliable home maintenance services", storeStatus:"PENDING_APPROVAL", itemType:"service", itemName:"Electrical inspection", itemDescription:"Residential electrical safety inspection", price:"350", stock:"", publish:"true" },
-    ], "linkwe-vendor-onboarding-sample.csv");
-  }
-
-  return <div className="space-y-6">
-    <div className="flex flex-wrap gap-2 rounded-2xl border border-zinc-200 bg-white p-2 shadow-sm">
-      <button onClick={() => setMode("single")} className={`flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-semibold ${mode === "single" ? "bg-zinc-900 text-white" : "text-zinc-600"}`}><Plus size={16}/>One vendor</button>
-      <button onClick={() => setMode("csv")} className={`flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-semibold ${mode === "csv" ? "bg-zinc-900 text-white" : "text-zinc-600"}`}><FileUp size={16}/>CSV bulk import</button>
+  const field = (
+    key: string,
+    label: string,
+    type = "text",
+    required = false,
+  ) => (
+    <label className="admin-field" key={key}>
+      <span className="admin-field-label">
+        {label}
+        {required ? " *" : ""}
+      </span>
+      <input
+        className="admin-input"
+        type={type}
+        autoComplete={type === "password" ? "new-password" : "off"}
+        min={type === "number" ? 0 : undefined}
+        step={type === "number" ? "any" : undefined}
+        value={values[key] || ""}
+        onChange={(e) => set(key, e.target.value)}
+        placeholder={
+          key === "password" ? "Leave empty to generate securely" : undefined
+        }
+      />
+    </label>
+  );
+  return (
+    <div>
+      {error && (
+        <p className="admin-alert" role="alert">
+          {error}
+        </p>
+      )}
+      {mode === "single" && !result && (
+        <section className="admin-panel max-w-4xl">
+          <div className="mb-6">
+            <h2 className="admin-panel-title">
+              One business. One guided setup.
+            </h2>
+            <p className="admin-muted mt-2">
+              Create the owner, store and first offering together. Add galleries
+              and fine-tune the storefront after setup.
+            </p>
+          </div>
+          <ol className="mb-7 grid grid-cols-4 gap-2">
+            {steps.map((item, index) => (
+              <li
+                key={item.name}
+                className={`rounded-xl p-3 text-center ${step === index ? "bg-[#1d4547] text-white" : step > index ? "bg-[#e9f3ee] text-[#3d7158]" : "bg-[#f1f4f4] text-[#819197]"}`}
+              >
+                <span className="mx-auto mb-2 flex h-6 items-center justify-center">
+                  {step > index ? <Check size={18} /> : <item.icon size={18} />}
+                </span>
+                <span className="text-[10px] font-semibold sm:text-xs">
+                  {item.name}
+                </span>
+              </li>
+            ))}
+          </ol>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (step < 3) next();
+              else void run([values]);
+            }}
+          >
+            <fieldset disabled={busy}>
+              {step === 0 && (
+                <div className="admin-form-grid">
+                  {field("fullName", "Owner's full name", "text", true)}
+                  {field("email", "Email address", "email", true)}
+                  {field("phone", "Phone number", "tel")}
+                  {field("password", "Temporary password", "password")}
+                  <p className="admin-field-help admin-full">
+                    The account is created as a vendor. Existing vendor emails
+                    reuse their account without changing their password. No
+                    welcome email is sent automatically.
+                  </p>
+                </div>
+              )}
+              {step === 1 && (
+                <div className="admin-form-grid">
+                  {field("storeName", "Store name", "text", true)}
+                  {field("storeSlug", "Store URL name")}
+                  <label className="admin-field">
+                    <span className="admin-field-label">Category *</span>
+                    <select
+                      className="admin-input"
+                      value={values.categoryId}
+                      onChange={(e) => set("categoryId", e.target.value)}
+                    >
+                      {STORE_CATEGORIES.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="admin-field">
+                    <span className="admin-field-label">Town / region *</span>
+                    <select
+                      className="admin-input"
+                      value={values.region || ""}
+                      onChange={(e) => set("region", e.target.value)}
+                    >
+                      <option value="">Choose a location</option>
+                      {TT_REGIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="admin-field admin-full">
+                    <span className="admin-field-label">
+                      About the business
+                    </span>
+                    <textarea
+                      className="admin-input"
+                      rows={4}
+                      value={values.storeDescription || ""}
+                      onChange={(e) => set("storeDescription", e.target.value)}
+                    />
+                  </label>
+                  <p className="admin-field-help admin-full">
+                    New storefronts start as drafts. Review branding, contact
+                    details and opening hours before publishing.
+                  </p>
+                </div>
+              )}
+              {step === 2 && (
+                <div className="admin-form-grid">
+                  <p className="admin-muted admin-full">
+                    Optional: add one product or service now. Leave the name
+                    empty to skip this step.
+                  </p>
+                  <label className="admin-field">
+                    <span className="admin-field-label">Offering type</span>
+                    <select
+                      className="admin-input"
+                      value={values.itemType}
+                      onChange={(e) => set("itemType", e.target.value)}
+                    >
+                      <option value="product">Product</option>
+                      <option value="service">Service · quote-based</option>
+                    </select>
+                  </label>
+                  {field("itemName", "Offering name")}
+                  {field("price", "Price (TTD)", "number")}
+                  {values.itemType === "product" &&
+                    field("stock", "Available stock", "number")}
+                  <label className="admin-field admin-full">
+                    <span className="admin-field-label">Description</span>
+                    <textarea
+                      className="admin-input"
+                      rows={4}
+                      value={values.itemDescription || ""}
+                      onChange={(e) => set("itemDescription", e.target.value)}
+                    />
+                  </label>
+                  <p className="admin-field-help admin-full">
+                    The offering starts as a draft. For services, you can choose
+                    another service model in the full editor after setup.
+                  </p>
+                </div>
+              )}
+              {step === 3 && (
+                <div className="space-y-4">
+                  <div className="admin-context">
+                    <ClipboardCheck size={21} />
+                    <strong>Review this setup before creating it</strong>
+                  </div>
+                  {[
+                    {
+                      label: "Owner account",
+                      value: `${values.fullName} · ${values.email}`,
+                      note: "Vendor access",
+                    },
+                    {
+                      label: "Storefront",
+                      value: values.storeName,
+                      note: `${values.region} · Draft`,
+                    },
+                    {
+                      label: "First offering",
+                      value: values.itemName || "Add one later",
+                      note: values.itemName
+                        ? `TTD ${Number(values.price || 0).toFixed(2)} · Draft`
+                        : "No item will be created",
+                    },
+                  ].map((row) => (
+                    <div
+                      className="rounded-xl border border-zinc-200 p-4"
+                      key={row.label}
+                    >
+                      <p className="admin-eyebrow">{row.label}</p>
+                      <p className="break-words font-semibold">{row.value}</p>
+                      <p className="admin-muted mt-1">{row.note}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="mt-7 flex items-center justify-between border-t border-zinc-100 pt-5">
+                <button
+                  type="button"
+                  disabled={step === 0 || busy}
+                  className="admin-button"
+                  onClick={() => {
+                    setStep((s) => s - 1);
+                    setError("");
+                  }}
+                >
+                  <ArrowLeft size={15} />
+                  Back
+                </button>
+                <button
+                  className="admin-button admin-button-primary"
+                  disabled={busy}
+                >
+                  {busy
+                    ? "Creating business…"
+                    : step === 3
+                      ? "Create vendor & store"
+                      : "Continue"}
+                  <ArrowRight size={15} />
+                </button>
+              </div>
+            </fieldset>
+          </form>
+        </section>
+      )}
+      {mode === "csv" && !result && (
+        <section className="admin-panel">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="admin-panel-title">Bring your vendors with you</h2>
+              <p className="admin-muted mt-2 max-w-xl">
+                Upload up to 500 rows. Repeat a vendor email to add more
+                offerings to their store. Review the file before running the
+                import.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="admin-button"
+              onClick={() => download([], "linkwe-vendor-template.csv")}
+            >
+              <Download size={16} />
+              Download template
+            </button>
+          </div>
+          <label className="admin-upload mt-6 min-h-36">
+            <FileUp size={26} />
+            <span>
+              Choose a CSV file
+              <small className="mt-1 block text-[10px]">
+                Names, emails, stores and optional first offerings
+              </small>
+            </span>
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              className="sr-only"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setError("");
+                setRows([]);
+                setFileName(file.name);
+                if (file.size > 2 * 1024 * 1024) {
+                  setError("Use a CSV smaller than 2 MB.");
+                  return;
+                }
+                Papa.parse<OnboardingRow>(file, {
+                  header: true,
+                  skipEmptyLines: "greedy",
+                  complete: (data) => {
+                    if (data.errors.length) {
+                      setError(
+                        `The CSV has a formatting issue: ${data.errors[0].message}`,
+                      );
+                      return;
+                    }
+                    if (data.data.length > 500) {
+                      setError("Import up to 500 rows at a time.");
+                      return;
+                    }
+                    const missing = ["fullName", "email", "storeName"].filter(
+                      (key) => !data.meta.fields?.includes(key),
+                    );
+                    if (missing.length) {
+                      setError(
+                        `Missing columns: ${missing.join(", ")}. Use the template headings.`,
+                      );
+                      return;
+                    }
+                    setRows(data.data);
+                  },
+                  error: () => setError("This CSV could not be read."),
+                });
+              }}
+            />
+          </label>
+          {rows.length > 0 && (
+            <>
+              <div className="my-5 flex flex-wrap gap-3">
+                <span className="admin-badge">{fileName}</span>
+                <span className="admin-badge">{rows.length} rows</span>
+                <span className="admin-badge">
+                  {
+                    new Set(rows.map((row) => String(row.email).toLowerCase()))
+                      .size
+                  }{" "}
+                  vendor emails
+                </span>
+                <span className="admin-badge admin-badge-orange">
+                  {
+                    rows.filter(
+                      (row) =>
+                        ["ACTIVE", "PENDING_APPROVAL"].includes(
+                          String(row.storeStatus).toUpperCase(),
+                        ) || String(row.publish).toLowerCase() === "true",
+                    ).length
+                  }{" "}
+                  rows request publication / approval
+                </span>
+              </div>
+              <div className="max-h-80 overflow-auto rounded-xl border border-zinc-200">
+                <table className="w-full min-w-[650px] text-left text-xs">
+                  <thead className="sticky top-0 bg-[#eef4f3]">
+                    <tr>
+                      {[
+                        "Row",
+                        "Owner",
+                        "Email",
+                        "Store",
+                        "Offering",
+                        "Publication",
+                      ].map((title) => (
+                        <th key={title} className="p-3">
+                          {title}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row, index) => (
+                      <tr key={index} className="border-t border-zinc-100">
+                        <td className="p-3">{index + 2}</td>
+                        <td className="p-3">{row.fullName}</td>
+                        <td className="p-3">{row.email}</td>
+                        <td className="p-3">{row.storeName}</td>
+                        <td className="p-3">{row.itemName || "—"}</td>
+                        <td className="p-3">
+                          {row.storeStatus || "DRAFT"} /{" "}
+                          {String(row.publish || "false")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="admin-muted my-4">
+                Existing accounts and stores are retained. Matching offering
+                names in the same store are skipped to make retries safer. New
+                records use the publication settings in your file.
+              </p>
+              <button
+                className="admin-button admin-button-primary"
+                disabled={busy}
+                onClick={() => void run(rows)}
+              >
+                <Check size={16} />
+                {busy
+                  ? "Importing vendors…"
+                  : `Import these ${rows.length} rows`}
+              </button>
+            </>
+          )}
+        </section>
+      )}
+      {result && (
+        <section className="admin-panel">
+          <p className="admin-eyebrow">Setup complete</p>
+          <h2 className="admin-panel-title">
+            {result.errors.length
+              ? "Some records need a second look"
+              : "Your new records are ready to manage"}
+          </h2>
+          <div className="my-5 flex flex-wrap gap-2">
+            <span className="admin-badge">
+              {result.createdUsers} accounts created
+            </span>
+            <span className="admin-badge">
+              {result.createdStores} stores created
+            </span>
+            <span className="admin-badge">
+              {result.createdItems} offerings created
+            </span>
+          </div>
+          {result.accounts?.map((account) => (
+            <div key={account.storeId} className="admin-context">
+              <strong>{account.storeName}</strong>
+              <Link href={`/dashboard/admin/records/store/${account.storeId}`}>
+                Complete storefront →
+              </Link>
+              <Link href={`/dashboard/admin/records/user/${account.userId}`}>
+                Edit owner
+              </Link>
+              <Link
+                href={`/dashboard/admin/products?storeId=${account.storeId}`}
+              >
+                Products
+              </Link>
+              <Link
+                href={`/dashboard/admin/services?storeId=${account.storeId}`}
+              >
+                Services
+              </Link>
+            </div>
+          ))}
+          {result.credentials.length > 0 && (
+            <div className="rounded-xl bg-[#f3f7f6] p-4">
+              <button
+                className="admin-button"
+                type="button"
+                onClick={() => setShowCredentials((v) => !v)}
+              >
+                <Eye size={15} />
+                {showCredentials ? "Hide" : "Show"} temporary credentials
+              </button>
+              <p className="admin-muted mt-2">
+                Share securely. These credentials will disappear when you leave
+                this page.
+              </p>
+              {showCredentials &&
+                result.credentials.map((credential) => (
+                  <p
+                    className="mt-3 break-all font-mono text-xs"
+                    key={credential.email}
+                  >
+                    {credential.email} — {credential.password}
+                  </p>
+                ))}
+            </div>
+          )}
+          {result.errors.length > 0 && (
+            <div role="alert" className="admin-alert mt-5">
+              <strong>Review these rows before importing them again:</strong>
+              <ul>
+                {result.errors.map((row, index) => (
+                  <li key={index}>
+                    Row {row.row}: {row.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <button
+            type="button"
+            className="admin-button mt-5"
+            onClick={() => {
+              setResult(null);
+              setRows([]);
+              setFileName("");
+              setStep(0);
+              setValues({
+                categoryId: "other",
+                storeStatus: "DRAFT",
+                itemType: "product",
+                publish: "false",
+              });
+            }}
+          >
+            Start another setup
+          </button>
+        </section>
+      )}
     </div>
-
-    {mode === "single" ? <form className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-7" onSubmit={async e => { e.preventDefault(); const values = Object.fromEntries(new FormData(e.currentTarget)) as Record<string,string>; if (!window.confirm(`Create ${values.fullName}'s account, store and first ${values.itemType || "item"}?`)) return; await run([values]); }}>
-      <div className="mb-6 flex items-start gap-3"><div className="rounded-2xl bg-orange-50 p-3 text-[#D4450A]"><Store/></div><div><h2 className="text-lg font-bold">Complete vendor setup</h2><p className="text-sm text-zinc-500">Create the login, storefront and first product or service in one save.</p></div></div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <label className="text-sm font-medium">Owner name<input className={field} name="fullName" required/></label>
-        <label className="text-sm font-medium">Email<input className={field} name="email" type="email" required/></label>
-        <label className="text-sm font-medium">Phone<input className={field} name="phone"/></label>
-        <label className="text-sm font-medium">Temporary password<input className={field} name="password" minLength={12} placeholder="Leave blank to generate"/></label>
-        <label className="text-sm font-medium">Store name<input className={field} name="storeName" required/></label>
-        <label className="text-sm font-medium">Store URL name<input className={field} name="storeSlug" placeholder="Generated from store name"/></label>
-        <label className="text-sm font-medium">Category key<input className={field} name="categoryId" placeholder="other"/></label>
-        <label className="text-sm font-medium">Region<input className={field} name="region" defaultValue="Trinidad and Tobago"/></label>
-        <label className="text-sm font-medium">Store status<select className={field} name="storeStatus"><option value="DRAFT">Draft</option><option value="PENDING_APPROVAL">Pending approval</option><option value="ACTIVE">Active / published</option></select></label>
-        <label className="text-sm font-medium sm:col-span-2 lg:col-span-3">Store description<textarea className={field} name="storeDescription" rows={3}/></label>
-      </div>
-      <div className="my-6 border-t border-zinc-100"/>
-      <h3 className="mb-4 font-bold">First listing <span className="font-normal text-zinc-400">(optional)</span></h3>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><label className="text-sm font-medium">Type<select className={field} name="itemType"><option value="product">Product</option><option value="service">Service</option></select></label><label className="text-sm font-medium lg:col-span-2">Name<input className={field} name="itemName"/></label><label className="text-sm font-medium">Price (TTD)<input className={field} name="price" type="number" min="0" step="0.01"/></label><label className="text-sm font-medium lg:col-span-3">Description<input className={field} name="itemDescription"/></label><label className="flex items-center gap-2 self-end pb-3 text-sm font-medium"><input type="checkbox" name="publish" value="true"/>Publish immediately</label></div>
-      <button disabled={busy} className="mt-6 min-h-12 rounded-xl bg-[#D4450A] px-6 font-bold text-white disabled:opacity-50">{busy ? "Creating everything…" : "Review and create vendor"}</button>
-    </form> : <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-7">
-      <div className="flex flex-wrap items-start justify-between gap-4"><div><h2 className="flex items-center gap-2 text-lg font-bold"><Users className="text-[#D4450A]"/>Bulk onboarding</h2><p className="mt-1 max-w-2xl text-sm text-zinc-500">One row can create a vendor, store and item. Repeat an email on additional rows to add more products or services to the same store.</p></div><div className="flex flex-wrap gap-2"><button type="button" onClick={downloadTemplate} className="flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-semibold"><Download size={16}/>Blank template</button><button type="button" onClick={downloadSample} className="flex min-h-11 items-center gap-2 rounded-xl bg-orange-50 px-4 text-sm font-semibold text-[#D4450A]"><Download size={16}/>Filled sample</button></div></div>
-      <label className="mt-6 flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-orange-200 bg-orange-50/40 p-6 text-center hover:bg-orange-50"><FileUp className="mb-2 text-[#D4450A]"/><span className="font-semibold">Choose a CSV file</span><span className="text-xs text-zinc-500">Up to 500 rows</span><input type="file" accept=".csv,text/csv" className="sr-only" onChange={e => { const file=e.target.files?.[0]; if(!file)return; setFileName(file.name); Papa.parse<OnboardingRow>(file,{header:true,skipEmptyLines:true,complete: data => setRows(data.data),error: () => toast.error("Could not read that CSV.")}); }}/></label>
-      {fileName && <p className="mt-3 text-sm font-medium">{fileName} · {rows.length} rows found</p>}
-      {preview.length > 0 && <div className="mt-4 overflow-x-auto rounded-xl border"><table className="w-full min-w-[700px] text-left text-xs"><thead className="bg-zinc-50 text-zinc-500"><tr>{["Row","Owner","Email","Store","Type","Item"].map(h=><th key={h} className="px-3 py-2">{h}</th>)}</tr></thead><tbody>{preview.map((row,i)=><tr key={i} className="border-t"><td className="px-3 py-2">{i+2}</td><td className="px-3 py-2">{row.fullName}</td><td className="px-3 py-2">{row.email}</td><td className="px-3 py-2">{row.storeName}</td><td className="px-3 py-2">{row.itemType}</td><td className="px-3 py-2">{row.itemName}</td></tr>)}</tbody></table></div>}
-      <button disabled={busy || rows.length === 0} onClick={() => void run(rows)} className="mt-5 min-h-12 rounded-xl bg-[#D4450A] px-6 font-bold text-white disabled:opacity-40">{busy ? "Importing…" : `Review and import ${rows.length || ""} rows`}</button>
-    </section>}
-
-    {result && <section className={`rounded-2xl border p-5 ${result.errors.length ? "border-amber-200 bg-amber-50" : "border-emerald-200 bg-emerald-50"}`}><h2 className="font-bold">Import summary</h2><p className="mt-1 text-sm">{result.createdUsers} users · {result.createdStores} stores · {result.createdItems} products/services created</p>{result.credentials.length > 0 && <div className="mt-4 rounded-xl bg-white p-4"><p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Temporary credentials — copy now</p>{result.credentials.map(c=><p key={c.email} className="mt-2 break-all font-mono text-xs">{c.email} — {c.password}</p>)}</div>}{result.errors.length > 0 && <ul className="mt-4 space-y-1 text-sm text-amber-900">{result.errors.map((e,i)=><li key={i}>Row {e.row}: {e.message}</li>)}</ul>}</section>}
-  </div>;
+  );
 }

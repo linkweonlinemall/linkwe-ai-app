@@ -59,7 +59,7 @@ export async function getAdminProducts(
   const andClauses: Prisma.ProductWhereInput[] = [];
   if (search) {
     andClauses.push({
-      name: { contains: search, mode: "insensitive" },
+      OR:[{name: { contains: search.slice(0,100), mode: "insensitive" }},{sku:{contains:search.slice(0,100),mode:"insensitive"}},{store:{name:{contains:search.slice(0,100),mode:"insensitive"}}}],
     });
   }
   if (storeId) {
@@ -91,6 +91,7 @@ export async function getAdminProducts(
         stock: true,
         images: true,
         isPublished: true,
+        isArchived: true,
         createdAt: true,
         store: { select: { id: true, name: true } },
       },
@@ -112,7 +113,7 @@ export async function getAdminProducts(
     thumbnailUrl: r.images[0] ?? null,
     storeId: r.store.id,
     storeName: r.store.name,
-    status: rowStatus({ isPublished: r.isPublished }),
+    status: rowStatus({ isPublished: r.isPublished, isArchived:r.isArchived }),
     createdAt: r.createdAt.toISOString(),
   }));
 
@@ -130,8 +131,9 @@ export async function updateProductStatus(
   status: AdminProductStatus
 ) {
   await assertAdmin();
+  if (!["active", "draft", "archived"].includes(status)) throw new Error("Choose a valid publication status.");
   await prisma.product.update({
-    where: { id: productId },
+    where: { id: productId, isService:false },
     data: dataForStatus(status),
   });
   revalidatePath("/dashboard/admin/products");
@@ -142,9 +144,10 @@ export async function bulkUpdateProductStatus(
   status: AdminProductStatus
 ) {
   await assertAdmin();
+  if (!["active", "draft", "archived"].includes(status)) throw new Error("Choose a valid publication status.");
   if (productIds.length === 0) return { ok: true as const };
   await prisma.product.updateMany({
-    where: { id: { in: productIds } },
+    where: { id: { in: productIds },isService:false },
     data: dataForStatus(status),
   });
   revalidatePath("/dashboard/admin/products");

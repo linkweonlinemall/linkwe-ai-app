@@ -18,7 +18,7 @@ export async function getAdminStores(filters: {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/login");
 
-  const page = filters.page ?? 1;
+  const page = Math.max(1,Math.floor(filters.page ?? 1));
   const take = 20;
   const skip = (page - 1) * take;
 
@@ -32,7 +32,7 @@ export async function getAdminStores(filters: {
       { owner: { email: { contains: filters.q, mode: "insensitive" } } },
     ];
   }
-  if (filters.status && filters.status !== "all") {
+  if (filters.status && ["DRAFT","ACTIVE","PENDING_APPROVAL"].includes(filters.status)) {
     where.status = filters.status as StoreStatus;
   }
 
@@ -55,9 +55,10 @@ export async function getAdminStores(filters: {
         subscriptionPlan: true,
         region: true,
         logoUrl: true,
+        coverPhotoUrl:true,
         createdAt: true,
         owner: {
-          select: { fullName: true, email: true, idVerificationStatus: true },
+          select: { id:true, fullName: true, email: true, idVerificationStatus: true },
         },
         _count: { select: { products: true } },
       },
@@ -67,13 +68,14 @@ export async function getAdminStores(filters: {
     }),
   ]);
 
-  return { stores, total, page, totalPages: Math.ceil(total / take) };
+  return { stores, total, page, totalPages: Math.max(1,Math.ceil(total / take)) };
 }
 
 export async function updateStoreStatus(storeId: string, status: string) {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/login");
 
+  if (!["DRAFT","ACTIVE","PENDING_APPROVAL"].includes(status)) return {ok:false,error:"Choose a valid store status."};
   await prisma.store.update({
     where: { id: storeId },
     data: { status: status as StoreStatus },
@@ -86,6 +88,7 @@ export async function setVendorPlan(storeId: string, plan: string) {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/login");
 
+  if (!["STARTER","GROWTH","PRO"].includes(plan)) return {ok:false,error:"Choose an available plan."};
   const normalizedPlan: VendorSubscriptionPlan =
     plan === "GROWTH" || plan === "PRO" ? plan : "STARTER";
   const status: StoreSubscriptionStatus =
@@ -133,7 +136,13 @@ export async function adminDeleteStore(storeId: string) {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/login");
 
-  await prisma.store.delete({ where: { id: storeId } });
+  try {
+    await prisma.$transaction(async tx => {
+      const store=await tx.store.findUniqueOrThrow({where:{id:storeId},select:{subscriptionStatus:true,_count:{select:{products:true,listings:true,splitOrders:true,payoutRequests:true,ledgerEntries:true,events:true,realEstateListings:true,vehicles:true,services:true,accommodations:true,foodOutlets:true,places:true}}}});
+      if(Object.values(store._count).some(count=>count>0)||["ACTIVE","PAST_DUE"].includes(store.subscriptionStatus))throw new Error("This store has catalogue, billing or customer history. Set it to draft to hide it while preserving its records.");
+      await tx.store.delete({where:{id:storeId}});
+    },{isolationLevel:"Serializable"});
+  } catch(error) { return {ok:false,error:error instanceof Error && !error.message.includes("prisma") ? error.message : "This store still has linked records. Set it to draft instead."}; }
   revalidatePath("/dashboard/admin/stores");
   return { ok: true };
 }

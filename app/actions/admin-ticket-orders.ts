@@ -5,12 +5,17 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
-export async function getAdminTicketOrders(filters?: { search?: string; limit?: number }) {
+export async function getAdminTicketOrders(filters?: {
+  search?: string;
+  limit?: number;
+  offset?: number;
+}) {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/");
 
-  const limit = filters?.limit ?? 50;
-  const search = filters?.search?.trim();
+  const limit = Math.min(100, Math.max(1, Math.floor(filters?.limit || 50)));
+  const offset = Math.max(0, Math.floor(filters?.offset || 0));
+  const search = filters?.search?.trim().slice(0, 100);
 
   return prisma.ticketOrder.findMany({
     where: {
@@ -60,5 +65,6 @@ export async function getAdminTicketOrders(filters?: { search?: string; limit?: 
     },
     orderBy: { createdAt: "desc" },
     take: limit,
+    skip: offset,
   });
 }
