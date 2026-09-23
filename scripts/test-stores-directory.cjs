@@ -1,0 +1,47 @@
+// Public discovery rules and rolled-back database integration checks. Loopback only.
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),ts=require('typescript');
+require('dotenv').config({path:'.env.local',quiet:true});require('dotenv').config({path:'.env',quiet:true});
+if(!['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABASE_URL||'').hostname))throw new Error('Store checks require a loopback database');
+process.env.NODE_ENV='test';
+const {PrismaClient}=require('@prisma/client');const prisma=new PrismaClient();let db=prisma;
+const load=Module._load;Module._load=function(request,parent,isMain){if(request==='server-only')return {};if(request==='@/lib/prisma')return {get prisma(){return db;}};if(request.startsWith('@/'))request=path.join(process.cwd(),request.slice(2));return load.call(this,request,parent,isMain);};
+require.extensions['.ts']=(mod,file)=>mod._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,file);
+const {parseStoreQuery,selectStores,storesHref,storeDistance,validCoordinates,storeHref}=require('../lib/stores/directory-query.ts');
+const {getStoreDirectory}=require('../lib/stores/directory.ts');
+let checks=0;const pass=name=>{checks++;console.log('PASS '+name);};
+const example={id:'a',name:'A photo studio',slug:'a',tagline:'Portraits with personality',description:'Local photography',categoryId:'photography_media',region:'port_of_spain',tags:['Headshots'],latitude:10.654,longitude:-61.51,createdAt:new Date('2026-09-01'),productCount:0,serviceCount:3,eventCount:0,listingCount:0,offers:['services'],averageRating:4.5,reviewCount:2,distanceKm:null,coverPhotoUrl:null,logoUrl:null};
+(async()=>{
+ let q=parseStoreQuery({q:[' photo ','ignored'],sort:'bad',kind:'bad',page:'Infinity',lat:'999',lng:'-61',category:'all',region:'port_of_spain'});assert.equal(q.q,'photo');assert.equal(q.sort,'recommended');assert.equal(q.kind,'');assert.equal(q.page,1);assert.equal(q.lat,null);assert.equal(q.category,'');assert.equal(q.region,'port of spain');pass('Malformed and legacy parameters are normalised safely');
+ assert.equal(parseStoreQuery({lat:'',lng:'0'}).lat,null);assert.equal(parseStoreQuery({lat:'0',lng:'0'}).lat,0);assert.equal(validCoordinates(NaN,4),false);assert.equal(validCoordinates(10,-190),false);pass('Coordinates require a complete valid pair while preserving zero');
+ const url=new URL(storesHref({q:'hair & nails',region:'san fernando',page:'3'},{kind:'services',page:undefined}),'https://example.test');assert.equal(url.searchParams.get('q'),'hair & nails');assert.equal(url.searchParams.get('region'),'san fernando');assert.equal(url.searchParams.has('page'),false);pass('Filter URLs retain existing refinements and reset pagination');
+ let result=selectStores([example],parseStoreQuery({q:'headshots',region:'port of spain',kind:'services',tag:'headshots'}));assert.equal(result.total,1);assert.equal(selectStores([example],parseStoreQuery({kind:'events'})).total,0);pass('Search, interests, legacy regions and business type combine correctly');
+ assert.equal(storeDistance(10,-61,10,-61),0);assert.ok(storeDistance(10,-61,11,-61)>110&&storeDistance(10,-61,11,-61)<112);pass('Nearby distances use geographic distance in kilometres');
+ result=selectStores([{...example,id:'unknown',latitude:null}, {...example,id:'far',latitude:11},{...example,id:'near'}],parseStoreQuery({lat:'10.654',lng:'-61.51',sort:'nearest'}));assert.deepEqual(result.stores.map(s=>s.id),['near','far','unknown']);pass('Nearest sorting keeps unpinned stores after measured matches');
+ result=selectStores([{...example,id:'unrated',reviewCount:0,averageRating:null},example],parseStoreQuery({sort:'rating'}));assert.equal(result.stores[0].id,'a');pass('Highest-rated ordering uses real reviews and puts unrated stores last');
+ result=selectStores([example,{...example,id:'event-host',eventCount:8,serviceCount:0,offers:['events']}],parseStoreQuery({sort:'popular'}));assert.equal(result.stores[0].id,'event-host');pass('Most-to-explore sorting includes products, services and events');
+ const many=Array.from({length:29},(_,i)=>({...example,id:String(i),name:'Store '+String(i).padStart(2,'0')}));const first=selectStores(many,parseStoreQuery({})),second=selectStores(many,parseStoreQuery({page:'2'}));assert.equal(first.stores.length,12);assert.equal(second.stores.length,12);assert.ok(second.stores.every(s=>!first.stores.some(a=>a.id===s.id)));assert.equal(selectStores(many,parseStoreQuery({page:'999'})).page,3);pass('Pagination is stable, complete and clamps impossible pages');
+ assert.equal(storeHref({...example,preview:true}),'https://www.linkweonlinemall.com/store/a');pass('Store links use the correct public storefront');
+ const marker='stores-check-'+Date.now(),rollback=new Error('ROLLBACK_TEST');
+ try{await prisma.$transaction(async tx=>{db=tx;
+  const owner=await tx.user.create({data:{email:marker+'@linkwe.test',fullName:'Store directory test',role:'VENDOR',idVerificationStatus:'APPROVED'}});
+  const store=await tx.store.create({data:{ownerId:owner.id,name:marker,slug:marker,categoryId:marker,region:'san fernando',status:'ACTIVE',description:'<p>Useful details</p>'}});
+  result=await getStoreDirectory(parseStoreQuery({category:marker}));assert.equal(result.total,0);pass('Empty stores do not appear in discovery');
+  const base={storeId:store.id,price:25,tags:[],images:[]};
+  await tx.product.createMany({data:[{...base,name:'Draft',slug:marker+'-draft',isPublished:false},{...base,name:'Archived',slug:marker+'-archived',isPublished:true,isArchived:true}]});
+  result=await getStoreDirectory(parseStoreQuery({category:marker}));assert.equal(result.total,0);pass('Draft-only and archived-only stores stay excluded');
+  await tx.product.createMany({data:[{...base,name:'Product',slug:marker+'-product',isPublished:true},{...base,name:'Service',slug:marker+'-service',isPublished:true,isService:true}]});
+  result=await getStoreDirectory(parseStoreQuery({category:marker}));assert.equal(result.total,1);assert.equal(result.stores[0].productCount,1);assert.equal(result.stores[0].serviceCount,1);assert.equal(result.stores[0].description,'Useful details');assert.equal(result.preview,false);pass('Public item counts distinguish products and services and ignore hidden inventory');
+  const listing=await tx.listing.create({data:{storeId:store.id,ownerId:owner.id,title:'Legacy listing',slug:marker+'-listing',status:'PUBLISHED',priceMinor:100}});
+  await tx.review.create({data:{userId:owner.id,storeId:store.id,listingId:listing.id,rating:5}});
+  await tx.review.create({data:{userId:owner.id,storeId:store.id,rating:3}});
+  result=await getStoreDirectory(parseStoreQuery({category:marker}));assert.equal(result.stores[0].reviewCount,2);assert.equal(result.stores[0].averageRating,4);pass('Reviews attached to both listing and store are counted once');
+  await tx.store.update({where:{id:store.id},data:{status:'DRAFT'}});result=await getStoreDirectory(parseStoreQuery({category:marker}));assert.equal(result.total,0);pass('Inactive stores stay hidden');
+  await tx.store.update({where:{id:store.id},data:{status:'ACTIVE'}});await tx.user.update({where:{id:owner.id},data:{idVerificationStatus:'UNSUBMITTED'}});result=await getStoreDirectory(parseStoreQuery({category:marker}));assert.equal(result.total,0);pass('Unverified store owners stay excluded');
+  await tx.user.update({where:{id:owner.id},data:{idVerificationStatus:'APPROVED'}});await tx.product.updateMany({where:{storeId:store.id},data:{isPublished:false}});await tx.listing.update({where:{id:listing.id},data:{status:'DRAFT'}});
+  await tx.event.create({data:{storeId:store.id,title:'Event only',slug:marker+'-event',status:'PUBLISHED',startDate:new Date('2027-01-01'),tags:[],galleryImages:[]}});
+  result=await getStoreDirectory(parseStoreQuery({category:marker,kind:'events'}));assert.equal(result.total,1);assert.equal(result.stores[0].eventCount,1);assert.equal(result.stores[0].productCount,0);pass('Event-only businesses are discoverable with accurate event counts');
+  throw rollback;
+ },{timeout:30000});}catch(error){if(error!==rollback)throw error;}
+ assert.equal(await prisma.store.count({where:{slug:marker}}),0);pass('Every temporary test record rolled back');
+ console.log(checks+' store directory checks passed.');
+})().catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>prisma.$disconnect());

@@ -1,0 +1,18 @@
+"use client";
+import Link from "next/link";
+import { ArrowUpRight, ChevronDown, MapPin, Store } from "lucide-react";
+import { useState } from "react";
+import { validCoordinates, storeHref, type DirectoryStore } from "@/lib/stores/directory-query";
+import { getRegionLabel } from "@/lib/regions/tt-regions";
+import styles from "./directory.module.css";
+
+type MapModules={Map:typeof import("react-map-gl/mapbox").default;Marker:typeof import("react-map-gl/mapbox").Marker;NavigationControl:typeof import("react-map-gl/mapbox").NavigationControl};
+type Point=Pick<DirectoryStore,"id"|"slug"|"name"|"latitude"|"longitude"|"region"|"preview">;
+export default function StoresMap({stores,preview=false}:{stores:Point[];preview?:boolean}){
+  const [expanded,setExpanded]=useState(false),[modules,setModules]=useState<MapModules|null>(null),[error,setError]=useState(false),[selected,setSelected]=useState<string|null>(null);
+  const token=process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim(),points=stores.filter(s=>validCoordinates(s.latitude,s.longitude)),active=points.find(s=>s.id===selected);
+  async function toggle(){setExpanded(!expanded);if(!expanded&&!modules&&token&&points.length){try{await import("mapbox-gl/dist/mapbox-gl.css");const m=await import("react-map-gl/mapbox");setModules({Map:m.default,Marker:m.Marker,NavigationControl:m.NavigationControl});}catch{setError(true);}}}
+  const Map=modules?.Map,Marker=modules?.Marker,Navigation=modules?.NavigationControl;
+  const lats=points.map(s=>s.latitude!),lngs=points.map(s=>s.longitude!);
+  return <section id="store-map" className={styles.mapSection}><button type="button" className={styles.mapToggle} onClick={()=>void toggle()} aria-expanded={expanded} aria-controls="store-map-content"><span><MapPin size={23} aria-hidden/></span><span><strong>A little closer to home.</strong><small>Explore matching stores on the map{points.length?` · ${points.length} saved ${points.length===1?"location":"locations"}`:""}</small></span><ChevronDown size={21} aria-hidden style={{transform:expanded?"rotate(180deg)":undefined}}/></button>{expanded&&<div id="store-map-content" className={styles.mapBody}>{!points.length||!token||error?<p>{preview?"These local design examples don’t include map pins. The live directory uses each store’s saved location.":!points.length?"These stores haven’t added map pins yet. Visit their storefronts for location and contact details.":"The interactive map is unavailable right now. You can still browse stores by area above."}</p>:<><div className={styles.mapCanvas}>{Map&&Marker&&Navigation?<Map mapboxAccessToken={token} initialViewState={{bounds:[[Math.min(...lngs)-.01,Math.min(...lats)-.01],[Math.max(...lngs)+.01,Math.max(...lats)+.01]],fitBoundsOptions:{padding:55,maxZoom:13}}} mapStyle="mapbox://styles/mapbox/streets-v12" style={{width:"100%",height:"100%"}} cooperativeGestures onError={()=>setError(true)}><Navigation position="top-right"/>{points.map(store=><Marker key={store.id} latitude={store.latitude!} longitude={store.longitude!} anchor="bottom"><button type="button" className={styles.mapPin} onClick={()=>setSelected(store.id)} aria-label={"Show "+store.name+" on map"} aria-pressed={selected===store.id}><Store size={19} aria-hidden/></button></Marker>)}</Map>:<p role="status">Opening the map…</p>}</div>{active&&<Link href={storeHref(active)} className={styles.mapActive}><div>{active.name}<span>{getRegionLabel(active.region)}</span></div><ArrowUpRight size={20} aria-hidden/></Link>}<p className={styles.locationNote}>Only stores with a saved map pin are shown. Select a pin to visit its storefront.</p></>}</div>}</section>;
+}
