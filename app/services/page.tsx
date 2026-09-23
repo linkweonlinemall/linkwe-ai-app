@@ -1,30 +1,35 @@
-import { getPublicServices } from "@/app/actions/services";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { ArrowLeft, ArrowRight, ArrowUpRight, ConciergeBell, Grid2X2, X } from "lucide-react";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
-import PublicNav from "@/components/layout/PublicNav";
-import { prisma } from "@/lib/prisma";
-
-import ServicesClient from "./ServicesClient";
 import { getWishlistProductIds } from "@/app/actions/wishlist";
+import PublicNav from "@/components/layout/PublicNav";
+import { SERVICE_TYPE_LUCIDE } from "@/components/icons/service-type-lucide";
+import { prisma } from "@/lib/prisma";
+import { getRegionLabel } from "@/lib/regions/tt-regions";
+import { getServiceDirectory } from "@/lib/services/directory";
+import { DIRECTORY_LOCATIONS, DIRECTORY_TYPES, directoryCategory, directoryHref, parseDirectoryQuery, SERVICE_PAGE_SIZE, type DirectoryParams } from "@/lib/services/directory-query";
+import ServiceDirectoryCard from "@/components/services/ServiceDirectoryCard";
+import ServicesHero from "@/components/services/ServicesHero";
+import ServicesClient, { ServicesEmpty, ServicesSearch } from "./ServicesClient";
+import base from "@/components/shop/shop.module.css";
+import styles from "@/components/services/directory.module.css";
 
-export default async function ServicesPage() {
-  const session = await getSession();
-  const user = session ? await prisma.user.findUnique({ where: { id: session.userId } }) : null;
-  const continueHref = user ? getRoleDashboardPath(user.role) : null;
-
-  const unreadCount = await getNavUnreadCount();
-
-  const [services, wishlistProductIds] = await Promise.all([getPublicServices({}), getWishlistProductIds()]);
-
-  return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
-      <PublicNav
-        user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null}
-        dashboardHref={continueHref ?? undefined}
-        unreadCount={unreadCount}
-      />
-      <ServicesClient initialServices={services} wishlistProductIds={wishlistProductIds} />
-    </div>
-  );
+export const metadata:Metadata={title:"Local services",description:"Find your kind of expert on LinkWe. Explore local services, book appointments, request quotes and discover talented providers across Trinidad & Tobago."};
+export default async function ServicesPage({searchParams}:{searchParams:Promise<DirectoryParams>}){
+  const params=await searchParams,query=parseDirectoryQuery(params);
+  const [session,unreadCount,catalog,wishlist]=await Promise.all([getSession(),getNavUnreadCount(),getServiceDirectory(query),getWishlistProductIds()]);
+  const user=session?await prisma.user.findUnique({where:{id:session.userId},select:{fullName:true,role:true}}):null;
+  const dashboard=user?getRoleDashboardPath(user.role):undefined;
+  const chips=[...(query.q?[{key:"q",label:`Search: ${query.q}`}]:[]),...(query.category?[{key:"category",label:directoryCategory(query.category)}]:[]),...(query.serviceType?[{key:"serviceType",label:DIRECTORY_TYPES.find(t=>t.value===query.serviceType)!.label}]:[]),...(query.region?[{key:"region",label:getRegionLabel(query.region)}]:[]),...(query.location?[{key:"location",label:DIRECTORY_LOCATIONS.find(l=>l.value===query.location)!.label}]:[]),...(query.pricing?[{key:"pricing",label:query.pricing==="quoted"?"Price on request":"Listed fee"}]:[]),...(query.minimumRating?[{key:"minimumRating",label:`${query.minimumRating}+ stars`}]:[]),...(query.minPrice!==undefined?[{key:"minPrice",label:`From TTD ${query.minPrice}`}]:[]),...(query.maxPrice!==undefined?[{key:"maxPrice",label:`Up to TTD ${query.maxPrice}`}]:[])];
+  return <div className={`${base.page} ${styles.page}`}><PublicNav user={user?{name:user.fullName??"Account",href:dashboard!}:null} dashboardHref={dashboard} unreadCount={unreadCount}/>{catalog.preview&&<div className={base.previewNote}>Local design preview · Real LinkWe service examples · Service links open the live site</div>}<main>
+    <div className={base.container}><ServicesHero services={catalog.highlights}/><nav className={styles.typeNav} aria-label="Ways to find a service">{DIRECTORY_TYPES.map(type=>{const Icon=SERVICE_TYPE_LUCIDE[type.value]??ConciergeBell;return <Link key={type.value} href={directoryHref(params,{serviceType:query.serviceType===type.value?undefined:type.value,page:undefined})} aria-current={query.serviceType===type.value?"page":undefined}><span className={styles.typeIcon}><Icon size={21} aria-hidden/></span><span><strong>{type.label}</strong><small>{type.detail}</small></span><ArrowUpRight size={15} aria-hidden/></Link>;})}</nav></div>
+    <section id="service-results" className={`${base.container} ${styles.catalog}`} aria-labelledby="service-results-title"><div className={base.sectionHeading}><div><p className={base.eyebrow}>LOCAL TALENT. REAL POSSIBILITIES.</p><h2 id="service-results-title">{query.q?<>Your search. <em>Your people.</em></>:query.category?directoryCategory(query.category):<>A little expertise. <em>A big difference.</em></>}</h2></div><ServicesSearch key={query.q} defaultValue={query.q}/></div><nav className={base.categoryStrip} aria-label="Service categories"><Link href={directoryHref(params,{category:undefined,page:undefined})} aria-current={!query.category?"page":undefined}><Grid2X2 size={15} aria-hidden/>All services</Link>{catalog.options.categories.map(category=><Link key={category.value} href={directoryHref(params,{category:category.value,page:undefined})} aria-current={query.category===category.value?"page":undefined}>{category.label}<span>{category.count}</span></Link>)}</nav>{chips.length>0&&<div className={base.activeFilters} aria-label="Active filters">{chips.map(chip=><Link key={chip.key} href={directoryHref(params,{[chip.key]:undefined,page:undefined})} aria-label={`Remove ${chip.label} filter`}>{chip.label}<X size={13} aria-hidden/></Link>)}<Link href="/services#service-results" className={base.clearFilters}>Clear all</Link></div>}
+      <ServicesClient key={JSON.stringify(query)} query={query} options={catalog.options} total={catalog.total}>{catalog.services.length?<div className={styles.grid}>{catalog.services.map((service,index)=><ServiceDirectoryCard key={service.id} service={service} index={index} saved={wishlist.includes(service.id)}/>)}</div>:<ServicesEmpty inventoryCount={catalog.inventoryCount}/>}{catalog.total>0&&<div className={base.pagination}><p>Showing {(catalog.page-1)*SERVICE_PAGE_SIZE+1}–{Math.min(catalog.page*SERVICE_PAGE_SIZE,catalog.total)} of {catalog.total} services</p>{catalog.pages>1&&<nav aria-label="Service pages">{catalog.page>1&&<Link href={directoryHref(params,{page:String(catalog.page-1)})} aria-label="Previous page"><ArrowLeft size={18}/></Link>}<span>Page {catalog.page} of {catalog.pages}</span>{catalog.page<catalog.pages&&<Link href={directoryHref(params,{page:String(catalog.page+1)})} aria-label="Next page"><ArrowRight size={18}/></Link>}</nav>}</div>}</ServicesClient>
+    </section>
+    <section className={`${base.container} ${styles.howItWorks}`} aria-labelledby="how-services-work"><div><p className={base.eyebrow}>FROM “I NEED” TO “ALL SORTED.”</p><h2 id="how-services-work">A good connection<br/>starts here.</h2></div><ol><li><span>01</span><div><h3>Find your person</h3><p>Explore their work, location and customer reviews.</p></div></li><li><span>02</span><div><h3>Make your plan</h3><p>Choose a session, request a quote or explore a service plan.</p></div></li><li><span>03</span><div><h3>Get the details right</h3><p>Review the price and terms before you confirm.</p></div></li></ol></section>
+    <section className={`${base.container} ${base.bottomBanner}`}><div><p className={base.eyebrow}>WE PEOPLE. WE BUSINESS.</p><h2>Got a skill? <em>There’s a place for you.</em></h2><p>Bring your business to the LinkWe community.</p></div><Link href="/register?role=vendor">Become a provider <ArrowUpRight size={19} aria-hidden/></Link></section>
+  </main></div>;
 }

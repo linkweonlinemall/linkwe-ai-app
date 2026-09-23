@@ -1,0 +1,53 @@
+// Real directory queries use only a loopback DB and always roll back temporary records.
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),ts=require('typescript');
+require('dotenv').config({path:'.env.local',quiet:true});require('dotenv').config({path:'.env',quiet:true});
+if(!['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABASE_URL||'').hostname))throw new Error('Events checks require a loopback database');
+process.env.NODE_ENV='test';
+const {PrismaClient}=require('@prisma/client');const prisma=new PrismaClient();let db=prisma;
+const load=Module._load;Module._load=function(request,parent,isMain){if(request==='server-only')return {};if(request==='@/lib/prisma')return {get prisma(){return db;}};if(request.startsWith('@/'))request=path.join(process.cwd(),request.slice(2));return load.call(this,request,parent,isMain);};
+require.extensions['.ts']=(mod,file)=>mod._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,file);
+const {parseEventQuery,selectEvents,eventsHref,getEventOffer,eventDateRange}=require('../lib/events/directory-query.ts');
+const {getEventDirectory}=require('../lib/events/directory.ts');
+const {getEventPreview}=require('../lib/events/directory-preview.ts');
+let checks=0;function pass(name){checks++;console.log('PASS '+name);}
+const now=new Date('2026-09-22T12:00:00-04:00');
+const ticket={price:100,quantity:100,quantitySold:0,isVisible:true,saleStartDate:null,saleEnds:null};
+const example={id:'a',title:'A local event',slug:'a',description:'A night of music',category:'soca_carnival',tags:['music'],startDate:new Date('2026-10-10T20:00:00-04:00'),endDate:null,coverImage:null,venueName:'Test venue',address:'Main Road',region:'port_of_spain',isOnline:false,isFeatured:false,ageRestriction:null,organiserName:'A promoter',store:{name:'Test organiser',slug:'organiser',logoUrl:null}};
+const offer=(tickets,extra={})=>getEventOffer({...example,ticketTypes:tickets,...extra},now);
+const entry=(extra={},tickets=[ticket])=>{const record={...example,...extra};return {...record,offer:getEventOffer({...record,ticketTypes:tickets},now)};};
+(async()=>{
+ assert.equal(offer([]).state,'unannounced');assert.equal(offer([]).price,null);assert.equal(offer([{...ticket,isVisible:false,price:0}]).hasFree,false);pass('Missing or hidden ticket tiers are never advertised as free');
+ let result=offer([{...ticket,price:0,quantitySold:100},ticket]);assert.equal(result.price,100);assert.equal(result.hasFree,false);pass('Sold-out early-bird tickets do not lower advertised prices');
+ result=offer([{...ticket,price:0,saleStartDate:new Date('2026-10-01')},{...ticket,price:50,saleEnds:new Date('2026-09-01')},ticket]);assert.equal(result.price,100);pass('Future and expired tiers do not lower advertised prices');
+ assert.equal(offer([{...ticket,quantitySold:100}]).state,'sold_out');assert.equal(offer([{...ticket,saleStartDate:new Date('2026-10-01')}]).state,'not_started');assert.equal(offer([{...ticket,saleEnds:new Date('2026-09-01')}]).state,'closed');pass('Sold-out, upcoming sales and closed sales have distinct states');
+ result=offer([{...ticket,price:0},ticket]);assert.equal(result.hasFree,true);assert.equal(result.hasPaid,true);assert.equal(result.label,'Free tickets available');pass('Mixed ticket tiers distinguish free tickets from an entirely free event');
+ assert.equal(offer([ticket],{startDate:new Date('2026-01-01')}).state,'past');assert.equal(offer([ticket],{startDate:new Date('2026-09-22T11:00:00-04:00'),endDate:new Date('2026-09-22T18:00:00-04:00')}).state,'started');pass('Events that already started do not advertise purchasable tickets');
+ let range=eventDateRange('this_weekend',new Date('2026-09-20T10:00:00-04:00'));assert.equal(range.start.toISOString(),'2026-09-20T14:00:00.000Z');assert.equal(range.end.toISOString(),'2026-09-21T03:59:59.999Z');pass('Sunday weekend filter retains this Sunday');
+ range=eventDateRange('today',new Date('2026-10-01T01:00:00Z'));assert.equal(range.start.toISOString(),'2026-09-30T04:00:00.000Z');pass('Calendar dates use Trinidad time even across UTC midnight');
+ range=eventDateRange('this_month',new Date('2026-12-31T12:00:00-04:00'));assert.equal(range.end.toISOString(),'2027-01-01T03:59:59.999Z');pass('Month-end correctly crosses calendar years');
+ range=eventDateRange('this_week',now);assert.equal(range.end.toISOString(),'2026-09-29T03:59:59.999Z');pass('Next seven days covers seven Trinidad calendar dates');
+ let q=parseEventQuery({q:[' music ','ignored'],region:'port_of_spain',page:'Infinity',sort:'invalid',date:'yesterday'});assert.equal(q.q,'music');assert.equal(q.region,'port of spain');assert.equal(q.page,100000);assert.equal(q.sort,'recommended');assert.equal(q.date,'');pass('Malformed and legacy query values normalise safely');
+ const url=new URL(eventsHref({q:'food & drink',page:'2',date:'upcoming'},{region:'port of spain',page:undefined}),'https://example.com');assert.equal(url.searchParams.get('q'),'food & drink');assert.equal(url.searchParams.get('date'),'upcoming');assert.equal(url.searchParams.has('page'),false);pass('Refinements retain other filters and reset pagination');
+ const events=[entry(),entry({id:'b',title:'B online',isOnline:true},[{...ticket,price:0}]),entry({id:'c',title:'C unannounced'},[]),entry({id:'d',title:'D past',startDate:new Date('2026-01-01')})];
+ result=selectEvents(events,parseEventQuery({pricing:'free',format:'online'}),now);assert.equal(result.total,1);assert.equal(result.events[0].id,'b');pass('Free and online filters combine without including unknown prices');
+ for(const sort of ['price_asc','price_desc']){result=selectEvents(events,parseEventQuery({sort}),now);assert.ok(result.events.slice(0,2).every(event=>event.offer.price!==null));}pass('Unpriced events follow known ticket prices in both sort directions');
+ result=selectEvents(events,parseEventQuery({q:'promoter',region:'port_of_spain',date:'upcoming'}),now);assert.equal(result.total,3);pass('Search finds organisers and combines with legacy region and upcoming dates');
+ result=selectEvents(events,parseEventQuery({}),now);assert.equal(result.total,4);assert.equal(result.events.at(-1).id,'d');pass('All dates keeps past listings accessible while recommending upcoming events first');
+ const many=Array.from({length:40},(_,i)=>entry({id:String(i),title:'Event '+String(i).padStart(2,'0')}));
+ const first=selectEvents(many,parseEventQuery({}),now),second=selectEvents(many,parseEventQuery({page:'2'}),now);assert.equal(first.events.length,18);assert.equal(second.events.length,18);assert.ok(second.events.every(event=>!first.events.some(other=>other.id===event.id)));assert.equal(selectEvents(many,parseEventQuery({page:'999'}),now).page,3);pass('Pagination has no duplicates and clamps invalid pages');
+ assert.deepEqual(getEventPreview(now),[]);pass('Public preview examples cannot render outside development');
+ const marker='events-check-'+Date.now(),rollback=new Error('ROLLBACK_TEST');
+ try{await prisma.$transaction(async tx=>{db=tx;
+  const user=await tx.user.create({data:{email:marker+'@linkwe.test',fullName:'Event directory test',role:'VENDOR',idVerificationStatus:'APPROVED'}});
+  const store=await tx.store.create({data:{ownerId:user.id,name:marker,slug:marker,categoryId:'other',region:'san fernando',status:'ACTIVE'}});
+  const data={storeId:store.id,category:marker,tags:[],galleryImages:[],startDate:example.startDate,status:'PUBLISHED'};
+  const published=await tx.event.create({data:{...data,title:'Published event',slug:marker,ticketTypes:{create:[{name:'Sold out free tier',price:0,quantity:5,quantitySold:5},{name:'Admission',price:150,quantity:20}]}}});
+  await tx.event.createMany({data:[{...data,title:'Draft',slug:marker+'-draft',status:'DRAFT'},{...data,title:'Cancelled',slug:marker+'-cancelled',status:'CANCELLED'}]});
+  result=await getEventDirectory(parseEventQuery({category:marker}),now);assert.equal(result.total,1);assert.equal(result.events[0].id,published.id);assert.equal(result.events[0].offer.price,150);assert.equal(result.preview,false);pass('Database query excludes drafts/cancelled events and returns actual available prices');
+  await tx.store.update({where:{id:store.id},data:{status:'DRAFT'}});result=await getEventDirectory(parseEventQuery({category:marker}),now);assert.equal(result.total,0);pass('Events from non-sellable stores are excluded');
+  await tx.store.update({where:{id:store.id},data:{status:'ACTIVE'}});await tx.user.update({where:{id:user.id},data:{idVerificationStatus:'UNSUBMITTED'}});result=await getEventDirectory(parseEventQuery({category:marker}),now);assert.equal(result.total,0);pass('Unverified owners remain excluded');
+  throw rollback;
+ },{timeout:30000});}catch(error){if(error!==rollback)throw error;}
+ assert.equal(await prisma.store.count({where:{slug:marker}}),0);pass('All temporary event data rolled back');
+ console.log(checks+' events directory checks passed.');
+})().catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>prisma.$disconnect());

@@ -1,306 +1,54 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import Link from "next/link";
-
-import PublicNav from "@/components/layout/PublicNav";
-import { EventCard, type EventCardData } from "@/components/events/EventCard";
-import { EventFilters } from "@/components/events/EventFilters";
+import { ArrowLeft, ArrowRight, ArrowUpRight, CalendarDays, Grid2X2, MapPin, Ticket, Users, X } from "lucide-react";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
+import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
+import PublicNav from "@/components/layout/PublicNav";
 import { prisma } from "@/lib/prisma";
+import { getEventDirectory } from "@/lib/events/directory";
+import { EVENT_DATES, EVENT_PAGE_SIZE, eventRegionLabel, eventsHref, parseEventQuery, type EventParams } from "@/lib/events/directory-query";
+import { eventCategoryLabel } from "@/lib/events/categories";
+import EventDirectoryCard from "@/components/events/EventDirectoryCard";
+import EventsHero from "@/components/events/EventsHero";
+import EventsBrowser, { EventsSearch } from "@/components/events/EventsBrowser";
+import base from "@/components/shop/shop.module.css";
+import styles from "@/components/events/directory.module.css";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+export const metadata: Metadata = { title: "Events in Trinidad & Tobago", description: "Good times. Great company. Discover fetes, concerts, food experiences and local events on LinkWe. Find your next plan by date, location and ticket options." };
 
-export const metadata: Metadata = {
-  title: "Events in Trinidad & Tobago · LinkWe",
-  description: "Concerts, fetes, food events, and more across Trinidad & Tobago. Buy tickets online.",
-};
-
-type SearchParams = {
-  q?: string;
-  category?: string;
-  region?: string;
-  date?: string;
-  sort?: string;
-};
-
-function buildDateRange(
-  dateFilter: string | undefined,
-): { gte?: Date; lte?: Date } | null {
-  const now = new Date();
-  if (dateFilter === "this_week") {
-    const end = new Date(now);
-    end.setDate(now.getDate() + 7);
-    return { gte: now, lte: end };
-  }
-  if (dateFilter === "this_weekend") {
-    const day = now.getDay();
-    const daysUntilSat = day === 0 ? 6 : 6 - day;
-    const sat = new Date(now);
-    sat.setDate(now.getDate() + daysUntilSat);
-    sat.setHours(0, 0, 0, 0);
-    const sun = new Date(sat);
-    sun.setDate(sat.getDate() + 1);
-    sun.setHours(23, 59, 59, 999);
-    return { gte: sat, lte: sun };
-  }
-  if (dateFilter === "this_month") {
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-    return { gte: now, lte: end };
-  }
-  // "All dates" (no filter) — return null so we don't add a startDate clause at all.
-  // Previously defaulted to { gte: now } which hid any event with a past startDate.
-  return null;
-}
-
-const HERO_CATEGORIES = [
-  { label: "Fetes", value: "all_inclusive_fete" },
-  { label: "Concerts", value: "soca_carnival" },
-  { label: "Food", value: "food_fair" },
-  { label: "Cultural", value: "cultural_festival" },
-  { label: "Sports", value: "sports_tournament" },
-  { label: "Business", value: "networking_event" },
-];
-
-export default async function EventsPage({
-  searchParams: rawSearchParams,
-}: {
-  searchParams: Promise<SearchParams>;
-}) {
-  const searchParams = await rawSearchParams;
-
-  const session = await getSession();
-  const user = session
-    ? await prisma.user.findUnique({ where: { id: session.userId } })
-    : null;
-  const continueHref = user ? getRoleDashboardPath(user.role) : null;
-
-  const q = searchParams.q?.trim() ?? "";
-  const category = searchParams.category ?? "";
-  const region = searchParams.region ?? "";
-  const sort = searchParams.sort ?? "recommended";
-  const dateRange = buildDateRange(searchParams.date);
-  const dateWhere = dateRange ? { startDate: dateRange } : {};
-
-  const orderBy =
-    sort === "latest"
-      ? [{ startDate: "desc" as const }]
-      : sort === "recommended"
-        ? [{ isFeatured: "desc" as const }, { startDate: "asc" as const }]
-        : [{ startDate: "asc" as const }];
-
-  // Only apply full-text search when q is a non-empty string.
-  // An empty string passed to Prisma `contains` matches every row in Postgres.
-  const searchWhere =
-    q.length > 0
-      ? {
-          OR: [
-            { title: { contains: q, mode: "insensitive" as const } },
-            { category: { contains: q, mode: "insensitive" as const } },
-            { venueName: { contains: q, mode: "insensitive" as const } },
-            { address: { contains: q, mode: "insensitive" as const } },
-            { description: { contains: q, mode: "insensitive" as const } },
-          ],
-        }
-      : {};
-
-  // Events query + category count query in parallel
-  const [eventsRaw, categoryCounts] = await Promise.all([
-    prisma.event.findMany({
-      where: {
-        status: "PUBLISHED",
-        ...dateWhere,
-        ...searchWhere,
-        ...(category ? { category } : {}),
-        ...(region ? { region } : {}),
-      },
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        category: true,
-        startDate: true,
-        coverImage: true,
-        venueName: true,
-        region: true,
-        isOnline: true,
-        isFeatured: true,
-        store: { select: { name: true, slug: true, logoUrl: true } },
-        ticketTypes: {
-          select: {
-            price: true,
-            quantity: true,
-            quantitySold: true,
-            isVisible: true,
-          },
-        },
-      },
-      orderBy,
-    }),
-    // Category counts for hero pills — always count against all published upcoming events
-    prisma.event.groupBy({
-      by: ["category"],
-      where: { status: "PUBLISHED", startDate: { gte: new Date() } },
-      _count: { id: true },
-    }),
-  ]);
-  const eventPrice = (event: (typeof eventsRaw)[number]) => {
-    const visible = event.ticketTypes.filter((ticket) => ticket.isVisible);
-    return visible.length ? Math.min(...visible.map((ticket) => ticket.price)) : 0;
-  };
-  const events = [...eventsRaw].sort((a,b) => {
-    if (sort === "price_asc") return eventPrice(a) - eventPrice(b);
-    if (sort === "price_desc") return eventPrice(b) - eventPrice(a);
-    if (sort === "name") return a.title.localeCompare(b.title);
-    if (sort === "recommended") {
-      if (a.isFeatured !== b.isFeatured) return Number(b.isFeatured) - Number(a.isFeatured);
-      const aSold = a.ticketTypes.reduce((total, ticket) => total + ticket.quantitySold, 0);
-      const bSold = b.ticketTypes.reduce((total, ticket) => total + ticket.quantitySold, 0);
-      if (aSold !== bSold) return bSold - aSold;
-      return a.startDate.getTime() - b.startDate.getTime();
-    }
-    return 0;
-  });
-
-  // Build a map: category value → count
-  const countByCategory: Record<string, number> = {};
-  for (const row of categoryCounts) {
-    if (row.category) countByCategory[row.category] = row._count.id;
-  }
-
-  const hasFilters = q || category || region || searchParams.date;
-
-  return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
-      <PublicNav
-        user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null}
-        dashboardHref={continueHref ?? undefined}
-      />
-
-      {/* ── Hero ── */}
-      <section
-        className="relative overflow-hidden"
-        style={{
-          backgroundColor: "#1C1C1A",
-          backgroundImage:
-            "url('https://res.cloudinary.com/dosxxjwnh/image/upload/v1780164845/events-hero_bfhevo.png')",
-          backgroundSize: "cover",
-          backgroundPosition: "center top",
-        }}
-      >
-        {/* Dark gradient overlay */}
-        <div className="absolute inset-0 z-0 bg-gradient-to-b from-black/75 via-black/65 to-black/85" />
-
-        <div className="relative z-10 mx-auto max-w-7xl px-4 pb-8 pt-20 sm:px-6 sm:pb-14 sm:pt-28">
-          {/* Eyebrow pill */}
-          <div className="mb-5 flex justify-center">
-            <span
-              className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest"
-              style={{
-                background: "rgba(212,69,10,0.15)",
-                border: "1px solid rgba(212,69,10,0.3)",
-                color: "#D4450A",
-              }}
-            >
-              🎟 Events &amp; Tickets
-            </span>
-          </div>
-
-          {/* Heading */}
-          <div className="mb-5 text-center">
-            <h1
-              className="font-sans font-extrabold leading-[1.06] tracking-tight text-white"
-              style={{ fontSize: "clamp(2.4rem, 5vw, 3.5rem)" }}
-            >
-              Trinidad &amp; Tobago&apos;s
-              <br />
-              <em className="not-italic text-[#D4450A]">Biggest Events</em>
-            </h1>
-          </div>
-
-          {/* Category pill row with scarlet dot separators + counts */}
-          <div className="mb-8 flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
-            {HERO_CATEGORIES.filter((pill) => (countByCategory[pill.value] ?? 0) > 0).map(
-              (pill, i, arr) => (
-                <span key={pill.value} className="flex items-center gap-3">
-                  <Link
-                    href={`/events?category=${pill.value}`}
-                    className={`text-sm transition-colors duration-150 ${
-                      category === pill.value
-                        ? "font-semibold text-[#D4450A]"
-                        : "text-white/50 hover:text-white"
-                    }`}
-                  >
-                    {pill.label}
-                    <span className="ml-1.5 text-white/30">
-                      ({countByCategory[pill.value] ?? 0})
-                    </span>
-                  </Link>
-                  {i < arr.length - 1 && (
-                    <span className="size-1 rounded-full bg-[#D4450A]/60" aria-hidden />
-                  )}
-                </span>
-              ),
-            )}
-          </div>
-
-          {/* Filters */}
-          <Suspense fallback={null}>
-            <EventFilters />
-          </Suspense>
-        </div>
+export default async function EventsPage({ searchParams }: { searchParams: Promise<EventParams> }) {
+  const params = await searchParams, query = parseEventQuery(params);
+  const [session, unreadCount, catalog] = await Promise.all([getSession(), getNavUnreadCount(), getEventDirectory(query)]);
+  const user = session ? await prisma.user.findUnique({ where: { id: session.userId }, select: { fullName: true, role: true } }) : null;
+  const dashboard = user ? getRoleDashboardPath(user.role) : undefined;
+  const chips = [
+    ...(query.q ? [{ key: "q", label: "Search: " + query.q }] : []),
+    ...(query.category ? [{ key: "category", label: eventCategoryLabel(query.category) }] : []),
+    ...(query.date ? [{ key: "date", label: EVENT_DATES.find(date => date.value === query.date)!.label }] : []),
+    ...(query.region ? [{ key: "region", label: eventRegionLabel(query.region) }] : []),
+    ...(query.format ? [{ key: "format", label: query.format === "online" ? "Online events" : "In person" }] : []),
+    ...(query.pricing ? [{ key: "pricing", label: query.pricing === "free" ? "Free tickets available" : "Paid tickets available" }] : []),
+  ];
+  return <div className={base.page + " " + styles.page}>
+    <PublicNav user={user ? { name: user.fullName ?? "Account", href: dashboard! } : null} dashboardHref={dashboard} unreadCount={unreadCount}/>
+    {catalog.preview && <div className={base.previewNote}>Local design preview · Real LinkWe event examples</div>}
+    <main>
+      <div className={base.container}><EventsHero event={catalog.highlight}/></div>
+      <section id="event-results" className={base.container + " " + styles.catalog} aria-labelledby="event-results-title">
+        <div className={base.sectionHeading}><div><p className={base.eyebrow}>FIND YOUR SCENE. MAKE A MEMORY.</p><h2 id="event-results-title">{query.q ? <>Your search. <em>Your next plan.</em></> : <>A date for <em>your diary.</em></>}</h2></div><EventsSearch key={query.q} defaultValue={query.q}/></div>
+        <nav className={styles.dateNav} aria-label="Event dates">{EVENT_DATES.map(date => <Link key={date.value} href={eventsHref(params, { date: date.value || undefined, page: undefined })} aria-current={query.date === date.value ? "page" : undefined}><CalendarDays size={16} aria-hidden/>{date.label}</Link>)}</nav>
+        <nav className={base.categoryStrip} aria-label="Event categories"><Link href={eventsHref(params, { category: undefined, page: undefined })} aria-current={!query.category ? "page" : undefined}><Grid2X2 size={15} aria-hidden/>All events</Link>{catalog.options.categories.map(category => <Link key={category.value} href={eventsHref(params, { category: category.value, page: undefined })} aria-current={query.category === category.value ? "page" : undefined}>{category.label}<span>{category.count}</span></Link>)}</nav>
+        {chips.length > 0 && <div className={base.activeFilters} aria-label="Active filters">{chips.map(chip => <Link key={chip.key} href={eventsHref(params, { [chip.key]: undefined, page: undefined })} aria-label={"Remove " + chip.label + " filter"}>{chip.label}<X size={13} aria-hidden/></Link>)}<Link href="/events#event-results" className={base.clearFilters}>Clear all</Link></div>}
+        <EventsBrowser key={JSON.stringify(query)} query={query} options={catalog.options} total={catalog.total}>
+          {catalog.events.length ? <div className={styles.grid} data-small={catalog.total <= 2}>{catalog.events.map((event, index) => <EventDirectoryCard key={event.id} event={event} index={index}/>)}</div> : <div className={base.empty}><Ticket size={45} strokeWidth={1.3} aria-hidden/><h3>{catalog.inventoryCount ? "Let’s try a different plan." : "The next good time is on its way."}</h3><p>{catalog.inventoryCount ? "Try another date, broaden your search or clear a filter to see more events." : "Check back for new events from the LinkWe community."}</p><Link href={catalog.inventoryCount ? "/events#event-results" : "/stores"}>{catalog.inventoryCount ? "Explore all events" : "Meet our local stores"}<ArrowUpRight size={17} aria-hidden/></Link></div>}
+          {catalog.total > 0 && <div className={base.pagination}><p>Showing {(catalog.page - 1) * EVENT_PAGE_SIZE + 1}–{Math.min(catalog.page * EVENT_PAGE_SIZE, catalog.total)} of {catalog.total} events</p>{catalog.pages > 1 && <nav aria-label="Event pages">{catalog.page > 1 && <Link href={eventsHref(params, { page: String(catalog.page - 1) })} aria-label="Previous page"><ArrowLeft size={18}/></Link>}<span>Page {catalog.page} of {catalog.pages}</span>{catalog.page < catalog.pages && <Link href={eventsHref(params, { page: String(catalog.page + 1) })} aria-label="Next page"><ArrowRight size={18}/></Link>}</nav>}</div>}
+        </EventsBrowser>
+        <div className={styles.guide}><div><CalendarDays size={25} strokeWidth={1.5} aria-hidden/><span><strong>Make your plan</strong><p>Dates and times shown in T&amp;T time.</p></span></div><div><MapPin size={25} strokeWidth={1.5} aria-hidden/><span><strong>Know before you go</strong><p>Check the venue, age limits and event details.</p></span></div><div><Users size={25} strokeWidth={1.5} aria-hidden/><span><strong>Bring your people</strong><p>Share your next find from the event page.</p></span></div></div>
       </section>
-
-      {/* ── Results ── */}
-      <section className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6 sm:pt-8">
-        {/* Results bar */}
-        <div className="mb-5 flex items-center justify-between gap-4">
-          <p className="text-sm text-[#888]">
-            <span className="font-semibold text-[#1C1C1A]">{events.length}</span>{" "}
-            {events.length === 1 ? "event" : "events"} found
-          </p>
-          {hasFilters && (
-            <Link
-              href="/events"
-              className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm text-zinc-600 shadow-sm transition-colors hover:border-[#D4450A] hover:text-[#D4450A]"
-            >
-              Clear filters
-            </Link>
-          )}
-        </div>
-
-        {events.length > 0 ? (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {(events as EventCardData[]).map((event, idx) => {
-              const isFeatured = event.isFeatured === true && idx === 0;
-              return (
-                <div key={event.id} className={isFeatured ? "sm:col-span-2 xl:col-span-2" : ""}>
-                  <EventCard event={event} featured={isFeatured} />
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-32 text-center">
-            <div className="mb-5 text-6xl">🎟️</div>
-            <h2 className="mb-2 font-sans text-xl font-bold text-[#1C1C1A]">No events found</h2>
-            <p className="mb-8 max-w-sm text-sm text-zinc-500">
-              {hasFilters
-                ? "Try adjusting your filters or clearing the search."
-                : "Check back soon — events will appear here as vendors publish them."}
-            </p>
-            {hasFilters && (
-              <Link
-                href="/events"
-                className="rounded-full bg-[#D4450A] px-8 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-              >
-                Clear all filters
-              </Link>
-            )}
-          </div>
-        )}
-      </section>
-    </div>
-  );
+      <section className={base.container + " " + base.bottomBanner}><div><p className={base.eyebrow}>GIVE PEOPLE SOMETHING TO LOOK FORWARD TO.</p><h2>Big plans? <em>Bring them to LinkWe.</em></h2><p>Build your local audience and give your event a place to shine.</p></div><Link href={user?.role === "VENDOR" ? "/dashboard/vendor/events/new" : "/register?role=vendor"}>Host an event <ArrowUpRight size={19} aria-hidden/></Link></section>
+    </main>
+  </div>;
 }

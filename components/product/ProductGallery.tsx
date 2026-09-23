@@ -6,7 +6,7 @@ import StorefrontImage from "@/components/storefront/StorefrontImage";
 import ProductPhotoZoom from "./ProductPhotoZoom";
 import styles from "./gallery.module.css";
 
-export function ProductGallery({ images, name, kind = "Product" }: { images: string[]; name: string; kind?: "Product" | "Service" }) {
+export function ProductGallery({ images, name, kind = "Product", stageClassName }: { images: string[]; name: string; kind?: "Product" | "Service" | "Event"; stageClassName?: string }) {
   const photos = useMemo(() => [...new Set(images.filter(Boolean))], [images]);
   const [selected, setSelected] = useState(0);
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -22,7 +22,7 @@ export function ProductGallery({ images, name, kind = "Product" }: { images: str
 
   if (!photos.length) return <div className={styles.empty}><ImageIcon size={40} strokeWidth={1.2} aria-hidden /><span>{kind} photo coming soon</span></div>;
   return <div className={styles.gallery}>
-    <div className={styles.stage} onTouchStart={event => { const touch = event.touches[0]; touchStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null; swiped.current = false; }} onTouchEnd={event => {
+    <div className={styles.stage + (stageClassName ? " " + stageClassName : "")} onTouchStart={event => { const touch = event.touches[0]; touchStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null; swiped.current = false; }} onTouchEnd={event => {
       const end = event.changedTouches[0];
       if (touchStart.current && end) {
         const dx = end.clientX - touchStart.current.x;

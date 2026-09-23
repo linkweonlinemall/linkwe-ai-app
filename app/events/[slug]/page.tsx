@@ -1,521 +1,62 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import { headers } from "next/headers";
-import {
-  CalendarDays,
-  Clock,
-  MapPin,
-  Video,
-  Users,
-  ShieldCheck,
-  Sparkles,
-  Tag,
-  Info,
-  ExternalLink,
-  Music,
-} from "lucide-react";
-
 import { getCrossStoreFeatureButtonState } from "@/app/actions/cross-store";
 import { getLinkedContent } from "@/app/actions/content-links";
 import RequestFeatureButton from "@/components/cross-store/RequestFeatureButton";
 import PublicNav from "@/components/layout/PublicNav";
-import RelatedContentSection from "@/components/storefront/RelatedContentSection";
-import { TicketPurchaseCard } from "@/components/events/TicketPurchaseCard";
-import { EventShareButton } from "@/components/events/EventShareButton";
-import SaveEventButton from "@/components/events/SaveEventButton";
-import { categoryLabel } from "@/components/events/EventCard";
-import LineupLightbox from "@/components/events/LineupLightbox";
+import EventDetailView from "@/components/events/EventDetailView";
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
-import {
-  formatEventDateLong,
-  formatEventTime,
-} from "@/lib/events/format-datetime";
+import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { prisma } from "@/lib/prisma";
-import { isStoreSellable } from "@/lib/store/sellable-store";
+import { isStoreSellable, sellableStoreWhere } from "@/lib/store/sellable-store";
 
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const event = await prisma.event.findFirst({
-    where: { slug, status: "PUBLISHED" },
-    select: { title: true, description: true, coverImage: true },
+    where: { slug, status: "PUBLISHED", store: sellableStoreWhere() },
+    select: { title: true, description: true, coverImage: true, metaTitle: true, metaDescription: true },
   });
-  if (!event) return { title: "Event · LinkWe" };
+  if (!event) return { title: "Event" };
   return {
-    title: `${event.title} · LinkWe Events`,
-    description: event.description?.replace(/<[^>]+>/g, "").slice(0, 160) ?? undefined,
+    title: event.metaTitle || event.title,
+    description: event.metaDescription || event.description?.replace(/<[^>]+>/g, "").slice(0, 160) || undefined,
+    alternates: { canonical: "https://www.linkweonlinemall.com/events/" + slug },
     openGraph: event.coverImage ? { images: [{ url: event.coverImage, alt: event.title }] } : undefined,
     twitter: event.coverImage ? { card: "summary_large_image", images: [event.coverImage] } : undefined,
   };
 }
 
-// Icon wrapper used in quick strip and section headings
-function IconBadge({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#D4450A]/10 text-[#D4450A]">
-      {children}
-    </span>
-  );
-}
-
 export default async function EventDetailPage({ params }: Props) {
   const { slug } = await params;
-
-  const session = await getSession();
-  const user = session
-    ? await prisma.user.findUnique({ where: { id: session.userId } })
-    : null;
-  const continueHref = user ? getRoleDashboardPath(user.role) : null;
-
-  const event = await prisma.event.findFirst({
-    where: { slug },
-    include: {
-      store: {
-        select: {
-          name: true,
-          slug: true,
-          logoUrl: true,
-          region: true,
-          ownerId: true,
-          status: true,
-          owner: { select: { idVerificationStatus: true } },
-        },
+  const [session, unreadCount, event] = await Promise.all([
+    getSession(), getNavUnreadCount(),
+    prisma.event.findFirst({
+      where: { slug },
+      select: {
+        id: true, slug: true, title: true, description: true, category: true, tags: true, organiserName: true,
+        startDate: true, endDate: true, isOnline: true, venueName: true, address: true, latitude: true,
+        longitude: true, region: true, capacity: true, dressCode: true, ticketPrice: true, ticketUrl: true,
+        refundPolicy: true, registrationRequired: true, registrationDeadline: true, ageRestriction: true,
+        status: true, eventType: true, coverImage: true, galleryImages: true, hasSeating: true, lineup: true,
+        refundPolicyType: true, refundCutoffHours: true,
+        store: { select: { name: true, slug: true, logoUrl: true, region: true, ownerId: true, status: true, owner: { select: { idVerificationStatus: true } } } },
+        ticketTypes: { where: { isVisible: true }, orderBy: [{ price: "asc" }, { createdAt: "asc" }], select: { id: true, name: true, price: true, quantity: true, quantitySold: true, description: true, perks: true, maxPerOrder: true, isVisible: true, saleStartDate: true, saleEnds: true, validDays: true, color: true } },
       },
-      ticketTypes: {
-        where: { isVisible: true },
-        orderBy: { price: "asc" },
-      },
-    },
-  });
-
-  if (!event || (event.status !== "PUBLISHED" && event.status !== "CANCELLED")) {
-    notFound();
-  }
-
-  const isOwner = session != null && event.store.ownerId === session.userId;
-  const isAdmin = session?.role === "ADMIN";
-  if (!isStoreSellable(event.store) && !isOwner && !isAdmin) notFound();
-
-  const now = new Date();
-  const isPast = new Date(event.startDate) < now;
-  const isCancelled = event.status === "CANCELLED";
-  const showTickets = !isCancelled && !isPast;
-
-  const catLabel = categoryLabel(event.category);
-
-  // Canonical URL for share button
-  const headersList = await headers();
-  const host = headersList.get("host") ?? "linkweonlinemall.com";
-  const protocol = host.startsWith("localhost") ? "http" : "https";
-  const shareUrl = `${protocol}://${host}/events/${event.slug}`;
-
-  // Tickets remaining across all visible types
-  const ticketsRemaining = event.ticketTypes.reduce(
-    (sum, t) => sum + Math.max(0, t.quantity - t.quantitySold),
-    0,
-  );
-
-  const eventDate = formatEventDateLong(event.startDate);
-  const eventTime = formatEventTime(event.startDate);
-
-  // Quick strip items — only include if value exists
-  const quickStripItems = [
-    event.capacity != null
-      ? { Icon: Users, label: "Capacity", value: event.capacity.toLocaleString() }
-      : null,
-    showTickets && event.ticketTypes.length > 0
-      ? {
-          Icon: Tag,
-          label: "Tickets remaining",
-          value: ticketsRemaining > 0 ? ticketsRemaining.toLocaleString() : "Sold out",
-        }
-      : null,
-    event.dressCode
-      ? { Icon: Sparkles, label: "Dress code", value: event.dressCode }
-      : null,
-    event.ageRestriction
-      ? { Icon: ShieldCheck, label: "Age restriction", value: event.ageRestriction }
-      : null,
-  ].filter(Boolean) as { Icon: React.ElementType; label: string; value: string }[];
-
-  // Gallery — cap display at 5 (show +X overlay on the 5th)
-  const galleryImages = event.galleryImages as string[];
-  const displayGallery = galleryImages.slice(0, 5);
-  const galleryOverflow = galleryImages.length > 5 ? galleryImages.length - 5 : 0;
-
-  // Lineup
-  type PerformerEntry = { name?: string; role?: string; type?: string; imageUrl?: string };
-  const lineupPerformers: PerformerEntry[] | null =
-    Array.isArray(event.lineup) && (event.lineup as unknown[]).length > 0
-      ? (event.lineup as PerformerEntry[])
-      : null;
-
-  const [{ items: linkedItems }, featureButtonState] = await Promise.all([
-    getLinkedContent("EVENT", event.id),
-    getCrossStoreFeatureButtonState("EVENT", event.id),
+    }),
   ]);
-
-  return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
-      <PublicNav
-        user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null}
-        dashboardHref={continueHref ?? undefined}
-      />
-
-      {/* ── Status banners ── */}
-      {isCancelled && (
-        <div className="w-full bg-red-600 py-3 text-center text-sm font-medium text-white">
-          This event has been cancelled.
-        </div>
-      )}
-      {!isCancelled && isPast && (
-        <div className="w-full bg-amber-500 py-3 text-center text-sm font-medium text-white">
-          This event has ended.
-        </div>
-      )}
-
-      {/* ════════════════════════════════════════════
-          HERO — 520px full bleed
-      ════════════════════════════════════════════ */}
-      <div className="relative h-[430px] w-full overflow-hidden bg-[#1C1C1A] sm:h-[520px]">
-        {/* Cover image */}
-        {event.coverImage && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={event.coverImage}
-            alt={event.title}
-            className="h-full w-full object-cover object-top"
-          />
-        )}
-
-        {/* Gradient overlay: light at top → heavy at bottom */}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/15 via-black/20 to-black/85" />
-
-        {/* ── Top bar ── */}
-        <div className="absolute left-3 right-3 top-3 flex items-center justify-between sm:left-6 sm:right-6 sm:top-6">
-          {/* Back link */}
-          <Link
-            href="/events"
-            className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/15 px-3 py-2 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/25 sm:px-4 sm:text-sm"
-          >
-            ← All events
-          </Link>
-
-          {/* Action buttons */}
-          <div className="flex items-center gap-2">
-            <EventShareButton title={event.title} url={shareUrl} glass />
-            <SaveEventButton eventId={event.id} glass />
-          </div>
-        </div>
-
-        {/* ── Bottom section: category + title + meta ── */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-10">
-          {catLabel && (
-            <span className="mb-4 inline-block rounded-full bg-[#D4450A] px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-white shadow">
-              {catLabel}
-            </span>
-          )}
-          <h1
-            className="mb-4 max-w-2xl break-words font-sans text-3xl font-extrabold leading-tight text-white drop-shadow-md sm:mb-5 sm:text-5xl"
-            style={{ textShadow: "0 2px 16px rgba(0,0,0,0.35)" }}
-          >
-            {event.title}
-          </h1>
-
-          {/* Meta row */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            {/* Date */}
-            <span className="flex items-center gap-2 text-sm text-white/85">
-              <CalendarDays className="size-4 shrink-0" aria-hidden />
-              {eventDate}
-            </span>
-            <span className="hidden h-4 w-px bg-white/20 sm:block" aria-hidden />
-            {/* Time */}
-            <span className="flex items-center gap-2 text-sm text-white/85">
-              <Clock className="size-4 shrink-0" aria-hidden />
-              {eventTime}
-            </span>
-            {(event.venueName || event.region || event.isOnline) && (
-              <>
-                <span className="hidden h-4 w-px bg-white/20 sm:block" aria-hidden />
-                <span className="flex items-center gap-2 text-sm text-white/85">
-                  {event.isOnline ? (
-                    <Video className="size-4 shrink-0" aria-hidden />
-                  ) : (
-                    <MapPin className="size-4 shrink-0" aria-hidden />
-                  )}
-                  {event.isOnline
-                    ? "Online event"
-                    : [event.venueName, event.region].filter(Boolean).join(", ")}
-                </span>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ════════════════════════════════════════════
-          QUICK STRIP
-      ════════════════════════════════════════════ */}
-      {quickStripItems.length > 0 && (
-        <div className="mx-auto max-w-5xl px-4 pt-4 sm:px-6 sm:pt-6">
-          <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
-            <div className="flex flex-col divide-y divide-zinc-100 sm:grid sm:divide-x sm:divide-y-0"
-              style={{ gridTemplateColumns: `repeat(${quickStripItems.length}, 1fr)` }}>
-              {quickStripItems.map(({ Icon, label, value }) => (
-                <div key={label} className="flex items-center gap-3 px-5 py-4">
-                  <IconBadge>
-                    <Icon className="size-4" aria-hidden />
-                  </IconBadge>
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-400">
-                      {label}
-                    </p>
-                    <p className="truncate text-sm font-semibold text-[#1C1C1A]">{value}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {linkedItems.length > 0 ? (
-        <div
-          className={`mx-auto max-w-5xl px-6 lg:hidden ${quickStripItems.length > 0 ? "pt-3" : "pt-6"}`}
-        >
-          <a
-            href="#shop-this-event"
-            className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl border border-[#D4450A]/25 bg-[#D4450A]/8 px-5 py-3 text-sm font-semibold text-[#D4450A] transition-colors active:bg-[#D4450A]/15"
-          >
-            <span aria-hidden>🛍</span>
-            Shop this event
-          </a>
-        </div>
-      ) : null}
-
-      {/* ════════════════════════════════════════════
-          TWO-COLUMN CONTENT
-      ════════════════════════════════════════════ */}
-      <div className="mx-auto max-w-5xl px-6 py-10">
-        <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
-
-          {/* ── LEFT COLUMN ── */}
-          <div className="min-w-0 flex-1 space-y-6">
-
-            {/* About card */}
-            {event.description && (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-7">
-                <div className="mb-5 flex items-center gap-3">
-                  <IconBadge>
-                    <Info className="size-4" aria-hidden />
-                  </IconBadge>
-                  <h2 className="font-sans text-base font-bold text-[#1C1C1A]">
-                    About this event
-                  </h2>
-                </div>
-                <div
-                  className="prose prose-sm max-w-none text-zinc-600 prose-headings:font-sans prose-headings:text-[#1C1C1A] prose-a:text-[#D4450A] prose-strong:text-[#1C1C1A]"
-                  dangerouslySetInnerHTML={{ __html: event.description }}
-                />
-                {/* Attribute badges */}
-                {(event.ageRestriction || event.dressCode || event.isOnline) && (
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    {event.ageRestriction && (
-                      <span className="rounded-full border border-zinc-200 px-3 py-1 text-sm text-zinc-700">
-                        🔞 {event.ageRestriction}
-                      </span>
-                    )}
-                    {event.dressCode && (
-                      <span className="rounded-full border border-zinc-200 px-3 py-1 text-sm text-zinc-700">
-                        👔 {event.dressCode}
-                      </span>
-                    )}
-                    {event.isOnline && (
-                      <span className="rounded-full border border-[#1A7FB5]/30 px-3 py-1 text-sm text-[#1A7FB5]">
-                        🌐 Online · Link provided after purchase
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Lineup card */}
-            {lineupPerformers && (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-7">
-                <div className="mb-5 flex items-center gap-3">
-                  <IconBadge>
-                    <Music className="size-4" aria-hidden />
-                  </IconBadge>
-                  <h2 className="font-sans text-base font-bold text-[#1C1C1A]">
-                    Entertainment &amp; Lineup
-                  </h2>
-                </div>
-                <LineupLightbox performers={lineupPerformers} />
-              </div>
-            )}
-
-            {/* Gallery card */}
-            {displayGallery.length > 0 && (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-7">
-                <h2 className="mb-5 font-sans text-base font-bold text-[#1C1C1A]">Photos</h2>
-
-                {displayGallery.length === 1 ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={displayGallery[0]}
-                    alt={`${event.title} photo`}
-                    className="h-64 w-full rounded-xl object-cover"
-                  />
-                ) : (
-                  <div
-                    className="overflow-hidden rounded-xl"
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "2fr 1fr 1fr",
-                      gridTemplateRows: "140px 140px",
-                      gap: "8px",
-                    }}
-                  >
-                    {displayGallery.map((img, i) => {
-                      const isFirst = i === 0;
-                      const isLastShown = i === displayGallery.length - 1;
-                      const showOverlay = isLastShown && galleryOverflow > 0;
-
-                      return (
-                        <div
-                          key={i}
-                          className="relative overflow-hidden"
-                          style={isFirst ? { gridRow: "span 2" } : {}}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={img}
-                            alt={`${event.title} photo ${i + 1}`}
-                            className="h-full w-full object-cover"
-                          />
-                          {showOverlay && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                              <span className="text-2xl font-bold text-white">
-                                +{galleryOverflow}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            <RelatedContentSection heading="Shop this event" items={linkedItems} />
-
-            {/* Hosted by card */}
-            <div className="rounded-2xl border border-zinc-200 bg-white p-7">
-              <p className="mb-4 text-[11px] font-bold uppercase tracking-widest text-zinc-400">
-                Hosted by
-              </p>
-              <div className="flex items-center gap-4">
-                {/* Store logo */}
-                <div className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-[#D4450A]">
-                  {event.store.logoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={event.store.logoUrl}
-                      alt={event.store.name}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-xl font-bold text-white">
-                      {event.store.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold text-[#1C1C1A]">{event.store.name}</p>
-                  {event.store.region && (
-                    <p className="mt-0.5 text-sm text-zinc-400">{event.store.region}</p>
-                  )}
-                </div>
-                <Link
-                  href={`/store/${event.store.slug}`}
-                  className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#D4450A]/8 px-4 py-2 text-sm font-semibold text-[#D4450A] transition-colors hover:bg-[#D4450A]/15"
-                >
-                  Visit store →
-                </Link>
-              </div>
-              <div className="mt-4 border-t border-zinc-100 pt-4">
-                <RequestFeatureButton
-                  itemType="EVENT"
-                  itemId={event.id}
-                  storeName={event.store.name}
-                  canRequest={featureButtonState.canRequest}
-                  alreadyRequested={featureButtonState.alreadyRequested}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* ── RIGHT COLUMN ── sticky ticket card */}
-          <div className="w-full lg:sticky lg:top-6 lg:w-[360px] lg:shrink-0">
-            {showTickets ? (
-              <TicketPurchaseCard
-                eventId={event.id}
-                eventSlug={event.slug}
-                startDate={event.startDate}
-                ticketTypes={event.ticketTypes.map((t) => ({
-                  id: t.id,
-                  name: t.name,
-                  price: Number(t.price),
-                  quantity: t.quantity,
-                  quantitySold: t.quantitySold,
-                  description: t.description,
-                  perks: t.perks,
-                  maxPerOrder: t.maxPerOrder,
-                  isVisible: t.isVisible,
-                  saleStartDate: t.saleStartDate,
-                  saleEnds: t.saleEnds,
-                }))}
-                refundPolicyType={event.refundPolicyType}
-                refundCutoffHours={event.refundCutoffHours}
-              />
-            ) : (
-              <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-lg">
-                <div className="bg-[#1C1C1A] px-6 py-5">
-                  <p className="text-sm text-white/70">{eventDate} · {eventTime}</p>
-                  <p className="mt-2 text-base font-bold text-white">
-                    {isCancelled ? "Event cancelled" : "Event ended"}
-                  </p>
-                </div>
-                <div className="px-6 py-8 text-center">
-                  <div className="mb-4 text-5xl">{isCancelled ? "❌" : "⏰"}</div>
-                  <p className="font-semibold text-zinc-700">
-                    {isCancelled
-                      ? "This event was cancelled"
-                      : "This event has ended"}
-                  </p>
-                  <p className="mt-2 text-sm text-zinc-400">
-                    {isCancelled
-                      ? "No tickets are available for this event."
-                      : "Tickets are no longer available."}
-                  </p>
-                  <Link
-                    href="/events"
-                    className="mt-6 inline-flex items-center gap-1.5 rounded-full bg-[#D4450A]/8 px-5 py-2.5 text-sm font-semibold text-[#D4450A] transition-colors hover:bg-[#D4450A]/15"
-                  >
-                    Browse upcoming events →
-                  </Link>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  if (!event || !["PUBLISHED", "CANCELLED"].includes(event.status)) notFound();
+  const isOwner = session?.userId === event.store.ownerId;
+  if (!isStoreSellable(event.store) && !isOwner && session?.role !== "ADMIN") notFound();
+  const [user, { items: linkedItems }, featureButtonState] = await Promise.all([
+    session ? prisma.user.findUnique({ where: { id: session.userId }, select: { fullName: true, role: true } }) : null,
+    getLinkedContent("EVENT", event.id), getCrossStoreFeatureButtonState("EVENT", event.id),
+  ]);
+  const dashboard = user ? getRoleDashboardPath(user.role) : undefined;
+  return <EventDetailView event={event} verified={isStoreSellable(event.store)} linkedItems={linkedItems}
+    nav={<PublicNav user={user ? { name: user.fullName ?? "Account", href: dashboard! } : null} dashboardHref={dashboard} unreadCount={unreadCount}/>}
+    featureAction={<RequestFeatureButton itemType="EVENT" itemId={event.id} storeName={event.store.name} canRequest={featureButtonState.canRequest} alreadyRequested={featureButtonState.alreadyRequested}/>}
+  />;
 }
