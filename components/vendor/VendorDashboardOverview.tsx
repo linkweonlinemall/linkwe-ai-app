@@ -1,518 +1,98 @@
 "use client";
 
-import type { ReactNode } from "react";
-import Image from "next/image";
+import { useRef, type ReactNode } from "react";
 import Link from "next/link";
-import type { SplitOrderStatus } from "@prisma/client";
-import {
-  IconChartBar,
-  IconCircleCheck,
-  IconCoin,
-  IconEdit,
-  IconEye,
-  IconInfoCircle,
-  IconPercentage,
-  IconPlus,
-  IconReceipt,
-  IconShoppingBag,
-  IconStarFilled,
-  IconTrendingUp,
-} from "@tabler/icons-react";
-import { Clock, ShieldCheck } from "lucide-react";
+import NextImage from "next/image";
 import type { IdVerificationStatus, StoreStatus } from "@prisma/client";
-
+import { ArrowDownRight, ArrowRight, ArrowUpRight, CalendarDays, Check, CheckCheck, ChevronDown, CircleHelp, Eye, Image, Package, Plus, ShieldCheck, ShoppingBag, Sparkles, Star, Store, Ticket, TrendingUp, Wallet, Zap } from "lucide-react";
 import GoLiveButton from "@/app/(dashboard)/dashboard/vendor/components/go-live-button";
-
 import type { VendorSplitOrder } from "@/app/(dashboard)/dashboard/vendor/components/tabs/orders-tab";
 import type { VendorDashboardAnalytics } from "@/lib/vendor/vendor-dashboard-analytics";
+import type { VendorWorkspaceSummary } from "@/lib/vendor/workspace-summary";
 import type { VendorReadinessCheck } from "@/lib/vendor/readiness";
-import { getStoreCategoryLabel } from "@/lib/categories";
+import AvailabilityToggle from "./AvailabilityToggle";
+import s from "./workspace.module.css";
 
-function formatPctChange(pct: number): string {
-  const rounded = Math.abs(pct) >= 100 ? pct.toFixed(0) : pct.toFixed(1);
-  return `${pct > 0 ? "+" : ""}${rounded}%`;
+const money = (value: number) => value.toLocaleString("en-TT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const dateLabel = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateString("en-TT", { day: "numeric", month: "short", timeZone: "America/Port_of_Spain" });
+function Delta({ value }: { value: number | null }) {
+  return <small className={s.delta} data-direction={value == null || value > 0 ? "up" : value < 0 ? "down" : "flat"}>{value == null || value > 0 ? <TrendingUp size={13}/> : value < 0 ? <ArrowDownRight size={13}/> : null}{value == null ? "New activity" : `${value > 0 ? "+" : ""}${value.toFixed(1)}%`}<span> vs last month</span></small>;
+}
+function orderStatus(status: string) {
+  const names: Record<string, string> = { AWAITING_VENDOR_ACTION: "Needs action", READY_FOR_CUSTOMER_PICKUP: "Ready for pickup", READY_FOR_LINKWE: "Ready for LinkWe", AWAITING_COURIER_PICKUP: "Awaiting courier", BUNDLED_FOR_DISPATCH: "Ready for dispatch" };
+  return names[status] ?? status.toLowerCase().replaceAll("_", " ").replace(/^./, c => c.toUpperCase());
 }
 
-type ReviewSummary = {
-  total: number;
-  average: number;
-  breakdown: Record<number, number>;
-};
-
-type ProfileRowSource = {
-  label: string;
-  done: boolean;
-  detail?: string;
-};
-
-/** Spec checklist subset + gallery row label normalization */
-function profileRowsForCard(items: ProfileRowSource[]) {
-  const keys: { label: string; match: (i: ProfileRowSource) => boolean }[] = [
-    { label: "Store logo", match: (i) => /^store logo$/i.test(i.label) },
-    { label: "Description", match: (i) => /^description$/i.test(i.label) },
-    { label: "Opening hours", match: (i) => /opening hours/i.test(i.label) },
-    { label: "Cover photo", match: (i) => /^cover photo$/i.test(i.label) },
-    { label: "Gallery photos", match: (i) => /^gallery/i.test(i.label) },
-    { label: "Store location", match: (i) => /^store location$/i.test(i.label) },
-  ];
-  const rows = keys.map((k) => {
-    const hit = items.find((i) => k.match(i));
-    return { label: k.label, done: !!hit?.done };
-  });
-  const done = rows.filter((r) => r.done).length;
-  const pct = rows.length ? Math.round((done / rows.length) * 100) : 0;
-  return { rows, pct };
-}
-
-function pillForSplitStatus(status: string): { label: string; className: string } {
-  switch (status as SplitOrderStatus) {
-    case "DELIVERED":
-    case "DISPATCHED":
-    case "BUNDLED_FOR_DISPATCH":
-    case "PACKAGED":
-      return { label: "Confirmed", className: "bg-[#EAF3DE] text-[#3B6D11]" };
-    case "AWAITING_VENDOR_ACTION":
-      return { label: "New", className: "bg-[#E6F1FB] text-[#185FA5]" };
-    default:
-      return { label: "Pending", className: "bg-[#FAEEDA] text-[#854F0B]" };
-  }
-}
-
-function DeltaLine({ pct }: { pct: number | null }) {
-  if (pct === null) {
-    return (
-      <p className="mt-1 flex items-center gap-1 text-[11px] font-medium text-[#15803d]">
-        <IconTrendingUp className="size-3 shrink-0" stroke={2} aria-hidden />
-        vs last month new activity
-      </p>
-    );
-  }
-  if (Math.abs(pct) < 0.05) {
-    return <p className="mt-1 text-[11px] font-medium text-[#a09f9b]">— vs last month {formatPctChange(0)}</p>;
-  }
-  const up = pct > 0;
-  return (
-    <p className={`mt-1 flex items-center gap-1 text-[11px] font-medium ${up ? "text-[#15803d]" : "text-[#b91c1c]"}`}>
-      <IconTrendingUp className={`size-3 shrink-0 ${up ? "" : "rotate-180"}`} stroke={2} aria-hidden />
-      vs last month {formatPctChange(pct)}
-    </p>
-  );
-}
-
-const CARD_BORDER = "border-[0.5px] border-[rgba(28,28,26,0.12)]";
-
-export default function VendorDashboardOverview(props: {
+type Props = {
   analytics: VendorDashboardAnalytics;
+  workspaceSummary: VendorWorkspaceSummary;
+  initialAvailableNow: boolean;
   recentOrders: VendorSplitOrder[];
-  reviewSummary: ReviewSummary;
-  completenessItems: ProfileRowSource[];
+  reviewSummary: { total: number; average: number; breakdown: Record<number, number> };
+  completenessItems: { label: string; done: boolean; detail?: string }[];
   idVerificationStatus: IdVerificationStatus;
   verificationChecks: VendorReadinessCheck[];
   openForBusinessChecklist?: ReactNode;
   verificationChecklist?: ReactNode;
-  store: {
-    id: string;
-    status: StoreStatus;
-    name: string;
-    slug: string;
-    categoryId: string;
-    region: string;
-    logoUrl: string | null;
-    coverPhotoUrl: string | null;
-  };
-}) {
-  const {
-    analytics,
-    recentOrders,
-    reviewSummary,
-    completenessItems,
-    idVerificationStatus,
-    verificationChecks,
-    openForBusinessChecklist,
-    verificationChecklist,
-    store,
-  } = props;
-
-  const { rows: profileRows, pct: profilePct } = profileRowsForCard(completenessItems);
-  const overallPct = completenessItems.length
-    ? Math.round((completenessItems.filter((i) => i.done).length / completenessItems.length) * 100)
-    : 0;
-
-  const amounts = analytics.salesLast30Days.map((d) => d.amountTtd);
-  const maxAmt = amounts.length ? Math.max(...amounts, 1) : 1;
-  const maxBarH = 82;
-
-  const salesFmt = analytics.salesThisMonthTtd.toLocaleString("en-TT", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-
-  const categoryLabel = getStoreCategoryLabel(store.categoryId);
-
-  const avgStars = Math.round(Math.min(5, Math.max(0, reviewSummary.average || 0)));
-  const maxReviewCount = Math.max(...[1, 2, 3, 4, 5].map((s) => reviewSummary.breakdown[s] ?? 0), 1);
-
-  return (
-    <div className="vendor-overview min-w-0 max-w-full space-y-5 font-sans max-md:[&_.dash-card-pad]:p-3">
-      <div data-tour="vendor-readiness">{openForBusinessChecklist}</div>
-      {verificationChecklist ? <div className="min-w-0">{verificationChecklist}</div> : null}
-      {overallPct < 100 ? (
-        <div className={`mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-[#B5D4F4] bg-[#EBF5FB] px-4 py-3 max-md:flex-col max-md:items-start`}>
-          <div className="flex min-w-0 items-start gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-white text-[#1A7FB5] shadow-sm">
-              <IconInfoCircle className="size-5" stroke={1.5} aria-hidden />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-[#0C447C]">Complete your storefront profile</p>
-              <p className="mt-0.5 text-[12px] text-[#378ADD]">You&apos;re at {overallPct}% — finish the checklist to unlock more visibility.</p>
-            </div>
-          </div>
-          <Link
-            href="/dashboard/vendor/store/edit"
-            className="max-md:w-full shrink-0 rounded-lg border border-[#378ADD] bg-white px-4 py-2 text-center text-sm font-semibold text-[#0C447C] hover:bg-[#f8fbff]"
-          >
-            Complete profile
-          </Link>
-        </div>
-      ) : null}
-
-      {/* Stats */}
-      <div data-tour="vendor-metrics" className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-4 md:gap-3">
-        <div className={`rounded-[12px] bg-white dash-card-pad p-4 ${CARD_BORDER}`}>
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <span className="text-[11px] text-[#7c7b77]">Settled earnings</span>
-              <p className="mt-0.5 text-[10px] leading-snug text-[#a09f9b]">
-                After commission · completed orders
-              </p>
-            </div>
-            <span className="flex size-[26px] shrink-0 items-center justify-center rounded-lg bg-[#FEF0EB] text-[#D4450A]">
-              <IconCoin className="size-4" stroke={1.75} aria-hidden />
-            </span>
-          </div>
-          <p className="mt-3 text-[22px] font-medium tabular-nums text-[#1C1C1A]">{`TTD ${salesFmt}`}</p>
-          <DeltaLine pct={analytics.salesChangePct} />
-        </div>
-        <div className={`rounded-[12px] bg-white dash-card-pad p-4 ${CARD_BORDER}`}>
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-[11px] text-[#7c7b77]">Orders this month</span>
-            <span className="flex size-[26px] items-center justify-center rounded-lg bg-[#E6F1FB] text-[#1A7FB5]">
-              <IconShoppingBag className="size-4" stroke={1.75} aria-hidden />
-            </span>
-          </div>
-          <p className="mt-3 text-[22px] font-medium tabular-nums text-[#1C1C1A]">{analytics.ordersThisMonth}</p>
-          <DeltaLine pct={analytics.ordersChangePct} />
-        </div>
-        <div className={`rounded-[12px] bg-white dash-card-pad p-4 ${CARD_BORDER}`}>
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-[11px] text-[#7c7b77]">Profile views this month</span>
-            <span className="flex size-[26px] items-center justify-center rounded-lg bg-[#FAEEDA] text-[#BA7517]">
-              <IconEye className="size-4" stroke={1.75} aria-hidden />
-            </span>
-          </div>
-          <p className="mt-3 text-[22px] font-medium tabular-nums text-[#1C1C1A]">{analytics.profileViewsThisMonth}</p>
-          <DeltaLine pct={analytics.profileViewsChangePct} />
-        </div>
-        <div className={`rounded-[12px] bg-white dash-card-pad p-4 ${CARD_BORDER}`}>
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-[11px] text-[#7c7b77]">Conversion rate</span>
-            <span className="flex size-[26px] items-center justify-center rounded-lg bg-[#EAF3DE] text-[#3B6D11]">
-              <IconPercentage className="size-4" stroke={1.75} aria-hidden />
-            </span>
-          </div>
-          <p className="mt-3 text-[22px] font-medium tabular-nums text-[#1C1C1A]">
-            {analytics.conversionRatePct.toFixed(1)}%
-          </p>
-          <DeltaLine pct={analytics.conversionChangePct} />
-        </div>
+  store: { id: string; status: StoreStatus; name: string; slug: string; categoryId: string; region: string; logoUrl: string | null; coverPhotoUrl: string | null };
+};
+export default function VendorDashboardOverview({ analytics, workspaceSummary: summary, initialAvailableNow, recentOrders, reviewSummary, completenessItems, idVerificationStatus, verificationChecks, openForBusinessChecklist, verificationChecklist, store }: Props) {
+  const setup = useRef<HTMLDetailsElement>(null);
+  const profilePct = completenessItems.length ? Math.round(completenessItems.filter(item => item.done).length / completenessItems.length * 100) : 0;
+  const live = store.status === "ACTIVE" && idVerificationStatus === "APPROVED";
+  const pendingCount = summary.activeOrdersCount + summary.pendingRequestsCount + summary.pendingBookings;
+  const total30Days = analytics.salesLast30Days.reduce((total, day) => total + day.amountTtd, 0);
+  const maxAmount = Math.max(...analytics.salesLast30Days.map(day => day.amountTtd), 1);
+  const openSetup = () => { if (setup.current) { setup.current.open = true; setup.current.scrollIntoView({ behavior: "smooth", block: "start" }); setup.current.querySelector("summary")?.focus(); } };
+  const quickActions = [
+    { label: "Add product", detail: "Something worth discovering", href: "/products/new", Icon: Package, tone: "peach" },
+    { label: "Add service", detail: "Put your skills to work", href: "/services/new", Icon: Sparkles, tone: "mint" },
+    { label: "Create event", detail: "Bring your people together", href: "/events/new", Icon: Ticket, tone: "lilac" },
+    { label: "Photo Studio", detail: "Make your products shine", href: "/photo-studio", Icon: Image, tone: "yellow" },
+  ];
+  return <div className={s.overview}>
+    <section className={s.hero} aria-labelledby="vendor-overview-title">
+      <div className={s.heroCopy}><p className={s.eyebrow}><span/> YOUR SPACE TO GROW</p><h1 id="vendor-overview-title">Your business.<br/><em>All together.</em></h1><p>Everything you need to keep your business moving.</p><div className={s.heroButtons}><Link className={s.primaryButton} href="/dashboard/vendor/store/edit"><Store size={18}/>Manage storefront</Link><Link className={s.heroLink} href={`/store/${store.slug}`}>View my store<ArrowUpRight size={18}/></Link></div></div>
+      <div className={s.heroStore}>
+        <div className={s.heroCover}>{store.coverPhotoUrl ? <NextImage src={store.coverPhotoUrl} alt="" width={620} height={320} unoptimized/> : <Store size={56}/>}<span className={s.storeStatus} data-live={live}><i/>{live ? "LIVE ON LINKWE" : store.status === "PENDING_APPROVAL" ? "AWAITING APPROVAL" : "NOT LIVE YET"}</span></div>
+        <div className={s.heroStoreBody}><span className={s.heroLogo}>{store.logoUrl ? <NextImage src={store.logoUrl} alt="" width={42} height={42} unoptimized/> : <Store size={25}/>}</span><div><strong>{store.name}</strong><small>{store.region.replaceAll("_", " ")}</small></div><Link href="/dashboard/vendor/store/edit" aria-label="Edit your storefront"><ArrowUpRight size={20}/></Link></div>
       </div>
+    </section>
 
-      <div className="grid min-w-0 max-w-full grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_240px] xl:grid-cols-[minmax(0,1fr)_280px]">
-        {/* Left column */}
-        <div className="min-w-0 space-y-4">
-          {/* Sales bars */}
-          <div data-tour="vendor-sales-chart" className={`min-w-0 overflow-hidden rounded-[12px] bg-white p-4 ${CARD_BORDER} dash-card-pad`}>
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 text-[14px] font-semibold text-[#1C1C1A]">
-                <IconChartBar className="size-[18px] text-[#7c7b77]" stroke={1.5} aria-hidden />
-                Sales — last 30 days
-              </div>
-              <Link href="/dashboard/vendor/reports" className="text-[12px] font-semibold text-[#1A7FB5] hover:underline">
-                View report
-              </Link>
-            </div>
-            <div className="flex h-[104px] items-end justify-between gap-1 border-b border-zinc-100 pb-3">
-              {analytics.salesLast30Days.slice(-14).map((d) => {
-                const pct = Math.max(10, Math.round((d.amountTtd / maxAmt) * 100));
-                const hPx = Math.round((maxBarH * pct) / 100);
-                return (
-                  <div key={d.date} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1">
-                    <div
-                      title={`${d.date}: TTD ${d.amountTtd.toFixed(2)}`}
-                      className={`w-full max-w-[14px] rounded-t-md transition-opacity hover:opacity-75 ${d.amountTtd > 0 ? "bg-gradient-to-t from-[#D4450A] to-[#E8820C]" : "bg-[#FEF0EB]"}`}
-                      style={{ height: `${Math.max(4, hPx)}px` }}
-                    />
-                    <span className="absolute bottom-0 hidden text-[9px] text-[#a09f9b]">
-                      {/* labels below grid */}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="mt-2 flex justify-between gap-0.5">
-              {analytics.salesLast30Days.slice(-14).map((d, index) => {
-                const day = new Date(d.date + "T12:00:00.000Z").toLocaleDateString("en-TT", { day: "numeric" });
-                return (
-                  <div key={`l-${d.date}`} className="min-w-0 flex-1 text-center text-[9px] text-[#a09f9b]">
-                    {index % 2 === 0 || index === 13 ? day : ""}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+    <section data-tour="vendor-shortcuts" className={s.quickActions} aria-label="Quick actions">{quickActions.map(action => <Link key={action.href} href={`/dashboard/vendor${action.href}`} className={s.quickAction} data-tone={action.tone}><span className={s.quickIcon}><action.Icon size={23}/></span><span><strong>{action.label}</strong><small>{action.detail}</small></span><ArrowUpRight size={17}/></Link>)}</section>
 
-          {/* Recent orders */}
-          <div data-tour="vendor-recent-orders" className={`min-w-0 rounded-[12px] bg-white ${CARD_BORDER} overflow-hidden`}>
-            <div className="flex items-center justify-between border-b border-[rgba(28,28,26,0.08)] px-4 py-3 dash-card-pad">
-              <div className="flex items-center gap-2 text-[14px] font-semibold text-[#1C1C1A]">
-                <IconShoppingBag className="size-[18px] text-[#7c7b77]" stroke={1.5} aria-hidden />
-                Recent orders
-              </div>
-              <Link href="/dashboard/vendor/orders" className="text-[12px] font-semibold text-[#1A7FB5] hover:underline">
-                View all
-              </Link>
-            </div>
-            <div>
-              {recentOrders.length === 0 ? (
-                <p className="px-4 py-8 text-center text-sm text-[#7c7b77]">No orders yet</p>
-              ) : (
-                recentOrders.map((o) => {
-                  const first = o.items[0];
-                  const title = first?.titleSnapshot ?? "Order";
-                  const thumbnailUrl = first?.listing?.imageUrl?.trim() || null;
-                  const pill = pillForSplitStatus(o.status);
-                  return (
-                    <div
-                      key={o.id}
-                      className="flex items-start gap-3 border-b border-[rgba(28,28,26,0.06)] px-4 py-[11px] last:border-b-0"
-                    >
-                      <div className="size-9 shrink-0 overflow-hidden rounded-[8px] bg-[#F7F5F2]">
-                        {thumbnailUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element -- remote Cloudinary / listing URLs
-                          <img src={thumbnailUrl} alt={title} className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="h-full w-full" aria-hidden />
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[12px] font-medium text-[#1C1C1A]">{title}</p>
-                        <p className="mt-0.5 text-[10px] text-[#7c7b77]">
-                          {o.mainOrder.buyer.fullName ?? "Customer"} · {new Date(o.createdAt).toLocaleDateString("en-TT")}
-                        </p>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <p className="text-[12px] font-medium tabular-nums text-[#1C1C1A]">
-                          TTD {(o.subtotalMinor / 100).toFixed(2)}
-                        </p>
-                        <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${pill.className}`}>
-                          {pill.label}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </div>
+    {pendingCount > 0 && <a href="#attention-title" className={s.attentionAlert}><Zap size={20}/><strong>{pendingCount} item{pendingCount === 1 ? "" : "s"} need your attention</strong><span>Review now<ArrowRight size={16}/></span></a>}
+    {(!live || profilePct < 100) && <div className={s.setupNudge}><span className={s.setupNudgeIcon}><Store size={21}/></span><div><strong>{!live ? "Let’s get your store ready for customers." : "Give customers the complete picture."}</strong><p>{idVerificationStatus === "PENDING" ? "Your identity review is in progress. You can keep building your store." : `Your store profile is ${profilePct}% complete. Pick up where you left off.`}</p></div><button onClick={openSetup}>Continue setup<ArrowRight size={16}/></button></div>}
 
-        {/* Right column */}
-        <div className="min-w-0 space-y-4">
-          {/* Store profile */}
-          <div data-tour="vendor-profile-strength" className={`overflow-hidden rounded-[12px] bg-white ${CARD_BORDER}`}>
-            <div
-              className="relative h-[60px] bg-[#1C1C1A]"
-              style={{
-                backgroundImage:
-                  "repeating-linear-gradient(135deg, rgba(255,255,255,0.04) 0, rgba(255,255,255,0.04) 4px, transparent 4px, transparent 8px)",
-              }}
-            >
-              {store.coverPhotoUrl ? (
-                <Image src={store.coverPhotoUrl} alt="" fill className="object-cover opacity-60" sizes="320px" />
-              ) : null}
-            </div>
-            <div className="relative px-3.5 pb-3.5 pt-0" style={{ paddingTop: "28px" }}>
-              <div className="absolute -top-[22px] left-3.5 flex size-11 items-center justify-center rounded-full bg-[#D4450A] text-sm font-bold text-white ring-4 ring-white">
-                {store.name
-                  .split(/\s+/)
-                  .filter(Boolean)
-                  .slice(0, 2)
-                  .map((w) => w[0])
-                  .join("")
-                  .toUpperCase()
-                  .slice(0, 2) || "LW"}
-              </div>
-              <p className="text-[13px] font-medium text-[#1C1C1A]">{store.name}</p>
-              <p className="mt-1 text-[10px] text-[#7c7b77]">
-                {categoryLabel} · {store.region.replace(/_/g, " ")}
-              </p>
-              <div className="mt-3">
-                <div className="mb-1 flex justify-between text-[11px] font-medium">
-                  <span className="text-[#7c7b77]">Profile strength</span>
-                  <span className="text-[#D4450A]">{profilePct}%</span>
-                </div>
-                <div className="h-[4px] overflow-hidden rounded-full bg-[#F7F5F2]">
-                  <div className="h-full rounded-full bg-[#D4450A]" style={{ width: `${profilePct}%` }} />
-                </div>
-              </div>
-              <ul className="mt-4 space-y-2 border-t border-[rgba(28,28,26,0.06)] pt-3">
-                {profileRows.map((row) => (
-                  <li key={row.label} className="flex items-center gap-2 text-[11px] text-[#45443f]">
-                    {row.done ? (
-                      <IconCircleCheck className="size-4 shrink-0 text-emerald-500" stroke={1.75} aria-hidden />
-                    ) : (
-                      <span className="size-4 shrink-0 rounded-full border border-[#d4d3cf] bg-white" aria-hidden />
-                    )}
-                    {row.label}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+    <section aria-labelledby="performance-title"><div className={s.sectionHeading}><div><p className={s.eyebrow}>THE BIG PICTURE</p><h2 id="performance-title">How you’re doing</h2></div><span className={s.period}>This month · TTD</span></div><div data-tour="vendor-metrics" className={s.metrics}>
+      <Link href="/dashboard/vendor/finance" className={`${s.metric} ${s.earnings}`}><div><span>Settled earnings</span><Wallet size={20}/></div><strong><small>TTD</small> {money(analytics.salesThisMonthTtd)}</strong><p>After commission · completed orders</p><Delta value={analytics.salesChangePct}/></Link>
+      <Link href="/dashboard/vendor/orders" className={s.metric}><div><span>Orders</span><ShoppingBag size={20}/></div><strong>{analytics.ordersThisMonth.toLocaleString()}</strong><p>Includes subscription renewals</p><Delta value={analytics.ordersChangePct}/></Link>
+      <Link href="/dashboard/vendor/reports" className={s.metric}><div><span>Store views</span><Eye size={20}/></div><strong>{analytics.profileViewsThisMonth.toLocaleString()}</strong><p>Visits to your storefront</p><Delta value={analytics.profileViewsChangePct}/></Link>
+      <Link href="/dashboard/vendor/reports" className={s.metric}><div><span>Conversion</span><TrendingUp size={20}/></div><strong>{analytics.conversionRatePct.toFixed(1)}<small>%</small></strong><p>Orders ÷ store views</p><Delta value={analytics.conversionChangePct}/></Link>
+    </div></section>
 
-          {idVerificationStatus === "APPROVED" && store.status === "ACTIVE" ? (
-            <div className="mx-0 mb-4 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500">
-                <ShieldCheck size={16} className="text-white" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-emerald-800">Confirmed to sell</p>
-                <p className="mt-0.5 text-xs text-emerald-600">Store verified and active</p>
-                <details className="group mt-2">
-                  <summary className="cursor-pointer list-none text-[11px] font-semibold text-emerald-800 hover:underline">
-                    <span className="group-open:hidden">View verification details</span>
-                    <span className="hidden group-open:inline">Hide verification details</span>
-                  </summary>
-                  <ul className="mt-2 space-y-1.5 border-t border-emerald-200 pt-2">
-                    {verificationChecks.map((check) => (
-                      <li key={check.id} className="flex items-center gap-2 text-[11px] text-emerald-800">
-                        <IconCircleCheck className="size-3.5 shrink-0 text-emerald-600" stroke={2} aria-hidden />
-                        {check.label}
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-semibold">
-                    <Link href="/dashboard/vendor/store/edit" className="text-emerald-800 hover:underline">
-                      Store profile
-                    </Link>
-                    <Link href="/dashboard/vendor/finance?tab=bank-details" className="text-emerald-800 hover:underline">
-                      Bank details
-                    </Link>
-                  </div>
-                </details>
-              </div>
-            </div>
-          ) : idVerificationStatus === "APPROVED" ? (
-            <div className="mx-0 mb-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-400">
-                <ShieldCheck size={16} className="text-white" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-amber-800">Identity verified — not live yet</p>
-                <p className="mt-0.5 text-xs text-amber-600">Click Go live to publish your store.</p>
-                <div className="mt-2">
-                  <GoLiveButton storeId={store.id} />
-                </div>
-              </div>
-            </div>
-          ) : idVerificationStatus === "PENDING" ? (
-            <div className="mx-0 mb-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-400">
-                <Clock size={16} className="text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-amber-800">Verification pending</p>
-                <p className="mt-0.5 text-xs text-amber-600">We are reviewing your documents</p>
-              </div>
-            </div>
-          ) : null}
-
-          {/* Quick actions */}
-          <div data-tour="vendor-shortcuts" className={`rounded-[12px] bg-white p-3.5 ${CARD_BORDER} dash-card-pad`}>
-            <div className="grid grid-cols-2 gap-2">
-              <Link
-                href="/dashboard/vendor/products/new"
-                className="flex flex-col items-center gap-1.5 rounded-lg bg-[#F7F5F2] px-2 py-3 text-center hover:bg-[#FEF0EB]"
-              >
-                <IconPlus className="size-[18px] text-[#D4450A]" stroke={1.75} aria-hidden />
-                <span className="text-[10px] font-medium leading-tight text-[#45443f]">New product</span>
-              </Link>
-              <Link
-                href="/dashboard/vendor/store/edit"
-                className="flex flex-col items-center gap-1.5 rounded-lg bg-[#F7F5F2] px-2 py-3 text-center hover:bg-[#FEF0EB]"
-              >
-                <IconEdit className="size-[18px] text-[#D4450A]" stroke={1.75} aria-hidden />
-                <span className="text-[10px] font-medium leading-tight text-[#45443f]">Edit store</span>
-              </Link>
-              <Link
-                href="/dashboard/vendor/orders"
-                className="flex flex-col items-center gap-1.5 rounded-lg bg-[#F7F5F2] px-2 py-3 text-center hover:bg-[#FEF0EB]"
-              >
-                <IconReceipt className="size-[18px] text-[#D4450A]" stroke={1.75} aria-hidden />
-                <span className="text-[10px] font-medium leading-tight text-[#45443f]">View orders</span>
-              </Link>
-              <Link
-                href="/dashboard/vendor/finance"
-                className="flex flex-col items-center gap-1.5 rounded-lg bg-[#F7F5F2] px-2 py-3 text-center hover:bg-[#FEF0EB]"
-              >
-                <IconCoin className="size-[18px] text-[#D4450A]" stroke={1.75} aria-hidden />
-                <span className="text-[10px] font-medium leading-tight text-[#45443f]">Finance</span>
-              </Link>
-            </div>
-          </div>
-
-          {/* Reviews */}
-          <div className={`rounded-[12px] bg-white p-3.5 ${CARD_BORDER} dash-card-pad`}>
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <span className="text-[13px] font-semibold text-[#1C1C1A]">Reviews</span>
-              <Link href={`/dashboard/vendor/reviews`} className="text-[12px] font-semibold text-[#1A7FB5] hover:underline">
-                View all
-              </Link>
-            </div>
-            <div className="flex flex-wrap items-start gap-3">
-              <p className="text-[28px] font-semibold tabular-nums leading-none text-[#1C1C1A]">
-                {reviewSummary.total > 0 ? reviewSummary.average.toFixed(1) : "—"}
-              </p>
-              <div className="flex flex-col gap-0.5 pt-1">
-                <div className="flex gap-0.5">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <IconStarFilled
-                      key={i}
-                      className={`size-[18px] ${i <= avgStars ? "text-[#E8820C]" : "text-[#ecebe8]"}`}
-                      aria-hidden
-                    />
-                  ))}
-                </div>
-                <p className="text-[10px] text-[#7c7b77]">{reviewSummary.total} reviews</p>
-              </div>
-            </div>
-            <div className="mt-4 space-y-2">
-              {[5, 4, 3, 2, 1].map((star) => {
-                const c = reviewSummary.breakdown[star] ?? 0;
-                const w = `${Math.round((c / maxReviewCount) * 100)}%`;
-                return (
-                  <div key={star} className="flex items-center gap-2 text-[10px] text-[#7c7b77]">
-                    <span className="w-8 tabular-nums">{star}★</span>
-                    <div className="h-[4px] min-w-0 flex-1 rounded-full bg-[#F7F5F2]">
-                      <div className="h-full rounded-full bg-[#E8820C]" style={{ width: w }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+    <div className={s.contentGrid}>
+      <div className={s.mainPanels}>
+        <section className={s.panel} aria-labelledby="attention-title"><div className={s.panelHeading}><div><p className={s.eyebrow}>FIRST THINGS FIRST</p><h2 id="attention-title">Needs your attention</h2></div><span className={s.countPill} data-clear={pendingCount === 0}>{pendingCount === 0 ? <CheckCheck size={18}/> : pendingCount}{pendingCount === 0 ? " All clear" : " to review"}</span></div><div className={s.attentionList}>
+          {[{label: "Orders to accept", note: "Review and start preparing", count: summary.activeOrdersCount, href: "orders", Icon: ShoppingBag}, {label: "Bookings to confirm", note: "Keep your schedule up to date", count: summary.pendingBookings, href: "bookings", Icon: CalendarDays}, {label: "On-demand requests", note: "Customers waiting to hear from you", count: summary.pendingRequestsCount, href: "requests", Icon: Zap}].map(item => <Link key={item.href} href={`/dashboard/vendor/${item.href}`} className={s.attentionRow}><span className={s.attentionIcon}><item.Icon size={20}/></span><span><strong>{item.label}</strong><small>{item.count ? item.note : "You’re up to date"}</small></span><b data-pending={item.count > 0}>{item.count}</b><ArrowUpRight size={17}/></Link>)}
+        </div></section>
+        <section data-tour="vendor-sales-chart" className={s.panel} aria-labelledby="earnings-title"><div className={s.panelHeading}><div><p className={s.eyebrow}>STEADY STEPS FORWARD</p><h2 id="earnings-title">Earnings over time</h2></div><Link href="/dashboard/vendor/reports">Reports<ArrowUpRight size={16}/></Link></div><div className={s.chartSummary}><strong>TTD {money(total30Days)}</strong><span>Settled · last 30 days</span></div>
+          {total30Days === 0 ? <div className={s.chartEmpty}><span><TrendingUp size={30}/></span><strong>Your progress will show up here.</strong><p>As orders complete and earnings settle, watch your business grow day by day.</p></div> : <div className={s.chart} role="img" aria-label={`Settled earnings over the last 30 days: TTD ${money(total30Days)}. Daily values are available in the table below.`}>{analytics.salesLast30Days.map(day => <div key={day.date} title={`${dateLabel(day.date)}: TTD ${money(day.amountTtd)}`}><span style={{ height: `${Math.max(day.amountTtd > 0 ? 3 : 0, day.amountTtd / maxAmount * 100)}%` }}/></div>)}</div>}
+          <div className={s.chartLabels}><span>{analytics.salesLast30Days[0] && dateLabel(analytics.salesLast30Days[0].date)}</span><span>Daily totals · UTC</span><span>{analytics.salesLast30Days.at(-1) && dateLabel(analytics.salesLast30Days.at(-1)!.date)}</span></div>
+          <details className={s.chartDetails}><summary>View daily amounts<ChevronDown size={14}/></summary><div><table><caption className="sr-only">Settled earnings for each of the last 30 days</caption><thead><tr><th>Date</th><th>TTD</th></tr></thead><tbody>{analytics.salesLast30Days.map(day => <tr key={day.date}><td>{dateLabel(day.date)}</td><td>{money(day.amountTtd)}</td></tr>)}</tbody></table></div></details>
+        </section>
+        <section data-tour="vendor-recent-orders" className={s.panel} aria-labelledby="recent-orders-title"><div className={s.panelHeading}><div><p className={s.eyebrow}>LATEST ACTIVITY</p><h2 id="recent-orders-title">Recent orders</h2></div><Link href="/dashboard/vendor/orders">View all<ArrowUpRight size={16}/></Link></div>{recentOrders.length ? <div className={s.orderList}>{recentOrders.map(order => { const first = order.items[0]; return <Link key={order.id} href={`/dashboard/vendor/orders/${order.id}`} className={s.orderRow}><span className={s.orderImage}>{first?.listing?.imageUrl ? <NextImage src={first.listing.imageUrl} alt="" width={46} height={49} unoptimized/> : <ShoppingBag size={23}/>}</span><span className={s.orderTitle}><strong>{first?.titleSnapshot ?? "Order"}{order.items.length > 1 ? ` +${order.items.length - 1} more` : ""}</strong><small>{order.mainOrder.buyer.fullName ?? "Customer"} · {new Date(order.createdAt).toLocaleDateString("en-TT", {day: "numeric", month: "short", timeZone: "America/Port_of_Spain"})}</small></span><span className={s.orderAmount}><strong>TTD {money(order.subtotalMinor / 100)}</strong><small data-status={order.status}>{orderStatus(order.status)}</small></span></Link>; })}</div> : <div className={s.emptyOrders}><span><ShoppingBag size={27}/></span><div><h3>Your first order starts with a great store.</h3><p>Keep your listings fresh and share your store with your community.</p><Link href="/dashboard/vendor/qr-studio">Share your store<ArrowRight size={16}/></Link></div></div>}</section>
+      </div>
+      <div className={s.sidePanels}>
+        <section className={`${s.panel} ${s.catalogue}`}><div className={s.panelHeading}><div><p className={s.eyebrow}>MADE FOR YOUR CUSTOMERS</p><h2>Your collection</h2></div><Package size={23}/></div><div className={s.catalogueLinks}>{[{label: "Products", count: summary.products, href: "products", Icon: Package}, {label: "Services", count: summary.services, href: "services", Icon: Sparkles}, {label: "Events", count: summary.events, href: "events", Icon: Ticket}].map(item => <Link href={`/dashboard/vendor/${item.href}`} key={item.href}><item.Icon size={18}/><span>{item.label}</span><strong>{item.count}</strong><ArrowUpRight size={15}/></Link>)}</div><p className={s.catalogueNote}>{summary.drafts > 0 ? `${summary.drafts} product or service draft${summary.drafts === 1 ? "" : "s"} to finish when you’re ready.` : "Your products, services and events, in one place."}</p></section>
+        <AvailabilityToggle appearance="banner" initialAvailable={initialAvailableNow}/>
+        <section data-tour="vendor-profile-strength" className={s.panel}><div className={s.panelHeading}><div><p className={s.eyebrow}>MAKE A GREAT FIRST IMPRESSION</p><h2>Store profile</h2></div><span className={s.profilePercent}>{profilePct}%</span></div><div className={s.progress} role="progressbar" aria-label="Store profile complete" aria-valuenow={profilePct} aria-valuemin={0} aria-valuemax={100}><span style={{width: `${profilePct}%`}}/></div><ul className={s.profileChecklist}>{completenessItems.filter(item => !item.done).slice(0, 3).map(item => <li key={item.label}><span/><span>Add {item.label.toLowerCase()}</span><Plus size={14}/></li>)}{profilePct === 100 && <li><Check size={17}/>Your profile is complete</li>}</ul><Link href="/dashboard/vendor/store/edit" className={s.outlineButton}>Edit storefront<ArrowUpRight size={16}/></Link></section>
+        <section className={`${s.panel} ${s.reviews}`}><div className={s.panelHeading}><h2>Customer love</h2><Star size={22}/></div><div className={s.reviewScore}><strong>{reviewSummary.total ? reviewSummary.average.toFixed(1) : "—"}</strong><span><span className={s.stars} aria-label={reviewSummary.total ? `${reviewSummary.average.toFixed(1)} out of 5 stars` : "No ratings yet"}>{[1, 2, 3, 4, 5].map(star => <Star key={star} size={17} fill={star <= Math.round(reviewSummary.average) ? "currentColor" : "none"}/>)}</span><small>{reviewSummary.total ? `${reviewSummary.total} customer review${reviewSummary.total === 1 ? "" : "s"}` : "Your first review is still to come"}</small></span></div><Link href="/dashboard/vendor/reviews">View feedback<ArrowUpRight size={16}/></Link></section>
+        <button className={s.helpCard} onClick={() => window.dispatchEvent(new CustomEvent("vendor-tour:open-library"))}><CircleHelp size={24}/><span><strong>A little guidance goes a long way.</strong><small>Explore step-by-step tutorials</small></span><ArrowUpRight size={19}/></button>
       </div>
     </div>
-  );
+
+    <details ref={setup} id="vendor-setup" className={s.setupPanel} data-tour="vendor-readiness"><summary><span className={s.setupNudgeIcon}><ShieldCheck size={23}/></span><span><strong>Store setup & verification</strong><small>{live ? "Your store is live. Review your details here." : "Your checklist, identity review and payout details."}</small></span><ChevronDown size={21}/></summary><div className={s.setupContents}>{openForBusinessChecklist}{verificationChecklist && <div id="vendor-verification">{verificationChecklist}</div>}{idVerificationStatus === "APPROVED" && <div className={s.verifiedCard}><ShieldCheck size={25}/><div><h3>Identity verified</h3><p>{live ? "Your store is active and visible to customers." : "Finish setting up your store, then publish when you’re ready."}</p><ul>{verificationChecks.map(check => <li key={check.id}>{check.ok ? <Check size={16}/> : <Plus size={16}/>} {check.label}</li>)}</ul>{store.status !== "ACTIVE" && <GoLiveButton storeId={store.id}/>}<Link href="/dashboard/vendor/finance?tab=bank-details">Manage payout details<ArrowUpRight size={15}/></Link></div></div>}<div className={s.fullProfile}><h3>Your complete store profile · {profilePct}%</h3><ul>{completenessItems.map(item => <li key={item.label}>{item.done ? <Check size={17}/> : <Plus size={17}/>}<span>{item.label}{item.detail && <small>{item.detail}</small>}</span></li>)}</ul><Link className={s.outlineButton} href="/dashboard/vendor/store/edit">Update store profile<ArrowUpRight size={16}/></Link></div></div></details>
+    <footer className={s.workspaceFooter}><span>We people. We business. <strong>We local.</strong></span><Link href="/dashboard/vendor/settings">Account settings<ArrowUpRight size={14}/></Link></footer>
+  </div>;
 }

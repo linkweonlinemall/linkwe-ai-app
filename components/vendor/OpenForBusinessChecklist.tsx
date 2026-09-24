@@ -131,7 +131,7 @@ export default function OpenForBusinessChecklist({
               label: "Verify your identity",
               state: "warn",
               helperText: "Verification rejected — please re-upload your ID",
-              href: "/dashboard/vendor",
+              href: "#vendor-verification",
               linkLabel: "Re-upload ID →",
             }
           : {
@@ -139,7 +139,7 @@ export default function OpenForBusinessChecklist({
               label: "Verify your identity",
               state: "todo",
               helperText: "Upload your ID to verify your account",
-              href: "/dashboard/vendor",
+              href: "#vendor-verification",
               linkLabel: "Upload ID →",
             };
 
@@ -163,14 +163,14 @@ export default function OpenForBusinessChecklist({
   const productRow: RowDef = hasProduct
     ? {
         id: "product",
-        label: "Add your first product",
+        label: "Add your first product or service",
         state: "done",
         helperText: "You've added a product",
         href: null,
       }
     : {
         id: "product",
-        label: "Add your first product",
+        label: "Add your first product or service",
         state: "todo",
         helperText: "Add your first product or service",
         href: "/dashboard/vendor/products/new",
@@ -200,9 +200,9 @@ export default function OpenForBusinessChecklist({
   const rows = [emailRow, verifyRow, bankRow, productRow, liveRow];
 
   return (
-    <div className="mb-5 rounded-[12px] border-[0.5px] border-[rgba(28,28,26,0.12)] bg-white px-4 py-4">
+    <div className="mb-5 rounded-2xl border border-[#e3e9d9] bg-[#fafbf6] p-5">
       <p className="mb-3 text-sm font-bold text-zinc-900">Open for business</p>
-      <ul className="flex flex-col gap-3">
+      <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {rows.map((row) => (
           <Row key={row.id} row={row} />
         ))}

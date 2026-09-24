@@ -8,6 +8,8 @@ import VendorDashboardSidebar from "@/components/vendor/vendor-dashboard-sidebar
 import VendorDashboardTopbar from "@/components/vendor/vendor-dashboard-topbar";
 import VendorMobileBottomNav from "@/components/vendor/vendor-mobile-bottom-nav";
 import FloatingAIChat from "@/components/vendor/floating-ai-chat";
+import s from "./workspace.module.css";
+import VendorWorkspaceMenu from "./VendorWorkspaceMenu";
 import VendorGuidedTours from "@/components/vendor/VendorGuidedTours";
 
 export type VendorDashboardShellProps = {
@@ -52,7 +54,8 @@ export default function VendorDashboardShell({
         <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
       </div>
     ) : (
-    <div className="vendor-premium-shell flex h-full min-h-0 min-w-0 bg-[#F3F2EF]">
+    <div className={s.shell}>
+      <a href="#vendor-workspace-content" className={s.skipLink}>Skip to workspace</a>
       <Suspense fallback={null}>
         <VendorDashboardSidebar
           storeName={storeName}
@@ -65,20 +68,21 @@ export default function VendorDashboardShell({
         />
       </Suspense>
 
-      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col md:ml-[60px] lg:ml-[220px]">
+      <div className={s.mainColumn}>
         <VendorDashboardTopbar
           firstName={userFirstName}
           unreadCount={unreadCount}
           renderedAt={renderedAt}
         />
 
-        <div className="vendor-main-scroll min-h-0 min-w-0 flex-1 overflow-y-auto bg-transparent pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0">
+        <div id="vendor-workspace-content" tabIndex={-1} className={`vendor-main-scroll ${s.mainScroll}`}>
           {children}
         </div>
 
         <Suspense fallback={null}>
-          <VendorMobileBottomNav />
+          <VendorMobileBottomNav activeOrdersCount={activeOrdersCount} pendingRequestsCount={pendingRequestsCount} />
         </Suspense>
+        <VendorWorkspaceMenu />
         <FloatingAIChat aiEnabled={aiEnabled} />
       </div>
     </div>

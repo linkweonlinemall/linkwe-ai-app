@@ -1,5 +1,6 @@
 import { getSession } from "@/lib/auth/session"
 import { getStorePlan } from "@/lib/finance/store-plan"
+import { getAIUsageState } from "@/lib/finance/ai-usage"
 import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 
@@ -15,8 +16,10 @@ export default async function AIAssistantLayout({
   const store = await prisma.store.findFirst({
     where: { ownerId: session.userId },
     select: {
+      id: true,
       subscriptionPlan: true,
       subscriptionStatus: true,
+      planRenewsAt: true,
       aiTopupCreditsRemaining: true,
     },
   })
@@ -25,8 +28,9 @@ export default async function AIAssistantLayout({
       subscriptionPlan: store.subscriptionPlan,
       subscriptionStatus: store.subscriptionStatus,
     }).limits.aiMonthlyAllowance
+    const usage = await getAIUsageState(store)
     const aiEnabled =
-      planAllowance > 0 || store.aiTopupCreditsRemaining > 0
+      planAllowance > 0 || usage.remaining > 0 || usage.topupRemaining > 0
     if (!aiEnabled) redirect("/dashboard/vendor/finance")
   }
 

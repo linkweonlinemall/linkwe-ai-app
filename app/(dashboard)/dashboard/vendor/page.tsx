@@ -7,6 +7,7 @@ import VendorVerificationChecklist from "@/components/vendor/VendorVerificationC
 import { getSession } from "@/lib/auth/session";
 import { assertDashboardRole } from "@/lib/auth/assert-role";
 import { prisma } from "@/lib/prisma";
+import { getVendorWorkspaceSummary } from "@/lib/vendor/workspace-summary";
 import { getVendorDashboardAnalytics } from "@/lib/vendor/vendor-dashboard-analytics";
 import { getVendorReadiness } from "@/lib/vendor/readiness";
 import { getVendorReviewStatsForStore } from "@/lib/vendor/get-vendor-review-stats";
@@ -99,11 +100,7 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
   });
   if (!store) redirect("/onboarding/business/step-3");
 
-  const splitOrders = await prisma.splitOrder.findMany({
-    where: { storeId: store.id },
-    orderBy: { createdAt: "desc" },
-    select: vendorSplitOrderListSelect,
-  });
+
 
   const dashboardErrorKey = sp.error;
   const dashboardSuccessKey = sp.success;
@@ -129,12 +126,19 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
     { label: "Tags", done: store.tags.length > 0 },
     { label: "Amenities", done: store.amenities.length > 0 },
     { label: "Store policies", done: !!store.policies },
-    { label: "Store location", done: !!store.latitude },
+    { label: "Store location", done: store.latitude != null && store.longitude != null },
     { label: "Social links", done: !!store.socialLinks },
   ];
 
-  const dashboardAnalytics = await getVendorDashboardAnalytics(store.id);
-  const reviewSummary = await getVendorReviewStatsForStore(store.id);
+  const [dashboardAnalytics, reviewSummary, workspaceSummary, splitOrders] = await Promise.all([
+    getVendorDashboardAnalytics(store.id),
+    getVendorReviewStatsForStore(store.id),
+    getVendorWorkspaceSummary(store.id),
+    prisma.splitOrder.findMany({
+      where: { storeId: store.id }, orderBy: { createdAt: "desc" },
+      take: 5, select: vendorSplitOrderListSelect,
+    }),
+  ]);
 
   const vendorReadiness = getVendorReadiness({
     idDocumentUrl: user.idDocumentUrl,
@@ -164,6 +168,7 @@ export default async function VendorDashboardPage({ searchParams }: Props) {
     >
     <VendorDashboardTabs
       store={store}
+      workspaceSummary={workspaceSummary}
       splitOrders={splitOrders}
       completenessItems={completenessItems}
       dashboardAnalytics={dashboardAnalytics}

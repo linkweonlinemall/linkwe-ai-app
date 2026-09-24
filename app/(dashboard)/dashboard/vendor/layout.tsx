@@ -8,6 +8,7 @@ import { getStoreByOwnerId } from "@/lib/store/get-vendor-store";
 import { getVendorNavCounts } from "@/lib/vendor/get-vendor-nav-counts";
 import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { getStorePlan } from "@/lib/finance/store-plan";
+import { getAIUsageState } from "@/lib/finance/ai-usage";
 import { prisma } from "@/lib/prisma";
 
 export default async function VendorDashboardLayout({
@@ -33,6 +34,7 @@ export default async function VendorDashboardLayout({
       status: true,
       subscriptionPlan: true,
       subscriptionStatus: true,
+      planRenewsAt: true,
       aiTopupCreditsRemaining: true,
     },
   });
@@ -42,13 +44,12 @@ export default async function VendorDashboardLayout({
     subscriptionPlan: fullStore.subscriptionPlan,
     subscriptionStatus: fullStore.subscriptionStatus,
   }).limits.aiMonthlyAllowance;
-  const aiEnabled =
-    planAllowance > 0 || fullStore.aiTopupCreditsRemaining > 0;
-
-  const [counts, unreadCount] = await Promise.all([
+  const [counts, unreadCount, aiUsage] = await Promise.all([
     getVendorNavCounts(fullStore.id),
     getNavUnreadCount(),
+    getAIUsageState(fullStore),
   ]);
+  const aiEnabled = planAllowance > 0 || aiUsage.remaining > 0 || aiUsage.topupRemaining > 0;
 
   const firstName = user.fullName?.trim().split(/\s+/)[0] ?? "there";
 

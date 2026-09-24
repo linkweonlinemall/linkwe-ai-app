@@ -6,7 +6,8 @@ import type { IdVerificationStatus, Prisma, StoreStatus } from "@prisma/client";
 
 import type { VendorSplitOrder } from "./tabs/orders-tab";
 
-import AvailabilityToggle from "@/components/vendor/AvailabilityToggle";
+import s from "@/components/vendor/workspace.module.css";
+import type { VendorWorkspaceSummary } from "@/lib/vendor/workspace-summary";
 import VendorDashboardOverview from "@/components/vendor/VendorDashboardOverview";
 
 import type { VendorDashboardAnalytics } from "@/lib/vendor/vendor-dashboard-analytics";
@@ -47,6 +48,7 @@ type ReviewSummary = {
 
 export type VendorDashboardTabsProps = {
   store: VendorDashboardStore;
+  workspaceSummary: VendorWorkspaceSummary;
   splitOrders: VendorSplitOrder[];
   completenessItems: CompletenessItem[];
   dashboardAnalytics: VendorDashboardAnalytics;
@@ -64,6 +66,7 @@ export type VendorDashboardTabsProps = {
 
 export default function VendorDashboardTabs({
   store,
+  workspaceSummary,
   splitOrders,
   completenessItems,
   dashboardAnalytics,
@@ -80,11 +83,7 @@ export default function VendorDashboardTabs({
   const recentOrders = splitOrders.slice(0, 5);
 
   return (
-    <main className="w-full min-w-0 max-w-full flex-1 bg-[#F7F5F2] px-4 pb-[calc(7rem+env(safe-area-inset-bottom,0px))] pt-4 font-sans antialiased sm:px-5 md:px-6 md:pb-12 md:pt-5">
-      <div className="mb-4 max-md:[&_.avail-row]:gap-2">
-        <AvailabilityToggle appearance="banner" initialAvailable={initialAvailableNow} />
-      </div>
-
+    <main className={s.overviewPage}>
       {dashboardSuccessMessage ? (
         <p
           className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
@@ -111,6 +110,8 @@ export default function VendorDashboardTabs({
 
       <VendorDashboardOverview
         analytics={dashboardAnalytics}
+        workspaceSummary={workspaceSummary}
+        initialAvailableNow={initialAvailableNow}
         completenessItems={completenessItems}
         recentOrders={recentOrders}
         reviewSummary={reviewSummary}

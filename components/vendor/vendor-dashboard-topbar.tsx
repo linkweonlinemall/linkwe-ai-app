@@ -1,6 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef } from "react";
+import { Search } from "lucide-react";
+import { workspaceGroups, workspaceLinkActive } from "./dashboard-navigation";
+import s from "./workspace.module.css";
 import { usePathname } from "next/navigation";
 import { IconHome, IconPlus, IconRouteSquare } from "@tabler/icons-react";
 import { CalendarDays, ChevronDown, ConciergeBell, Package } from "lucide-react";
@@ -37,13 +41,6 @@ function greetingLine(firstName: string, now: Date) {
   return `${label}, ${firstName}`;
 }
 
-/** Mobile spec: "Morning, John" (no leading "Good"). */
-function shortGreeting(firstName: string, now: Date) {
-  const h = vendorHour(now);
-  const word = h < 12 ? "Morning" : h < 17 ? "Afternoon" : "Evening";
-  return `${word}, ${firstName}`;
-}
-
 export type VendorDashboardTopbarProps = {
   firstName: string;
   unreadCount: number;
@@ -55,8 +52,18 @@ export default function VendorDashboardTopbar({
   unreadCount,
   renderedAt,
 }: VendorDashboardTopbarProps) {
+  const addMenu = useRef<HTMLDetailsElement>(null);
   const now = new Date(renderedAt);
   const pathname = usePathname() ?? "";
+  const currentPage = workspaceGroups.flatMap(group => group.items).find(item => workspaceLinkActive(pathname, item.path))?.label ?? "Workspace";
+  useEffect(() => {
+    const close = (event: MouseEvent) => { if (!addMenu.current?.contains(event.target as Node)) addMenu.current?.removeAttribute("open"); };
+    const escape = (event: KeyboardEvent) => { if (event.key === "Escape" && addMenu.current?.open) { addMenu.current.removeAttribute("open"); addMenu.current.querySelector("summary")?.focus(); } };
+    document.addEventListener("click", close);
+    document.addEventListener("keydown", escape);
+    return () => { document.removeEventListener("click", close); document.removeEventListener("keydown", escape); };
+  }, []);
+  useEffect(() => { addMenu.current?.removeAttribute("open"); }, [pathname]);
   const pageTour: TutorialName | null =
     pathname === "/dashboard/vendor" ? "essentials" :
     pathname === "/dashboard/vendor/products/new" ? "productSimple" :
@@ -79,23 +86,18 @@ export default function VendorDashboardTopbar({
     pathname.startsWith("/dashboard/vendor/settings") ? "settings" : null;
 
   return (
-    <header
-      className="vendor-premium-topbar sticky top-0 z-50 flex h-14 min-w-0 shrink-0 items-center justify-between gap-2 border-b border-black/[0.07] bg-white/95 px-3 backdrop-blur-xl sm:gap-3 sm:px-6"
-      style={{ borderBottomWidth: "0.5px", height: "56px" }}
-    >
-      <div className="hidden min-w-0 sm:block">
-        <p className="truncate text-[15px] font-bold tracking-tight text-[#1C1C1A]">{greetingLine(firstName || "there", now)}</p>
-        <p className="mt-0.5 hidden truncate text-[11px] text-[#7C7B77] md:block">{formatVendorDate(now)}</p>
+    <header className={s.topbar}>
+      <div className={s.topbarTitle}>
+        <p>{currentPage}</p>
+        <small>{greetingLine(firstName || "there", now)} <span>· {formatVendorDate(now)}</span></small>
       </div>
-      <div className="min-w-0 flex-1 sm:hidden">
-        <p className="truncate text-[15px] font-bold tracking-tight text-[#1C1C1A]">{shortGreeting(firstName || "there", now)}</p>
-      </div>
-      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+      <div className={s.topbarActions}>
+        <button type="button" className={s.topbarSearch} aria-label="Search dashboard" aria-haspopup="dialog" onClick={() => window.dispatchEvent(new CustomEvent("vendor-workspace:open-menu"))}><Search size={18}/><span>Find a tool…</span></button>
         {pageTour ? (
           <button
             type="button"
             onClick={() => window.dispatchEvent(new CustomEvent("vendor-tour:start", { detail: pageTour }))}
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#D4450A]/20 bg-[#FFF8F4] px-2 text-[11px] font-bold text-[#B83A09] shadow-[inset_0_1px_0_white,0_3px_8px_rgba(28,28,26,.06)] transition hover:bg-[#FFF1E9] sm:px-3"
+            className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-[#D4450A]/20 bg-[#FFF8F4] px-2 text-[11px] font-bold text-[#B83A09] shadow-[inset_0_1px_0_white,0_3px_8px_rgba(28,28,26,.06)] transition hover:bg-[#FFF1E9] sm:px-3"
             aria-label="Tour this page"
           >
             <IconRouteSquare className="size-4" />
@@ -104,7 +106,7 @@ export default function VendorDashboardTopbar({
         ) : null}
         <Link
           href="/"
-          className="flex size-8 items-center justify-center rounded-lg border border-black/10 bg-white text-[#6B6A66] shadow-sm transition-colors hover:bg-[#F7F5F2] hover:text-[#D4450A] md:hidden"
+          className="flex size-10 items-center justify-center rounded-lg border border-black/10 bg-white text-[#6B6A66] shadow-sm transition-colors hover:bg-[#F7F5F2] hover:text-[#D4450A] md:hidden"
           aria-label="Back to LinkWe homepage"
           title="Home"
         >
@@ -113,16 +115,16 @@ export default function VendorDashboardTopbar({
         <MessageNavBadge
           href="/dashboard/vendor/messages"
           enabled
-          className="relative flex size-8 items-center justify-center rounded-lg border border-black/10 bg-white text-[#6B6A66] shadow-sm transition-colors hover:bg-[#F7F5F2] hover:text-[#D4450A]"
+          className="relative flex size-10 items-center justify-center rounded-lg border border-black/10 bg-white text-[#6B6A66] shadow-sm transition-colors hover:bg-[#F7F5F2] hover:text-[#D4450A]"
           iconClassName="size-[18px] shrink-0"
         />
-        <div className="flex size-8 items-center justify-center rounded-lg border border-black/10 bg-white shadow-sm">
+        <div className="flex size-10 items-center justify-center rounded-lg border border-black/10 bg-white shadow-sm">
           <NotificationBell compactToolbar initialUnreadCount={unreadCount} variant="light" />
         </div>
-        <details className="group relative">
-          <summary className="inline-flex size-8 cursor-pointer list-none items-center justify-center whitespace-nowrap rounded-lg bg-gradient-to-b from-[#F06A2A] to-[#D4450A] text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,.3),0_5px_12px_rgba(212,69,10,.2)] hover:brightness-105 sm:h-auto sm:w-auto sm:gap-1.5 sm:px-4 sm:py-2" aria-label="Add product, service or event">
+        <details ref={addMenu} className="group relative">
+          <summary className="inline-flex size-10 cursor-pointer list-none items-center justify-center whitespace-nowrap rounded-lg bg-gradient-to-b from-[#F06A2A] to-[#D4450A] text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,.3),0_5px_12px_rgba(212,69,10,.2)] hover:brightness-105 sm:h-auto sm:w-auto sm:gap-1.5 sm:px-4 sm:py-2" aria-label="Add product, service or event">
             <IconPlus className="size-[18px]" stroke={2} aria-hidden />
-            <span className="hidden sm:inline">Add</span>
+            <span className="hidden sm:inline">Create</span>
             <ChevronDown className="hidden size-3.5 transition group-open:rotate-180 sm:block" aria-hidden />
           </summary>
           <div className="absolute right-0 top-[calc(100%+.55rem)] z-[80] w-56 overflow-hidden rounded-2xl border border-orange-100 bg-white p-2 shadow-[0_18px_55px_rgba(28,28,26,.20)]">
@@ -131,12 +133,7 @@ export default function VendorDashboardTopbar({
             <Link href="/dashboard/vendor/events/new" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-zinc-800 hover:bg-rose-50 hover:text-rose-700"><span className="flex size-9 items-center justify-center rounded-xl bg-rose-100 text-rose-700"><CalendarDays className="size-4" /></span>Add event</Link>
           </div>
         </details>
-          <Link
-            href="/dashboard/vendor/reports"
-            className="hidden items-center justify-center whitespace-nowrap rounded-lg border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-[#343330] shadow-sm hover:bg-[#F8F7F5] md:inline-flex"
-          >
-            Reports
-          </Link>
+
       </div>
     </header>
   );
