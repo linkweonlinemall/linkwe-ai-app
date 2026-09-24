@@ -17,6 +17,7 @@ import {
   IconRouteSquare,
   IconPackage,
   IconQrcode,
+  IconPhoto,
   IconRefresh,
   IconSettings,
   IconShoppingBag,
@@ -178,6 +179,7 @@ export default function VendorDashboardSidebar({
   const STORE: NavLeaf[] = [
     { href: "/dashboard/vendor/store/edit", label: "Store profile", Icon: IconBuildingStore },
     { href: "/dashboard/vendor/qr-studio", label: "QR Studio", Icon: IconQrcode },
+    { href: "/dashboard/vendor/photo-studio", label: "Photo Studio", Icon: IconPhoto },
     { href: "/dashboard/vendor/partners", label: "Collab", Icon: IconLink },
     { href: "/dashboard/vendor/staff", label: "Availability", Icon: IconUsers },
   ];

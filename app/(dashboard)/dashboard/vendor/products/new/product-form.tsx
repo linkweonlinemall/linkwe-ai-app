@@ -539,6 +539,8 @@ export function ProductForm() {
           </h2>
           <div className="space-y-4">
             <CompressedFileInput
+              photoStudio
+              maxFiles={10}
               accept="image/jpeg,image/png,image/webp"
               className="text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-zinc-200 file:px-4 file:py-2"
               error={fieldError("images")}

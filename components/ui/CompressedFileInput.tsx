@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, type ChangeEvent, type ComponentProps } from "react";
+import { useRef, useState, type ChangeEvent, type ComponentProps } from "react";
+import dynamic from "next/dynamic";
 
 import Input from "@/components/ui/Input";
 import { compressImageFile, MAX_COMPRESSED_BYTES } from "@/lib/images/compress-image";
+
+const PhotoStudioLauncher = dynamic(() => import("@/components/vendor/photo-studio/PhotoStudioLauncher"));
 
 type FileStatus =
   | { state: "compressing" }
@@ -25,6 +28,8 @@ type OwnProps = {
   onUploadingChange?: (isUploading: boolean) => void;
   /** Limit the current selection before compression. */
   maxFiles?: number;
+  /** Product photos only; leave other upload fields unchanged. */
+  photoStudio?: boolean;
 };
 
 // We always force type="file" internally, so callers can't accidentally pass
@@ -44,9 +49,11 @@ type Props = Omit<ComponentProps<typeof Input>, "type"> & OwnProps;
 export default function CompressedFileInput({
   onUploadingChange,
   maxFiles,
+  photoStudio,
   onChange,
   ...rest
 }: Props) {
+  const inputRef = useRef<HTMLInputElement>(null);
   const [fileStatuses, setFileStatuses] = useState<
     { name: string; status: FileStatus }[]
   >([]);
@@ -133,7 +140,18 @@ export default function CompressedFileInput({
 
   return (
     <div>
-      <Input {...rest} type="file" onChange={handleChange} />
+      <Input {...rest} ref={inputRef} type="file" onChange={handleChange} />
+      {photoStudio && <PhotoStudioLauncher disabled={rest.disabled || compressing || (fileStatuses.length >= (maxFiles ?? 10))} onUse={file => {
+        const input = inputRef.current;
+        if (!input) return;
+        const existing = Array.from(input.files || []);
+        if (existing.length >= (maxFiles ?? 10)) return;
+        const transfer = new DataTransfer();
+        existing.forEach(item => transfer.items.add(item));
+        transfer.items.add(file);
+        input.files = transfer.files;
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      }} />}
 
       {fileStatuses.length > 0 && (
         <div className="mt-2 space-y-1" aria-live="polite">

@@ -644,6 +644,8 @@ export function ProductEditForm({
               )}
             </div>
             <CompressedFileInput
+              photoStudio
+              maxFiles={Math.max(0, 10 - remainingImages.length)}
               accept="image/jpeg,image/png,image/webp"
               className="text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-zinc-200 file:px-4 file:py-2"
               disabled={!canAddMore}
