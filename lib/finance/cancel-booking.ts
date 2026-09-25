@@ -217,7 +217,7 @@ export async function cancelBookingCore(
   }
 
   // 5. Cache revalidation (best-effort; must not crash the cancel flow)
-  for (const path of ["/bookings", "/dashboard/vendor/bookings"]) {
+  for (const path of ["/bookings", "/dashboard/vendor/bookings", "/dashboard/vendor/service-desk"]) {
     try {
       revalidatePath(path);
     } catch {

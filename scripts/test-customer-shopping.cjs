@@ -1,0 +1,19 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
+function load(file){const module={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{module,exports:module.exports,require,Date,URL});return module.exports;}
+const orders=load('lib/customer/orders.ts'),cart=load('lib/cart/display.ts');
+const base={id:'abc',referenceNumber:'LW-100',createdAt:'2026-09-25T12:00:00Z',status:'PROCESSING',shippingAddressId:'address',region:'San Fernando',subtotalMinor:10000,totalMinor:13000,shippingMinor:3000,splitOrders:[],items:[{id:'1',titleSnapshot:'Old item name',quantity:1,product:{name:'New name',images:[],isDigital:false},store:{name:'The local shop',slug:'local'}}]};
+for(const status of ['PAID','PROCESSING','PARTIALLY_IN_HOUSE','READY_TO_SHIP','PACKING_COMPLETE','SHIPPED','DELIVERED','CUSTOMER_RECEIVED','COMPLETED'])assert.equal(orders.hasConfirmedPayment(status),true);
+for(const status of ['PENDING_PAYMENT','DRAFT','CANCELLED','REFUNDED']){assert.equal(orders.hasConfirmedPayment(status),false);assert.equal(orders.customerOrderState({...base,status}).step,-1);assert.equal(orders.customerParcelProgress('OUT_FOR_DELIVERY',status,false),null);}
+assert.equal(orders.customerOrderBucket('CUSTOMER_RECEIVED'),'delivered');assert.equal(orders.customerOrderBucket('REFUNDED'),'closed');
+assert.equal(orders.customerOrderState({...base,shippingAddressId:null,splitOrders:[{status:'READY_FOR_CUSTOMER_PICKUP'},{status:'PREPARING'}]}).label,'Being prepared');
+assert.equal(orders.customerOrderState({...base,shippingAddressId:null,splitOrders:[{status:'READY_FOR_CUSTOMER_PICKUP'},{status:'DELIVERED'}]}).label,'Ready for pickup');
+assert.equal(orders.customerParcelProgress('AWAITING_COURIER_PICKUP','PAID',true).current,1);
+assert.equal(orders.customerParcelProgress('OUT_FOR_DELIVERY','PAID',true).steps[3],'In transit');
+assert.equal(orders.customerParcelProgress('UNKNOWN','PAID',true),null);
+const long={...base,items:[...base.items,...Array.from({length:5},(_,i)=>({...base.items[0],id:String(i+2),titleSnapshot:i===4?'Last hidden product':'Test'}))]};
+const filters={search:'hidden local',view:'all',status:'all',sort:'newest',days:0};assert.equal(orders.filterCustomerOrders([long],filters).length,1);assert.equal(orders.filterCustomerOrders([long],{...filters,view:'closed'}).length,0);
+assert.equal(orders.filterCustomerOrders([long],{...filters,search:'',days:1},Date.parse('2026-09-27T12:00:00Z')).length,0);
+assert.equal(orders.safeDownloadUrl('javascript:alert(1)'),null);assert.equal(orders.safeDownloadUrl('//example.com/file'),null);assert.equal(orders.safeDownloadUrl('https://example.com/res.cloudinary.com/upload/file'), 'https://example.com/res.cloudinary.com/upload/file');assert.ok(orders.safeDownloadUrl('https://res.cloudinary.com/demo/image/upload/file.png','Our product').includes('fl_attachment:Our_product'));
+const item={quantity:1,variant:{stock:2},product:{stock:10,hasVariants:true,isPublished:true,isArchived:false,isService:false,store:{status:'ACTIVE',owner:{idVerificationStatus:'APPROVED'}}}};
+assert.equal(cart.cartStock(item),2);assert.equal(cart.cartIssue(item),null);assert.ok(cart.cartIssue({...item,quantity:3}));assert.ok(cart.cartIssue({...item,variant:null}));assert.ok(cart.cartIssue({...item,product:{...item.product,isArchived:true}}));assert.ok(cart.cartIssue({...item,product:{...item.product,store:{...item.product.store,status:'DRAFT'}}}));assert.equal(cart.variantLabel({bad:true},'Medium'),'Medium');assert.equal(cart.variantLabel([{name:'Size',value:'M'},null,{bad:true}]),'M');
+console.log('PASS: every paid/closed status, pickup readiness, truthful parcel progress, full item/store search, date filters, safe download links and cart stock/availability.');

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { getCart, removeFromCart, updateCartQuantity } from "@/app/actions/cart";
 import type { CartItem } from "@/lib/cart/cart-store";
 import { useCartStore } from "@/lib/cart/cart-store";
+import { toast } from "sonner";
 import { toastRemovedFromCart } from "@/lib/feedback/toasts";
 import { formatTTDPrice } from "@/lib/format/price";
 
@@ -28,6 +29,8 @@ function mapRows(rows: Awaited<ReturnType<typeof getCart>>): CartItem[] {
       ? {
           id: row.variant.id,
           name: row.variant.name,
+          stock: row.variant.stock,
+          images: row.variant.images,
           price: row.variant.price,
           attributes: row.variant.attributes as { name: string; value: string; hex?: string }[],
         }
@@ -62,9 +65,11 @@ export default function CartDrawer() {
 
   const onQty = async (cartItemId: string, nextQty: number) => {
     setBusyItemId(cartItemId);
-    await updateCartQuantity(cartItemId, nextQty);
-    await refresh();
-    setBusyItemId(null);
+    try {
+      const result=await updateCartQuantity(cartItemId, nextQty);
+      if(!result.ok)toast.error(result.error);
+      await refresh();
+    } catch { toast.error("Could not update your cart. Please try again."); } finally { setBusyItemId(null); }
   };
 
   const onRemove = async (cartItemId: string, productName: string) => {
@@ -155,7 +160,8 @@ export default function CartDrawer() {
             <ul className="divide-y divide-zinc-100 px-4 py-2">
               {items.map((item) => {
                 const busy = busyItemId === item.id;
-                const img = item.product.images[0];
+                const img = item.variant?.images?.[0] ?? item.product.images[0];
+                const stock = item.variant?.stock === undefined ? item.product.stock : item.variant.stock;
 
                 return (
                   <li key={item.id} className={`flex gap-3 py-4 ${busy ? "opacity-60" : ""}`}>
@@ -196,7 +202,7 @@ export default function CartDrawer() {
                           type="button"
                           disabled={
                             busy ||
-                            (item.product.stock !== null && item.quantity >= item.product.stock)
+                            (stock !== null && item.quantity >= stock)
                           }
                           onClick={() => void onQty(item.id, item.quantity + 1)}
                           className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"

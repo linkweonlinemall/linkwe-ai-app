@@ -653,6 +653,7 @@ export async function recordServiceSubscriptionSession(
     }),
   ]);
   revalidatePath("/dashboard/vendor/subscribers");
+  revalidatePath("/dashboard/vendor/service-desk");
   revalidatePath("/dashboard/customer/subscriptions");
   return { ok: true };
 }

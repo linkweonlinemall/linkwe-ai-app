@@ -2,7 +2,7 @@
 
 import { randomUUID } from "crypto";
 
-import type { RefundPolicyType, TicketStatus } from "@prisma/client";
+import type { EventStatus, Prisma, RefundPolicyType, TicketOrderStatus, TicketStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import { getSession } from "@/lib/auth/session";
@@ -36,12 +36,15 @@ export type CustomerTicketDetail = {
     perks: string | null;
   };
   ticketOrder: {
+    status: TicketOrderStatus;
+    couponSnapshot: Prisma.JsonValue;
     reference: string;
     total: number;
     subtotal: number;
     createdAt: Date;
   } | null;
   event: {
+    status: EventStatus;
     title: string;
     slug: string;
     description: string | null;
@@ -80,7 +83,7 @@ export async function getCustomerTicketById(
     where: {
       id: trimmedId,
       userId: session.userId,
-      ticketOrder: { is: { status: "PAID" } },
+      ticketOrder: { is: { status: { in: ["PAID", "REFUNDED"] } } },
     },
     select: {
       id: true,
@@ -104,6 +107,8 @@ export async function getCustomerTicketById(
       },
       ticketOrder: {
         select: {
+          status: true,
+          couponSnapshot: true,
           reference: true,
           total: true,
           subtotal: true,
@@ -112,6 +117,7 @@ export async function getCustomerTicketById(
       },
       event: {
         select: {
+          status: true,
           title: true,
           slug: true,
           description: true,
@@ -163,6 +169,7 @@ export async function getCustomerTicketById(
     },
     ticketOrder: ticket.ticketOrder,
     event: {
+      status: ticket.event.status,
       title: ticket.event.title,
       slug: ticket.event.slug,
       description: ticket.event.description,
@@ -293,10 +300,11 @@ export async function transferTicket(
   } catch (err) {
     console.error("[my-tickets] transfer email failed:", err);
     emailNote =
-      "Ticket transferred, but we could not send the confirmation email. Share your updated QR from this page.";
+      "Ticket transferred, but the confirmation email could not be sent. Please contact LinkWe support for help delivering it to the new holder.";
   }
 
   revalidatePath(`/my-tickets/${trimmedId}`);
+  revalidatePath("/my-tickets");
 
   return emailNote ? { ok: true, emailNote } : { ok: true };
 }

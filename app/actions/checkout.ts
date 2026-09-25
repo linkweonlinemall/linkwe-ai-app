@@ -87,6 +87,10 @@ export async function createPaymentIntent(
   const cartItems = await loadCheckoutCart(session.userId);
   if (cartItems.length === 0) return { ok: false, error: "cart_empty" };
 
+  const productQuantities = new Map<string, number>();
+  for (const item of cartItems) {
+    productQuantities.set(item.productId, (productQuantities.get(item.productId) ?? 0) + item.quantity);
+  }
   for (const item of cartItems) {
     if (!item.product.isPublished || item.product.isService || item.product.isArchived) {
       return { ok: false, error: `${item.product.name} is no longer available.` };
@@ -94,7 +98,11 @@ export async function createPaymentIntent(
     if (!isStoreSellable(item.product.store)) {
       return { ok: false, error: `${item.product.name} is no longer available.` };
     }
-    if (item.product.stock !== null && item.product.stock < item.quantity) {
+    if (item.product.hasVariants && (!item.variant || item.variant.productId !== item.productId)) return {ok:false,error:`Choose the options again for ${item.product.name}.`};
+    const stock = item.variant ? item.variant.stock : item.product.stock;
+    // Fulfilment also draws from the product’s shared inventory across its options.
+    const exceedsSharedStock = item.product.stock !== null && (productQuantities.get(item.productId) ?? 0) > item.product.stock;
+    if ((stock !== null && stock < item.quantity) || exceedsSharedStock) {
       return { ok: false, error: `Not enough stock for ${item.product.name}.` };
     }
   }
@@ -152,7 +160,7 @@ export async function createPaymentIntent(
     const storeIds = [...new Set(cartItems.map(item=>item.product.storeId))];
     for(const storeId of storeIds){
       const indexes=cartItems.map((item,index)=>item.product.storeId===storeId?index:-1).filter(index=>index>=0);
-      const totals=indexes.map(index=>Math.round(cartItems[index].product.price*100)*cartItems[index].quantity);
+      const totals=indexes.map(index=>Math.round((cartItems[index].variant?.price??cartItems[index].product.price)*100)*cartItems[index].quantity);
       try {const coupon=await priceCoupon(storeId,"product",couponCode,indexes.map((index,i)=>({key:`product:${cartItems[index].productId}`,subtotalMinor:totals[i]})));if(coupon){couponSnapshots.push(coupon);const allocated=allocateDiscount(totals.map((total,i)=>coupon.eligibleKeys?.includes(`product:${cartItems[indexes[i]].productId}`)?total:0),coupon.discountMinor);indexes.forEach((index,i)=>lineDiscounts[index]=allocated[i]);}}
       catch(error){if(!(error instanceof CouponError))throw error;}
     }
@@ -197,9 +205,9 @@ export async function createPaymentIntent(
         shippingAddressId,
         checkoutResponses: Object.keys(checkoutResponses).length > 0 ? checkoutResponses : undefined,
         items: {
-          create: cartItems.flatMap((item,index) => discountedUnits(Math.round(item.product.price*100),item.quantity,lineDiscounts[index]).map(unit => ({
+          create: cartItems.flatMap((item,index) => discountedUnits(Math.round((item.variant?.price??item.product.price)*100),item.quantity,lineDiscounts[index]).map(unit => ({
             listingId:null, productId:item.productId, storeId:item.product.storeId,
-            titleSnapshot:item.product.name, priceMinor:unit.priceMinor, quantity:unit.quantity,
+            titleSnapshot:item.variant?`${item.product.name} · ${item.variant.name}`:item.product.name, priceMinor:unit.priceMinor, quantity:unit.quantity,
             weightLbs:pricingLines[index]?.weightLbs??0.5,
           }))),
         },

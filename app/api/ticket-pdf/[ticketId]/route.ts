@@ -8,6 +8,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { TicketDocument } from "@/components/tickets/TicketDocument";
 import { getSession } from "@/lib/auth/session";
 import { generateTicketQRCodeDataURL } from "@/lib/tickets/qr-code";
+import { ticketState } from "@/lib/customer/experiences";
 import { prisma } from "@/lib/prisma";
 
 function readLogoDataUrl(): string | null {
@@ -43,8 +44,11 @@ export async function GET(
       holderName: true,
       status: true,
       qrToken: true,
+      transferredAt: true,
       event: {
         select: {
+          status: true,
+          endDate: true,
           title: true,
           startDate: true,
           venueName: true,
@@ -59,6 +63,7 @@ export async function GET(
       },
       ticketOrder: {
         select: {
+          status: true,
           reference: true,
           total: true,
         },
@@ -68,6 +73,10 @@ export async function GET(
 
   if (!ticket) {
     return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
+  }
+
+  if (session.role !== "ADMIN" && !ticketState(ticket, Date.now()).usable) {
+    return NextResponse.json({ error: "This ticket is no longer available for entry." }, { status: 403 });
   }
 
   const qrCodeDataUrl = await generateTicketQRCodeDataURL(ticket.qrToken);

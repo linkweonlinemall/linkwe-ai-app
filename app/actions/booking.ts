@@ -879,6 +879,7 @@ export async function updateBookingStatus(
   });
 
   revalidatePath("/dashboard/vendor/bookings");
+  revalidatePath("/dashboard/vendor/service-desk");
   return { ok: true as const };
 }
 
@@ -948,6 +949,7 @@ export async function updateBookingMeetingLink(
   });
 
   revalidatePath("/dashboard/vendor/bookings");
+  revalidatePath("/dashboard/vendor/service-desk");
   revalidatePath("/bookings");
   return { ok: true };
 }

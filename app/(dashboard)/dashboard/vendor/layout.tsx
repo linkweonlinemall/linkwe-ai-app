@@ -62,7 +62,7 @@ export default async function VendorDashboardLayout({
       idVerificationStatus={user.idVerificationStatus}
       userFirstName={firstName}
       unreadCount={unreadCount}
-      pendingRequestsCount={counts.pendingRequestsCount}
+      pendingRequestsCount={counts.serviceDeskCount}
       activeOrdersCount={counts.activeOrdersCount}
       aiEnabled={aiEnabled}
       renderedAt={new Date().toISOString()}

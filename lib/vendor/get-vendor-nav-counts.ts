@@ -6,10 +6,12 @@ import { prisma } from "@/lib/prisma";
 export const getVendorNavCounts = cache(async (storeId: string) => {
   const pendingRequestStatuses = ["PENDING"] as const;
 
-  const [pendingRequestsCount, activeOrdersCount] = await Promise.all([
+  const [pendingRequestsCount, pendingBookings, subscriptionAttention, activeOrdersCount] = await Promise.all([
     prisma.onDemandRequest.count({
-      where: { storeId, status: { in: [...pendingRequestStatuses] } },
+      where: { storeId, status: { in: [...pendingRequestStatuses, "REFUND_PENDING"] } },
     }),
+    prisma.productBooking.count({ where: { product: { storeId, isService: true }, cancelledAt: null, status: { in: ["PENDING", "DEPOSIT_PAID"] } } }),
+    prisma.customerServiceSubscription.count({ where: { storeId, OR: [{ status: "PAST_DUE" }, { status: "ACTIVE", OR: [{ sessionsRemaining: 0 }, { currentPeriodEnd: { lte: new Date() } }] }] } }),
     prisma.splitOrder.count({
       where: {
         storeId,
@@ -20,5 +22,5 @@ export const getVendorNavCounts = cache(async (storeId: string) => {
     }),
   ]);
 
-  return { pendingRequestsCount, activeOrdersCount };
+  return { pendingRequestsCount, activeOrdersCount, serviceDeskCount: pendingRequestsCount + pendingBookings + subscriptionAttention };
 });

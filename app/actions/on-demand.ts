@@ -186,6 +186,7 @@ export async function submitOnDemandRequest(input: {
   }
 
   revalidatePath("/dashboard/vendor/requests");
+  revalidatePath("/dashboard/vendor/service-desk");
   return { ok: true, requestId: request.id };
 }
 
@@ -268,6 +269,7 @@ export async function submitQuoteRequest(input: {
   }
 
   revalidatePath("/dashboard/vendor/requests");
+  revalidatePath("/dashboard/vendor/service-desk");
   return { ok: true, requestId: request.id };
 }
 
@@ -388,6 +390,7 @@ export async function acceptOnDemandRequest(
   }
 
   revalidatePath("/dashboard/vendor/requests");
+  revalidatePath("/dashboard/vendor/service-desk");
   return { ok: true };
 }
 
@@ -491,6 +494,7 @@ export async function completeOnDemandRequest(requestId: string): Promise<{ ok: 
   });
 
   revalidatePath("/dashboard/vendor/requests");
+  revalidatePath("/dashboard/vendor/service-desk");
   revalidatePath("/my-requests");
   return { ok: true };
 }
@@ -518,6 +522,7 @@ export async function markOnDemandRequestComplete(
 
   revalidatePath("/my-requests");
   revalidatePath("/dashboard/vendor/requests");
+  revalidatePath("/dashboard/vendor/service-desk");
   return { ok: true };
 }
 
@@ -540,6 +545,7 @@ export async function toggleVendorAvailability(): Promise<
 
   revalidatePath("/dashboard/vendor");
   revalidatePath("/dashboard/vendor/requests");
+  revalidatePath("/dashboard/vendor/service-desk");
   return { ok: true, isAvailableNow: !store.isAvailableNow };
 }
 
@@ -671,6 +677,7 @@ export async function confirmOnDemandRequest(
 
       revalidatePath("/my-requests");
       revalidatePath("/dashboard/vendor/requests");
+  revalidatePath("/dashboard/vendor/service-desk");
 
       return { ok: true, checkoutUrl: payment.url };
     } catch (err) {
@@ -707,6 +714,7 @@ export async function confirmOnDemandRequest(
 
   revalidatePath("/my-requests");
   revalidatePath("/dashboard/vendor/requests");
+  revalidatePath("/dashboard/vendor/service-desk");
   return { ok: true };
 }
 

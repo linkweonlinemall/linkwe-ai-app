@@ -35,6 +35,7 @@ export function TransferTicketPanel({ ticketId, status }: Props) {
     setSuccess(null);
 
     startTransition(async () => {
+      try {
       const result = await transferTicket(ticketId, holderName, holderEmail);
 
       if (!result.ok) {
@@ -52,6 +53,7 @@ export function TransferTicketPanel({ ticketId, status }: Props) {
       setHolderName("");
       setHolderEmail("");
       router.refresh();
+      } catch { setError("We couldn’t confirm the transfer. Refresh to check its status before trying again."); }
     });
   }
 

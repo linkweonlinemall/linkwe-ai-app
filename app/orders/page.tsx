@@ -1,12 +1,11 @@
-import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { Package } from "lucide-react";
+
 
 import { getRoleDashboardPath } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import PublicNav from "@/components/layout/PublicNav";
-import { icn } from "@/lib/iconography";
+import styles from "@/components/customer/customer.module.css";
 import { prisma } from "@/lib/prisma";
 
 import OrdersClient from "./orders-client";
@@ -32,18 +31,22 @@ export default async function OrdersPage() {
       createdAt: true,
       status: true,
       region: true,
+      shippingAddressId: true,
+      splitOrders: { select: { status: true } },
       subtotalMinor: true,
       shippingMinor: true,
       totalMinor: true,
       items: {
-        take: 3,
         select: {
           id: true,
           titleSnapshot: true,
+          quantity: true,
+          store: { select: { name: true, slug: true } },
           product: {
             select: {
               name: true,
               images: true,
+              isDigital: true,
             },
           },
         },
@@ -53,7 +56,7 @@ export default async function OrdersPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
+    <div className={`${styles.page} pb-mobile-public lg:pb-0`}>
       <PublicNav
         user={
           userRecord
@@ -62,49 +65,9 @@ export default async function OrdersPage() {
         }
         dashboardHref={continueHref ?? undefined}
       />
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
-            My Orders
-          </h1>
-          <Link href="/" className="text-sm hover:underline" style={{ color: "var(--blue)" }}>
-            Continue shopping
-          </Link>
-        </div>
+      <main className={styles.container}><OrdersClient orders={orders} /></main>
 
-        {orders.length === 0 ? (
-          <div className="py-16 text-center">
-            <Package className={`${icn.empty} mx-auto mb-4`} aria-hidden strokeWidth={1.25} />
-            <h2 className="mb-2 text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
-              No orders yet
-            </h2>
-            <p className="mb-6 text-sm" style={{ color: "var(--text-muted)" }}>
-              Your orders will appear here once you make a purchase
-            </p>
-            <Link
-              href="/shop"
-              className="inline-flex rounded-xl px-5 py-2.5 text-sm font-semibold text-white"
-              style={{ backgroundColor: "var(--scarlet)" }}
-            >
-              Start shopping →
-            </Link>
-          </div>
-        ) : (
-          <OrdersClient orders={orders} />
-        )}
-      </div>
-
-      <footer
-        className="mt-12 py-6 text-center"
-        style={{ borderTop: "1px solid var(--card-border-subtle)" }}
-      >
-        <p className="text-xs" style={{ color: "var(--text-faint)" }}>
-          <a href="/" style={{ color: "var(--scarlet)" }}>
-            LinkWe
-          </a>{" "}
-          — We People. We Business. We Marketplace.
-        </p>
-      </footer>
+      <footer className={styles.footer}>We people. We business. We local.</footer>
     </div>
   );
 }

@@ -12,6 +12,8 @@ type CartProduct = {
 };
 
 type CartVariant = {
+  stock?: number | null;
+  images?: string[];
   id: string;
   name: string;
   price: number | null;

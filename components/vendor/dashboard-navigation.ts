@@ -1,6 +1,6 @@
 import {
-  LayoutDashboard, Layers3, ShoppingBag, CalendarDays, MessageCircle, Zap,
-  Repeat2, Store, Image, QrCode, Newspaper, Bot, Users,
+  LayoutDashboard, Layers3, ShoppingBag, ConciergeBell, MessageCircle,
+  Store, Image, QrCode, Newspaper, Bot, Users,
   Truck, Handshake, Wallet, ChartNoAxesCombined, Star, Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -16,13 +16,11 @@ export const workspaceGroups: { label: string; items: WorkspaceLink[] }[] = [
   { label: "Your day", items: [
     { label: "Overview", path: "", description: "Your business at a glance", icon: LayoutDashboard },
     { label: "Orders", path: "/orders", description: "Sales, fulfilment and deliveries", icon: ShoppingBag, badge: "orders" },
-    { label: "Bookings", path: "/bookings", description: "Appointments and your schedule", icon: CalendarDays },
-    { label: "Requests", path: "/requests", description: "Respond to on-demand customers", icon: Zap, badge: "requests" },
+    { label: "Service Desk", path: "/service-desk", description: "Bookings, appointments, requests, quotes, subscribers and subscriptions in one place", icon: ConciergeBell, badge: "requests" },
     { label: "Messages", path: "/messages", description: "Conversations with customers", icon: MessageCircle },
   ] },
   { label: "Create & sell", items: [
     { label: "Creation Zone", path: "/creation", description: "Create and manage products, services, events, tickets and coupons", icon: Layers3 },
-    { label: "Subscribers", path: "/subscribers", description: "Recurring service subscriptions", icon: Repeat2 },
   ] },
   { label: "Your brand", items: [
     { label: "Storefront", path: "/store/edit", description: "Logo, cover, location and store information", icon: Store },

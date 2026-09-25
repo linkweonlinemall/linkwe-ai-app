@@ -48,12 +48,14 @@ function resolveOrderShippingZone(
 }
 
 const checkoutCartInclude = {
+  variant: { select: { id:true, productId:true, name:true, price:true, stock:true } },
   product: {
     select: {
       id: true,
       name: true,
       price: true,
       stock: true,
+      hasVariants: true,
       isPublished: true,
         isService: true,
         isArchived: true,
@@ -96,7 +98,7 @@ export async function computeCartShippingFromItems(
   destinationLongitude?: number | null,
 ): Promise<Omit<ComputeCartShippingSuccess, "ok">> {
   const pricingLines: CheckoutPricingLine[] = cartItems.map((item) => ({
-    priceMinor: Math.round(item.product.price * 100),
+    priceMinor: Math.round((item.variant?.price ?? item.product.price) * 100),
     quantity: item.quantity,
     weightLbs: itemWeightLbs(item.product.weight, item.product.weightUnit),
   }));

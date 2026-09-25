@@ -154,7 +154,7 @@ export async function cancelOnDemandCore(
   }
 
   // 5. Cache revalidation (best-effort; must not crash the cancel flow)
-  for (const path of ["/my-requests", "/dashboard/vendor/requests"]) {
+  for (const path of ["/my-requests", "/dashboard/vendor/requests", "/dashboard/vendor/service-desk"]) {
     try {
       revalidatePath(path);
     } catch {

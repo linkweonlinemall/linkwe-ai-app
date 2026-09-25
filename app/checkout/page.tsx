@@ -26,6 +26,7 @@ export default async function CheckoutPage() {
   const items = await prisma.productCartItem.findMany({
     where: { userId: session.userId },
     include: {
+      variant: {select:{name:true,price:true,images:true}},
       product: {
         select: {
           id: true,
@@ -49,7 +50,7 @@ export default async function CheckoutPage() {
 
   if (items.length === 0) redirect("/cart");
 
-  const subtotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
+  const subtotal = items.reduce((sum, i) => sum + (i.variant?.price ?? i.product.price) * i.quantity, 0);
 
   return (
     <div className={`min-h-screen ${tw.bgPage} pb-mobile-public lg:pb-0 ${tw.fontSans}`}>
@@ -73,7 +74,7 @@ export default async function CheckoutPage() {
             </div>
           </div>
         </div>
-        <CheckoutClient items={items.map((item) => ({ ...item, product: { ...item.product, checkoutFields: parseCheckoutFields(item.product.checkoutFields), store: { ...item.product.store, checkoutFields: parseCheckoutFields(item.product.store.checkoutFields) } } }))} subtotal={subtotal} initialPhone={userRecord?.phone ?? ""} />
+        <CheckoutClient items={items.map((item) => ({ ...item, product: { ...item.product, price: item.variant?.price ?? item.product.price, name: item.variant ? `${item.product.name} · ${item.variant.name}` : item.product.name, images: item.variant?.images.length ? item.variant.images : item.product.images, checkoutFields: parseCheckoutFields(item.product.checkoutFields), store: { ...item.product.store, checkoutFields: parseCheckoutFields(item.product.store.checkoutFields) } } }))} subtotal={subtotal} initialPhone={userRecord?.phone ?? ""} />
       </div>
     </div>
   );

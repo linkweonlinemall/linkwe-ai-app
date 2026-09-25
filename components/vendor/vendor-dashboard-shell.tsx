@@ -86,7 +86,7 @@ export default function VendorDashboardShell({
           <VendorMobileBottomNav activeOrdersCount={activeOrdersCount} pendingRequestsCount={pendingRequestsCount} />
         </Suspense>}
         <VendorWorkspaceMenu />
-        {!isMessages && !isCreation && <FloatingAIChat aiEnabled={aiEnabled} />}
+        {!isMessages && !isCreation && !pathname.startsWith("/dashboard/vendor/service-desk") && <FloatingAIChat aiEnabled={aiEnabled} />}
       </div>
     </div>
     )}

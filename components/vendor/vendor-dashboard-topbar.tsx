@@ -67,6 +67,7 @@ export default function VendorDashboardTopbar({
   }, []);
   useEffect(() => { addMenu.current?.removeAttribute("open"); }, [pathname, searchParams]);
   const pageTour: TutorialName | null =
+    pathname.startsWith("/dashboard/vendor/service-desk") ? "serviceDesk" :
     pathname === "/dashboard/vendor" ? "essentials" :
     pathname === "/dashboard/vendor/creation/new" && creationType === "product" ? "productSimple" :
     pathname.startsWith("/dashboard/vendor/products") ? "products" :

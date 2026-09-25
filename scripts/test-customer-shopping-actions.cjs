@@ -1,0 +1,62 @@
+// Integration tests against local linkwe_dev. All writes roll back; providers and notifications are stubbed.
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),ts=require('typescript');
+require('dotenv').config({path:'.env.local',quiet:true});require('dotenv').config({path:'.env',quiet:true});
+const url=new URL(process.env.DATABASE_URL||'');if(!['localhost','127.0.0.1','[::1]'].includes(url.hostname)||url.pathname!=='/linkwe_dev')throw new Error('Only local linkwe_dev permitted.');
+const {PrismaClient}=require('@prisma/client');const real=new PrismaClient();const rollback=new Error('ROLLBACK_TEST');
+require.extensions['.ts']=(mod,file)=>mod._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);
+(async()=>{try{await real.$transaction(async tx=>{
+ const vendor=await tx.user.findUniqueOrThrow({where:{email:'vendor-preview@linkwe.test'}}),customer=await tx.user.findUniqueOrThrow({where:{email:'customer-preview@linkwe.test'}});
+ const store=await tx.store.findUniqueOrThrow({where:{ownerId:vendor.id}});
+ await tx.store.update({where:{id:store.id},data:{status:'ACTIVE',subscriptionPlan:'PRO',subscriptionStatus:'ACTIVE'}});await tx.user.update({where:{id:vendor.id},data:{idVerificationStatus:'APPROVED'}});
+ let session={userId:customer.id,role:'CUSTOMER',email:customer.email};let paymentCalls=[];let refunds=[];
+ const client={...tx,$transaction:async arg=>typeof arg==='function'?arg(tx):Promise.all(arg)};
+ const old=Module._load;Module._load=function(request,parent,main){
+  if(request==='@/lib/prisma')return {prisma:client};
+  if(request==='@/lib/auth/session')return {getSession:async()=>session};
+  if(request==='next/cache')return {revalidatePath:()=>{},unstable_cache:fn=>fn};
+  if(request==='@/lib/wipay/payments')return {createWiPayHostedPayment:async input=>{paymentCalls.push(input);return{transactionId:'local-stub-'+paymentCalls.length,url:'https://example.invalid/payment-test'};}};
+  if(request==='@/lib/wipay/wapi')return {requestWiPayRefund:async id=>{refunds.push(id);}};
+  if(request==='@/lib/admin/alerts')return {alertAdmins:async()=>{}};
+  if(request==='@/lib/email/resend')return {BASE_URL:'http://localhost:3000'};
+  if(request==='@/lib/email/send')return {sendEmail:async()=>{}};
+  if(request==='@/lib/notifications/create')return {createNotification:async()=>{}};
+  if(request==='@/lib/notifications/admin-alert')return {alertAdmins:async()=>{}};
+  if(request==='@/app/actions/booking-emails')return {sendBookingConfirmationEmails:async()=>{}};
+  if(request==='@/lib/services/get-available-slots')return {getAvailableSlots:()=>[{time:'10:00',endTime:'11:00',available:true}]};
+  if(request==='@/lib/wipay/subscriptions')return {beginWiPayManualSubscription:async input=>{paymentCalls.push(input);return '/local-subscription-checkout';}};
+  if(request==='server-only')return {};
+  if(request.startsWith('@/'))request=path.join(process.cwd(),request.slice(2));
+  return old.call(this,request,parent,main);
+ };
+ try{
+  const cart=require('../app/actions/cart.ts');const checkout=require('../app/actions/checkout.ts');const coupons=require('../app/actions/store-coupons.ts');
+  const product=await tx.product.create({data:{storeId:store.id,slug:'shopping-test-'+Date.now(),name:'Product option test',price:100,stock:20,isPublished:true,hasVariants:true,allowPickup:true}});
+  const variant=await tx.productVariant.create({data:{productId:product.id,name:'Ocean / Large',price:165,stock:3,attributes:[{name:'Size',value:'Large'}]}});
+  await tx.productCartItem.deleteMany({where:{userId:customer.id}});
+  assert.equal((await cart.addToCart(product.id,1,variant.id)).ok,true);
+  const row=await tx.productCartItem.findFirstOrThrow({where:{userId:customer.id,productId:product.id}});
+  for(const quantity of [NaN,1.5,-1,Infinity,2147483648])assert.equal((await cart.updateCartQuantity(row.id,quantity)).ok,false);
+  assert.equal((await cart.updateCartQuantity(row.id,4)).ok,false);
+  assert.equal((await cart.updateCartQuantity(row.id,3)).ok,true);
+  assert.equal((await cart.getCart())[0].variant.stock,3);
+  session={userId:vendor.id,role:'VENDOR'};assert.equal((await cart.updateCartQuantity(row.id,1)).ok,false);await cart.removeFromCart(row.id);assert.ok(await tx.productCartItem.findUnique({where:{id:row.id}}));
+  session={userId:customer.id,role:'CUSTOMER'};
+  const code='SHOPPING25';await tx.storeCoupon.create({data:{storeId:store.id,code,discountType:'PERCENT',discountValue:25,scopes:['product'],targets:[`product:${product.id}`]}});
+  const preview=await coupons.previewStoreCoupon({kind:'cart',code});assert.equal(preview.totalMinor,37125);assert.equal(preview.discountMinor,12375);
+  const payment=await checkout.createPaymentIntent('','',false,null,null,null,{},code);assert.equal(payment.ok,true,JSON.stringify(payment));assert.equal(paymentCalls.at(-1).amountMinor,37125);
+  const order=await tx.mainOrder.findUniqueOrThrow({where:{id:payment.orderId},include:{items:true}});assert.equal(order.totalMinor,37125);assert.equal(order.items.reduce((sum,item)=>sum+item.quantity*item.priceMinor,0),37125);assert.equal(order.items.reduce((sum,item)=>sum+item.quantity,0),3);assert.ok(order.items.every(item=>item.titleSnapshot.includes('Ocean / Large')));
+  const secondVariant=await tx.productVariant.create({data:{productId:product.id,name:'Coral / Large',price:170,stock:3,attributes:[]}});
+  await tx.productCartItem.create({data:{userId:customer.id,productId:product.id,productVariantId:secondVariant.id,quantity:1}});
+  await tx.product.update({where:{id:product.id},data:{stock:3}});
+  const beforeBlocked=paymentCalls.length;assert.equal((await checkout.createPaymentIntent('','',false)).ok,false);assert.equal(paymentCalls.length,beforeBlocked);
+  await tx.product.update({where:{id:product.id},data:{stock:20,isArchived:true}});assert.equal((await cart.addToCart(product.id,1,variant.id)).ok,false);assert.equal((await cart.updateCartQuantity(row.id,3)).ok,false);assert.equal((await checkout.createPaymentIntent('','',false)).ok,false);
+  assert.equal((await cart.updateCartQuantity(row.id,0)).ok,true);assert.equal(await tx.productCartItem.count({where:{id:row.id}}),0);
+  const ticketActions=require('../app/actions/my-tickets.ts');
+  const sampleTicket=await tx.ticket.findUniqueOrThrow({where:{ticketNumber:'PREVIEW-TICKET-04'}});
+  assert.ok(await ticketActions.getCustomerTicketById(sampleTicket.id),'refunded history accessible to owner');
+  session={userId:vendor.id,role:'VENDOR'};assert.equal(await ticketActions.getCustomerTicketById(sampleTicket.id),null);
+  session=null;assert.equal(await ticketActions.getCustomerTicketById(sampleTicket.id),null);assert.equal((await cart.updateCartQuantity(row.id,1)).ok,false);
+  console.log('PASS: customer ownership, anonymous access, variant stock, invalid quantities, archive handling, removal, selected-option prices through coupon preview/payment/order snapshots.');
+ } finally {Module._load=old;}
+ throw rollback;
+ },{timeout:60000});}catch(error){if(error!==rollback)throw error;}finally{await real.$disconnect();}})().then(()=>console.log('All database writes rolled back. No real payments, messages or notifications sent.')).catch(error=>{console.error(error);process.exitCode=1;});

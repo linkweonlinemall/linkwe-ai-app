@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { cartIssue, cartStock } from "@/lib/cart/display";
 import { isStoreSellable } from "@/lib/store/sellable-store";
 
 export async function getCart() {
@@ -23,9 +24,13 @@ export async function getCart() {
           price: true,
           images: true,
           stock: true,
+          hasVariants: true,
+          isPublished: true,
+          isArchived: true,
+          isService: true,
           isDigital: true,
           store: {
-            select: { name: true, slug: true },
+            select: { id: true, name: true, slug: true, status: true, owner: { select: { idVerificationStatus: true } } },
           },
         },
       },
@@ -34,6 +39,7 @@ export async function getCart() {
           id: true,
           name: true,
           attributes: true,
+          stock: true,
           price: true,
           images: true,
         },
@@ -65,6 +71,8 @@ export async function addToCart(
       id: true,
       stock: true,
       isPublished: true,
+      isArchived: true,
+      isService: true,
       hasVariants: true,
       store: {
         select: {
@@ -75,10 +83,11 @@ export async function addToCart(
     },
   });
 
-  if (!product || !product.isPublished || !isStoreSellable(product.store)) {
+  if (!product || !product.isPublished || product.isArchived || product.isService || !isStoreSellable(product.store)) {
     return { ok: false, error: "product_not_found" };
   }
 
+  if (!product.hasVariants && variantId) return { ok: false, error: "variant_not_found" };
   let effectiveStock: number | null = product.stock;
   if (product.hasVariants) {
     if (variantId == null || variantId === "") {
@@ -145,22 +154,28 @@ export async function removeFromCart(cartItemId: string): Promise<void> {
   revalidatePath("/cart");
 }
 
-export async function updateCartQuantity(cartItemId: string, quantity: number): Promise<void> {
+export async function updateCartQuantity(cartItemId: string, quantity: number): Promise<{ok:true}|{ok:false;error:string}> {
   const session = await getSession();
-  if (!session) return;
-
-  if (quantity <= 0) {
-    await prisma.productCartItem.deleteMany({
-      where: { id: cartItemId, userId: session.userId },
-    });
+  if (!session) return {ok:false,error:"Please sign in to update your cart."};
+  if (!Number.isSafeInteger(quantity) || quantity < 0 || quantity > 2147483647) return {ok:false,error:"Choose a whole number of items."};
+  const item = await prisma.productCartItem.findFirst({
+    where:{id:cartItemId,userId:session.userId},
+    include:{product:{include:{store:{select:{status:true,owner:{select:{idVerificationStatus:true}}}}}},variant:true},
+  });
+  if(!item)return {ok:false,error:"This item is no longer in your cart."};
+  if(quantity===0) {
+    await prisma.productCartItem.deleteMany({where:{id:cartItemId,userId:session.userId}});
   } else {
-    await prisma.productCartItem.updateMany({
-      where: { id: cartItemId, userId: session.userId },
-      data: { quantity },
-    });
+    const issue=cartIssue({...item,quantity});
+    // Always allow a reduction, including while an unavailable item is being removed.
+    if(issue && quantity>=item.quantity)return {ok:false,error:issue};
+    const stock=cartStock(item);
+    if(stock!==null && quantity>stock)return {ok:false,error:`Only ${stock} available.`};
+    await prisma.productCartItem.updateMany({where:{id:cartItemId,userId:session.userId},data:{quantity}});
   }
-
   revalidatePath("/cart");
+  revalidatePath("/checkout");
+  return {ok:true};
 }
 
 export async function addEventTicketToCart(
