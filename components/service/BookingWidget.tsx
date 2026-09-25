@@ -1,4 +1,5 @@
 "use client";
+import CouponInput, { type AppliedCoupon } from "@/components/checkout/CouponInput";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -85,6 +86,7 @@ function confirmButtonLabel(
 ): string {
   if (booking) return "Booking...";
   if (requiresApproval) return "Request booking";
+  if (fullPrice===0) return "Confirm free booking";
   if (paymentMethod === "online") {
     return `Book & pay TTD ${fullPrice.toFixed(2)} online`;
   }
@@ -242,10 +244,10 @@ export default function BookingWidget({
   storeId,
   isLoggedIn,
   isOwner,
-  price,
+  price: originalPrice,
   serviceDuration,
   requiresDeposit,
-  depositAmount,
+  depositAmount: originalDeposit,
   requiresApproval,
   bookingPaymentMode,
   advanceBookingDays,
@@ -253,6 +255,9 @@ export default function BookingWidget({
   storeOpeningHours: rawOpeningHours,
   existingSlots,
 }: Props) {
+  const [coupon,setCoupon]=useState<AppliedCoupon|null>(null);
+  const price=coupon?coupon.totalMinor/100:originalPrice;
+  const depositAmount=originalDeposit==null?null:Math.min(originalDeposit,price);
   const router = useRouter();
   const [messagePending, startMessageTransition] = useTransition();
   const openingHours = useMemo(
@@ -379,6 +384,7 @@ export default function BookingWidget({
       startTime: selectedSlot.startTime,
       endTime: selectedSlot.endTime,
       customerNotes: notes || undefined,
+      couponCode: coupon?.code,
       paymentMethod,
     });
 
@@ -669,6 +675,7 @@ export default function BookingWidget({
             </div>
           </div>
 
+          <CouponInput kind="service" id={serviceId} onChange={setCoupon} disabled={booking}/>
           {bookingPaymentMode !== "ONLINE_ONLY" && bookingPaymentMode !== "ON_ARRIVAL_ONLY" ? (
             <div>
               <p className="mb-1.5 text-xs font-semibold text-zinc-700">Payment method</p>

@@ -45,9 +45,9 @@ export default function VendorDashboardOverview({ analytics, workspaceSummary: s
   const maxAmount = Math.max(...analytics.salesLast30Days.map(day => day.amountTtd), 1);
   const openSetup = () => { if (setup.current) { setup.current.open = true; setup.current.scrollIntoView({ behavior: "smooth", block: "start" }); setup.current.querySelector("summary")?.focus(); } };
   const quickActions = [
-    { label: "Add product", detail: "Something worth discovering", href: "/products/new", Icon: Package, tone: "peach" },
-    { label: "Add service", detail: "Put your skills to work", href: "/services/new", Icon: Sparkles, tone: "mint" },
-    { label: "Create event", detail: "Bring your people together", href: "/events/new", Icon: Ticket, tone: "lilac" },
+    { label: "Add product", detail: "Something worth discovering", href: "/creation/new?type=product", Icon: Package, tone: "peach" },
+    { label: "Add service", detail: "Put your skills to work", href: "/creation/new?type=service", Icon: Sparkles, tone: "mint" },
+    { label: "Create event", detail: "Bring your people together", href: "/creation/new?type=event", Icon: Ticket, tone: "lilac" },
     { label: "Photo Studio", detail: "Make your products shine", href: "/photo-studio", Icon: Image, tone: "yellow" },
   ];
   return <div className={s.overview}>

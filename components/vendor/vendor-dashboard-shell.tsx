@@ -43,6 +43,9 @@ export default function VendorDashboardShell({
 }: VendorDashboardShellProps) {
   const pathname = usePathname() ?? "";
   const isAIAssistant = pathname.includes("/ai-assistant");
+  const isCreation = pathname.startsWith("/dashboard/vendor/creation");
+  const isMessages = pathname.startsWith("/dashboard/vendor/messages");
+  const isMessageThread = pathname.startsWith("/dashboard/vendor/messages/");
 
   useEffect(() => {
     document.querySelector<HTMLElement>(".vendor-main-scroll")?.scrollTo({ top: 0, left: 0 });
@@ -75,15 +78,15 @@ export default function VendorDashboardShell({
           renderedAt={renderedAt}
         />
 
-        <div id="vendor-workspace-content" tabIndex={-1} className={`vendor-main-scroll ${s.mainScroll}`}>
+        <div id="vendor-workspace-content" tabIndex={-1} className={`vendor-main-scroll ${s.mainScroll} ${isMessageThread ? s.messageThreadScroll : ""}`}>
           {children}
         </div>
 
-        <Suspense fallback={null}>
+        {!isMessageThread && <Suspense fallback={null}>
           <VendorMobileBottomNav activeOrdersCount={activeOrdersCount} pendingRequestsCount={pendingRequestsCount} />
-        </Suspense>
+        </Suspense>}
         <VendorWorkspaceMenu />
-        <FloatingAIChat aiEnabled={aiEnabled} />
+        {!isMessages && !isCreation && <FloatingAIChat aiEnabled={aiEnabled} />}
       </div>
     </div>
     )}

@@ -37,6 +37,8 @@ export function TicketPurchaseCard({ eventId, startDate, ticketTypes, refundPoli
   const started = new Date(startDate) <= now;
   const summary = ticketSummary(started ? [] : visibleTypes, quantities, appliedPromo, now);
   function adjust(ticket: EventTicketOption, delta: number) {
+    if(appliedPromo)setPromoError("Ticket quantity changed. Apply your code again to update the discount.");
+    setAppliedPromo(null);
     setQuantities(previous => ({ ...previous, [ticket.id]: Math.max(0, Math.min(ticketLimit(ticket), (previous[ticket.id] || 0) + delta)) }));
   }
   async function applyPromo() {
@@ -44,7 +46,7 @@ export function TicketPurchaseCard({ eventId, startDate, ticketTypes, refundPoli
     if (!promoInput.trim() || promoApplying) return;
     setPromoApplying(true); setPromoError(null);
     try {
-      const result = await validatePromoCode(eventId, promoInput.trim());
+      const result = await validatePromoCode(eventId, promoInput.trim(), summary.items.map(item=>({ticketTypeId:item.id,quantity:item.qty})));
       if (!result.ok) { setAppliedPromo(null); setPromoError(result.reason); return; }
       setAppliedPromo({ code: result.code, discountType: result.discountType, discountValue: result.discountValue });
       setPromoInput(result.code);

@@ -1,6 +1,7 @@
 "use client";
+import { useRouter } from "next/navigation";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   createTicketType,
   updateTicketType,
@@ -259,21 +260,27 @@ export function TicketTypesClient({
   eventStatus,
   initialRevenueMinor,
   initialTicketTypes,
+  initialEditingId,
+  initiallyAdding = false,
 }: {
+  initialEditingId?: string;
+  initiallyAdding?: boolean;
   eventId: string;
   eventStatus: string;
   initialRevenueMinor: number;
   initialTicketTypes: SerializedTicketType[];
 }) {
+  const router=useRouter();
   const [isPending, startTransition] = useTransition();
   const [ticketTypes, setTicketTypes] = useState<SerializedTicketType[]>(initialTicketTypes);
   const [status, setStatus] = useState(eventStatus);
   const [actionError, setActionError] = useState<string | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
   const [publishSuccess, setPublishSuccess] = useState(false);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [showAddForm, setShowAddForm] = useState(initiallyAdding);
+  const [editingId, setEditingId] = useState<string | null>(initialTicketTypes.some(ticket => ticket.id === initialEditingId) ? initialEditingId! : null);
 
+  useEffect(()=>{setTicketTypes(initialTicketTypes);setStatus(eventStatus);},[initialTicketTypes,eventStatus]);
   function handleCreate(formData: FormData) {
     startTransition(async () => {
       setActionError(null);
@@ -283,7 +290,8 @@ export function TicketTypesClient({
       } else {
         setShowAddForm(false);
         // Optimistically append; full refresh on next render
-        window.location.reload();
+        router.replace(`/dashboard/vendor/creation/event/${eventId}?panel=tickets`);
+        router.refresh();
       }
     });
   }
@@ -296,7 +304,8 @@ export function TicketTypesClient({
         setActionError(result.error);
       } else {
         setEditingId(null);
-        window.location.reload();
+        router.replace(`/dashboard/vendor/creation/event/${eventId}?panel=tickets`);
+        router.refresh();
       }
     });
   }

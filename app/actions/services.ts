@@ -1,4 +1,5 @@
 "use server";
+import { normalizeSubscriptionInterval, validateSubscriptionConfiguration } from "@/lib/services/configuration-validation";
 
 import { revalidatePath } from "next/cache";
 import {
@@ -8,7 +9,6 @@ import {
   ServiceType,
 } from "@prisma/client";
 
-import { mapSubscriptionInterval } from "@/lib/finance/subscription-interval";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth/session";
 import { sellableStoreWhere } from "@/lib/store/sellable-store";
@@ -17,20 +17,6 @@ import {
 } from "@/lib/vendor/vendor-service-query";
 import { canVendorUsePayOnArrival } from "@/lib/services/payment-policy";
 import { getStorePlan } from "@/lib/finance/store-plan";
-
-function normalizeSubscriptionInterval(
-  serviceType: string,
-  rawInterval: string | null,
-): { interval: string | null } | { error: string } {
-  if (serviceType !== "SUBSCRIPTION") {
-    return { interval: rawInterval };
-  }
-  const normalized = rawInterval?.trim().toLowerCase() ?? "";
-  if (!mapSubscriptionInterval(normalized)) {
-    return { error: "A billing interval is required for subscription services." };
-  }
-  return { interval: normalized };
-}
 
 function slugify(text: string): string {
   return text
@@ -223,6 +209,18 @@ export async function createService(formData: FormData) {
   const intervalResult = normalizeSubscriptionInterval(serviceType, subscriptionInterval);
   if ("error" in intervalResult) return { error: intervalResult.error };
   const resolvedSubscriptionInterval = intervalResult.interval;
+  const subscriptionError = validateSubscriptionConfiguration({
+    serviceType,
+    interval: resolvedSubscriptionInterval,
+    price,
+    sessionsIncluded,
+    cancellationDays: subscriptionCancellationDays,
+    trialDays: subscriptionTrialPeriod,
+    trialPrice: subscriptionTrialPrice,
+    canPause: subscriptionCanPause,
+    pauseMaxWeeks: subscriptionPauseMaxWeeks,
+  });
+  if (subscriptionError) return { error: subscriptionError };
 
   let slug = slugify(name);
   const existing = await prisma.product.findUnique({ where: { slug } });
@@ -295,6 +293,7 @@ export async function createService(formData: FormData) {
     },
   });
 
+  revalidatePath("/dashboard/vendor/creation", "layout");
   revalidatePath("/dashboard/vendor/services");
   return { ok: true };
 }
@@ -423,6 +422,18 @@ export async function updateService(id: string, formData: FormData) {
   const intervalResult = normalizeSubscriptionInterval(serviceType, subscriptionInterval);
   if ("error" in intervalResult) return { error: intervalResult.error };
   const resolvedSubscriptionInterval = intervalResult.interval;
+  const subscriptionError = validateSubscriptionConfiguration({
+    serviceType,
+    interval: resolvedSubscriptionInterval,
+    price,
+    sessionsIncluded,
+    cancellationDays: subscriptionCancellationDays,
+    trialDays: subscriptionTrialPeriod,
+    trialPrice: subscriptionTrialPrice,
+    canPause: subscriptionCanPause,
+    pauseMaxWeeks: subscriptionPauseMaxWeeks,
+  });
+  if (subscriptionError) return { error: subscriptionError };
 
   await prisma.product.update({
     where: { id },
@@ -498,6 +509,7 @@ export async function updateService(id: string, formData: FormData) {
     },
   });
 
+  revalidatePath("/dashboard/vendor/creation", "layout");
   revalidatePath("/dashboard/vendor/services");
   revalidatePath(`/service/${existing.slug}`);
   return { ok: true };
@@ -519,6 +531,7 @@ export async function deleteService(id: string) {
     where: { id },
     data: { isPublished: false, isArchived: true },
   });
+  revalidatePath("/dashboard/vendor/creation", "layout");
   revalidatePath("/dashboard/vendor/services");
   return { ok: true };
 }
@@ -547,6 +560,7 @@ export async function toggleServicePublished(
     select: { isPublished: true },
   });
 
+  revalidatePath("/dashboard/vendor/creation", "layout");
   revalidatePath("/dashboard/vendor/services");
   return { ok: true, isPublished: updated.isPublished };
 }
@@ -575,6 +589,7 @@ export async function permanentlyDeleteService(serviceId: string): Promise<{ ok:
     data: { isPublished: false, isArchived: true },
   });
 
+  revalidatePath("/dashboard/vendor/creation", "layout");
   revalidatePath("/dashboard/vendor/services");
   return { ok: true };
 }
@@ -601,6 +616,7 @@ export async function bulkToggleServicesPublished(
     data: { isPublished: publish },
   });
 
+  revalidatePath("/dashboard/vendor/creation", "layout");
   revalidatePath("/dashboard/vendor/services");
   return { ok: true };
 }
@@ -768,7 +784,8 @@ export async function updateServiceAvailability(
     });
 
     revalidatePath("/dashboard/vendor/staff");
-    revalidatePath("/dashboard/vendor/services");
+    revalidatePath("/dashboard/vendor/creation", "layout");
+  revalidatePath("/dashboard/vendor/services");
     revalidatePath("/service/[slug]", "page");
     return { success: true };
   } catch {
@@ -802,7 +819,8 @@ export async function toggleServiceAvailability(
     });
 
     revalidatePath("/dashboard/vendor/staff");
-    revalidatePath("/dashboard/vendor/services");
+    revalidatePath("/dashboard/vendor/creation", "layout");
+  revalidatePath("/dashboard/vendor/services");
     return { success: true };
   } catch {
     return { error: "Could not update availability" };

@@ -29,6 +29,7 @@ export async function handleBookingPaymentSucceeded(input: {
       autoCompleteAt: true,
       customerId: true,
       earningsReleased: true,
+      cancelledAt: true,
       product: {
         select: {
           slug: true,
@@ -46,7 +47,15 @@ export async function handleBookingPaymentSucceeded(input: {
     },
   });
 
-  if (!booking || booking.status === BookingStatus.CANCELLED) return;
+  if (
+    !booking ||
+    booking.cancelledAt ||
+    (
+      [BookingStatus.CANCELLED, BookingStatus.COMPLETED, BookingStatus.NO_SHOW] as BookingStatus[]
+    ).includes(booking.status)
+  ) {
+    throw new Error("Booking payment target is closed");
+  }
 
   const autoCompleteAt = getBookingAutoCompleteAt(booking.bookingDate, booking.endTime);
   const plan = resolveVendorPlan(booking.product.store.subscriptionPlan);

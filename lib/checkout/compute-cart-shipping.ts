@@ -55,6 +55,8 @@ const checkoutCartInclude = {
       price: true,
       stock: true,
       isPublished: true,
+        isService: true,
+        isArchived: true,
       deliveryFee: true,
       allowDelivery: true,
       allowPickup: true,

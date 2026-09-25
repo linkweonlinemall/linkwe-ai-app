@@ -155,7 +155,8 @@ export async function createEvent(
       select: { id: true },
     });
 
-    revalidatePath(EVENTS_PATH);
+    revalidatePath("/dashboard/vendor/creation", "layout");
+  revalidatePath(EVENTS_PATH);
     return { success: true, eventId: event.id };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Failed to create event." };
@@ -231,7 +232,8 @@ export async function updateEvent(
       },
     });
 
-    revalidatePath(EVENTS_PATH);
+    revalidatePath("/dashboard/vendor/creation", "layout");
+  revalidatePath(EVENTS_PATH);
     revalidatePath(`${EVENTS_PATH}/${eventId}/edit`);
     return { success: true };
   } catch (err) {
@@ -275,8 +277,10 @@ export async function publishEvent(
     data: { status: "PUBLISHED", isPublished: true },
   });
 
+  revalidatePath("/dashboard/vendor/creation", "layout");
   revalidatePath(EVENTS_PATH);
-  revalidatePath(`${EVENTS_PATH}/${eventId}/tickets`);
+  revalidatePath("/dashboard/vendor/creation", "layout");
+    revalidatePath(`${EVENTS_PATH}/${eventId}/tickets`);
   revalidatePath(`/events/${event.slug}`);
   return { success: true };
 }
@@ -338,6 +342,7 @@ export async function deleteEvent(
     };
   }
 
+  revalidatePath("/dashboard/vendor/creation", "layout");
   revalidatePath(EVENTS_PATH);
   revalidatePath(`/events/${event.slug}`);
   return { success: true };
@@ -451,6 +456,7 @@ export async function createTicketType(
       select: { id: true },
     });
 
+    revalidatePath("/dashboard/vendor/creation", "layout");
     revalidatePath(`${EVENTS_PATH}/${eventId}/tickets`);
     return { success: true, ticketTypeId: ticketType.id };
   } catch (err) {
@@ -508,6 +514,7 @@ export async function updateTicketType(
 
   try {
     await prisma.eventTicketType.update({ where: { id: ticketTypeId }, data: updates });
+    revalidatePath("/dashboard/vendor/creation", "layout");
     revalidatePath(`${EVENTS_PATH}/${ticketType.eventId}/tickets`);
     return { success: true };
   } catch (err) {
@@ -533,7 +540,8 @@ export async function deleteTicketType(
   }
 
   await prisma.eventTicketType.delete({ where: { id: ticketTypeId } });
-  revalidatePath(`${EVENTS_PATH}/${ticketType.eventId}/tickets`);
+  revalidatePath("/dashboard/vendor/creation", "layout");
+    revalidatePath(`${EVENTS_PATH}/${ticketType.eventId}/tickets`);
   return { success: true };
 }
 
@@ -589,6 +597,7 @@ export async function unpublishEvent(
     data: { status: "DRAFT", isPublished: false },
   });
 
+  revalidatePath("/dashboard/vendor/creation", "layout");
   revalidatePath(EVENTS_PATH);
   revalidatePath(`/events/${event.slug}`);
   return { success: true };
@@ -658,6 +667,7 @@ export async function bulkUpdateEventStatus(
     }
   }
 
+  revalidatePath("/dashboard/vendor/creation", "layout");
   revalidatePath(EVENTS_PATH);
   return { success: true, count, errors };
 }

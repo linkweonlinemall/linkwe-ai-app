@@ -20,6 +20,8 @@ export async function cancelOnDemandCore(
       id: true,
       status: true,
       amountPaid: true,
+      earningsReleased: true,
+      autoCompleteAt: true,
       customerId: true,
       store: {
         select: { id: true, ownerId: true },
@@ -30,6 +32,12 @@ export async function cancelOnDemandCore(
   if (!request) return { ok: false, error: "Request not found" };
   if (request.status === OnDemandRequestStatus.COMPLETED) {
     return { ok: false, error: "This request is already completed and cannot be refunded" };
+  }
+  if (request.status === OnDemandRequestStatus.REFUND_PENDING) {
+    return { ok: false, error: "A refund is already being processed" };
+  }
+  if (request.earningsReleased) {
+    return { ok: false, error: "Earnings have already been released for this request" };
   }
   if (
     request.status === OnDemandRequestStatus.CANCELLED ||
@@ -43,6 +51,18 @@ export async function cancelOnDemandCore(
   // with amountPaid > 0 and no successful (or already-refunded) refund.
   let refundedTTD = 0;
   if (request.amountPaid != null && request.amountPaid > 0) {
+    const claimed = await prisma.onDemandRequest.updateMany({
+      where: {
+        id: requestId,
+        status: request.status,
+        earningsReleased: false,
+      },
+      data: { status: OnDemandRequestStatus.REFUND_PENDING, autoCompleteAt: null },
+    });
+    if (claimed.count !== 1) {
+      return { ok: false, error: "This request changed. Refresh and try again." };
+    }
+
     const payment = await prisma.paymentAttempt.findFirst({
       where: {
         purpose: "ON_DEMAND_SERVICE",
@@ -52,6 +72,10 @@ export async function cancelOnDemandCore(
       orderBy: { createdAt: "desc" },
     });
     if (!payment?.providerTransactionId) {
+      await prisma.onDemandRequest.updateMany({
+        where: { id: requestId, status: OnDemandRequestStatus.REFUND_PENDING },
+        data: { status: request.status, autoCompleteAt: request.autoCompleteAt },
+      });
       return {
         ok: false,
         error: "Could not locate the payment to refund. Nothing was changed.",
@@ -69,6 +93,10 @@ export async function cancelOnDemandCore(
         refundedTTD = request.amountPaid;
       } catch (err) {
         console.error("[cancelOnDemandCore] WiPay refund failed", err);
+        await prisma.onDemandRequest.updateMany({
+          where: { id: requestId, status: OnDemandRequestStatus.REFUND_PENDING },
+          data: { status: request.status, autoCompleteAt: request.autoCompleteAt },
+        });
         return { ok: false, error: "Refund failed. Please try again." };
       }
     }
@@ -76,15 +104,26 @@ export async function cancelOnDemandCore(
   }
 
   // 3. DB write
-  await prisma.onDemandRequest.update({
-    where: { id: requestId },
+  const closed = await prisma.onDemandRequest.updateMany({
+    where: {
+      id: requestId,
+      status:
+        refundedTTD > 0
+          ? OnDemandRequestStatus.REFUND_PENDING
+          : request.status,
+      earningsReleased: false,
+    },
     data: {
       status: newStatus,
+      autoCompleteAt: null,
       ...(newStatus === "DECLINED" && declineReason != null
         ? { declineReason, respondedAt: new Date() }
         : {}),
     },
   });
+  if (closed.count !== 1) {
+    return { ok: false, error: "This request changed. Contact support for review." };
+  }
 
   // 4. Notifications (outside the write — no network calls inside a transaction)
   await createNotification({

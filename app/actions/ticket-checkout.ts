@@ -1,4 +1,6 @@
 "use server";
+import { priceCoupon } from "@/lib/coupons/server";
+import { CouponError, allocateDiscount } from "@/lib/coupons/pricing";
 
 import { randomUUID } from "crypto";
 
@@ -171,6 +173,7 @@ export async function createTicketPaymentIntent(
     select: {
       id: true,
       title: true,
+      storeId: true,
       isPublished: true,
       status: true,
       store: {
@@ -286,6 +289,7 @@ export async function createTicketPaymentIntent(
 
       let discountMinor = 0;
       let promoId: string | null = null;
+      let storeCoupon = null;
 
       if (normalizedPromoCode) {
         const promo = await tx.eventPromoCode.findUnique({
@@ -307,7 +311,11 @@ export async function createTicketPaymentIntent(
             })
           : 0;
 
-        if (!promo || !isPromoCodeRedeemable(promo, now, reservedCount)) {
+        if (!promo) {
+          storeCoupon = await priceCoupon(event.storeId,"event",normalizedPromoCode,validatedItems.map(item=>({key:`ticket:${item.ticketTypeId}`,parentKey:`event:${event.id}`,subtotalMinor:item.unitMinor*item.quantity})),tx);
+          discountMinor=storeCoupon?.discountMinor??0;
+        } else {
+        if (!isPromoCodeRedeemable(promo, now, reservedCount)) {
           throw new PromoInvalidError();
         }
 
@@ -317,6 +325,7 @@ export async function createTicketPaymentIntent(
           promo.discountType,
           promo.discountValue,
         );
+        }
       }
 
       orderTotalMinor = subtotalMinor - discountMinor;
@@ -324,7 +333,11 @@ export async function createTicketPaymentIntent(
       const unitMinorsFlat = validatedItems.flatMap((item) =>
         Array.from({ length: item.quantity }, () => item.unitMinor),
       );
-      const pricePaidMinors = distributePricePaidMinor(unitMinorsFlat, discountMinor);
+      const eligibleUnitTotals=validatedItems.flatMap(item=>Array.from({length:item.quantity},()=>storeCoupon?.eligibleKeys?.includes(`ticket:${item.ticketTypeId}`)?item.unitMinor:0));
+      const unitDiscounts=storeCoupon?allocateDiscount(eligibleUnitTotals,discountMinor):[];
+      const pricePaidMinors = storeCoupon
+        ? unitMinorsFlat.map((price,index)=>price-unitDiscounts[index])
+        : distributePricePaidMinor(unitMinorsFlat, discountMinor);
 
       let globalIdx = 0;
       let priceIdx = 0;
@@ -357,6 +370,7 @@ export async function createTicketPaymentIntent(
           userId: session.userId,
           eventId,
           promoCodeId: promoId,
+          couponSnapshot: storeCoupon??undefined,
           promoReservationExpiresAt,
           status: freeOrder ? "PAID" : "PENDING_PAYMENT",
           subtotal: subtotalMinor,
@@ -394,6 +408,7 @@ export async function createTicketPaymentIntent(
     ticketCount = txResult.ticketCount;
     isFree = txResult.free;
   } catch (e) {
+    if (e instanceof CouponError) return {ok:false,error:e.message,reason:"promo_invalid"};
     if (e instanceof PromoInvalidError) {
       return { ok: false, error: "Promo code is no longer valid.", reason: "promo_invalid" };
     }

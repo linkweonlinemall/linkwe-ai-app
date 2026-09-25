@@ -23,9 +23,9 @@ export type TutorialDefinition = {
 const routeStep = (route: string, title: string, body: string): TutorialStep => ({ route, title, body });
 const field = (route: string, name: string, title: string, body: string, note?: string): TutorialStep => ({ route, title, body, selector: `[name="${name}"]`, field: true, note });
 
-const PRODUCT_ROUTE = "/dashboard/vendor/products/new";
-const SERVICE_ROUTE = "/dashboard/vendor/services/new";
-const EVENT_ROUTE = "/dashboard/vendor/events/new";
+const PRODUCT_ROUTE = "/dashboard/vendor/creation/new?type=product";
+const SERVICE_ROUTE = "/dashboard/vendor/creation/new?type=service";
+const EVENT_ROUTE = "/dashboard/vendor/creation/new?type=event";
 
 const productBasics: TutorialStep[] = [
   field(PRODUCT_ROUTE, "name", "Product name", "Use the exact customer-facing name. Include the important product or model words shoppers will search for; avoid internal abbreviations."),
@@ -89,11 +89,11 @@ export const tutorialCatalog = {
   products: {
     label: "Manage products", description: "Operate the catalogue, inventory, publishing and bulk actions.", category: "Create & sell", duration: "4 min",
     steps: [
-      routeStep("/dashboard/vendor/products", "Product catalogue", "This page is the operating list for physical and digital products."),
-      { route: "/dashboard/vendor/products", selector: '[href="/dashboard/vendor/products/new"]', title: "Add a product", body: "Create a new listing here. Choose the correct product type before entering information because fields change by type." },
-      { route: "/dashboard/vendor/products", selector: '[data-tour="products-list"]', title: "Read each product row", body: "Check image, name, type, price, stock and publication status. Open Edit when the public information or inventory changes." },
-      { route: "/dashboard/vendor/products", selector: '[data-tour="products-select"]', title: "Select products", body: "Select one or more rows to reveal bulk tools. Confirm the selection before applying a change." },
-      { route: "/dashboard/vendor/products", selector: '[data-tour="products-bulk"]', title: "Bulk actions", body: "Publish, unpublish, add stock, feature, change category or delete selected items. Deletion is permanent, so use it carefully." },
+      routeStep("/dashboard/vendor/creation?type=product", "Product catalogue", "This page is the operating list for physical and digital products."),
+      { route: "/dashboard/vendor/creation?type=product", selector: '[href="/dashboard/vendor/creation/new?type=product"]', title: "Add a product", body: "Create a new listing here. Choose the correct product type before entering information because fields change by type." },
+      { route: "/dashboard/vendor/creation?type=product", selector: '[data-tour="creation-library"]', title: "Read each product row", body: "Check image, name, type, price, stock and publication status. Open Edit when the public information or inventory changes." },
+      { route: "/dashboard/vendor/creation?type=product", selector: '[data-tour="creation-library"]', title: "Select products", body: "Select one or more rows to reveal bulk tools. Confirm the selection before applying a change." },
+      { route: "/dashboard/vendor/creation?type=product", selector: '[data-tour="creation-library"]', title: "Bulk actions", body: "Publish, unpublish, add stock, feature, change category or archive selected items. Archived listings can be restored as drafts." },
     ],
   },
   productSimple: {
@@ -134,10 +134,10 @@ export const tutorialCatalog = {
   services: {
     label: "Manage services", description: "Understand service types, status, availability and service actions.", category: "Create & sell", duration: "4 min",
     steps: [
-      routeStep("/dashboard/vendor/services", "Service catalogue", "All bookable, quoted, subscription, on-demand and virtual services are managed here."),
-      { route: "/dashboard/vendor/services", selector: '[href="/dashboard/vendor/services/new"]', title: "Create a service", body: "Start here and choose the buying workflow that matches how the work is actually sold." },
-      { route: "/dashboard/vendor/services", selector: '[data-tour="services-list"]', title: "Service cards", body: "Each card shows the service type, price/status and actions. Edit details, manage availability when relevant, or open the public page." },
-      { route: "/dashboard/vendor/services", selector: '[data-tour="services-select"]', title: "Bulk service controls", body: "Select services to publish, unpublish or delete several at once. Unpublish instead of deleting when the service may return." },
+      routeStep("/dashboard/vendor/creation?type=service", "Service catalogue", "All bookable, quoted, subscription, on-demand and virtual services are managed here."),
+      { route: "/dashboard/vendor/creation?type=service", selector: '[href="/dashboard/vendor/creation/new?type=service"]', title: "Create a service", body: "Start here and choose the buying workflow that matches how the work is actually sold." },
+      { route: "/dashboard/vendor/creation?type=service", selector: '[data-tour="creation-library"]', title: "Service cards", body: "Each card shows the service type, price/status and actions. Edit details, manage availability when relevant, or open the public page." },
+      { route: "/dashboard/vendor/creation?type=service", selector: '[data-tour="creation-library"]', title: "Bulk service controls", body: "Select services to publish, unpublish or archive several at once. Archived services remain available to restore." },
     ],
   },
   serviceBooking: {
@@ -212,9 +212,9 @@ export const tutorialCatalog = {
       routeStep("/dashboard/vendor/orders", "Orders workspace", "Product fulfilment and service work appear in one operational area."),
       { route: "/dashboard/vendor/orders", selector: 'nav[aria-label="Order type"]', title: "Product vs service orders", body: "Use the two tabs to separate shipped/pickup/digital product work from bookings, quotes, requests and subscriptions." },
       { route: "/dashboard/vendor/orders", selector: '[data-tour="orders-action"]', title: "Action required", body: "Start here. Confirm payment and fulfilment method, then open the order. Never fulfil a pending-payment order as if it were paid." },
-      { route: "/dashboard/vendor/orders", selector: '[data-tour="orders-list"]', title: "Order cards", body: "Read order number, date, customer, delivery method, total and current status. Use View order for the full record." },
+      { route: "/dashboard/vendor/orders", selector: '[data-tour="orders-list"]', title: "Order cards", body: "Read order number, date, customer, delivery method, total and current status. Use Order details or Review order for the full record." },
       { route: "/dashboard/vendor/orders", selector: 'a[href^="/dashboard/vendor/orders/"]', navigateSelector: 'a[href^="/dashboard/vendor/orders/"]', title: "Open an order", body: "We’ll open the first available order so you can learn the full fulfilment workspace. This only views the order; it does not change its status." },
-      { selector: '[data-tour="order-progress"]', title: "Follow the correct progress", body: "This progress changes for vendor delivery, LinkWe delivery and local pickup. Advance the real order only after completing the highlighted physical step." },
+      { selector: '[data-tour="order-progress"]', title: "Follow the correct progress", body: "Follow digital delivery or the LinkWe warehouse journey. Choose vendor handover only when the parcel is ready; LinkWe handles warehouse receipt, dispatch and pickup readiness." },
       { selector: '[data-tour="order-items"]', title: "Verify items and variations", body: "Confirm every item, variation, quantity and image before packing. Similar-looking variants must remain separate." },
       { selector: '[data-tour="order-fulfilment-action"]', title: "Take the next fulfilment action", body: "The action shown is based on payment, current status and delivery method. Never use it early just to clear the order." },
       { selector: '[data-tour="order-delivery-location"]', title: "Customer delivery location", body: "For delivery orders, confirm the written address, phone and map pin before leaving. Pickup orders intentionally do not show a customer delivery map." },
@@ -253,10 +253,10 @@ export const tutorialCatalog = {
   events: {
     label: "Manage events", description: "Operate event listings, tickets, attendees and check-in.", category: "Create & sell", duration: "6 min",
     steps: [
-      routeStep("/dashboard/vendor/events", "Event manager", "Create, publish and operate ticketed or free events from this page."),
-      { route: "/dashboard/vendor/events", selector: '[href="/dashboard/vendor/events/new"]', title: "Create an event", body: "Build the event details first, then add ticket types after saving unless it is a free event." },
-      { route: "/dashboard/vendor/events", selector: '[data-tour="events-filters"]', title: "Search and filter", body: "Find draft, published, completed or cancelled events and avoid editing the wrong event." },
-      { route: "/dashboard/vendor/events", selector: '[data-tour="events-list"]', title: "Event cards", body: "Check date, venue, status and sold count. Open the actions menu for edit, tickets, attendees, check-in or cancellation." },
+      routeStep("/dashboard/vendor/creation?type=event", "Event manager", "Create, publish and operate ticketed or free events from this page."),
+      { route: "/dashboard/vendor/creation?type=event", selector: '[href="/dashboard/vendor/creation/new?type=event"]', title: "Create an event", body: "Build the event details first, then add ticket types after saving including a free ticket for a free event." },
+      { route: "/dashboard/vendor/creation?type=event", selector: '[data-tour="creation-types"]', title: "Search and filter", body: "Find draft, published, completed or cancelled events and avoid editing the wrong event." },
+      { route: "/dashboard/vendor/creation?type=event", selector: '[data-tour="creation-library"]', title: "Event cards", body: "Check date, venue, status and sold count. Open the actions menu for edit, tickets, attendees, check-in or cancellation." },
       { title: "Ticket operations", body: "Set ticket inventory and sales windows, monitor attendees, scan QR tickets once, review duplicate scans and use transfers according to policy." },
     ],
   },
@@ -373,12 +373,12 @@ export const tutorialCatalog = {
   messages: {
     label: "Messages", description: "Find, filter and manage customer conversations professionally.", category: "Customers & fulfilment", duration: "5 min",
     steps: [routeStep("/dashboard/vendor/messages", "Messages inbox", "Use Messages for customer questions and work-related communication tied to LinkWe."),
-      { route: "/dashboard/vendor/messages", selector: '[data-tour="message-search"]', title: "Search", body: "Search by customer, subject or relevant text to find an older conversation quickly." },
-      { route: "/dashboard/vendor/messages", selector: '[data-tour="message-filters"]', title: "Conversation filters", body: "Filter unread, orders, services and other message types so priority conversations are not missed." },
+      { route: "/dashboard/vendor/messages", selector: '[data-tour="message-search"]', title: "Search", body: "Search by customer name or recent message text. Inside a conversation, use its search button to find older messages." },
+      { route: "/dashboard/vendor/messages", selector: '[data-tour="message-filters"]', title: "Conversation filters", body: "Choose All, Unread or Needs reply. Needs reply shows conversations whose latest message came from the customer. Sort by newest, oldest or name." },
       { route: "/dashboard/vendor/messages", selector: '[data-tour="message-list"]', title: "Conversation list", body: "Read the customer, context, last message, time and unread status before opening." },
       { route: "/dashboard/vendor/messages", selector: 'a[href^="/dashboard/vendor/messages/"]', navigateSelector: 'a[href^="/dashboard/vendor/messages/"]', title: "Open a conversation", body: "We’ll open the first available conversation to demonstrate the complete messaging workspace without sending anything." },
-      { selector: '[data-tour="message-thread"]', title: "Conversation thread", body: "Keep commitments and order/service context in the correct conversation. Be clear, timely and professional." },
-      { selector: '[data-tour="message-composer"]', title: "Practise a reply", body: "You can type here while the tour remains open. Nothing is sent unless you deliberately press Send. Never request passwords, card data or unnecessary identity documents." },
+      { selector: '[data-tour="message-thread"]', title: "Conversation thread", body: "Customer replies refresh automatically. Open the information button for this customer’s recent orders, bookings and service requests." },
+      { selector: '[data-tour="message-composer"]', title: "Practise a reply", body: "Quick replies insert editable text. Drafts stay saved in this browser tab. Send with the orange button or Enter on desktop; Shift + Enter adds a new line. On mobile, use the send button." },
       { title: "Resolve the next action", body: "End with who will do what and when. Return to unread conversations and follow through on promises." }],
   },
   reviews: {

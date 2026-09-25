@@ -1,3 +1,4 @@
+import CouponSummary from "@/components/checkout/CouponSummary";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -28,6 +29,7 @@ export default async function OrderConfirmationPage({ params }: Props) {
       id: true,
       referenceNumber: true,
       subtotalMinor: true,
+      couponSnapshot: true,
       shippingMinor: true,
       totalMinor: true,
       items: {
@@ -118,6 +120,7 @@ export default async function OrderConfirmationPage({ params }: Props) {
             </div>
           ))}
 
+          <CouponSummary snapshot={order.couponSnapshot}/>
           <div className="mt-4 space-y-2 text-sm">
             <div className="flex justify-between" style={{ color: "var(--text-secondary)" }}>
               <span>Subtotal</span>

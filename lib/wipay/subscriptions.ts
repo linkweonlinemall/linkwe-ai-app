@@ -1,6 +1,8 @@
+import { fulfillWiPayAttempt } from "@/lib/payments/fulfill-wipay-attempt";
 import type { PaymentPurpose, Prisma } from "@prisma/client";
 
 import { BASE_URL } from "@/lib/email/resend";
+import { checkoutExpiresAt } from "@/lib/payments/checkout-expiry";
 import { prisma } from "@/lib/prisma";
 import { chargeTrustedCard, createTrustedCardEnrollment } from "@/lib/wipay/wapi";
 import { createWiPayHostedPayment } from "@/lib/wipay/payments";
@@ -18,6 +20,12 @@ type SubscriptionContext = {
   metadata: Prisma.InputJsonValue;
   forceEnroll?: boolean;
 };
+
+function subscriptionActiveKey(input: SubscriptionContext): string {
+  return input.purpose === "VENDOR_SUBSCRIPTION"
+    ? `VENDOR_SUBSCRIPTION:${input.targetId}`
+    : `SERVICE_SUBSCRIPTION:${input.userId}:${input.targetId}`;
+}
 
 export async function beginWiPaySubscription(input: SubscriptionContext): Promise<string> {
   const trustedCard = await prisma.wiPayTrustedCard.findFirst({
@@ -62,10 +70,17 @@ export async function beginWiPayManualSubscription(input: SubscriptionContext): 
       amountMinor: input.amountMinor,
       userId: input.userId,
       targetId: input.targetId,
+      activeKey: subscriptionActiveKey(input),
+      expiresAt: checkoutExpiresAt(),
       providerData: input.metadata,
     },
   });
   try {
+    if(input.amountMinor===0&&input.purpose==="SERVICE_SUBSCRIPTION"){
+      await fulfillWiPayAttempt(attempt);
+      await prisma.paymentAttempt.update({where:{id:attempt.id},data:{status:"SUCCEEDED",activeKey:null,paidAt:new Date()}});
+      return "/dashboard/customer/subscriptions?coupon=applied";
+    }
     const result = await createWiPayHostedPayment({
       merchantOrderId: attempt.merchantOrderId,
       amountMinor: input.amountMinor,
@@ -76,7 +91,14 @@ export async function beginWiPayManualSubscription(input: SubscriptionContext): 
     await prisma.paymentAttempt.update({ where: { id: attempt.id }, data: { providerTransactionId: result.transactionId } });
     return result.url;
   } catch (error) {
-    await prisma.paymentAttempt.update({ where: { id: attempt.id }, data: { status: "ERROR", failureMessage: error instanceof Error ? error.message : "WiPay payment setup failed" } });
+    await prisma.paymentAttempt.update({
+      where: { id: attempt.id },
+      data: {
+        status: "ERROR",
+        activeKey: null,
+        failureMessage: error instanceof Error ? error.message : "WiPay payment setup failed",
+      },
+    });
     throw error;
   }
 }
@@ -94,19 +116,33 @@ export async function startSubscriptionCharge(
       userId: input.userId,
       targetId: input.targetId,
       trustedCardId,
+      activeKey: subscriptionActiveKey(input),
+      expiresAt: checkoutExpiresAt(),
       providerData: input.metadata,
     },
   });
-  const result = await chargeTrustedCard({
-    providerUuid,
-    merchantOrderId: attempt.merchantOrderId,
-    amountMinor: input.amountMinor,
-    responseUrl: `${BASE_URL}/api/payments/wipay/return`,
-    data: JSON.stringify({ purpose: input.purpose, targetId: input.targetId }),
-  });
-  await prisma.paymentAttempt.update({
-    where: { id: attempt.id },
-    data: { providerTransactionId: result.transaction_id },
-  });
-  return result.url;
+  try {
+    const result = await chargeTrustedCard({
+      providerUuid,
+      merchantOrderId: attempt.merchantOrderId,
+      amountMinor: input.amountMinor,
+      responseUrl: `${BASE_URL}/api/payments/wipay/return`,
+      data: JSON.stringify({ purpose: input.purpose, targetId: input.targetId }),
+    });
+    await prisma.paymentAttempt.update({
+      where: { id: attempt.id },
+      data: { providerTransactionId: result.transaction_id },
+    });
+    return result.url;
+  } catch (error) {
+    await prisma.paymentAttempt.update({
+      where: { id: attempt.id },
+      data: {
+        status: "ERROR",
+        activeKey: null,
+        failureMessage: error instanceof Error ? error.message : "WiPay payment setup failed",
+      },
+    });
+    throw error;
+  }
 }

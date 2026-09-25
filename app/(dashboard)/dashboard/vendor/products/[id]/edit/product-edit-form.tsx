@@ -193,7 +193,7 @@ export function ProductEditForm({
 
   return (
     <>
-      <div className="mb-6 flex items-center justify-between">
+      <div data-creation-heading="true" className="mb-6 flex items-center justify-between">
         <div>
           <a
             href="/dashboard/vendor/products"
@@ -232,7 +232,7 @@ export function ProductEditForm({
           </p>
         ) : null}
 
-        <div
+        <div data-creation-section="Product Type"
           className="rounded-xl bg-white p-5 sm:p-6"
           style={{ border: "1px solid var(--card-border)" }}
         >
@@ -308,7 +308,7 @@ export function ProductEditForm({
           </div>
         </div>
 
-        <div
+        <div data-creation-section="Product Details"
           className="rounded-xl bg-white p-5 sm:p-6"
           style={{ border: "1px solid var(--card-border)" }}
         >
@@ -399,7 +399,7 @@ export function ProductEditForm({
           </div>
         </div>
 
-        <div
+        <div data-creation-section="Pricing &amp; Inventory"
           className="rounded-xl bg-white p-5 sm:p-6"
           style={{ border: "1px solid var(--card-border)" }}
         >
@@ -458,7 +458,7 @@ export function ProductEditForm({
         </div>
 
         {productType === "digital" ? (
-          <div
+          <div data-creation-section="Digital file"
             className="rounded-xl bg-white p-5 sm:p-6"
             style={{ border: "1px solid var(--card-border)" }}
           >
@@ -598,7 +598,7 @@ export function ProductEditForm({
         ) : null}
 
         {productType === "variable" ? (
-          <div
+          <div data-creation-section="Variants"
             className="rounded-xl bg-white p-5 sm:p-6"
             style={{ border: "1px solid var(--card-border)" }}
           >
@@ -612,7 +612,7 @@ export function ProductEditForm({
           </div>
         ) : null}
 
-        <div
+        <div data-creation-section="Images"
           className="rounded-xl bg-white p-5 sm:p-6"
           style={{ border: "1px solid var(--card-border)" }}
         >
@@ -661,7 +661,7 @@ export function ProductEditForm({
         </div>
 
         {productType !== "digital" ? (
-          <div
+          <div data-creation-section="Shipping"
             className="rounded-xl bg-white p-5 sm:p-6"
             style={{ border: "1px solid var(--card-border)" }}
           >
@@ -710,7 +710,7 @@ export function ProductEditForm({
         ) : null}
 
         {productType !== "digital" ? (
-          <div
+          <div data-creation-section="Location"
             className="rounded-xl bg-white p-5 sm:p-6"
             style={{ border: "1px solid var(--card-border)" }}
           >
@@ -730,9 +730,9 @@ export function ProductEditForm({
           </div>
         ) : null}
 
-        <CheckoutFieldsBuilder initialFields={product.checkoutFields} />
+        <div data-creation-section="Checkout questions"><CheckoutFieldsBuilder initialFields={product.checkoutFields} /></div>
 
-        <div
+        <div data-creation-section="SEO"
           className="rounded-xl bg-white p-5 sm:p-6"
           style={{ border: "1px solid var(--card-border)" }}
         >
@@ -763,11 +763,11 @@ export function ProductEditForm({
           </div>
         </div>
 
-        <RelatedItemsPanel
+        <div data-creation-section="Related listings"><RelatedItemsPanel
           fromType="PRODUCT"
           fromId={product.id}
           initialItems={initialRelatedItems}
-        />
+        /></div>
 
         <div className="flex flex-wrap gap-3">
           <button

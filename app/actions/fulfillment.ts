@@ -1,10 +1,8 @@
 "use server";
 
-import { NotificationType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { createNotification } from "@/lib/notifications/create";
 import { alertOperations } from "@/lib/fulfillment/admin-alerts";
 import { getSession } from "@/lib/auth/session";
 import { recalculateMainOrderStatus } from "@/lib/fulfillment/order-status";
@@ -15,15 +13,15 @@ async function chooseInbound(formData: FormData, method: "VENDOR_DROPOFF" | "PIC
   if (!session || session.role !== "VENDOR") redirect("/");
   const id = String(formData.get("splitOrderId") ?? "").trim();
   const mainOrderId = await prisma.$transaction(async (tx) => {
-    const split = await tx.splitOrder.findFirst({ where: { id, store: { ownerId: session.userId }, status: { in: ["AWAITING_VENDOR_ACTION", "PREPARING"] } }, select: { mainOrderId: true, store: { select: { name: true, address: true, region: true } } } });
-    if (!split) return null;
+    const split = await tx.splitOrder.findFirst({ where: { id, store: { ownerId: session.userId }, mainOrder: { status: { notIn: ["DRAFT", "PENDING_PAYMENT", "CANCELLED", "REFUNDED"] } }, status: { in: ["AWAITING_VENDOR_ACTION", "PREPARING"] } }, select: { mainOrderId: true, store: { select: { name: true, address: true, region: true } } } });
+    if (!split) throw new Error("This order is not available for handover.");
     const physical = await tx.orderItem.count({ where: { mainOrderId: split.mainOrderId, store: { ownerId: session.userId }, OR: [{ productId: null }, { product: { isDigital: false } }] } });
     if (!physical) throw new Error("Digital orders do not require warehouse handover.");
-    const claimed = await tx.splitOrder.updateMany({ where: { id, status: { in: ["AWAITING_VENDOR_ACTION", "PREPARING"] }, vendorInboundMethod: null }, data: {
+    const claimed = await tx.splitOrder.updateMany({ where: { id, store: { ownerId: session.userId }, mainOrder: { status: { notIn: ["DRAFT", "PENDING_PAYMENT", "CANCELLED", "REFUNDED"] } }, status: { in: ["AWAITING_VENDOR_ACTION", "PREPARING"] }, vendorInboundMethod: null }, data: {
       vendorInboundMethod: method, vendorActionAt: new Date(), status: method === "PICKUP_REQUESTED" ? "AWAITING_COURIER_PICKUP" : "VENDOR_PREPARING",
       pickupRequestedAt: method === "PICKUP_REQUESTED" ? new Date() : null,
     } });
-    if (!claimed.count) return null;
+    if (!claimed.count) throw new Error("This order has already been updated.");
     if (method === "PICKUP_REQUESTED") {
       const shipment = await tx.shipment.create({ data: { type: "INBOUND_COURIER_PICKUP", carrier: "CSF Couriers", shipmentStatus: "PENDING", pickupFeeMinor: 4000, region: split.store.region, inboundForSplitOrderId: id, splitOrderId: id } });
       await tx.splitOrder.update({ where: { id }, data: { inboundShipmentId: shipment.id } });
@@ -51,6 +49,7 @@ export async function startPreparing(formData: FormData): Promise<void> {
     where: {
       id: splitOrderId,
       store: { ownerId: session.userId },
+      mainOrder: { status: { notIn: ["DRAFT", "PENDING_PAYMENT", "CANCELLED", "REFUNDED"] } },
       status: "AWAITING_VENDOR_ACTION",
     },
     select: { id: true, mainOrderId: true },
@@ -58,14 +57,20 @@ export async function startPreparing(formData: FormData): Promise<void> {
 
   if (!splitOrder) redirect("/dashboard/vendor");
 
-  await prisma.splitOrder.update({
-    where: { id: splitOrderId },
+  const updated = await prisma.splitOrder.updateMany({
+    where: {
+      id: splitOrderId,
+      store: { ownerId: session.userId },
+      mainOrder: { status: { notIn: ["DRAFT", "PENDING_PAYMENT", "CANCELLED", "REFUNDED"] } },
+      status: "AWAITING_VENDOR_ACTION",
+    },
     data: {
       status: "PREPARING",
       vendorActionAt: new Date(),
     },
   });
 
+  if (!updated.count) throw new Error("This order has already been updated.");
   await recalculateMainOrderStatus(splitOrder.mainOrderId);
   revalidatePath(`/orders/${splitOrder.mainOrderId}`, "page");
   revalidatePath("/dashboard/vendor");
@@ -87,11 +92,12 @@ export async function markDigitalFulfilled(formData: FormData): Promise<void> {
   const session = await getSession();
   if (!session || session.role !== "VENDOR") redirect("/");
   const id = String(formData.get("splitOrderId") ?? "");
-  const split = await prisma.splitOrder.findFirst({ where: { id, store: { ownerId: session.userId }, status: { in: ["AWAITING_VENDOR_ACTION", "PREPARING"] } }, select: { mainOrderId: true, storeId: true, mainOrder: { select: { buyerId: true } } } });
-  if (!split) return;
+  const split = await prisma.splitOrder.findFirst({ where: { id, store: { ownerId: session.userId }, mainOrder: { status: { notIn: ["DRAFT", "PENDING_PAYMENT", "CANCELLED", "REFUNDED"] } }, status: { in: ["AWAITING_VENDOR_ACTION", "PREPARING"] } }, select: { mainOrderId: true, storeId: true, mainOrder: { select: { buyerId: true } } } });
+  if (!split) throw new Error("This order is not available for fulfilment.");
   const items = await prisma.orderItem.findMany({ where: { mainOrderId: split.mainOrderId, storeId: split.storeId }, select: { product: { select: { isDigital: true } } } });
   if (!items.length || items.some((item) => !item.product?.isDigital)) throw new Error("Physical orders must go through the warehouse.");
-  await prisma.splitOrder.updateMany({ where: { id, status: { in: ["AWAITING_VENDOR_ACTION", "PREPARING"] } }, data: { status: "DELIVERED", deliveredAt: new Date() } });
+  const updated = await prisma.splitOrder.updateMany({ where: { id, store: { ownerId: session.userId }, mainOrder: { status: { notIn: ["DRAFT", "PENDING_PAYMENT", "CANCELLED", "REFUNDED"] } }, status: { in: ["AWAITING_VENDOR_ACTION", "PREPARING"] } }, data: { status: "DELIVERED", deliveredAt: new Date() } });
+  if (!updated.count) throw new Error("This order has already been updated.");
   await recalculateMainOrderStatus(split.mainOrderId);
   revalidatePath("/dashboard/vendor", "layout");
   revalidatePath(`/orders/${split.mainOrderId}`);

@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   updateEvent,
   deleteEvent,
@@ -205,8 +205,7 @@ export function EditEventForm({
   event: EventFormData;
   initialRelatedItems?: ContentLinkItem[];
 }) {
-  const params = useParams<{ id: string }>();
-  const eventId = params.id;
+  const eventId = event.id;
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -312,17 +311,17 @@ export function EditEventForm({
       if ("error" in result) {
         setError(result.error);
       } else {
-        router.push("/dashboard/vendor/events");
+        router.push("/dashboard/vendor/creation?type=event");
       }
     });
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <div data-creation-form="true">
     <form id="edit-event-form" onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-6">
 
       {/* ── Section 1: Basic Details ── */}
-      <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+      <div data-creation-section="Basic details" className="rounded-2xl border border-zinc-200 bg-white p-5">
         <p className="mb-4 text-sm font-bold text-zinc-900">Basic details</p>
         <div className="flex flex-col gap-4">
 
@@ -475,16 +474,16 @@ export function EditEventForm({
       </div>
 
       {/* ── Section 1b: Entertainment & Lineup ── */}
-      <LineupEditor value={lineup} onChange={setLineup} />
+      <div data-creation-section="Entertainment & lineup"><LineupEditor value={lineup} onChange={setLineup} /></div>
 
-      <RelatedItemsPanel
+      <div data-creation-section="Related listings"><RelatedItemsPanel
         fromType="EVENT"
         fromId={event.id}
         initialItems={initialRelatedItems}
-      />
+      /></div>
 
       {/* ── Section 2: Location ── */}
-      <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+      <div data-creation-section="Location" className="rounded-2xl border border-zinc-200 bg-white p-5">
         <p className="mb-3 text-sm font-bold text-zinc-900">Location</p>
         <div className="mb-4 flex gap-2">
           {(["IN_PERSON", "ONLINE", "HYBRID"] as const).map((loc) => (
@@ -556,7 +555,7 @@ export function EditEventForm({
       </div>
 
       {/* ── Section 3: Cover Image ── */}
-      <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+      <div data-creation-section="Cover image" className="rounded-2xl border border-zinc-200 bg-white p-5">
         <p className="mb-2 text-sm font-bold text-zinc-900">Cover image</p>
         {coverImage ? (
           <div className="relative mb-3 w-full max-w-sm">
@@ -604,7 +603,7 @@ export function EditEventForm({
       </div>
 
       {/* ── Section 4: Gallery ── */}
-      <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+      <div data-creation-section="Gallery" className="rounded-2xl border border-zinc-200 bg-white p-5">
         <p className="mb-2 text-sm font-bold text-zinc-900">Gallery</p>
         {galleryImages.length > 0 && (
           <div className="mb-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
@@ -674,7 +673,7 @@ export function EditEventForm({
       </div>
 
       {/* ── Section 5: Settings ── */}
-      <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+      <div data-creation-section="Settings" className="rounded-2xl border border-zinc-200 bg-white p-5">
         <p className="mb-4 text-sm font-bold text-zinc-900">Settings</p>
         <div className="flex flex-col gap-4">
           <div>

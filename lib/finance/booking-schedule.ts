@@ -1,21 +1,19 @@
+import { slotInstantTrinidad, ymdInTrinidad } from "@/lib/timezone/trinidad";
+
 /**
- * Scheduled start of a ProductBooking in UTC (booking date anchor + startTime HH:mm).
+ * Scheduled start of a ProductBooking as the UTC instant represented by its
+ * Trinidad calendar date and local wall-clock time.
  */
 export function getBookingScheduledStart(bookingDate: Date, startTime: string): Date {
-  const [h, m] = startTime.split(":").map((v) => parseInt(v, 10));
-  const start = new Date(bookingDate);
-  start.setUTCHours(h, m ?? 0, 0, 0);
-  return start;
+  return slotInstantTrinidad(ymdInTrinidad(bookingDate), startTime);
 }
 
 /**
- * Scheduled end of a ProductBooking in UTC (booking date anchor + endTime HH:mm).
+ * Scheduled end of a ProductBooking as the UTC instant represented by its
+ * Trinidad calendar date and local wall-clock time.
  */
 export function getBookingScheduledEnd(bookingDate: Date, endTime: string): Date {
-  const [h, m] = endTime.split(":").map((v) => parseInt(v, 10));
-  const end = new Date(bookingDate);
-  end.setUTCHours(h, m ?? 0, 0, 0);
-  return end;
+  return slotInstantTrinidad(ymdInTrinidad(bookingDate), endTime);
 }
 
 export function getBookingAutoCompleteAt(

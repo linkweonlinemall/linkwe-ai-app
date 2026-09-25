@@ -25,6 +25,7 @@ export type ServiceAvailabilityInput = {
 export type ExistingBookingSlot = {
   date: Date | string;
   startTime: string;
+  endTime?: string;
   currentBookings?: number;
   maxBookings?: number;
   isAvailable?: boolean;
@@ -73,28 +74,39 @@ function countBookingsOnDate(
   dateStr: string,
   existingSlots: ExistingBookingSlot[],
 ): number {
-  return existingSlots.filter((s) => {
+  return existingSlots.reduce((count, s) => {
     const key = dateKeyFromInput(s.date);
-    if (key !== dateStr) return false;
-    const booked =
-      s.isAvailable === false ||
-      (s.currentBookings ?? 0) >= (s.maxBookings ?? 1);
-    return booked;
-  }).length;
+    if (key !== dateStr) return count;
+    const currentBookings = s.currentBookings ?? 0;
+    if (currentBookings > 0) return count + currentBookings;
+    return count + (s.isAvailable === false ? 1 : 0);
+  }, 0);
 }
 
 function isSlotBooked(
   dateStr: string,
   startTime: string,
+  endTime: string,
+  durationMinutes: number,
+  bufferMinutes: number,
   existingSlots: ExistingBookingSlot[],
 ): boolean {
+  const candidateStart = minsFromTime(startTime);
+  const candidateEnd = minsFromTime(endTime) + bufferMinutes;
+
   return existingSlots.some((s) => {
     const key = dateKeyFromInput(s.date);
-    if (key !== dateStr || s.startTime !== startTime) return false;
-    return (
+    if (key !== dateStr) return false;
+    const occupied =
       s.isAvailable === false ||
-      (s.currentBookings ?? 0) >= (s.maxBookings ?? 1)
-    );
+      (s.currentBookings ?? 0) > 0;
+    if (!occupied) return false;
+
+    const existingStart = minsFromTime(s.startTime);
+    const existingEnd = s.endTime
+      ? minsFromTime(s.endTime) + bufferMinutes
+      : existingStart + durationMinutes + bufferMinutes;
+    return candidateStart < existingEnd && candidateEnd > existingStart;
   });
 }
 
@@ -141,7 +153,14 @@ export function getAvailableSlots(
   while (current + duration <= endMins) {
     const startTime = timeFromMins(current);
     const endTime = timeFromMins(current + duration);
-    const booked = isSlotBooked(dateStr, startTime, existingSlots);
+    const booked = isSlotBooked(
+      dateStr,
+      startTime,
+      endTime,
+      duration,
+      buffer,
+      existingSlots,
+    );
     const inPast = dateStr === todayYmd && isSlotInPastTrinidad(dateStr, startTime);
     const available = !dayCapReached && !booked && !inPast;
     slots.push({ time: startTime, endTime, available });

@@ -179,6 +179,9 @@ export async function startSubscriptionCheckout(
     select: { id: true, subscriptionPlan: true, planRenewsAt: true },
   });
   if (!store) return { ok: false, error: "No store found" };
+  if (store.subscriptionPlan === "PRO" && plan === "GROWTH") {
+    return { ok: false, error: "Please contact support to downgrade your plan." };
+  }
   if (
     store.subscriptionPlan === plan &&
     store.planRenewsAt &&

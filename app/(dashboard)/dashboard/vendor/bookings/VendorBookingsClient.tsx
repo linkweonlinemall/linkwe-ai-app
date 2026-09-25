@@ -107,12 +107,14 @@ function formatTime(t: string): string {
 export default function VendorBookingsClient({
   bookings,
   stats,
+  initialBookingId,
 }: {
   bookings: Booking[];
   stats: Stats;
+  initialBookingId?: string;
 }) {
   const [filter, setFilter] = useState("all");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(initialBookingId ?? null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [localBookings, setLocalBookings] = useState<Booking[]>(bookings);
   const [vendorNoteInput, setVendorNoteInput] = useState<Record<string, string>>({});
@@ -124,8 +126,8 @@ export default function VendorBookingsClient({
   const [meetingLinkValue, setMeetingLinkValue] = useState<Record<string, string>>({});
   const [savingLink, setSavingLink] = useState<string | null>(null);
 
-  const filtered =
-    filter === "all" ? localBookings : localBookings.filter((b) => b.status === filter);
+  const filtered = (filter === "all" ? [...localBookings] : localBookings.filter((b) => b.status === filter))
+    .sort((a,b) => Number(b.id === initialBookingId) - Number(a.id === initialBookingId));
 
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {

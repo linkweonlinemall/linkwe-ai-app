@@ -1,6 +1,6 @@
 import {
-  LayoutDashboard, Package, ShoppingBag, CalendarDays, MessageCircle, Zap,
-  Sparkles, Ticket, Repeat2, Store, Image, QrCode, Newspaper, Bot, Users,
+  LayoutDashboard, Layers3, ShoppingBag, CalendarDays, MessageCircle, Zap,
+  Repeat2, Store, Image, QrCode, Newspaper, Bot, Users,
   Truck, Handshake, Wallet, ChartNoAxesCombined, Star, Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -21,9 +21,7 @@ export const workspaceGroups: { label: string; items: WorkspaceLink[] }[] = [
     { label: "Messages", path: "/messages", description: "Conversations with customers", icon: MessageCircle },
   ] },
   { label: "Create & sell", items: [
-    { label: "Products", path: "/products", description: "Your catalogue, pricing and stock", icon: Package },
-    { label: "Services", path: "/services", description: "Bookings, quotes and service listings", icon: Sparkles },
-    { label: "Events", path: "/events", description: "Tickets, attendees and check-in", icon: Ticket },
+    { label: "Creation Zone", path: "/creation", description: "Create and manage products, services, events, tickets and coupons", icon: Layers3 },
     { label: "Subscribers", path: "/subscribers", description: "Recurring service subscriptions", icon: Repeat2 },
   ] },
   { label: "Your brand", items: [

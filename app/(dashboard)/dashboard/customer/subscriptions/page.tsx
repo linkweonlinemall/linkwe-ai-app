@@ -37,7 +37,7 @@ export default async function CustomerSubscriptionsPage() {
   if (!result.ok) redirect("/login");
 
   const { subscriptions } = result;
-  const active = subscriptions.filter((s) => s.status === "ACTIVE" || s.status === "PAST_DUE");
+  const active = subscriptions.filter((s) => s.status !== "CANCELED");
   const past = subscriptions.filter((s) => s.status === "CANCELED");
 
   return (
@@ -133,12 +133,18 @@ export default async function CustomerSubscriptionsPage() {
                               </div>
                               <span
                                 className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
-                                  sub.cancelAtPeriodEnd
+                                  sub.status === "PAUSED"
+                                    ? "bg-sky-100 text-sky-700"
+                                    : sub.status === "PAST_DUE"
+                                      ? "bg-red-100 text-red-700"
+                                      : sub.cancelAtPeriodEnd
                                     ? "bg-amber-100 text-amber-800"
                                     : "bg-emerald-100 text-emerald-700"
                                 }`}
                               >
-                                {sub.status === "PAST_DUE"
+                                {sub.status === "PAUSED"
+                                  ? "Paused"
+                                  : sub.status === "PAST_DUE"
                                   ? "Renewal due"
                                   : sub.cancelAtPeriodEnd
                                     ? "Ending soon"
@@ -154,6 +160,19 @@ export default async function CustomerSubscriptionsPage() {
                                 ? `Ends on ${periodEndLabel}`
                                 : `Paid through ${periodEndLabel} · renew manually`}
                             </p>
+                            {sub.trialEndsAt && sub.trialEndsAt >= new Date() ? (
+                              <p className="mt-1 text-xs font-semibold text-sky-700">Trial ends {formatSubscriptionPeriodEnd(sub.trialEndsAt)}</p>
+                            ) : null}
+                            {sub.sessionsIncluded ? (
+                              <p className="mt-1 text-xs font-semibold text-zinc-700">
+                                {sub.sessionsRemaining ?? 0} of {sub.sessionsIncluded} sessions remaining this cycle
+                              </p>
+                            ) : null}
+                            {sub.cancellationNoticeDays > 0 ? (
+                              <p className="mt-1 text-[11px] text-zinc-500">
+                                Cancellation requires {sub.cancellationNoticeDays} days&apos; notice before renewal.
+                              </p>
+                            ) : null}
                           </div>
                         </div>
                         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 px-4 py-3">
@@ -165,9 +184,12 @@ export default async function CustomerSubscriptionsPage() {
                           </Link>
                           <SubscriptionManageActions
                             subscriptionId={sub.id}
+                            status={sub.status}
                             cancelAtPeriodEnd={sub.cancelAtPeriodEnd}
                             currentPeriodEnd={sub.currentPeriodEnd}
                             canRenew={sub.canRenew}
+                            canPause={sub.canPause}
+                            pauseEndsAt={sub.pauseEndsAt}
                             layout="card"
                           />
                         </div>

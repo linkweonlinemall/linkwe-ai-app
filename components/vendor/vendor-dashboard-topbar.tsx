@@ -5,9 +5,9 @@ import { useEffect, useRef } from "react";
 import { Search } from "lucide-react";
 import { workspaceGroups, workspaceLinkActive } from "./dashboard-navigation";
 import s from "./workspace.module.css";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { IconHome, IconPlus, IconRouteSquare } from "@tabler/icons-react";
-import { CalendarDays, ChevronDown, ConciergeBell, Package } from "lucide-react";
+import { CalendarDays, ChevronDown, ConciergeBell, Package, Ticket, Tag, Layers3 } from "lucide-react";
 
 import MessageNavBadge from "@/components/messages/MessageNavBadge";
 import NotificationBell from "@/components/ui/NotificationBell";
@@ -55,6 +55,8 @@ export default function VendorDashboardTopbar({
   const addMenu = useRef<HTMLDetailsElement>(null);
   const now = new Date(renderedAt);
   const pathname = usePathname() ?? "";
+  const searchParams=useSearchParams();
+  const creationType=searchParams.get("type");
   const currentPage = workspaceGroups.flatMap(group => group.items).find(item => workspaceLinkActive(pathname, item.path))?.label ?? "Workspace";
   useEffect(() => {
     const close = (event: MouseEvent) => { if (!addMenu.current?.contains(event.target as Node)) addMenu.current?.removeAttribute("open"); };
@@ -63,18 +65,19 @@ export default function VendorDashboardTopbar({
     document.addEventListener("keydown", escape);
     return () => { document.removeEventListener("click", close); document.removeEventListener("keydown", escape); };
   }, []);
-  useEffect(() => { addMenu.current?.removeAttribute("open"); }, [pathname]);
+  useEffect(() => { addMenu.current?.removeAttribute("open"); }, [pathname, searchParams]);
   const pageTour: TutorialName | null =
     pathname === "/dashboard/vendor" ? "essentials" :
-    pathname === "/dashboard/vendor/products/new" ? "productSimple" :
+    pathname === "/dashboard/vendor/creation/new" && creationType === "product" ? "productSimple" :
     pathname.startsWith("/dashboard/vendor/products") ? "products" :
-    pathname === "/dashboard/vendor/services/new" ? "serviceBooking" :
+    pathname === "/dashboard/vendor/creation/new" && creationType === "service" ? "serviceBooking" :
     pathname.startsWith("/dashboard/vendor/services") ? "services" :
     pathname.startsWith("/dashboard/vendor/orders") ? "orders" :
     pathname.startsWith("/dashboard/vendor/bookings") ? "bookings" :
     pathname.startsWith("/dashboard/vendor/subscribers") ? "subscribers" :
-    pathname === "/dashboard/vendor/events/new" ? "eventCreate" :
+    pathname === "/dashboard/vendor/creation/new" && creationType === "event" ? "eventCreate" :
     pathname.startsWith("/dashboard/vendor/events") ? "events" :
+    pathname.startsWith("/dashboard/vendor/creation") ? "products" :
     pathname.startsWith("/dashboard/vendor/requests") ? "requests" :
     pathname.startsWith("/dashboard/vendor/store") ? "store" :
     pathname.startsWith("/dashboard/vendor/partners") ? "partners" :
@@ -122,15 +125,18 @@ export default function VendorDashboardTopbar({
           <NotificationBell compactToolbar initialUnreadCount={unreadCount} variant="light" />
         </div>
         <details ref={addMenu} className="group relative">
-          <summary className="inline-flex size-10 cursor-pointer list-none items-center justify-center whitespace-nowrap rounded-lg bg-gradient-to-b from-[#F06A2A] to-[#D4450A] text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,.3),0_5px_12px_rgba(212,69,10,.2)] hover:brightness-105 sm:h-auto sm:w-auto sm:gap-1.5 sm:px-4 sm:py-2" aria-label="Add product, service or event">
+          <summary className="inline-flex size-10 cursor-pointer list-none items-center justify-center whitespace-nowrap rounded-lg bg-gradient-to-b from-[#F06A2A] to-[#D4450A] text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,.3),0_5px_12px_rgba(212,69,10,.2)] hover:brightness-105 sm:h-auto sm:w-auto sm:gap-1.5 sm:px-4 sm:py-2" aria-label="Create a product, service, event, ticket or coupon">
             <IconPlus className="size-[18px]" stroke={2} aria-hidden />
             <span className="hidden sm:inline">Create</span>
             <ChevronDown className="hidden size-3.5 transition group-open:rotate-180 sm:block" aria-hidden />
           </summary>
           <div className="absolute right-0 top-[calc(100%+.55rem)] z-[80] w-56 overflow-hidden rounded-2xl border border-orange-100 bg-white p-2 shadow-[0_18px_55px_rgba(28,28,26,.20)]">
-            <Link href="/dashboard/vendor/products/new" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-zinc-800 hover:bg-orange-50 hover:text-[#D4450A]"><span className="flex size-9 items-center justify-center rounded-xl bg-orange-100 text-[#D4450A]"><Package className="size-4" /></span>Add product</Link>
-            <Link href="/dashboard/vendor/services/new" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-zinc-800 hover:bg-amber-50 hover:text-amber-700"><span className="flex size-9 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><ConciergeBell className="size-4" /></span>Add service</Link>
-            <Link href="/dashboard/vendor/events/new" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-zinc-800 hover:bg-rose-50 hover:text-rose-700"><span className="flex size-9 items-center justify-center rounded-xl bg-rose-100 text-rose-700"><CalendarDays className="size-4" /></span>Add event</Link>
+            <Link href="/dashboard/vendor/creation/new?type=product" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-zinc-800 hover:bg-orange-50 hover:text-[#D4450A]"><span className="flex size-9 items-center justify-center rounded-xl bg-orange-100 text-[#D4450A]"><Package className="size-4" /></span>Add product</Link>
+            <Link href="/dashboard/vendor/creation/new?type=service" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-zinc-800 hover:bg-amber-50 hover:text-amber-700"><span className="flex size-9 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><ConciergeBell className="size-4" /></span>Add service</Link>
+            <Link href="/dashboard/vendor/creation/new?type=event" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-zinc-800 hover:bg-rose-50 hover:text-rose-700"><span className="flex size-9 items-center justify-center rounded-xl bg-rose-100 text-rose-700"><CalendarDays className="size-4" /></span>Add event</Link>
+              <Link href="/dashboard/vendor/creation/new?type=ticket"><Ticket size={17}/> Add tickets</Link>
+              <Link href="/dashboard/vendor/creation/coupons"><Tag size={17}/> Coupons</Link>
+              <Link href="/dashboard/vendor/creation"><Layers3 size={17}/> Open Creation Zone</Link>
           </div>
         </details>
 

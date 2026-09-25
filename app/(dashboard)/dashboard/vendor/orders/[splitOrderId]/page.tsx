@@ -1,533 +1,78 @@
-import type { CSSProperties } from "react";
-import type { StoreShippingMode } from "@prisma/client";
+import CouponSummary from "@/components/checkout/CouponSummary";
+import Image from "next/image";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-
-import {
-  markDigitalFulfilled,
-  chooseVendorDropoff,
-  chooseCourierPickup,
-} from "@/app/actions/fulfillment";
+import { notFound, redirect } from "next/navigation";
+import { ArrowLeft, ArrowUpRight, Check, Download, Mail, MapPin, Package, Phone, QrCode, Route, Truck, Wallet } from "lucide-react";
 import { getSession } from "@/lib/auth/session";
 import { calculateEarningsMinor, getCommissionRate } from "@/lib/finance/commission";
 import { resolveVendorPlan } from "@/lib/finance/vendor-plan";
 import { getCourierPickupFeeMinor } from "@/lib/fulfillment/courier-pickup-rates";
 import { prisma } from "@/lib/prisma";
-import { getSplitProgressSteps, getSplitStepIndex } from "@/lib/orders/split-progress";
 import { generateOrderReceiptQRCodeDataURL } from "@/lib/orders/qr-code";
 import { vendorSplitOrderDetailSelect } from "@/lib/vendor/vendor-split-order-query";
+import { effectiveOrderStatus, orderBucket, orderDate, orderMoney, orderNextStep, orderProgress, orderStatusLabel, safeOrderLink } from "@/lib/vendor/order-workspace";
 import { StoreMapBox } from "@/components/storefront/StorefrontMapAndProducts";
+import OrderFulfilmentActions from "@/components/vendor/orders/OrderFulfilmentActions";
+import s from "@/components/vendor/orders/orders.module.css";
 import { MessageCustomerButton } from "./message-customer-button";
 import { parseCheckoutFields, type CheckoutResponses } from "@/lib/checkout/custom-fields";
 
 type Props = { params: Promise<{ splitOrderId: string }> };
-
-const SCARLET = "#D4450A";
-const EMERALD = "#059669";
-
-function getStatusBadge(status: string): { label: string; style: CSSProperties } {
-  const pill = {
-    display: "inline-flex" as const,
-    alignItems: "center" as const,
-    borderRadius: "9999px",
-    borderWidth: "1px",
-    borderStyle: "solid" as const,
-    padding: "0.25rem 0.75rem",
-    fontSize: "0.75rem",
-    fontWeight: 600,
-  };
-  switch (status) {
-    case "AWAITING_VENDOR_ACTION":
-      return {
-        label: "Action Required",
-        style: { ...pill, backgroundColor: "#FEF2F2", color: "#B91C1C", borderColor: "#FECACA" },
-      };
-    case "PREPARING":
-    case "VENDOR_PREPARING":
-      return {
-        label: "Preparing",
-        style: { ...pill, backgroundColor: "#FFFBEB", color: "#B45309", borderColor: "#FDE68A" },
-      };
-    case "SHIPPED":
-    case "OUT_FOR_DELIVERY":
-      return {
-        label: "Out for delivery",
-        style: { ...pill, backgroundColor: "#EFF6FF", color: "#1D4ED8", borderColor: "#BFDBFE" },
-      };
-    case "READY_FOR_LINKWE":
-      return {
-        label: "Ready for LinkWe",
-        style: { ...pill, backgroundColor: "#EFF6FF", color: "#1D4ED8", borderColor: "#BFDBFE" },
-      };
-    case "READY_FOR_CUSTOMER_PICKUP":
-      return {
-        label: "Ready for customer pickup",
-        style: { ...pill, backgroundColor: "#ECFDF5", color: "#047857", borderColor: "#A7F3D0" },
-      };
-    case "AWAITING_COURIER_PICKUP":
-    case "COURIER_ASSIGNED":
-    case "COURIER_PICKED_UP":
-    case "VENDOR_DROPPED_OFF":
-      return {
-        label:
-          status === "AWAITING_COURIER_PICKUP"
-            ? "Awaiting Courier"
-            : status === "COURIER_ASSIGNED"
-              ? "Courier Assigned"
-              : status === "COURIER_PICKED_UP"
-                ? "Courier Picked Up"
-                : "Dropped Off",
-        style: { ...pill, backgroundColor: "#EFF6FF", color: "#1D4ED8", borderColor: "#BFDBFE" },
-      };
-    case "AT_WAREHOUSE":
-    case "PACKAGED":
-    case "BUNDLED_FOR_DISPATCH":
-    case "DISPATCHED":
-      return {
-        label:
-          status === "AT_WAREHOUSE"
-            ? "At Warehouse"
-            : status === "PACKAGED"
-              ? "Packaged"
-              : status === "BUNDLED_FOR_DISPATCH"
-                ? "Bundled"
-                : "Dispatched",
-        style: { ...pill, backgroundColor: "#ECFDF5", color: "#047857", borderColor: "#A7F3D0" },
-      };
-    case "DELIVERED":
-    case "COMPLETED":
-      return {
-        label: status === "COMPLETED" ? "Completed" : "Delivered",
-        style: { ...pill, backgroundColor: "#ECFDF5", color: "#047857", borderColor: "#A7F3D0" },
-      };
-    default:
-      return {
-        label: status.replace(/_/g, " "),
-        style: { ...pill, backgroundColor: "#F4F4F5", color: "#52525B", borderColor: "#E4E4E7" },
-      };
-  }
-}
-
-function formatMinor(minor: number): string {
-  return `TTD ${(minor / 100).toFixed(2)}`;
-}
-
-function formatDate(date: Date): string {
-  return new Date(date).toLocaleDateString("en-TT", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function formatRegion(region: string): string {
-  return region.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function lineItemImageUrl(imageUrl: string | null | undefined): string | null {
-  const url = imageUrl?.trim();
-  return url ? url : null;
-}
-
-function LineItemThumbnail({ imageUrl, alt }: { imageUrl: string | null; alt: string }) {
-  return (
-    <div className="size-10 shrink-0 overflow-hidden rounded-lg bg-zinc-100">
-      {imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- remote Cloudinary / listing URLs
-        <img src={imageUrl} alt={alt} className="h-full w-full object-cover" />
-      ) : (
-        <div className="h-full w-full" aria-hidden />
-      )}
-    </div>
-  );
-}
-
 export default async function VendorOrderDetailPage({ params }: Props) {
   const session = await getSession();
   if (!session) redirect("/login");
   if (session.role !== "VENDOR") redirect("/");
-
   const { splitOrderId } = await params;
+  const order = await prisma.splitOrder.findFirst({ where: { id: splitOrderId, store: { ownerId: session.userId } }, select: vendorSplitOrderDetailSelect });
+  if (!order) notFound();
 
-  const splitOrder = await prisma.splitOrder.findFirst({
-    where: {
-      id: splitOrderId,
-      store: { ownerId: session.userId },
-    },
-    select: vendorSplitOrderDetailSelect,
-  });
+  const main = order.mainOrder;
+  const buyer = main.buyer;
+  const ownItems = main.items.filter(item => item.storeId === order.storeId);
+  const digital = ownItems.length > 0 && ownItems.every(item => item.product?.isDigital);
+  const pickup = !main.shippingAddress;
+  const status = effectiveOrderStatus(order.status, main.status);
+  const row = {kind:"product" as const, status, inboundMethod:order.vendorInboundMethod, detail:digital ? "Digital delivery" : pickup ? "Warehouse pickup" : "LinkWe delivery"};
+  const bucket = orderBucket(row);
+  const actionable = bucket === "action";
+  const progress = orderProgress(status, digital, pickup);
+  const mainRef = main.referenceNumber ?? `LW-${main.id.slice(-8).toUpperCase()}`;
+  const splitRef = order.referenceNumber ?? `SP-${order.id.slice(-8).toUpperCase()}`;
+  const money = (amount: number) => orderMoney(amount, order.currency);
+  const plan = resolveVendorPlan(order.store.subscriptionPlan);
+  const { commissionMinor, netMinor } = calculateEarningsMinor(order.subtotalMinor, "product", plan);
+  const collectionFee = getCourierPickupFeeMinor(order.store.region ?? "", 1);
+  const pickupFee = order.vendorInboundMethod === "PICKUP_REQUESTED" ? collectionFee : 0;
+  const address = main.shippingAddress;
+  const lat = address?.latitude != null ? Number(address.latitude) : null;
+  const lng = address?.longitude != null ? Number(address.longitude) : null;
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  const addressText = address ? [address.line1, address.line2, address.city, address.region].filter(Boolean).join(", ") : "";
+  const directions = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(lat !== null && lng !== null ? `${lat},${lng}` : addressText)}`;
+  const shipment = order.legacyInboundShipment;
+  const fields = [...new Map([...parseCheckoutFields(order.store.checkoutFields), ...ownItems.flatMap(item => parseCheckoutFields(item.product?.checkoutFields))].map(field=>[field.id,field])).values()];
+  const responses = ((main.checkoutResponses ?? {}) as CheckoutResponses)[order.storeId] ?? {};
+  const responseIds = [...new Set([...fields.map(field=>field.id), ...Object.keys(responses)])];
+  const qr = await generateOrderReceiptQRCodeDataURL(main.id, order.id);
 
-  if (!splitOrder) redirect("/dashboard/vendor");
-
-  const shippingMode = "LINKWE" as StoreShippingMode;
-  const fulfillment = splitOrder.mainOrder.shippingAddress ? "delivery" : "pickup";
-  const badge = getStatusBadge(splitOrder.status);
-  const splitRef = `SP-${splitOrder.id.slice(-8).toUpperCase()}`;
-  const mainRef = `LW-${splitOrder.mainOrderId.slice(-8).toUpperCase()}`;
-  const flowSteps = getSplitProgressSteps(shippingMode, "vendor", fulfillment);
-  const stepIndex = getSplitStepIndex(splitOrder.status, shippingMode, fulfillment);
-  const plan = resolveVendorPlan(splitOrder.store.subscriptionPlan);
-  const { commissionMinor, netMinor: netAfterCommission } = calculateEarningsMinor(
-    splitOrder.subtotalMinor,
-    "product",
-    plan,
-  );
-  const commissionRatePct = Math.round(getCommissionRate("product", plan) * 100);
-  const pickupFeeMinor =
-    splitOrder.vendorInboundMethod === "PICKUP_REQUESTED"
-      ? getCourierPickupFeeMinor(splitOrder.store.region ?? "", 1)
-      : 0;
-  const netEarningsMinor = netAfterCommission - pickupFeeMinor;
-
-  const digitalOnly = splitOrder.mainOrder.items.filter((i) => i.storeId === splitOrder.storeId).every((i) => i.product?.isDigital);
-  const showInboundChoice = !digitalOnly && ["AWAITING_VENDOR_ACTION", "PREPARING"].includes(splitOrder.status) && !splitOrder.vendorInboundMethod;
-  const showPickupReadyPanel = splitOrder.status === "READY_FOR_CUSTOMER_PICKUP";
-  const showShippedPanel = splitOrder.status === "SHIPPED";
-  const showReadyForLinkWePanel = splitOrder.status === "READY_FOR_LINKWE";
-  const showOutForDeliveryPanel = splitOrder.status === "OUT_FOR_DELIVERY";
-  const showDeliveredPanel = splitOrder.status === "DELIVERED" || splitOrder.status === "COMPLETED";
-  const warehouseHasReceived = ["AT_WAREHOUSE", "PACKAGED", "BUNDLED_FOR_DISPATCH", "OUT_FOR_DELIVERY", "DISPATCHED", "SHIPPED", "DELIVERED", "COMPLETED", "READY_FOR_CUSTOMER_PICKUP"].includes(splitOrder.status);
-  const receiptQrDataUrl = await generateOrderReceiptQRCodeDataURL(splitOrder.mainOrderId, splitOrder.id);
-  const deliveryLat = splitOrder.mainOrder.shippingAddress?.latitude ? Number(splitOrder.mainOrder.shippingAddress.latitude) : null;
-  const deliveryLng = splitOrder.mainOrder.shippingAddress?.longitude ? Number(splitOrder.mainOrder.shippingAddress.longitude) : null;
-  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-  const checkoutFields = [
-    ...parseCheckoutFields(splitOrder.store.checkoutFields),
-    ...splitOrder.mainOrder.items
-      .filter((item) => item.storeId === splitOrder.storeId)
-      .flatMap((item) => parseCheckoutFields(item.product?.checkoutFields)),
-  ];
-  const checkoutResponses = (splitOrder.mainOrder.checkoutResponses ?? {}) as CheckoutResponses;
-  const vendorResponses = checkoutResponses[splitOrder.storeId] ?? {};
-
-  return (
-    <div className="bg-[#f5f5f5] pb-24 sm:pb-0">
-      <div className="max-w-4xl mx-auto px-6 py-6">
-        <Link
-          href="/dashboard/vendor/orders"
-          className="mb-4 inline-flex items-center gap-1 text-xs hover:underline"
-          style={{ color: "var(--blue)" }}
-        >
-          ← Back to dashboard
-        </Link>
-
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-          <div>
-            <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
-              {splitRef}
-            </h1>
-            <p className="mt-1 text-sm text-zinc-400">Main order: {mainRef}</p>
-            <p className="mt-1 text-sm text-zinc-600">Placed {formatDate(splitOrder.mainOrder.createdAt)}</p>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span style={badge.style}>{badge.label}</span>
-              <span
-                className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
-                style={{
-                  backgroundColor: fulfillment === "pickup" ? "#F0FDF4" : shippingMode === "SELF" ? "#FFF7ED" : "#EFF6FF",
-                  color: fulfillment === "pickup" ? "#047857" : shippingMode === "SELF" ? "#C2410C" : "#1D4ED8",
-                  borderColor: fulfillment === "pickup" ? "#A7F3D0" : shippingMode === "SELF" ? "#FED7AA" : "#BFDBFE",
-                }}
-              >
-                {fulfillment === "pickup" ? "Customer pickup" : "Via LinkWe warehouse"}
-              </span>
-            </div>
-          </div>
-          <div className="flex shrink-0 flex-col gap-2 sm:items-end">
-            <a
-              href={`/api/vendor-invoice/${splitOrderId}`}
-              className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50"
-            >
-              Download Invoice
-            </a>
-          </div>
-        </div>
-
-        {digitalOnly && ["AWAITING_VENDOR_ACTION", "PREPARING"].includes(splitOrder.status) ? <form action={markDigitalFulfilled} className="mt-6 rounded-xl bg-white p-5"><input type="hidden" name="splitOrderId" value={splitOrder.id}/><p className="mb-3 text-sm">Digital order: provide the purchased content to the customer, then confirm fulfilment. No warehouse or collection fee applies.</p><button className="rounded-xl bg-[#D4450A] px-4 py-3 text-sm font-semibold text-white">Confirm digital order fulfilled</button></form> : null}
-        {showInboundChoice ? <section className="mt-6 rounded-2xl border border-orange-200 bg-orange-50 p-5">
-          <p className="text-xs font-bold uppercase tracking-widest text-orange-700">Warehouse handover</p>
-          <h2 className="mt-2 text-xl font-semibold">How will this order reach LinkWe?</h2>
-          <p className="mt-2 text-sm text-zinc-600">All physical orders come to our warehouse. We combine the customer’s items and arrange delivery with CSF Couriers.</p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <form action={chooseVendorDropoff}><input type="hidden" name="splitOrderId" value={splitOrder.id}/><button className="min-h-20 w-full rounded-xl border border-zinc-200 bg-white p-4 text-left font-semibold">I’ll drop it off · Free<span className="mt-1 block text-xs font-normal text-zinc-500">Bring your labelled order to the LinkWe warehouse.</span></button></form>
-            <form action={chooseCourierPickup}><input type="hidden" name="splitOrderId" value={splitOrder.id}/><button className="min-h-20 w-full rounded-xl bg-[#D4450A] p-4 text-left font-semibold text-white">Collect my order · TTD 40<span className="mt-1 block text-xs font-normal text-white/80">Pack it first. TTD 40 will be deducted from this order’s earnings.</span></button></form>
-          </div>
-        </section> : warehouseHasReceived ? <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">Received at the LinkWe warehouse. No further vendor action is needed.</div> : splitOrder.vendorInboundMethod ? <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm">{splitOrder.vendorInboundMethod === "PICKUP_REQUESTED" ? "Collection requested. Staff will arrange collection to our warehouse. TTD 40 is deducted from your earnings." : "Drop-off selected. Bring the labelled order to our warehouse; staff will confirm receipt. No collection fee."}</div> : null}
-
-        <div
-          data-tour="order-progress"
-          className="mt-8 rounded-xl bg-white p-5 sm:p-6"
-          style={{ border: "1px solid var(--card-border)" }}
-        >
-          <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-            Your progress
-          </h2>
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            {flowSteps.map((label, i) => {
-              const isPast = i < stepIndex;
-              const isCurrent = i === stepIndex;
-              return (
-                <div key={label} className="flex min-w-[72px] flex-1 flex-col items-center text-center">
-                  <div
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold"
-                    style={{
-                      backgroundColor: isCurrent ? SCARLET : isPast ? EMERALD : "#f4f4f5",
-                      color: isCurrent || isPast ? "#fff" : "#a1a1aa",
-                    }}
-                  >
-                    {isPast ? "✓" : i + 1}
-                  </div>
-                  <p
-                    className="mt-2 text-[10px] font-medium leading-tight sm:text-xs"
-                    style={{ color: isCurrent ? SCARLET : isPast ? EMERALD : "#a1a1aa" }}
-                  >
-                    {label}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="space-y-6 lg:col-span-2">
-            <div
-              data-tour="order-items"
-              className="rounded-xl bg-white p-5 sm:p-6"
-              style={{ border: "1px solid var(--card-border)" }}
-            >
-              <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                Items
-              </h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-zinc-200 text-left text-xs uppercase tracking-wide text-zinc-400">
-                      <th className="pb-2 pr-2 font-medium">Item</th>
-                      <th className="pb-2 pr-2 font-medium">Qty</th>
-                      <th className="pb-2 pr-2 text-right font-medium">Unit</th>
-                      <th className="pb-2 text-right font-medium">Line</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {splitOrder.items.map((item) => {
-                      const imageUrl = lineItemImageUrl(item.listing?.imageUrl);
-                      return (
-                      <tr key={item.id} className="border-b border-zinc-100">
-                        <td className="py-2 pr-2">
-                          <div className="flex items-center gap-2">
-                            <LineItemThumbnail imageUrl={imageUrl} alt={item.titleSnapshot} />
-                            <span className="font-medium text-zinc-900">{item.titleSnapshot}</span>
-                          </div>
-                        </td>
-                        <td className="py-2 pr-2 text-zinc-600">{item.quantity}</td>
-                        <td className="py-2 pr-2 text-right text-zinc-600">{formatMinor(item.unitPriceMinor)}</td>
-                        <td className="py-2 text-right font-medium text-zinc-900">{formatMinor(item.lineTotalMinor)}</td>
-                      </tr>
-                    );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-4 flex justify-end border-t border-zinc-100 pt-4">
-                <p className="text-sm font-semibold text-zinc-900">Subtotal {formatMinor(splitOrder.subtotalMinor)}</p>
-              </div>
-            </div>
-
-            {showPickupReadyPanel ? (
-              <div data-tour="order-pickup-ready" className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
-                <h2 className="mb-2 text-sm font-semibold text-emerald-900">Ready for customer pickup</h2>
-                <p className="text-sm text-emerald-800">Keep the order secure until the customer collects it and confirms receipt using their LinkWe order page or the QR code.</p>
-              </div>
-            ) : null}
-
-            {showShippedPanel ? (
-              <div
-                className="rounded-xl bg-white p-5 sm:p-6"
-                style={{ border: "1px solid var(--card-border)" }}
-              >
-                <h2 className="mb-2 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                  Fulfillment
-                </h2>
-                <p className="text-sm text-zinc-600">
-                  Out for delivery — waiting for the customer to confirm receipt.
-                </p>
-              </div>
-            ) : null}
-
-            {showReadyForLinkWePanel ? (
-              <div
-                className="rounded-xl bg-white p-5 sm:p-6"
-                style={{ border: "1px solid var(--card-border)" }}
-              >
-                <h2 className="mb-2 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                  Fulfillment
-                </h2>
-                <p className="text-sm text-zinc-600">
-                  Ready for LinkWe. We&apos;ll collect and deliver it.
-                </p>
-              </div>
-            ) : null}
-
-            {showOutForDeliveryPanel ? (
-              <div
-                className="rounded-xl bg-white p-5 sm:p-6"
-                style={{ border: "1px solid var(--card-border)" }}
-              >
-                <h2 className="mb-2 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                  Fulfillment
-                </h2>
-                <p className="text-sm text-zinc-600">LinkWe is delivering this order.</p>
-              </div>
-            ) : null}
-
-            {showDeliveredPanel ? (
-              <div
-                className="rounded-xl bg-white p-5 sm:p-6"
-                style={{ border: "1px solid var(--card-border)" }}
-              >
-                <h2 className="mb-2 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                  Fulfillment
-                </h2>
-                <p className="text-sm text-zinc-600">
-                  {splitOrder.status === "COMPLETED" ? "Order completed." : "Delivered to the customer."}
-                </p>
-              </div>
-            ) : null}
-          </div>
-
-          <div className="space-y-6 lg:col-span-1">
-            {fulfillment === "delivery" && splitOrder.mainOrder.shippingAddress ? (
-              <div data-tour="order-delivery-location" className="overflow-hidden rounded-xl bg-white" style={{ border: "1px solid var(--card-border)" }}>
-                <div className="p-5 pb-3">
-                  <h2 className="text-sm font-semibold text-zinc-900">Delivery location</h2>
-                  <p className="mt-1 text-xs leading-5 text-zinc-500">{splitOrder.mainOrder.shippingAddress.line1}{splitOrder.mainOrder.shippingAddress.line2 ? `, ${splitOrder.mainOrder.shippingAddress.line2}` : ""}, {splitOrder.mainOrder.shippingAddress.city}</p>
-                  {splitOrder.mainOrder.shippingAddress.phone ? <a href={`tel:${splitOrder.mainOrder.shippingAddress.phone}`} className="mt-1 inline-block text-xs font-semibold text-[#D4450A]">{splitOrder.mainOrder.shippingAddress.phone}</a> : null}
-                </div>
-                {deliveryLat !== null && deliveryLng !== null && mapboxToken ? <div className="h-52 border-t border-zinc-100"><StoreMapBox latitude={deliveryLat} longitude={deliveryLng} mapboxAccessToken={mapboxToken}/></div> : <div className="border-t border-zinc-100 bg-zinc-50 px-5 py-4 text-xs text-zinc-500">The customer supplied an address without a map pin. Use the written address above.</div>}
-              </div>
-            ) : null}
-
-            <div data-tour="order-receipt-qr" className="rounded-xl bg-white p-5 text-center" style={{ border: "1px solid var(--card-border)" }}>
-              <h2 className="text-sm font-semibold text-zinc-900">Customer receipt QR</h2>
-              <p className="mx-auto mt-1 max-w-[240px] text-xs leading-5 text-zinc-500">At handoff, ask the customer to scan this code on their phone. They sign in and confirm receipt securely.</p>
-              {/* eslint-disable-next-line @next/next/no-img-element -- generated QR data URL */}
-              <img src={receiptQrDataUrl} alt="QR code for customer to confirm order receipt" className="mx-auto mt-3 size-44 rounded-xl border border-zinc-100" />
-              <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Customer confirmation required</p>
-            </div>
-
-            {checkoutFields.length > 0 ? <div className="rounded-xl border border-orange-100 bg-white p-5 shadow-sm sm:p-6"><h2 className="mb-1 text-sm font-semibold text-zinc-900">Customer details for this order</h2><p className="mb-4 text-xs text-zinc-500">Information requested by your store at checkout.</p><dl className="space-y-3 text-sm">{checkoutFields.map((field) => { const value = vendorResponses[field.id]; const values = Array.isArray(value) ? value : typeof value === "string" && value ? [value] : []; return <div key={field.id} className="rounded-xl bg-zinc-50 px-3 py-3"><dt className="text-xs font-semibold text-zinc-500">{field.label}</dt><dd className="mt-1 break-words font-medium text-zinc-900">{values.length ? values.map((entry, index) => entry.startsWith("/") || entry.startsWith("http") ? <a key={entry} href={entry} target="_blank" rel="noreferrer" className="text-[#D4450A] underline">Open uploaded file{values.length > 1 ? ` ${index + 1}` : ""}</a> : <span key={entry}>{index ? ", " : ""}{entry}</span>) : <span className="text-zinc-400">Not provided</span>}</dd></div>; })}</dl></div> : null}
-
-            <div
-              className="rounded-xl bg-white p-5 sm:p-6"
-              style={{ border: "1px solid var(--card-border)" }}
-            >
-              <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                Order summary
-              </h2>
-              <dl className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <dt className="text-zinc-500">Vendor subtotal</dt>
-                  <dd className="font-medium text-zinc-900">{formatMinor(splitOrder.subtotalMinor)}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-zinc-500">Shipping</dt>
-                  <dd className="font-medium text-zinc-900">{formatMinor(splitOrder.shippingMinor)}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-zinc-500">Commission ({commissionRatePct}%)</dt>
-                  <dd className="font-medium text-zinc-700">−{formatMinor(commissionMinor)}</dd>
-                </div>
-                {pickupFeeMinor > 0 ? (
-                  <div className="flex justify-between">
-                    <dt className="text-zinc-500">Courier pickup fee</dt>
-                    <dd className="font-medium text-zinc-700">−{formatMinor(pickupFeeMinor)}</dd>
-                  </div>
-                ) : null}
-                <div className="flex justify-between border-t border-zinc-100 pt-3">
-                  <dt className="font-semibold text-zinc-900">Net earnings</dt>
-                  <dd className="font-semibold" style={{ color: EMERALD }}>
-                    {formatMinor(netEarningsMinor)}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-
-            <div
-              className="rounded-xl bg-white p-5 sm:p-6"
-              style={{ border: "1px solid var(--card-border)" }}
-            >
-              <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                Customer
-              </h2>
-              <dl className="space-y-2 text-sm">
-                <div>
-                  <dt className="text-zinc-500">Name</dt>
-                  <dd className="font-medium text-zinc-900">{splitOrder.mainOrder.buyer.fullName}</dd>
-                </div>
-                <div>
-                  <dt className="text-zinc-500">Email</dt>
-                  <dd className="text-zinc-700">{splitOrder.mainOrder.buyer.email}</dd>
-                </div>
-                <div>
-                  <dt className="text-zinc-500">Delivery region</dt>
-                  <dd className="font-medium text-zinc-900">{formatRegion(splitOrder.mainOrder.region)}</dd>
-                </div>
-                <div>
-                  <dt className="text-zinc-500">Order placed</dt>
-                  <dd className="text-zinc-700">{formatDate(splitOrder.mainOrder.createdAt)}</dd>
-                </div>
-              </dl>
-            </div>
-
-            <div
-              className="rounded-xl bg-white p-5 sm:p-6"
-              style={{ border: "1px solid var(--card-border)" }}
-            >
-              <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                Main order
-              </h2>
-              <dl className="space-y-2 text-sm">
-                <div>
-                  <dt className="text-zinc-500">Reference</dt>
-                  <dd className="font-mono font-medium text-zinc-900">{mainRef}</dd>
-                </div>
-                <div>
-                  <dt className="text-zinc-500">Status</dt>
-                  <dd className="font-medium capitalize text-zinc-900">
-                    {splitOrder.mainOrder.status.replace(/_/g, " ").toLowerCase()}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-zinc-500">Vendors in this order</dt>
-                  <dd className="font-medium text-zinc-900">{splitOrder.mainOrder._count.splitOrders}</dd>
-                </div>
-              </dl>
-            </div>
-
-            <div
-              className="rounded-xl bg-white p-5 sm:p-6"
-              style={{ border: "1px solid var(--card-border)" }}
-            >
-              <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                Quick actions
-              </h2>
-              <div className="flex flex-col gap-2">
-                <a
-                  href={`/api/vendor-invoice/${splitOrderId}`}
-                  className="inline-flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                  style={{ backgroundColor: SCARLET }}
-                >
-                  Download Invoice
-                </a>
-                <MessageCustomerButton
-                  customerId={splitOrder.mainOrder.buyer.id}
-                  storeId={splitOrder.storeId}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+  return <div className={s.page}>
+    <Link className={s.back} href="/dashboard/vendor/orders"><ArrowLeft size={15}/> All orders</Link>
+    <header className={s.detailHeader}><div><p className={s.eyebrow}>PRODUCT ORDER · {order.store.name}</p><h1>{mainRef}</h1><p>Placed {orderDate(main.createdAt)} · Your store reference: {splitRef}</p><div className={s.detailTags}><span className={s.badge} data-tone={bucket}>{orderStatusLabel(status)}</span><span className={s.badge}>{row.detail}</span></div></div><div className={s.headerActions}><a className={s.secondary} href={`/api/vendor-invoice/${order.id}`}><Download size={16}/> Download invoice</a></div></header>
+    {actionable ? <OrderFulfilmentActions id={order.id} digital={digital} pickupFeeMinor={collectionFee}/> : <div className={s.notice} data-closed={bucket==="cancelled"}><Route size={23}/><div><strong>{orderNextStep(row)}</strong><p>{bucket==="cancelled" ? "This order is closed. Its details remain available for your records." : status==="PENDING_PAYMENT" ? "Fulfilment will become available once payment has been confirmed." : order.vendorInboundMethod==="VENDOR_DROPOFF" && status==="VENDOR_PREPARING" ? "Your drop-off plan is confirmed. LinkWe will update the order after receiving your parcel." : "The order status updates as it moves through fulfilment. Contact the customer below if you need to clarify anything."}</p></div></div>}
+    <div className={s.detailGrid}>
+      <main className={s.detailMain}>
+        {progress && <section className={s.panel} data-tour="order-progress"><div className={s.panelHeading}><h2>Order progress</h2><Route size={20}/></div><ol className={s.steps} aria-label="Order progress">{progress.steps.map((step,index)=><li key={step} data-current={index===progress.current} data-past={index<progress.current} aria-current={index===progress.current ? "step" : undefined}><span>{index<progress.current ? <Check size={13}/> : index+1}</span>{step}</li>)}</ol></section>}
+        <section className={s.panel} data-tour="order-items"><div className={s.panelHeading}><h2>The order, at a glance.</h2><span>{order.items.reduce((n,item)=>n+item.quantity,0)} {order.items.reduce((n,item)=>n+item.quantity,0)===1?"item":"items"}</span></div><div className={s.items}>{order.items.map(item=><div className={s.item} key={item.id}><div className={s.thumbnail}>{item.listing?.imageUrl ? <Image src={item.listing.imageUrl} alt={item.titleSnapshot} fill sizes="57px" unoptimized/> : <Package size={23}/>}</div><div><h3>{item.titleSnapshot}</h3><p>Quantity {item.quantity} · {money(item.unitPriceMinor)} each</p></div><strong>{money(item.lineTotalMinor)}</strong></div>)}</div><CouponSummary snapshot={order.mainOrder.couponSnapshot} storeId={order.storeId}/><div className={s.subtotal}><span>Your store’s item subtotal</span><span>{money(order.subtotalMinor)}</span></div></section>
+        {responseIds.length>0 && <section className={s.panel}><div className={s.panelHeading}><h2>Made just for this customer.</h2><Package size={20}/></div><p className={s.caption} style={{margin:"-8px 0 17px"}}>Requirements and files supplied at checkout.</p><dl className={s.responses}>{responseIds.map((id,index)=>{const field=fields.find(field=>field.id===id);const value=responses[id];const values=Array.isArray(value) ? value.filter(entry=>typeof entry==="string") : typeof value==="string" && value ? [value] : [];return <div key={id} className={s.response}><dt>{field?.label ?? `Additional checkout response ${index+1}`}</dt><dd>{values.length ? values.map((entry,i)=><div key={i}>{field?.type==="upload" && safeOrderLink(entry) ? <a href={safeOrderLink(entry)!} target="_blank" rel="noopener noreferrer">Open customer file {values.length>1 ? i+1 : ""} ↗</a> : entry}</div>) : "Not provided"}</dd></div>;})}</dl></section>}
+        <section className={s.panel}><div className={s.panelHeading}><h2>Fulfilment details</h2><Truck size={20}/></div><dl className={s.definition}><div><dt>Delivery method</dt><dd>{row.detail}</dd></div><div><dt>Vendor handover</dt><dd>{digital ? "Digital content" : order.vendorInboundMethod==="PICKUP_REQUESTED" ? "Courier collection" : order.vendorInboundMethod==="VENDOR_DROPOFF" ? "Warehouse drop-off" : "Not selected yet"}</dd></div><div><dt>Customer region</dt><dd>{main.region.replaceAll("_"," ")}</dd></div>{!digital && order.vendorInboundMethod==="PICKUP_REQUESTED" && <div><dt>Collection address</dt><dd>{[order.store.address,order.store.region].filter(Boolean).join(", ") || "Contact LinkWe to confirm"}</dd></div>}{shipment && <><div><dt>Collection status</dt><dd>{orderStatusLabel(shipment.status)}</dd></div>{shipment.courier && <div><dt>Courier</dt><dd>{shipment.courier.fullName}{shipment.courier.phone && <><br/><a href={`tel:${shipment.courier.phone}`}>{shipment.courier.phone}</a></>}</dd></div>}{shipment.claimedAt && <div><dt>Assigned</dt><dd>{orderDate(shipment.claimedAt)}</dd></div>}{shipment.pickedUpAt && <div><dt>Collected</dt><dd>{orderDate(shipment.pickedUpAt)}</dd></div>}</>}</dl>{!digital && <p className={s.caption}>Physical orders go through LinkWe. Warehouse staff confirm receipt, dispatch and customer collection.</p>}</section>
+        <section className={s.panel}><div className={s.panelHeading}><h2>Order record</h2><Package size={20}/></div><dl className={s.definition}><div><dt>Main reference</dt><dd>{mainRef}</dd></div><div><dt>Your store reference</dt><dd>{splitRef}</dd></div><div><dt>Main order status</dt><dd>{orderStatusLabel(main.status)}</dd></div><div><dt>Stores in this order</dt><dd>{main._count.splitOrders}</dd></div></dl><p className={s.caption}>This view contains your store’s items. LinkWe coordinates any other stores in the customer’s order.</p></section>
+      </main>
+      <aside className={s.detailAside}>
+        <section className={s.panel}><h2>A little customer care.</h2><div className={s.customerName}><span className={s.avatar}>{buyer.fullName.slice(0,1).toUpperCase()}</span><strong>{buyer.fullName}</strong></div><div className={s.contact}><a href={`mailto:${buyer.email}`}><Mail size={14}/>{buyer.email}</a>{address?.phone && <a href={`tel:${address.phone}`}><Phone size={14}/>{address.phone}</a>}</div><MessageCustomerButton customerId={buyer.id} storeId={order.storeId}/></section>
+        <section className={s.panel}><div className={s.panelHeading}><h2>The numbers</h2><Wallet size={19}/></div><dl className={s.definition}><div><dt>Item subtotal</dt><dd>{money(order.subtotalMinor)}</dd></div><div><dt>Commission ({Math.round(getCommissionRate("product",plan)*100)}%)</dt><dd>−{money(commissionMinor)}</dd></div>{pickupFee>0 && <div><dt>Courier collection</dt><dd>−{money(pickupFee)}</dd></div>}<div className={s.net}><dt>Estimated earnings</dt><dd>{money(netMinor-pickupFee)}</dd></div></dl><p className={s.caption}>Estimate based on your current plan. Payment settlement, refunds and adjustments can affect your final payout.</p><dl className={s.definition} style={{marginTop:16}}><div><dt>Customer shipping allocation</dt><dd>{money(order.shippingMinor)}</dd></div></dl><p className={s.caption}>Shipping is handled by LinkWe and is not included in your estimated earnings.</p><Link className={s.secondary} style={{marginTop:15,width:"100%"}} href="/dashboard/vendor/finance">View your finances <ArrowUpRight size={15}/></Link></section>
+        {!digital && address && <section className={s.panel} data-tour="order-delivery-location"><div className={s.panelHeading}><h2>Delivery location</h2><MapPin size={19}/></div><p className={s.address}>{addressText}</p><a className={s.secondary} href={directions} target="_blank" rel="noopener noreferrer">Open directions <ArrowUpRight size={15}/></a>{lat!==null && lng!==null && token && <div className={s.map}><StoreMapBox latitude={lat} longitude={lng} mapboxAccessToken={token}/></div>}</section>}
+        <details className={`${s.panel} ${s.qrDetails}`} data-tour="order-receipt-qr"><summary>Customer receipt QR <QrCode size={20}/></summary><div className={s.qrContent}><p className={s.caption}>The customer scans this code, signs in and confirms receipt on their own phone.</p><Image src={qr} alt="Customer order receipt confirmation QR code" width={180} height={180} unoptimized/><p className={s.caption}>Only the customer can confirm receipt.</p></div></details>
+      </aside>
     </div>
-  );
+  </div>;
 }

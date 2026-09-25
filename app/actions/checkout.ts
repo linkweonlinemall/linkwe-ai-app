@@ -1,4 +1,8 @@
 "use server";
+import { priceCoupon } from "@/lib/coupons/server";
+import { CouponError } from "@/lib/coupons/pricing";
+import { allocateDiscount, discountedUnits, type CouponSnapshot } from "@/lib/coupons/pricing";
+import { fulfillProductOrder } from "@/lib/payments/fulfill-product-order";
 
 import {
   computeCartShipping,
@@ -74,6 +78,7 @@ export async function createPaymentIntent(
   deliveryLng?: number | null,
   deliveryPhone?: string | null,
   checkoutResponses: CheckoutResponses = {},
+  couponCode?: string,
 ): Promise<CreatePaymentIntentResult> {
 
   const session = await getSession();
@@ -83,7 +88,7 @@ export async function createPaymentIntent(
   if (cartItems.length === 0) return { ok: false, error: "cart_empty" };
 
   for (const item of cartItems) {
-    if (!item.product.isPublished) {
+    if (!item.product.isPublished || item.product.isService || item.product.isArchived) {
       return { ok: false, error: `${item.product.name} is no longer available.` };
     }
     if (!isStoreSellable(item.product.store)) {
@@ -141,29 +146,24 @@ export async function createPaymentIntent(
   }
 
   const { subtotalMinor, totalShippingMinor: shippingMinor, zone, pricingLines } = shipping;
-  const totalMinor = subtotalMinor + shippingMinor;
+  const couponSnapshots: CouponSnapshot[] = [];
+  const lineDiscounts = cartItems.map(() => 0);
+  if(couponCode?.trim()) {
+    const storeIds = [...new Set(cartItems.map(item=>item.product.storeId))];
+    for(const storeId of storeIds){
+      const indexes=cartItems.map((item,index)=>item.product.storeId===storeId?index:-1).filter(index=>index>=0);
+      const totals=indexes.map(index=>Math.round(cartItems[index].product.price*100)*cartItems[index].quantity);
+      try {const coupon=await priceCoupon(storeId,"product",couponCode,indexes.map((index,i)=>({key:`product:${cartItems[index].productId}`,subtotalMinor:totals[i]})));if(coupon){couponSnapshots.push(coupon);const allocated=allocateDiscount(totals.map((total,i)=>coupon.eligibleKeys?.includes(`product:${cartItems[indexes[i]].productId}`)?total:0),coupon.discountMinor);indexes.forEach((index,i)=>lineDiscounts[index]=allocated[i]);}}
+      catch(error){if(!(error instanceof CouponError))throw error;}
+    }
+    if(!couponSnapshots.length)return {ok:false,error:"This coupon is not eligible for the products in your cart. Check its code, expiry and minimum spend."};
+  }
+  const discountMinor=couponSnapshots.reduce((sum,row)=>sum+row.discountMinor,0);
+  const totalMinor = subtotalMinor - discountMinor + shippingMinor;
   const paymentEnvironment =
     session.role === "ADMIN" && (await isAdminPaymentTestMode(session.userId))
       ? "sandbox" as const
       : undefined;
-
-  const recentPending = await prisma.mainOrder.findFirst({
-    where: {
-      buyerId: session.userId,
-      status: "PENDING_PAYMENT",
-      createdAt: { gte: new Date(Date.now() - 30 * 60 * 1000) },
-    },
-    select: { id: true },
-  });
-
-  if (recentPending) {
-    await prisma.orderItem.deleteMany({
-      where: { mainOrderId: recentPending.id },
-    });
-    await prisma.mainOrder.delete({
-      where: { id: recentPending.id },
-    });
-  }
 
   let shippingAddressId: string | undefined;
   if (cartRequiresDelivery) {
@@ -190,21 +190,18 @@ export async function createPaymentIntent(
         status: "PENDING_PAYMENT",
         region: deliveryRegion || "unknown",
         shippingZone: zone,
-        subtotalMinor,
+        subtotalMinor: subtotalMinor-discountMinor,
+        couponSnapshot: couponSnapshots.length ? {code:couponSnapshots[0].code, subtotalMinor,discountMinor,stores:couponSnapshots} : undefined,
         shippingMinor,
         totalMinor,
         shippingAddressId,
         checkoutResponses: Object.keys(checkoutResponses).length > 0 ? checkoutResponses : undefined,
         items: {
-          create: cartItems.map((item, index) => ({
-            listingId: null,
-            productId: item.productId,
-            storeId: item.product.storeId,
-            titleSnapshot: item.product.name,
-            priceMinor: Math.round(item.product.price * 100),
-            quantity: item.quantity,
-            weightLbs: pricingLines[index]?.weightLbs ?? 0.5,
-          })),
+          create: cartItems.flatMap((item,index) => discountedUnits(Math.round(item.product.price*100),item.quantity,lineDiscounts[index]).map(unit => ({
+            listingId:null, productId:item.productId, storeId:item.product.storeId,
+            titleSnapshot:item.product.name, priceMinor:unit.priceMinor, quantity:unit.quantity,
+            weightLbs:pricingLines[index]?.weightLbs??0.5,
+          }))),
         },
       },
     });
@@ -220,6 +217,7 @@ export async function createPaymentIntent(
     return { ok: false, error: "Could not create order. Please try again." };
   }
 
+  if(totalMinor===0){await fulfillProductOrder(order.id,session.userId);return {ok:true,checkoutUrl:`/order-confirmation/${order.id}`,orderId:order.id};}
   const merchantOrderId = `product-${order.id}`;
   await prisma.paymentAttempt.create({
     data: {

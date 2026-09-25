@@ -1,0 +1,1 @@
+ALTER TABLE "store_coupons" ADD COLUMN "targets" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

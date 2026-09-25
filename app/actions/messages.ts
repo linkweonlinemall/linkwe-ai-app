@@ -5,6 +5,7 @@ import { NotificationType } from "@prisma/client";
 import { createNotification } from "@/lib/notifications/create";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { MESSAGE_MAX_LENGTH } from "@/lib/messages/vendor-inbox";
 
 const PREVIEW_MAX_LEN = 120;
 
@@ -17,6 +18,7 @@ export type VendorConversationListItem = {
   lastMessageAt: Date;
   unread: number;
   lastSeenAt: Date | null;
+  lastSenderRole: string | null;
 };
 
 export type CustomerConversationListItem = {
@@ -56,6 +58,7 @@ export type GetConversationMessagesResult =
       ok: true;
       messages: ConversationMessageRow[];
       callerRole: MessageSenderRole;
+      snapshotAt: Date;
     };
 
 export type AdminConversationListItem = {
@@ -241,14 +244,19 @@ export async function getOrCreateConversationAsVendor(
 export async function sendMessage(
   conversationId: string,
   content: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+  clientMessageId?: string,
+): Promise<{ ok: true; message: ConversationMessageRow } | { ok: false; error: string }> {
   const session = await getSession();
   if (!session) return { ok: false, error: "Sign in to send a message." };
 
-  const trimmedContent = content?.trim() ?? "";
+  const trimmedContent = typeof content === "string" ? content.trim() : "";
   if (!trimmedContent) return { ok: false, error: "Message cannot be empty." };
+  if (trimmedContent.length > MESSAGE_MAX_LENGTH) return { ok: false, error: `Keep your message within ${MESSAGE_MAX_LENGTH.toLocaleString()} characters.` };
+  if (clientMessageId && !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(clientMessageId)) {
+    return { ok: false, error: "Please retry with a new message." };
+  }
 
-  const trimmedId = conversationId?.trim();
+  const trimmedId = typeof conversationId === "string" ? conversationId.trim() : "";
   if (!trimmedId) return { ok: false, error: "Conversation not found." };
 
   const conversation = await prisma.conversation.findUnique({
@@ -267,6 +275,19 @@ export async function sendMessage(
     return { ok: false, error: "Not authorized" };
   }
 
+  // A retry after a lost response must not create another message or notification.
+  async function findRetry() {
+    if (!clientMessageId) return null;
+    const existing = await prisma.message.findUnique({ where: { id: clientMessageId } });
+    if (!existing) return null;
+    if (existing.conversationId !== conversation!.id || existing.senderId !== session!.userId || existing.content !== trimmedContent) {
+      return { ok: false as const, error: "This message reference has already been used. Start a new message." };
+    }
+    return { ok: true as const, message: { id:existing.id, senderId:existing.senderId, senderRole:existing.senderRole, content:existing.content, createdAt:existing.createdAt } };
+  }
+  const retried = await findRetry();
+  if (retried) return retried;
+
   const preview = truncatePreview(trimmedContent);
   const now = new Date();
 
@@ -280,10 +301,12 @@ export async function sendMessage(
             storeUnread: { increment: 1 },
           };
 
+  let savedMessage: ConversationMessageRow;
   try {
-    await prisma.$transaction([
+    const [created] = await prisma.$transaction([
       prisma.message.create({
         data: {
+          ...(clientMessageId ? { id: clientMessageId } : {}),
           conversationId: conversation.id,
           senderId: session.userId,
           senderRole,
@@ -299,7 +322,12 @@ export async function sendMessage(
         },
       }),
     ]);
+    savedMessage = { id:created.id, senderId:created.senderId, senderRole:created.senderRole, content:created.content, createdAt:created.createdAt };
   } catch (err) {
+    if (clientMessageId && typeof err === "object" && err !== null && "code" in err && err.code === "P2002") {
+      const raced = await findRetry();
+      if (raced) return raced;
+    }
     console.error("[messages] sendMessage", err);
     return { ok: false, error: "Could not send message." };
   }
@@ -346,7 +374,7 @@ export async function sendMessage(
     // Notification failures must not break message send
   }
 
-  return { ok: true };
+  return { ok: true, message: savedMessage };
 }
 
 export async function getMyConversations(): Promise<MyConversationsResult> {
@@ -365,6 +393,7 @@ export async function getMyConversations(): Promise<MyConversationsResult> {
         lastMessageAt: true,
         storeUnread: true,
         customer: { select: { fullName: true, lastSeenAt: true } },
+        messages: { take: 1, orderBy: [{ createdAt: "desc" }, { id: "desc" }], select: { senderRole: true } },
       },
     });
 
@@ -378,6 +407,7 @@ export async function getMyConversations(): Promise<MyConversationsResult> {
         lastMessageAt: row.lastMessageAt,
         unread: row.storeUnread,
         lastSeenAt: row.customer.lastSeenAt,
+        lastSenderRole: row.messages[0]?.senderRole ?? null,
       })),
     };
   }
@@ -411,6 +441,7 @@ export async function getMyConversations(): Promise<MyConversationsResult> {
 
 export async function getConversationMessages(
   conversationId: string,
+  markAsRead = true,
 ): Promise<GetConversationMessagesResult> {
   const session = await getSession();
   if (!session) return { ok: false, error: "Sign in to view messages." };
@@ -423,6 +454,7 @@ export async function getConversationMessages(
     select: {
       id: true,
       customerId: true,
+      lastMessageAt: true,
       store: { select: { ownerId: true } },
     },
   });
@@ -447,19 +479,32 @@ export async function getConversationMessages(
     },
   });
 
-  if (callerRole === "CUSTOMER") {
-    await prisma.conversation.update({
-      where: { id: conversation.id },
+  if (markAsRead && callerRole === "CUSTOMER") {
+    await prisma.conversation.updateMany({
+      where: { id: conversation.id, lastMessageAt: { lte: conversation.lastMessageAt } },
       data: { customerUnread: 0 },
     });
-  } else if (callerRole === "VENDOR") {
-    await prisma.conversation.update({
-      where: { id: conversation.id },
+  } else if (markAsRead && callerRole === "VENDOR") {
+    await prisma.conversation.updateMany({
+      where: { id: conversation.id, lastMessageAt: { lte: conversation.lastMessageAt } },
       data: { storeUnread: 0 },
     });
   }
 
-  return { ok: true, messages, callerRole };
+  return { ok: true, messages, callerRole, snapshotAt: conversation.lastMessageAt };
+}
+
+/** Called only after the vendor has actually opened the visible thread. */
+export async function markVendorConversationRead(conversationId: string, snapshotAt: string) {
+  const session = await getSession();
+  if (!session || session.role !== "VENDOR") return { ok: false as const };
+  const seenAt = new Date(snapshotAt);
+  if (!Number.isFinite(seenAt.getTime())) return { ok: false as const };
+  const updated = await prisma.conversation.updateMany({
+    where: { id: conversationId, store: { ownerId: session.userId }, lastMessageAt: { lte: seenAt } },
+    data: { storeUnread: 0 },
+  });
+  return { ok: true as const, cleared: updated.count > 0 };
 }
 
 export async function getUnreadCount(): Promise<

@@ -306,7 +306,8 @@ export async function createProduct(
   }
 
   revalidatePath(PRODUCTS_PATH);
-  redirect(isPublished ? `${PRODUCTS_PATH}?product_published=1` : PRODUCTS_PATH);
+  revalidatePath("/dashboard/vendor/creation");
+  redirect(`/dashboard/vendor/creation?type=product&saved=1`);
 }
 
 export async function updateProduct(
@@ -520,7 +521,8 @@ export async function updateProduct(
   }
 
   revalidatePath(PRODUCTS_PATH);
-  redirect(PRODUCTS_PATH);
+  revalidatePath("/dashboard/vendor/creation");
+  redirect("/dashboard/vendor/creation?type=product&saved=1");
 }
 
 export async function toggleProductPublished(formData: FormData): Promise<void> {

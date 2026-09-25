@@ -60,6 +60,8 @@ export const vendorInboundShipmentSelect = {
  */
 export const vendorSplitOrderDetailSelect = {
   id: true,
+  referenceNumber: true,
+  currency: true,
   mainOrderId: true,
   storeId: true,
   status: true,
@@ -92,6 +94,8 @@ export const vendorSplitOrderDetailSelect = {
   mainOrder: {
     select: {
       id: true,
+      referenceNumber: true,
+      couponSnapshot: true,
       status: true,
       region: true,
       shippingMinor: true,

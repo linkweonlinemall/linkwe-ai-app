@@ -157,7 +157,7 @@ export default function EditServiceForm({
       setError(result.error);
       setLoading(false);
     } else {
-      router.push("/dashboard/vendor/services");
+      router.push("/dashboard/vendor/creation?type=service&saved=1");
     }
   }
 
@@ -169,7 +169,7 @@ export default function EditServiceForm({
         name="subscriptionCanPause"
         value={subscriptionCanPause ? "true" : "false"}
       />
-      <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+      <div data-creation-section="Service type" className="rounded-2xl border border-zinc-200 bg-white p-5">
         <p className="mb-3 text-sm font-bold text-zinc-900">Service type</p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {SERVICE_TYPES.map((type) => (
@@ -202,7 +202,7 @@ export default function EditServiceForm({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+      <div data-creation-section="Basic information" className="rounded-2xl border border-zinc-200 bg-white p-5">
         <p className="mb-4 text-sm font-bold text-zinc-900">Basic information</p>
         <div className="flex flex-col gap-6">
           <div>
@@ -253,7 +253,7 @@ export default function EditServiceForm({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+      <div data-creation-section="Pricing" className="rounded-2xl border border-zinc-200 bg-white p-5">
         <p className="mb-4 text-sm font-bold text-zinc-900">Pricing</p>
         <div className="flex flex-col gap-6">
           {serviceType === "QUOTE" ? (
@@ -414,14 +414,14 @@ export default function EditServiceForm({
       </div>
 
       {serviceType === "VIRTUAL" ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <div data-creation-section="Payment preference" className="rounded-2xl border border-zinc-200 bg-white p-5">
           <p className="mb-1 text-sm font-bold text-zinc-900">Payment preference</p>
           <p className="text-xs text-zinc-500">Virtual services are paid online.</p>
         </div>
       ) : null}
 
       {serviceType === "BOOKABLE" ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <div data-creation-section="Payment preference" className="rounded-2xl border border-zinc-200 bg-white p-5">
           <p className="mb-3 text-sm font-bold text-zinc-900">Payment preference</p>
           {!canPayOnArrival ? (
             <p className="mb-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-800">
@@ -460,7 +460,7 @@ export default function EditServiceForm({
       ) : null}
 
       {serviceType === "BOOKABLE" || serviceType === "VIRTUAL" ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <div data-creation-section="Duration" className="rounded-2xl border border-zinc-200 bg-white p-5">
           <p className="mb-4 text-sm font-bold text-zinc-900">Duration</p>
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
@@ -479,7 +479,7 @@ export default function EditServiceForm({
       ) : null}
 
       {serviceType === "QUOTE" ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <div data-creation-section="Quote details" className="rounded-2xl border border-zinc-200 bg-white p-5">
           <p className="mb-4 text-sm font-bold text-zinc-900">Quote details</p>
           <div className="flex flex-col gap-6">
             <div>
@@ -522,7 +522,7 @@ export default function EditServiceForm({
       ) : null}
 
       {serviceType === "SUBSCRIPTION" ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <div data-creation-section="Subscription details" className="rounded-2xl border border-zinc-200 bg-white p-5">
           <p className="mb-4 text-sm font-bold text-zinc-900">Subscription details</p>
           <div className="flex flex-col gap-6">
             <div className="rounded-xl border border-purple-100 bg-purple-50 px-4 py-3">
@@ -699,7 +699,7 @@ export default function EditServiceForm({
       ) : null}
 
       {serviceType === "ON_DEMAND" ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <div data-creation-section="On-demand details" className="rounded-2xl border border-zinc-200 bg-white p-5">
           <p className="mb-4 text-sm font-bold text-zinc-900">On-demand details</p>
           <p className="mb-4 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs leading-5 text-blue-800">On-demand requests use the accepted service price rather than a booking deposit. Deposit controls are available for Bookable and Virtual services.</p>
           <div className="flex flex-col gap-6">
@@ -760,7 +760,7 @@ export default function EditServiceForm({
       ) : null}
 
       {serviceType === "VIRTUAL" ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <div data-creation-section="Virtual session details" className="rounded-2xl border border-zinc-200 bg-white p-5">
           <p className="mb-4 text-sm font-bold text-zinc-900">Virtual session details</p>
           <div className="flex flex-col gap-6">
             <div>
@@ -811,7 +811,7 @@ export default function EditServiceForm({
         </div>
       ) : null}
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+      <div data-creation-section="Where does this service happen?" className="rounded-2xl border border-zinc-200 bg-white p-5">
         <p className="mb-3 text-sm font-bold text-zinc-900">Where does this service happen?</p>
         <div className="grid grid-cols-2 gap-2">
           {SERVICE_LOCATIONS.map((loc) => (
@@ -838,7 +838,7 @@ export default function EditServiceForm({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+      <div data-creation-section="Service images" className="rounded-2xl border border-zinc-200 bg-white p-5">
         <p className="mb-3 text-sm font-bold text-zinc-900">Service images</p>
         <p className="mb-3 text-xs text-zinc-500">
           Add up to 10 photos — the first image will be shown as the cover.
@@ -919,7 +919,7 @@ export default function EditServiceForm({
         ) : null}
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+      <div data-creation-section="Visibility" className="rounded-2xl border border-zinc-200 bg-white p-5">
         <p className="mb-3 text-sm font-bold text-zinc-900">Visibility</p>
         <div className="flex flex-col gap-2">
           {[
@@ -948,18 +948,15 @@ export default function EditServiceForm({
         </div>
       </div>
 
-      <RelatedItemsPanel
+      <div data-creation-section="Related listings"><RelatedItemsPanel
         fromType="SERVICE"
         fromId={service.id}
         initialItems={initialRelatedItems}
-      />
+      /></div>
 
       {error ? <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p> : null}
 
-      <div className="flex gap-3">
-        <button
-          type="button"
-          onClick={() => router.back()}
+      <div data-creation-actions="true" className="flex gap-3"><button type="button" onClick={() => router.push("/dashboard/vendor/creation?type=service")}
           className="flex-1 rounded-xl border border-zinc-200 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
         >
           Cancel

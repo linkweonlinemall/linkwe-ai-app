@@ -1,4 +1,5 @@
 "use client";
+import CouponInput, { type AppliedCoupon } from "@/components/checkout/CouponInput";
 
 import { Check, ChevronUp } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -74,6 +75,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
   const [deliveryPhone, setDeliveryPhone] = useState(() => localPhoneDisplay(initialPhone));
   const [fulfillmentChoice, setFulfillmentChoice] = useState<"delivery" | "pickup" | null>(() => null);
   const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
+  const [coupon,setCoupon]=useState<AppliedCoupon|null>(null);
   const [checkoutResponses, setCheckoutResponses] = useState<CheckoutResponses>({});
   const [uploadingField, setUploadingField] = useState<string | null>(null);
 
@@ -220,7 +222,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
     needsShippingQuote && shippingBreakdown?.ok && shippingBreakdown.hasCoverageFailure,
   );
 
-  const displayTotal = subtotal + totalShippingMinor / 100;
+  const displayTotal = subtotal + totalShippingMinor / 100 - (coupon?.discountMinor??0)/100;
 
   const needsRegionConfirmation = !allDigital && useDelivery && regionNeedsConfirmation;
   const deliveryPhoneValid = !useDelivery || allDigital || normalizeTTPhone(deliveryPhone).ok;
@@ -273,6 +275,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
       Number.isFinite(deliveryLng) ? deliveryLng : null,
       deliveryPhone.trim() || null,
       checkoutResponses,
+      coupon?.code,
     );
     if (result.ok) {
       window.location.assign(result.checkoutUrl);
@@ -372,6 +375,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
         <span>Subtotal</span>
         <span>TTD {subtotal.toFixed(2)}</span>
       </div>
+      <CouponInput kind="cart" value={coupon} onChange={setCoupon}/>{coupon&&<div className="flex justify-between py-2 text-sm text-emerald-700"><span>Coupon · {coupon.code}</span><span>− TTD {(coupon.discountMinor/100).toFixed(2)}</span></div>}
       {renderShippingLines()}
       <div className="my-3 border-t" style={{ borderColor: "var(--card-border-subtle)" }} />
       <div className="flex justify-between">

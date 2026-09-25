@@ -2,54 +2,23 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
+import { MessageCircle } from "lucide-react";
 import { getOrCreateConversationAsVendor } from "@/app/actions/messages";
+import s from "@/components/vendor/orders/orders.module.css";
 
 type Props = { customerId: string; storeId: string };
-
 export function MessageCustomerButton({ customerId, storeId }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-
+  const [error, setError] = useState("");
   async function handleClick() {
-    setLoading(true);
-    const result = await getOrCreateConversationAsVendor(customerId, storeId);
-    setLoading(false);
-    if (!result.ok) {
-      alert(result.error);
-      return;
-    }
-    router.push(`/dashboard/vendor/messages/${result.conversationId}`);
+    setLoading(true); setError("");
+    try {
+      const result = await getOrCreateConversationAsVendor(customerId, storeId);
+      if (!result.ok) { setError(result.error); return; }
+      router.push(`/dashboard/vendor/messages/${result.conversationId}`);
+    } catch { setError("Couldn’t open this conversation. Please try again."); }
+    finally { setLoading(false); }
   }
-
-  return (
-    <button
-      type="button"
-      onClick={handleClick}
-      disabled={loading}
-      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50 disabled:opacity-60"
-    >
-      {loading ? (
-        "Opening..."
-      ) : (
-        <>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          Message customer
-        </>
-      )}
-    </button>
-  );
+  return <div><button type="button" onClick={handleClick} disabled={loading} className={s.secondary} style={{width:"100%"}}><MessageCircle size={16}/>{loading ? "Opening…" : "Message customer"}</button>{error && <p className={s.error} role="alert">{error}</p>}</div>;
 }

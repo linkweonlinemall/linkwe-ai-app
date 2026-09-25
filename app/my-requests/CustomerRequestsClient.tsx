@@ -1,9 +1,14 @@
 "use client";
+import CouponInput, { type AppliedCoupon } from "@/components/checkout/CouponInput";
 
 import Link from "next/link";
 import { useState } from "react";
 
-import { cancelOnDemandRequest, confirmOnDemandRequest } from "@/app/actions/on-demand";
+import {
+  cancelOnDemandRequest,
+  confirmOnDemandRequest,
+  markOnDemandRequestComplete,
+} from "@/app/actions/on-demand";
 
 type Request = {
   id: string;
@@ -13,6 +18,9 @@ type Request = {
   quotedPrice: number | null;
   estimatedArrival: string | null;
   declineReason: string | null;
+  vendorCompletedAt: Date | string | null;
+  autoCompleteAt: Date | string | null;
+  earningsReleased: boolean;
   createdAt: Date | string;
   service: { name: string; slug: string };
   store: { name: string; slug: string };
@@ -62,6 +70,8 @@ export default function CustomerRequestsClient({
 }: {
   initialRequests: Request[];
 }) {
+  const [coupons,setCoupons]=useState<Record<string,AppliedCoupon|null>>({});
+  const [confirmErrors,setConfirmErrors]=useState<Record<string,string>>({});
   const [requests, setRequests] = useState(initialRequests);
   const [actingId, setActingId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<Record<string, "online" | "arrival">>({});
@@ -83,14 +93,16 @@ export default function CustomerRequestsClient({
     const request = requests.find((r) => r.id === requestId);
     const method = request?.requestType === "QUOTE" ? "online" : paymentMethod[requestId] ?? "arrival";
     setActingId(requestId);
-    const result = await confirmOnDemandRequest(requestId, method);
+    setConfirmErrors(previous=>({...previous,[requestId]:""}));
+    const result = await confirmOnDemandRequest(requestId, method, coupons[requestId]?.code);
     if ("ok" in result) {
       if (method === "online" && "checkoutUrl" in result && result.checkoutUrl) {
-        window.location.href = result.checkoutUrl;
+        window.location.assign(result.checkoutUrl);
         return;
       }
-      setRequests((prev) => prev.map((r) => (r.id === requestId ? { ...r, status: "CONFIRMED" } : r)));
+      setRequests((prev) => prev.map((r) => (r.id === requestId ? { ...r, status: "CONFIRMED",quotedPrice:coupons[requestId]?coupons[requestId]!.totalMinor/100:r.quotedPrice } : r)));
     }
+    if("error" in result)setConfirmErrors(previous=>({...previous,[requestId]:result.error}));
     setActingId(null);
   }
 
@@ -139,6 +151,31 @@ export default function CustomerRequestsClient({
       }));
     } else {
       setCancelFeedback((prev) => ({ ...prev, [requestId]: { type: "error", text: result.error } }));
+    }
+    setActingId(null);
+  }
+
+  async function handleComplete(requestId: string) {
+    if (!confirm("Confirm that this service was completed to your satisfaction?")) return;
+    setActingId(requestId);
+    const result = await markOnDemandRequestComplete(requestId);
+    if ("error" in result) {
+      setCancelFeedback((prev) => ({
+        ...prev,
+        [requestId]: { type: "error", text: result.error },
+      }));
+    } else {
+      setRequests((prev) =>
+        prev.map((request) =>
+          request.id === requestId
+            ? { ...request, status: "COMPLETED", earningsReleased: true }
+            : request,
+        ),
+      );
+      setCancelFeedback((prev) => ({
+        ...prev,
+        [requestId]: { type: "success", text: "Service confirmed complete. Thank you." },
+      }));
     }
     setActingId(null);
   }
@@ -223,7 +260,9 @@ export default function CustomerRequestsClient({
                     <p className="text-sm font-semibold text-zinc-900">
                       {isQuote && request.status === "CONFIRMED"
                         ? "Quote paid — the provider will be in touch"
-                        : status.desc}
+                        : request.status === "CONFIRMED" && request.vendorCompletedAt
+                          ? "Provider marked the job complete — please confirm or report a problem"
+                          : status.desc}
                     </p>
                   </div>
 
@@ -287,6 +326,9 @@ export default function CustomerRequestsClient({
                   {/* Confirmation actions for ACCEPTED */}
                   {request.status === "ACCEPTED" ? (
                     <div className="flex flex-col gap-3">
+                      <CouponInput kind="request" id={request.id} disabled={actingId===request.id} onChange={coupon=>setCoupons(previous=>({...previous,[request.id]:coupon}))}/>
+                      {coupons[request.id]&&<p className="font-bold text-emerald-800">Discounted total: TTD {(coupons[request.id]!.totalMinor/100).toFixed(2)}</p>}
+                      {confirmErrors[request.id]&&<p role="alert" className="text-sm text-red-700">{confirmErrors[request.id]}</p>}
                       {isQuote ? null : (
                         <>
                           <p className="text-xs font-bold text-zinc-700">How would you like to pay?</p>
@@ -327,7 +369,7 @@ export default function CustomerRequestsClient({
                           ? "Confirming..."
                           : isQuote
                             ? request.quotedPrice && request.quotedPrice > 0
-                              ? `Pay quote — TTD ${request.quotedPrice.toFixed(2)}`
+                              ? `Pay quote — TTD ${(coupons[request.id]?coupons[request.id]!.totalMinor/100:request.quotedPrice).toFixed(2)}`
                               : "Confirm & pay online"
                             : method === "online"
                               ? "Confirm & pay online"
@@ -359,6 +401,16 @@ export default function CustomerRequestsClient({
                   {/* Cancel button for CONFIRMED */}
                   {request.status === "CONFIRMED" ? (
                     <div className="flex flex-col gap-2">
+                      {request.vendorCompletedAt ? (
+                        <button
+                          type="button"
+                          onClick={() => handleComplete(request.id)}
+                          disabled={actingId === request.id}
+                          className="w-full rounded-xl bg-emerald-600 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                          {actingId === request.id ? "Confirming..." : "Confirm service completed ✓"}
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => handleCancelConfirmedRequest(request.id)}
@@ -367,7 +419,11 @@ export default function CustomerRequestsClient({
                       >
                         {actingId === request.id ? "Cancelling..." : "Cancel request"}
                       </button>
-                      <p className="text-center text-xs text-zinc-400">Cancelling will refund your payment.</p>
+                      <p className="text-center text-xs text-zinc-400">
+                        {request.vendorCompletedAt
+                          ? "If something is wrong, cancel and request a refund before the 48-hour review window ends."
+                          : "Cancelling will refund your payment."}
+                      </p>
                     </div>
                   ) : null}
 

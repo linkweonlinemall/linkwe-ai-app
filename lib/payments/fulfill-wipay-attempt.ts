@@ -4,6 +4,7 @@ import { handleBookingPaymentSucceeded } from "@/lib/finance/booking-payment";
 import { fulfillPaidTicketOrder } from "@/lib/payments/fulfill-ticket-order";
 import { fulfillProductOrder } from "@/lib/payments/fulfill-product-order";
 import { createVendorEarningsLedgerPair } from "@/lib/finance/release-earnings";
+import { PLAN_PRICE_MINOR } from "@/lib/finance/plan-limits";
 import { resolveVendorPlan } from "@/lib/finance/vendor-plan";
 import { prisma } from "@/lib/prisma";
 
@@ -43,10 +44,21 @@ export async function fulfillWiPayAttempt(attempt: PaymentAttempt): Promise<void
   }
 
   if (attempt.purpose === "ON_DEMAND_SERVICE") {
-    await prisma.onDemandRequest.updateMany({
-      where: { id: attempt.targetId, status: { not: "CONFIRMED" } },
+    const confirmed = await prisma.onDemandRequest.updateMany({
+      where: { id: attempt.targetId, status: "ACCEPTED" },
       data: { status: "CONFIRMED", amountPaid: attempt.amountMinor / 100 },
     });
+    if (confirmed.count === 0) {
+      const existing = await prisma.onDemandRequest.findUnique({
+        where: { id: attempt.targetId },
+        select: { status: true, amountPaid: true },
+      });
+      const alreadyApplied =
+        existing &&
+        (existing.status === "CONFIRMED" || existing.status === "COMPLETED") &&
+        existing.amountPaid === attempt.amountMinor / 100;
+      if (!alreadyApplied) throw new Error("On-demand payment target is closed");
+    }
     return;
   }
 
@@ -69,26 +81,52 @@ export async function fulfillWiPayAttempt(attempt: PaymentAttempt): Promise<void
   if (attempt.purpose === "VENDOR_SUBSCRIPTION") {
     const data = attempt.providerData as { targetPlan?: string } | null;
     const targetPlan = data?.targetPlan === "PRO" ? "PRO" : "GROWTH";
-    const store = await prisma.store.findUnique({
-      where: { id: attempt.targetId },
-      select: { planRenewsAt: true },
-    });
-    const renewalBase = store?.planRenewsAt && store.planRenewsAt > new Date()
-      ? store.planRenewsAt
-      : new Date();
-    await prisma.store.update({
-      where: { id: attempt.targetId },
-      data: {
-        subscriptionPlan: targetPlan,
-        subscriptionStatus: "ACTIVE",
-        planRenewsAt: addInterval(renewalBase, "monthly"),
-        pastDueSince: null,
-        autoRenew: false,
-        wipayTrustedCardId: attempt.trustedCardId,
-        stripeSubscriptionId: null,
-        stripeCustomerId: null,
-      },
-    });
+    if (attempt.amountMinor !== PLAN_PRICE_MINOR[targetPlan]) {
+      throw new Error("Vendor subscription payment amount is invalid");
+    }
+    await prisma.$transaction(async (tx) => {
+      const payment = await tx.paymentAttempt.findUnique({
+        where: { id: attempt.id },
+        select: { status: true },
+      });
+      if (payment?.status === "SUCCEEDED") return;
+      if (payment?.status !== "PROCESSING") {
+        throw new Error("Vendor subscription payment is not ready for fulfillment");
+      }
+
+      const store = await tx.store.findUnique({
+        where: { id: attempt.targetId },
+        select: { ownerId: true, subscriptionPlan: true, planRenewsAt: true },
+      });
+      if (!store || store.ownerId !== attempt.userId) {
+        throw new Error("Vendor subscription store is unavailable");
+      }
+      if (store.subscriptionPlan === "PRO" && targetPlan === "GROWTH") {
+        throw new Error("Paid vendor plan downgrades are not supported");
+      }
+
+      const now = new Date();
+      const renewalBase = store.planRenewsAt && store.planRenewsAt > now
+        ? store.planRenewsAt
+        : now;
+      await tx.store.update({
+        where: { id: attempt.targetId },
+        data: {
+          subscriptionPlan: targetPlan,
+          subscriptionStatus: "ACTIVE",
+          planRenewsAt: addInterval(renewalBase, "monthly"),
+          pastDueSince: null,
+          autoRenew: false,
+          wipayTrustedCardId: attempt.trustedCardId,
+          stripeSubscriptionId: null,
+          stripeCustomerId: null,
+        },
+      });
+      await tx.paymentAttempt.update({
+        where: { id: attempt.id },
+        data: { status: "SUCCEEDED", activeKey: null, paidAt: now },
+      });
+    }, { isolationLevel: "Serializable" });
     return;
   }
 
@@ -97,12 +135,39 @@ export async function fulfillWiPayAttempt(attempt: PaymentAttempt): Promise<void
       storeId?: string;
       interval?: string;
       subscriptionId?: string;
+      regularPriceMinor?: number;
+      trialDays?: number;
+      sessionsIncluded?: number | null;
+      cancellationNoticeDays?: number;
+      canPause?: boolean;
+      pauseMaxWeeks?: number | null;
     } | null;
     if (!data?.storeId || !data.interval) {
       throw new Error("Service subscription payment metadata is incomplete");
     }
     const storeId = data.storeId;
     const interval = data.interval;
+    const regularPriceMinor =
+      Number.isInteger(data.regularPriceMinor) && (data.regularPriceMinor ?? 0) > 0
+        ? data.regularPriceMinor!
+        : attempt.amountMinor;
+    const trialDays =
+      !data.subscriptionId && Number.isInteger(data.trialDays) && (data.trialDays ?? 0) > 0
+        ? data.trialDays!
+        : 0;
+    const sessionsIncluded = data.sessionsIncluded === null
+      ? null
+      : Number.isInteger(data.sessionsIncluded) && (data.sessionsIncluded ?? 0) > 0
+        ? data.sessionsIncluded!
+        : undefined;
+    const cancellationNoticeDays =
+      Number.isInteger(data.cancellationNoticeDays) && (data.cancellationNoticeDays ?? 0) >= 0
+        ? data.cancellationNoticeDays!
+        : undefined;
+    const canPause = data.canPause === undefined
+      ? undefined
+      : data.canPause === true && Number.isInteger(data.pauseMaxWeeks) && (data.pauseMaxWeeks ?? 0) > 0;
+    const pauseMaxWeeks = canPause === undefined ? undefined : canPause ? data.pauseMaxWeeks! : null;
     await prisma.$transaction(async (tx) => {
     // A provider return can be replayed before the payment attempt is marked
     // succeeded. Keep the service period and its earnings exactly-once together.
@@ -124,10 +189,13 @@ export async function fulfillWiPayAttempt(attempt: PaymentAttempt): Promise<void
           where: { customerId: attempt.userId, productId: attempt.targetId },
           orderBy: { createdAt: "desc" },
         });
-    const renewalBase = existing?.currentPeriodEnd && existing.currentPeriodEnd > new Date()
+    const now = new Date();
+    const renewalBase = existing?.currentPeriodEnd && existing.currentPeriodEnd > now
       ? existing.currentPeriodEnd
-      : new Date();
-    const periodEnd = addInterval(renewalBase, interval);
+      : now;
+    const periodEnd = trialDays > 0
+      ? new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1_000)
+      : addInterval(renewalBase, interval);
     if (existing) {
       await tx.customerServiceSubscription.update({
         where: { id: existing.id },
@@ -135,9 +203,17 @@ export async function fulfillWiPayAttempt(attempt: PaymentAttempt): Promise<void
           status: "ACTIVE",
           currentPeriodEnd: periodEnd,
           nextChargeAt: periodEnd,
-          lastChargeAt: new Date(),
-          priceMinor: attempt.amountMinor,
+          lastChargeAt: now,
+          priceMinor: regularPriceMinor,
           interval,
+          sessionsIncluded: sessionsIncluded ?? existing.sessionsIncluded,
+          sessionsRemaining: sessionsIncluded === undefined ? existing.sessionsIncluded : sessionsIncluded,
+          cancellationNoticeDays: cancellationNoticeDays ?? existing.cancellationNoticeDays,
+          canPause: canPause ?? existing.canPause,
+          pauseMaxWeeks: pauseMaxWeeks === undefined ? existing.pauseMaxWeeks : pauseMaxWeeks,
+          pausedAt: null,
+          pauseEndsAt: null,
+          pauseUsedSeconds: 0,
           cancelAtPeriodEnd: false,
           canceledAt: null,
           wipayTrustedCardId: attempt.trustedCardId ?? existing.wipayTrustedCardId,
@@ -150,11 +226,18 @@ export async function fulfillWiPayAttempt(attempt: PaymentAttempt): Promise<void
           customerId: attempt.userId,
           productId: attempt.targetId,
           storeId,
-          priceMinor: attempt.amountMinor,
+          priceMinor: regularPriceMinor,
           interval,
+          sessionsIncluded: sessionsIncluded ?? null,
+          sessionsRemaining: sessionsIncluded ?? null,
+          cancellationNoticeDays: cancellationNoticeDays ?? 0,
+          canPause: canPause ?? false,
+          pauseMaxWeeks: pauseMaxWeeks ?? null,
           currentPeriodEnd: periodEnd,
           nextChargeAt: periodEnd,
-          lastChargeAt: new Date(),
+          lastChargeAt: now,
+          trialStartedAt: trialDays > 0 ? now : null,
+          trialEndsAt: trialDays > 0 ? periodEnd : null,
           wipayTrustedCardId: attempt.trustedCardId,
         },
       });

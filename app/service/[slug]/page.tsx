@@ -188,10 +188,11 @@ export default async function ServiceDetailPage({ params }: Props) {
           where: {
             customerId: session.userId,
             productId: service.id,
-            status: "ACTIVE",
+            status: { in: ["ACTIVE", "PAUSED", "PAST_DUE"] },
           },
           select: {
             id: true,
+            status: true,
             cancelAtPeriodEnd: true,
             currentPeriodEnd: true,
           },
@@ -272,6 +273,7 @@ export default async function ServiceDetailPage({ params }: Props) {
                       activeSubscription
                         ? {
                             id: activeSubscription.id,
+                            status: activeSubscription.status,
                             cancelAtPeriodEnd: activeSubscription.cancelAtPeriodEnd,
                             currentPeriodEnd: activeSubscription.currentPeriodEnd,
                           }

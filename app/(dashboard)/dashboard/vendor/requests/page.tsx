@@ -6,12 +6,14 @@ import { getSession } from "@/lib/auth/session";
 
 import VendorRequestsClient from "./VendorRequestsClient";
 
-export default async function VendorRequestsPage() {
+export default async function VendorRequestsPage({ searchParams }: { searchParams: Promise<{ request?: string }> }) {
   const session = await getSession();
   if (!session) redirect("/login");
   assertDashboardRole(session, "VENDOR");
 
   const requests = await getVendorOnDemandRequests();
+  const requestedId = (await searchParams).request;
+  const initialRequestId = requests.some(request => request.id === requestedId) ? requestedId : undefined;
 
   return (
     <div className="px-6 py-8">
@@ -19,7 +21,7 @@ export default async function VendorRequestsPage() {
         <h1 className="text-2xl font-bold text-zinc-900">On-demand requests</h1>
         <p className="mt-1 text-sm text-zinc-500">Manage incoming service requests from customers</p>
       </div>
-      <VendorRequestsClient initialRequests={requests} />
+      <VendorRequestsClient key={initialRequestId ?? "all"} initialRequests={requests} initialRequestId={initialRequestId} />
     </div>
   );
 }

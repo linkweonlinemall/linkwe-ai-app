@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Package, ShoppingBag, MessageCircle, Grid2X2 } from "lucide-react";
+import { LayoutDashboard, Layers3, ShoppingBag, MessageCircle, Grid2X2 } from "lucide-react";
 import { workspaceHref, workspaceLinkActive } from "./dashboard-navigation";
 import s from "./workspace.module.css";
 
 const items = [
   { path: "", label: "Overview", Icon: LayoutDashboard },
-  { path: "/products", label: "Products", Icon: Package },
+  { path: "/creation", label: "Create", Icon: Layers3 },
   { path: "/orders", label: "Orders", Icon: ShoppingBag },
   { path: "/messages", label: "Messages", Icon: MessageCircle },
 ];

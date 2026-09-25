@@ -33,6 +33,7 @@ async function resolveListingIdForOrderItem(
       storeId: string;
       slug: string;
       name: string;
+      price: number;
       shortDescription: string | null;
       images: string[];
     } | null;
@@ -82,7 +83,7 @@ async function resolveListingIdForOrderItem(
         title: item.titleSnapshot,
         imageUrl: product.images[0] ?? null,
         shortDescription: product.shortDescription?.slice(0, 500) ?? null,
-        priceMinor: item.priceMinor,
+        priceMinor: Math.round(product.price*100),
         currency: "TTD",
         publishedAt: new Date(),
       },
@@ -256,19 +257,18 @@ export async function createSplitOrdersFromMainOrder(mainOrderId: string): Promi
         select: { region: true, address: true },
       });
 
-      const itemCreates = await Promise.all(
-        items.map(async (item) => {
+      const itemCreates = [];
+      for (const item of items) {
           const listingId = await resolveListingIdForOrderItem(tx, storeId, item);
-          return {
+          itemCreates.push({
             listingId,
             titleSnapshot: item.titleSnapshot,
             unitPriceMinor: item.priceMinor,
             lineTotalMinor: item.priceMinor * item.quantity,
             currency: "TTD",
             quantity: item.quantity,
-          };
-        }),
-      );
+          });
+      }
 
       await tx.splitOrder.create({
         data: {

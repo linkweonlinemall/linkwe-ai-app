@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { RefreshCw } from "lucide-react";
 
 import { getMyStoreSubscribers } from "@/app/actions/service-subscription";
+import SubscriptionSessionButton from "@/components/subscriptions/SubscriptionSessionButton";
 import { assertDashboardRole } from "@/lib/auth/assert-role";
 import { getSession } from "@/lib/auth/session";
 import { formatSubscriptionIntervalDisplay } from "@/lib/finance/subscription-interval";
@@ -26,7 +27,7 @@ function formatPriceMinor(priceMinor: number, interval: string): string {
 }
 
 function subscriberStatusBadge(sub: {
-  status: "ACTIVE" | "PAST_DUE" | "CANCELED";
+  status: "ACTIVE" | "PAUSED" | "PAST_DUE" | "CANCELED";
   cancelAtPeriodEnd: boolean;
 }): { label: string; className: string } {
   if (sub.status === "CANCELED") {
@@ -34,6 +35,9 @@ function subscriberStatusBadge(sub: {
   }
   if (sub.status === "PAST_DUE") {
     return { label: "Past due", className: "bg-red-100 text-red-700" };
+  }
+  if (sub.status === "PAUSED") {
+    return { label: "Paused", className: "bg-sky-100 text-sky-700" };
   }
   if (sub.cancelAtPeriodEnd) {
     return { label: "Ending soon", className: "bg-amber-100 text-amber-800" };
@@ -128,6 +132,7 @@ export default async function VendorSubscribersPage() {
                         <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${badge.className}`}>{badge.label}</span>
                       </div>
                       <dl className="mt-4 grid grid-cols-2 gap-3 text-xs"><div><dt className="text-zinc-400">Price</dt><dd className="mt-1 font-medium text-zinc-700">{formatPriceMinor(sub.priceMinor, sub.interval)}</dd></div><div><dt className="text-zinc-400">Next renewal</dt><dd className="mt-1 font-medium text-zinc-700">{sub.status === "ACTIVE" ? formatDate(sub.currentPeriodEnd) : "—"}</dd></div></dl>
+                      {sub.sessionsIncluded ? <div className="mt-3 flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-semibold text-zinc-700">{sub.sessionsRemaining ?? 0} / {sub.sessionsIncluded} sessions left</p>{sub.status === "ACTIVE" ? <SubscriptionSessionButton subscriptionId={sub.id} remaining={sub.sessionsRemaining ?? 0} /> : null}</div> : null}
                     </article>;
                   })}
                 </div>
@@ -141,6 +146,7 @@ export default async function VendorSubscribersPage() {
                         <th className="px-4 py-3">Status</th>
                         <th className="px-4 py-3">Subscribed</th>
                         <th className="px-4 py-3">Next renewal</th>
+                        <th className="px-4 py-3">Sessions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-100">
@@ -172,6 +178,9 @@ export default async function VendorSubscribersPage() {
                             <td className="px-4 py-3 text-zinc-600">{formatDate(sub.createdAt)}</td>
                             <td className="px-4 py-3 text-zinc-600">
                               {sub.status === "ACTIVE" ? formatDate(sub.currentPeriodEnd) : "—"}
+                            </td>
+                            <td className="px-4 py-3 text-zinc-600">
+                              {sub.sessionsIncluded ? <div className="space-y-1.5"><p>{sub.sessionsRemaining ?? 0} / {sub.sessionsIncluded} left</p>{sub.status === "ACTIVE" ? <SubscriptionSessionButton subscriptionId={sub.id} remaining={sub.sessionsRemaining ?? 0} /> : null}</div> : "Unlimited"}
                             </td>
                           </tr>
                         );

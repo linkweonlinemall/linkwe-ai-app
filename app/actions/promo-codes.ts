@@ -1,4 +1,6 @@
 "use server";
+import { priceCoupon } from "@/lib/coupons/server";
+import { CouponError } from "@/lib/coupons/pricing";
 
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
@@ -32,6 +34,7 @@ function isPromoCodeRedeemable(row: PromoRedeemRow, now = new Date()): boolean {
 export async function validatePromoCode(
   eventId: string,
   code: string,
+  items?: {ticketTypeId:string;quantity:number}[],
 ): Promise<ValidatePromoCodeResult> {
   const trimmedId = eventId?.trim();
   const normalized = code?.trim().toUpperCase();
@@ -63,6 +66,19 @@ export async function validatePromoCode(
       },
     },
   });
+
+  if(!row){
+    const event=await prisma.event.findUnique({where:{id:trimmedId},select:{storeId:true}});
+    if(!event)return {ok:false,reason:INVALID_PROMO_MESSAGE};
+    try{
+      if(!items?.length||items.length>100||items.some(item=>!Number.isSafeInteger(item.quantity)||item.quantity<1||item.quantity>1000))return {ok:false,reason:"Select your tickets before applying a coupon."};
+      const types=await prisma.eventTicketType.findMany({where:{id:{in:items.map(item=>item.ticketTypeId)},eventId:trimmedId,isVisible:true},select:{id:true,price:true}});
+      const lines=items.map(item=>{const ticket=types.find(row=>row.id===item.ticketTypeId);if(!ticket)throw new CouponError("Select an available ticket.");return {key:`ticket:${ticket.id}`,parentKey:`event:${trimmedId}`,subtotalMinor:Math.round(ticket.price*100)*item.quantity};});
+      const quote=await priceCoupon(event.storeId,"event",normalized,lines);if(!quote)return {ok:false,reason:INVALID_PROMO_MESSAGE};
+      return {ok:true,code:quote.code,discountType:"FIXED",discountValue:quote.discountMinor};
+    }
+    catch(error){return {ok:false,reason:error instanceof CouponError?error.message:INVALID_PROMO_MESSAGE};}
+  }
 
   if (
     !row ||
@@ -243,6 +259,7 @@ export async function createPromoCode(
     return { ok: false, reason: "Could not create promo code." };
   }
 
+  revalidatePath("/dashboard/vendor/creation", "layout");
   revalidatePath(`${EVENTS_PATH}/${auth.eventId}/tickets`);
   return { ok: true };
 }
@@ -300,6 +317,7 @@ export async function togglePromoCode(
     data: { active },
   });
 
+  revalidatePath("/dashboard/vendor/creation", "layout");
   revalidatePath(`${EVENTS_PATH}/${promo.eventId}/tickets`);
   return { ok: true };
 }
