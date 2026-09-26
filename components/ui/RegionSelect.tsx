@@ -1,8 +1,8 @@
 "use client";
 
-import type { ChangeEvent } from "react";
+import { useId, type ChangeEvent } from "react";
 
-import { TT_REGION_GROUPS } from "@/lib/regions/tt-regions";
+import { TT_REGION_GROUPS, canonicalRegionValue } from "@/lib/regions/tt-regions";
 
 type Props = {
   name: string;
@@ -23,14 +23,15 @@ export default function RegionSelect({
   label,
   error,
 }: Props) {
+  const id = useId();
   const controlled = value !== undefined;
   const selectProps = controlled
     ? {
-        value,
+        value: canonicalRegionValue(value),
         onChange: (e: ChangeEvent<HTMLSelectElement>) => onChange?.(e.target.value),
       }
     : {
-        defaultValue: defaultValue ?? "",
+        defaultValue: canonicalRegionValue(defaultValue ?? ""),
         onChange: onChange
           ? (e: ChangeEvent<HTMLSelectElement>) => onChange(e.target.value)
           : undefined,
@@ -39,11 +40,14 @@ export default function RegionSelect({
   return (
     <div>
       {label ? (
-        <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
+        <label htmlFor={id} className="mb-1.5 block text-xs font-semibold text-zinc-700">
           {label} {required ? <span className="text-[#D4450A]">*</span> : null}
         </label>
       ) : null}
       <select
+        id={id}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${id}-error` : undefined}
         name={name}
         required={required}
         className={`w-full rounded-xl border bg-zinc-50 px-3.5 py-2.5 text-sm focus:bg-white focus:outline-none ${
@@ -62,7 +66,7 @@ export default function RegionSelect({
           </optgroup>
         ))}
       </select>
-      {error ? <p className="mt-1 text-xs text-red-500">{error}</p> : null}
+      {error ? <p id={`${id}-error`} className="mt-1 text-xs text-red-500">{error}</p> : null}
     </div>
   );
 }

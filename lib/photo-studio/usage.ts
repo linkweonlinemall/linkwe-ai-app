@@ -47,7 +47,7 @@ export async function reservePhotoAttempt(storeId: string, fingerprint: string, 
     await recoverTrial(tx, trialKey, now);
     const trial = await tx.rateLimit.findUnique({ where: { key: trialKey } });
     const access = photoAccess(store, trial?.count || 0, now);
-    if (!access.allowed) throw new PhotoStudioError("You've used your 5 free Photo Studio edits. Upgrade to Growth or Pro to keep editing.", 403);
+    if (!access.allowed) throw new PhotoStudioError("You've used your free Photo Studio image. Upgrade to Growth or Pro to keep editing.", 403);
     const prefix = `photo-studio:${sandbox ? "test" : "live"}`;
     const day = now.toISOString().slice(0, 10), month = day.slice(0, 7);
     const tomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));

@@ -1,7 +1,9 @@
 "use client";
+import RexUsageMeter from "@/components/vendor/RexUsageMeter";
+import workspace from "@/components/vendor/business-workspace.module.css";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { payMySubscriptionFromBalance, requestPayout, saveVendorBankDetails, startSubscriptionBillingPortal, startSubscriptionCheckout } from "@/app/actions/vendor";
@@ -115,11 +117,12 @@ function formatTTD(minor: number): string {
   return `TTD ${Number(amount).toLocaleString("en-TT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-type FinanceSection = "earnings" | "bank" | "history";
+type FinanceSection = "overview" | "earnings" | "bank" | "history" | "plan";
 
 function sectionFromTabParam(tab: string | null): FinanceSection | null {
   if (tab === "bank-details" || tab === "bank") return "bank";
   if (tab === "history" || tab === "payout-history") return "history";
+  if (tab === "plan" || tab === "overview") return tab;
   if (tab === "earnings") return "earnings";
   return null;
 }
@@ -130,7 +133,6 @@ export default function FinanceTab({
   payoutRequests,
   subscriptionPlan,
   subscriptionStatus,
-  aiUsed,
   aiAllowance,
   aiRemaining,
   topupRemaining,
@@ -142,7 +144,7 @@ export default function FinanceTab({
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { plan, limits } = getStorePlan({ subscriptionPlan, subscriptionStatus });
+  const { plan } = getStorePlan({ subscriptionPlan, subscriptionStatus });
   const planLabel = `${plan.charAt(0)}${plan.slice(1).toLowerCase()} plan`;
   const productCommissionPct = Math.round(getCommissionRate("product", plan) * 100);
   const priceMinor = PLAN_PRICE_MINOR[plan];
@@ -150,14 +152,6 @@ export default function FinanceTab({
     plan === "STARTER"
       ? "Free"
       : `TTD ${(priceMinor / 100).toLocaleString("en-TT", { maximumFractionDigits: 0 })}/mo`;
-  const aiLine =
-    plan === "STARTER"
-      ? `${aiUsed} of ${aiAllowance} complimentary lifetime Rex prompts used · ${aiRemaining} left`
-      : limits.aiMonthlyAllowance === 0
-      ? "No monthly Rex allowance"
-      : `${aiUsed} of ${aiAllowance} AI uses used · ${aiRemaining} left this period`;
-  const topupLine =
-    topupRemaining > 0 ? ` · ${topupRemaining} top-up use${topupRemaining !== 1 ? "s" : ""} remaining` : "";
   const [requestAmount, setRequestAmount] = useState("");
   const [requestError, setRequestError] = useState<string | null>(null);
   const [requestSuccess, setRequestSuccess] = useState(false);
@@ -167,32 +161,18 @@ export default function FinanceTab({
   const [subPayMessage, setSubPayMessage] = useState<string | null>(null);
   const [subPayError, setSubPayError] = useState<string | null>(null);
   const subCheckoutStatus = searchParams.get("sub");
-  const [activeSection, setActiveSection] = useState<FinanceSection>(
-    () => sectionFromTabParam(searchParams.get("tab")) ?? "earnings",
-  );
+  const activeSection = sectionFromTabParam(searchParams.get("tab")) ?? (searchParams.get("sub") ? "plan" : "overview");
+  const [transactionSearch, setTransactionSearch] = useState("");
+  const [transactionKind, setTransactionKind] = useState("all");
+  const [transactionLimit, setTransactionLimit] = useState(30);
+  function chooseSection(section: FinanceSection) { const query = new URLSearchParams(searchParams.toString()); query.set("tab", section); router.replace(`/dashboard/vendor/finance?${query}`, {scroll:false}); }
   const [editingBankDetails, setEditingBankDetails] = useState(false);
   const [editAccountNumber, setEditAccountNumber] = useState("");
-
-  useEffect(() => {
-    const section = sectionFromTabParam(searchParams.get("tab"));
-    if (section) setActiveSection(section);
-  }, [searchParams]);
 
   const hasBankOnFile =
     !!bankDetails?.bankName && !!bankDetails.accountName && !!bankDetails.accountNumber;
 
   const showBankDetailForm = !hasBankOnFile || editingBankDetails;
-
-  useEffect(() => {
-    if (!showBankDetailForm) return;
-    if (!hasBankOnFile) {
-      setEditAccountNumber("");
-      return;
-    }
-    if (bankDetails?.accountNumber) {
-      setEditAccountNumber(bankDetails.accountNumber);
-    }
-  }, [showBankDetailForm, hasBankOnFile, bankDetails?.accountNumber]);
 
   const earningCredits = ledgerEntries.filter(
     (e) =>
@@ -224,20 +204,6 @@ export default function FinanceTab({
     .filter((e) => isVendorBalanceDebit(e.entryType))
     .reduce((s, e) => s + e.amountMinor, 0);
 
-  const lastPayoutDate = payoutRequests
-    .filter((p) => p.status === "APPROVED")
-    .sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime())[0]
-    ?.requestedAt ?? null;
-
-  const pendingDebits = ledgerEntries
-    .filter(
-      (e) =>
-        isVendorBalanceDebit(e.entryType) &&
-        (lastPayoutDate === null ||
-          new Date(e.createdAt).getTime() > new Date(lastPayoutDate).getTime()),
-    )
-    .reduce((s, e) => s + e.amountMinor, 0);
-
   const availableBalance = credits - debits;
 
   const pendingPayout = payoutRequests.find((p) => p.status === "PENDING");
@@ -248,20 +214,23 @@ export default function FinanceTab({
     const fd = new FormData();
     const minor = Math.round(parseFloat(requestAmount) * 100);
     fd.append("amountMinor", String(minor));
+    try {
     const result = await requestPayout(fd);
     if (result.ok) {
       setRequestSuccess(true);
       setRequestAmount("");
+      router.refresh();
     } else {
       setRequestError(result.error ?? "Something went wrong");
     }
-    setRequesting(false);
+    } catch { setRequestError("Could not submit the request. Check payout history before trying again."); } finally { setRequesting(false); }
   }
 
   async function handlePaySubscription(targetPlan?: "GROWTH" | "PRO") {
     setSubPayMessage(null);
     setSubPayError(null);
     setPayingSubscription(true);
+    try {
     const result = await payMySubscriptionFromBalance(targetPlan);
     setPayingSubscription(false);
     if (result.ok) {
@@ -286,11 +255,13 @@ export default function FinanceTab({
     } else {
       setSubPayError(result.error);
     }
+    } catch { setSubPayError("We could not confirm the payment result. Refresh your plan and transactions before retrying."); } finally {setPayingSubscription(false);}
   }
 
   async function handleSubscribeByCard(targetPlan: string) {
     setSubPayError(null);
     setSubscribing(true);
+    try {
     const result = await startSubscriptionCheckout(targetPlan);
     if (result.ok) {
       window.location.href = result.checkoutUrl;
@@ -298,11 +269,13 @@ export default function FinanceTab({
     }
     setSubscribing(false);
     setSubPayError(result.error);
+    } catch {setSubPayError("The payment page could not be opened. Please try again.");} finally {setSubscribing(false);}
   }
 
   async function handleUpdatePaymentMethod() {
     setSubPayError(null);
     setSubscribing(true);
+    try {
     const result = await startSubscriptionBillingPortal();
     if (result.ok) {
       window.location.href = result.portalUrl;
@@ -310,9 +283,11 @@ export default function FinanceTab({
     }
     setSubscribing(false);
     setSubPayError(result.error);
+    } catch {setSubPayError("The payment page could not be opened. Please try again.");} finally {setSubscribing(false);}
   }
 
-  const CARD = "rounded-2xl border border-zinc-200/80 bg-white shadow-sm";
+  const filteredActivity = ledgerActivity.filter(entry => (transactionKind === "all" || (transactionKind === "debits") === isVendorLedgerDebit(entry.entryType)) && `${entry.description ?? ""} ${entry.entryType}`.toLowerCase().includes(transactionSearch.toLowerCase().trim()));
+  const CARD = "rounded-[20px] border border-[#dce5d8] bg-white";
 
   const downgradeDate = pastDueSince
     ? new Date(new Date(pastDueSince).getTime() + 7 * 24 * 60 * 60 * 1000)
@@ -320,30 +295,33 @@ export default function FinanceTab({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Balance summary cards — denser */}
+      <nav aria-label="Finance sections" className={workspace.tabs} data-tour="finance-navigation">
+        {([['overview','Overview'],['earnings','Transactions'],['history','Payouts'],['bank','Bank details'],['plan','Plan & Rex']] as const).map(([key,label])=><button key={key} aria-pressed={activeSection===key} onClick={()=>chooseSection(key)}>{label}</button>)}
+      </nav>
+      {/* Balance summary cards */}
       <div data-tour="finance-balances" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className={`${CARD} p-4 shadow-none`}>
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Total earned (net)</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Total earned (net)</p>
           <p className="mt-1 truncate text-xl font-bold text-zinc-900">{formatTTD(totalEarnedMinor)}</p>
-          <p className="mt-0.5 text-[11px] text-zinc-500">After platform commission</p>
+          <p className="mt-0.5 text-xs text-zinc-500">After platform commission</p>
         </div>
         <div className={`${CARD} p-4 shadow-none`}>
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Commission paid</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Commission paid</p>
           <p className="mt-1 truncate text-xl font-bold text-red-500">-{formatTTD(totalCommissionMinor)}</p>
-          <p className="mt-0.5 text-[11px] text-zinc-500">Platform fees on released earnings</p>
+          <p className="mt-0.5 text-xs text-zinc-500">Platform fees on released earnings</p>
         </div>
         <div className={`overflow-hidden ${CARD} p-4 shadow-none`}>
           <div className="-mx-4 -mt-4 mb-3 h-0.5 w-[calc(100%+32px)]" style={{ backgroundColor: "#D4450A" }} />
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Available balance</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Available balance</p>
           <p className="mt-1 truncate text-xl font-bold" style={{ color: "#D4450A" }}>
             {formatTTD(availableBalance)}
           </p>
-          <p className="mt-0.5 text-[11px] text-zinc-500">Ready to withdraw</p>
+          <p className="mt-0.5 text-xs text-zinc-500">Ready to withdraw</p>
         </div>
-        <div className={`${CARD} p-4 shadow-none`}><p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Pending release</p><p className="mt-1 truncate text-xl font-bold text-amber-600">{formatTTD(pendingReleaseMinor)}</p><p className="mt-0.5 text-[11px] text-zinc-500">Awaiting completion or release</p></div>
+        <div className={`${CARD} p-4 shadow-none`}><p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Pending release</p><p className="mt-1 truncate text-xl font-bold text-amber-600">{formatTTD(pendingReleaseMinor)}</p><p className="mt-0.5 text-xs text-zinc-500">Awaiting completion or release</p></div>
       </div>
 
-      <div className="grid gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 p-4 text-xs leading-5 text-blue-950 sm:grid-cols-3"><p><strong className="block">Gross sales</strong><span className="text-blue-700">What customers paid before commission.</span></p><p><strong className="block">Pending release</strong><span className="text-blue-700">Eligible money still waiting on completion.</span></p><p><strong className="block">Available balance</strong><span className="text-blue-700">Funds that can be requested for payout now.</span></p></div>
+      {activeSection === "overview" && <section className={workspace.hero}><div className={workspace.row}><div><h2 className={workspace.heading}>Your money, at a glance.</h2><p className={workspace.muted}>Released earnings fund your balance. Payouts, refunds, subscriptions and adjustments reduce it.</p><p className={workspace.muted} style={{marginTop:8}}>Payments customers make directly to you on arrival are separate from your LinkWe balance.</p></div><button className={workspace.secondary} onClick={()=>chooseSection("history")}>Manage payouts →</button></div></section>}
 
       {/* Pending payout alert */}
       {pendingPayout ? (
@@ -361,14 +339,14 @@ export default function FinanceTab({
       ) : null}
 
       {/* Request payout */}
-      {!pendingPayout && availableBalance >= 5000 ? (
-        <div className={`${CARD} p-4 shadow-none`}>
+      {(activeSection === "overview" || activeSection === "history") && !pendingPayout && availableBalance >= 5000 ? (
+        <div data-tour="finance-payout-request" className={`${CARD} p-4 shadow-none`}>
           <h2 className="mb-3 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Request a Payout
           </h2>
           {!hasBankOnFile ? (
             <p className="text-sm text-amber-600">
-              Please add your bank details below before requesting a payout.
+              <button onClick={()=>chooseSection("bank")} className="underline">Add your bank details</button> before requesting a payout.
             </p>
           ) : requestSuccess ? (
             <div className="flex items-center gap-2 text-sm text-emerald-700">
@@ -378,11 +356,12 @@ export default function FinanceTab({
               Payout request submitted successfully. Admin will review shortly.
             </div>
           ) : (
-            <div className="flex items-center gap-3">
-              <div className="relative flex-1">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative min-w-40 flex-1">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-500">TTD</span>
                 <input
                   type="number"
+                  aria-label="Payout amount in TTD"
                   value={requestAmount}
                   onChange={(e) => setRequestAmount(e.target.value)}
                   placeholder="0.00"
@@ -414,32 +393,30 @@ export default function FinanceTab({
         </div>
       ) : null}
 
-      <div data-tour="finance-plan" className={`${CARD} p-4 shadow-none`}>
+      {activeSection === "plan" && <div data-tour="finance-plan" className={`${CARD} p-4 shadow-none`}>
         <div className="flex items-start justify-between">
           <div>
             <h2 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
               Subscription
             </h2>
-            <p className="mt-0.5 text-[11px] text-zinc-500">{planLabel}</p>
+            <p className="mt-0.5 text-xs text-zinc-500">{planLabel}</p>
           </div>
-          <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-[10px] font-medium text-zinc-600">
+          <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-600">
             {pricePill}
           </span>
         </div>
         <div className="mt-3 rounded-lg border border-zinc-100 bg-zinc-50 p-2.5">
           {subCheckoutStatus === "success" && subscriptionStatus === "ACTIVE" ? (
-            <p className="mb-2 text-[11px] text-emerald-700">
+            <p className="mb-2 text-xs text-emerald-700">
               Subscription started — your plan is now active
             </p>
           ) : null}
-          <p className="text-[11px] text-zinc-500">
-            Product commission: {productCommissionPct}% · {aiLine}
-            {topupLine}
-          </p>
+          <p className="text-sm text-zinc-600 mb-3">Product commission: {productCommissionPct}%</p>
+          <div className="rounded-xl bg-[#183f3a] p-4 mb-3"><RexUsageMeter allowance={aiAllowance} remaining={aiRemaining} topupRemaining={topupRemaining} lifetime={plan === "STARTER"}/></div>
           <AITopupCheckout topupRemaining={topupRemaining} />
           {plan === "STARTER" ? (
             <>
-              <p className="mt-2 text-[11px] text-zinc-500">
+              <p className="mt-2 text-xs text-zinc-500">
                 Upgrade to Growth for TTD 300/month: 5% product commission, no service commission, and 300 Rex uses per month.
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -461,7 +438,7 @@ export default function FinanceTab({
                   Go Pro — TTD 500/mo
                 </button>
               </div>
-              <div className="mt-2 flex flex-wrap gap-3 text-[11px]">
+              <div className="mt-2 flex flex-wrap gap-3 text-xs">
                 <button
                   type="button"
                   disabled={payingSubscription || subscribing}
@@ -482,22 +459,22 @@ export default function FinanceTab({
             </>
           ) : (
             <>
-              <p className="mt-2 text-[11px] font-medium text-zinc-600">
+              <p className="mt-2 text-xs font-medium text-zinc-600">
                 You&apos;re on the {planLabel}.
               </p>
               {subscriptionMode ? (
                 <p
-                  className="mt-1 text-[10px] font-semibold text-emerald-700"
+                  className="mt-1 text-xs font-semibold text-emerald-700"
                 >
                   WiPay card connected
                 </p>
               ) : null}
               {subscriptionStatus === "PAST_DUE" ? (
                 <div className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2.5">
-                  <p className="text-[11px] font-medium text-red-700">
+                  <p className="text-xs font-medium text-red-700">
                     ⚠️ Your last payment failed.
                   </p>
-                  <p className="mt-1 text-[11px] text-red-600">
+                  <p className="mt-1 text-xs text-red-600">
                     {downgradeDate
                       ? `Update your card by ${formatDate(downgradeDate)} or your plan will move to Starter.`
                       : "Update your card soon or your plan will move to Starter."}
@@ -512,15 +489,15 @@ export default function FinanceTab({
                     {subscribing ? "Redirecting…" : "Update payment method"}
                   </button>
                   {subPayError ? (
-                    <p className="mt-2 text-[11px] text-red-600">{subPayError}</p>
+                    <p className="mt-2 text-xs text-red-600">{subPayError}</p>
                   ) : null}
                 </div>
               ) : isCardBilled ? (
                 <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5">
-                  <p className="text-[11px] font-medium text-amber-900">
+                  <p className="text-xs font-medium text-amber-900">
                     Paid through {planRenewsAt ? formatDate(planRenewsAt) : "the current period"}
                   </p>
-                  <p className="mt-1 text-[11px] text-amber-800">
+                  <p className="mt-1 text-xs text-amber-800">
                     WiPay requires you to approve each monthly renewal. Your card is not charged automatically.
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -543,7 +520,7 @@ export default function FinanceTab({
                   </div>
                 </div>
               ) : subPaidThisPeriod ? (
-                <p className="mt-2 text-[11px] text-zinc-500">
+                <p className="mt-2 text-xs text-zinc-500">
                   ✓ Subscription paid for this period
                 </p>
               ) : (
@@ -559,10 +536,10 @@ export default function FinanceTab({
                       : `Pay TTD ${(priceMinor / 100).toLocaleString("en-TT", { maximumFractionDigits: 0 })} from balance`}
                   </button>
                   {subPayMessage ? (
-                    <p className="mt-2 text-[11px] text-emerald-700">{subPayMessage}</p>
+                    <p className="mt-2 text-xs text-emerald-700">{subPayMessage}</p>
                   ) : null}
                   {subPayError ? (
-                    <p className="mt-2 text-[11px] text-red-600">{subPayError}</p>
+                    <p className="mt-2 text-xs text-red-600">{subPayError}</p>
                   ) : null}
                 </div>
               )}
@@ -572,12 +549,12 @@ export default function FinanceTab({
                     type="button"
                     disabled={subscribing || payingSubscription}
                     onClick={() => void handleSubscribeByCard(plan)}
-                    className="mt-2 text-[11px] font-medium text-zinc-500 underline-offset-2 hover:text-zinc-700 hover:underline disabled:opacity-50"
+                    className="mt-2 text-xs font-medium text-zinc-500 underline-offset-2 hover:text-zinc-700 hover:underline disabled:opacity-50"
                   >
                     {subscribing ? "Redirecting to checkout…" : "Pay by card instead"}
                   </button>
                   {subscriptionStatus !== "PAST_DUE" ? (
-                    <p className="mt-2 text-[11px] text-zinc-500">
+                    <p className="mt-2 text-xs text-zinc-500">
                       To change or downgrade your plan,{" "}
                       <Link
                         href="/contact"
@@ -589,7 +566,7 @@ export default function FinanceTab({
                     </p>
                   ) : null}
                   {plan === "GROWTH" ? (
-                    <div className="mt-3 flex flex-wrap gap-3 border-t border-zinc-100 pt-3 text-[11px]">
+                    <div className="mt-3 flex flex-wrap gap-3 border-t border-zinc-100 pt-3 text-xs">
                       <button
                         type="button"
                         disabled={subscribing || payingSubscription}
@@ -613,36 +590,22 @@ export default function FinanceTab({
             </>
           )}
         </div>
-      </div>
-
-      {/* Section tabs */}
-      <div className={`grid grid-cols-3 overflow-hidden ${CARD} p-1 shadow-none`}>
-        {(["earnings", "bank", "history"] as const).map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => setActiveSection(s)}
-            className={`min-h-10 rounded-xl px-2 py-2.5 text-xs font-bold capitalize transition-all sm:px-4 sm:text-sm ${
-              activeSection === s ? "bg-zinc-900 text-white shadow-md" : "text-zinc-600 hover:bg-zinc-50"
-            }`}
-          >
-            {s === "earnings" ? "Earnings Ledger" : s === "bank" ? "Bank Details" : "Payout History"}
-          </button>
-        ))}
-      </div>
+      </div>}
 
       {/* Earnings ledger */}
-      {activeSection === "earnings" ? (
+      {activeSection === "earnings" || activeSection === "overview" ? (
         <div data-tour="finance-transactions">
-          {ledgerEntries.length === 0 ? (
+          <div className={workspace.row} style={{margin:"12px 0"}}><h2 className={workspace.heading}>{activeSection==="overview"?"Latest activity":"Transactions"}</h2>{activeSection==="overview"&&<button className={workspace.link} onClick={()=>chooseSection("earnings")}>View all activity →</button>}</div>
+          {activeSection==="earnings"&&<div className={workspace.toolbar}><input className={workspace.input} aria-label="Search transactions" placeholder="Search descriptions…" value={transactionSearch} onChange={e=>{setTransactionSearch(e.target.value);setTransactionLimit(30);}}/><select className={workspace.select} aria-label="Transaction type" value={transactionKind} onChange={e=>{setTransactionKind(e.target.value);setTransactionLimit(30);}}><option value="all">All activity</option><option value="credits">Earnings</option><option value="debits">Deductions</option></select><span className={workspace.muted}>{filteredActivity.length} transactions</span></div>}
+          {filteredActivity.length === 0 ? (
             <div className={`${CARD} p-6 text-center shadow-none`}>
               <p className="text-sm text-zinc-500">
-                No earnings yet. Earnings appear here once your delivered orders are completed.
+                {ledgerActivity.length ? "No transactions match your filters." : "Earnings appear here when completed orders are released."}
               </p>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              {ledgerActivity.map((entry) => {
+              {filteredActivity.slice(0,activeSection==="overview"?5:transactionLimit).map((entry) => {
                 const dateLabel = formatDate(entry.createdAt);
                 const gross = entry.grossMinor ?? entry.amountMinor;
                 const commission = entry.commissionMinor ?? 0;
@@ -653,9 +616,9 @@ export default function FinanceTab({
                 return (
                   <div key={entry.id} className={`px-4 py-3 ${CARD} shadow-none`}>
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[10px] text-zinc-500">{dateLabel}</span>
+                      <span className="text-xs text-zinc-500">{dateLabel}</span>
                       <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
                           isDebit
                             ? "bg-red-50 text-red-700"
                             : "bg-emerald-50 text-emerald-700"
@@ -664,28 +627,28 @@ export default function FinanceTab({
                         {isDebit ? debit.label : ledgerTypeLabel(entry.ledgerEntryType)}
                       </span>
                       {entry.releasedAt ? (
-                        <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600">
+                        <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">
                           Released
                         </span>
                       ) : null}
                     </div>
-                    <p className="mt-1 truncate text-[11px] text-zinc-600">{entry.description ?? "—"}</p>
+                    <p className="mt-1 truncate text-xs text-zinc-600">{entry.description ?? "—"}</p>
                     {isDebit ? (
                       <div className="mt-2">
                         <p className="font-semibold tabular-nums text-red-600">
                           -{formatTTD(entry.amountMinor)}
                         </p>
-                        <p className="mt-0.5 text-[10px] text-zinc-400">
+                        <p className="mt-0.5 text-xs text-zinc-400">
                           {debit.detail}
                         </p>
                       </div>
                     ) : isShipping ? (
                       <div className="mt-2">
                         <p className="font-semibold tabular-nums text-emerald-600">+{formatTTD(net)}</p>
-                        <p className="mt-0.5 text-[10px] text-zinc-400">Your delivery fee · no commission</p>
+                        <p className="mt-0.5 text-xs text-zinc-400">Your delivery fee · no commission</p>
                       </div>
                     ) : (
-                      <div className="mt-2 grid grid-cols-3 gap-2 text-[10px]">
+                      <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
                         <div>
                           <p className="text-zinc-400">Gross</p>
                           <p className="font-semibold tabular-nums text-zinc-800">{formatTTD(gross)}</p>
@@ -705,12 +668,13 @@ export default function FinanceTab({
               })}
             </div>
           )}
+          {activeSection === "earnings" && filteredActivity.length > transactionLimit && <button className={workspace.secondary} style={{marginTop:16}} onClick={()=>setTransactionLimit(n=>n+30)}>Show more transactions</button>}
         </div>
       ) : null}
 
       {/* Bank details */}
       {activeSection === "bank" ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <div data-tour="finance-payout-details" className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Bank Details
           </h2>
@@ -740,7 +704,7 @@ export default function FinanceTab({
               </div>
               <button
                 type="button"
-                onClick={() => setEditingBankDetails(true)}
+                onClick={() => {setEditAccountNumber("");setEditingBankDetails(true);}}
                 className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:opacity-90"
                 style={{ backgroundColor: "#D4450A" }}
               >
@@ -822,7 +786,7 @@ export default function FinanceTab({
                       type="button"
                       onClick={() => {
                         setEditingBankDetails(false);
-                        setEditAccountNumber(bankDetails?.accountNumber ?? "");
+                        setEditAccountNumber("");
                       }}
                       className="rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
                     >
@@ -836,9 +800,10 @@ export default function FinanceTab({
         </div>
       ) : null}
 
+      {activeSection === "history" && !pendingPayout && availableBalance < 5000 && <div className={workspace.card}><h2 className={workspace.heading}>Build your next payout</h2><p className={workspace.muted}>The minimum payout is TTD 50.00. Your available balance is {formatTTD(availableBalance)}.</p>{!hasBankOnFile&&<button className={workspace.link} onClick={()=>chooseSection("bank")}>Add bank details now →</button>}</div>}
       {/* Payout history */}
       {activeSection === "history" ? (
-        <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+        <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
           {payoutRequests.length === 0 ? (
             <div className="p-8 text-center">
               <p className="text-sm text-zinc-500">No payout requests yet.</p>

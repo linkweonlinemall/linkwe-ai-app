@@ -36,6 +36,7 @@ import {
 } from "@/app/actions/events"
 import { getSession } from "@/lib/auth/session"
 import { VENDOR_SYSTEM_PROMPT } from "@/lib/chat/vendorSystemPrompt"
+import { WORKSPACE_TOOLS, runWorkspaceTool } from "@/lib/chat/vendor-workspace-tools"
 import { SERVICE_CATEGORIES } from "@/lib/categories"
 import {
   canonicalRegionValue,
@@ -659,6 +660,7 @@ const SEARCH_TIMELINE_SOURCES_TOOL: Anthropic.Tool = {
 }
 
 const VENDOR_TOOLS: Anthropic.Tool[] = [
+  ...WORKSPACE_TOOLS,
   CREATE_PRODUCT_TOOL,
   CREATE_SERVICE_TOOL,
   SEARCH_PRODUCTS_TOOL,
@@ -806,8 +808,8 @@ export async function POST(req: NextRequest) {
       JSON.stringify({
         error:
           store.subscriptionPlan === "STARTER"
-            ? "You have used all 5 complimentary lifetime Rex prompts. Upgrade to Growth or Pro, or buy a top-up, to continue."
-            : "You're out of Rex uses for this period. Buy a top-up or review your plan to continue.",
+            ? "Your Starter Rex allowance is finished. Upgrade to Growth or Pro, or add a top-up in Finance to continue."
+            : "Your Rex allowance is finished for this period. Add a top-up or review your plan in Finance to continue.",
       }),
       { status: 403, headers: { "Content-Type": "application/json" } },
     )
@@ -861,6 +863,7 @@ export async function POST(req: NextRequest) {
     })
   }
   const aiRemainingToSend = usage.remaining
+  const refreshedCredits = await prisma.store.findUnique({ where: { id: store.id }, select: { aiTopupCreditsRemaining: true } })
   const lastUserText = incomingContentText(last.content!)
 
   const focusProductIdFromBody =
@@ -886,7 +889,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (aiRemainingToSend !== undefined) {
-        send(JSON.stringify({ aiRemaining: aiRemainingToSend }))
+        send(JSON.stringify({ aiRemaining: aiRemainingToSend, aiTopupRemaining: refreshedCredits?.aiTopupCreditsRemaining ?? 0 }))
       }
 
       let galleryUpdateSent = false
@@ -901,6 +904,9 @@ export async function POST(req: NextRequest) {
         galleryUpdate?: { productId: string; images: string[] }
         eventGalleryUpdate?: { eventId: string }
       }> => {
+        if (WORKSPACE_TOOLS.some(tool => tool.name === toolBlock.name)) {
+          return { content: JSON.stringify(await runWorkspaceTool(toolBlock.name, toolBlock.input)) }
+        }
         if (toolBlock.name === "create_product") {
           const raw = toolBlock.input as Record<string, unknown>
           const input = {

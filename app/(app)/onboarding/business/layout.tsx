@@ -8,9 +8,5 @@ export default async function BusinessOnboardingLayout({ children }: { children:
   if (user.role !== "VENDOR") {
     redirect(getRoleDashboardPath(user.role));
   }
-  return (
-    <div className="w-full min-w-0 bg-[#F5F5F5]">
-      <div className="mx-auto w-full min-w-0 max-w-2xl has-[[data-plan-picker]]:max-w-6xl">{children}</div>
-    </div>
-  );
+  return <>{children}</>;
 }

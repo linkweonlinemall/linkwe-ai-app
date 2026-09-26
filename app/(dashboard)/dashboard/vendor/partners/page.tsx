@@ -1,4 +1,6 @@
 import Link from "next/link";
+import WorkspacePage from "@/components/vendor/WorkspacePage";
+import styles from "@/components/vendor/business-workspace.module.css";
 import { redirect } from "next/navigation";
 
 import {
@@ -22,22 +24,8 @@ export default async function VendorPartnersPage() {
   const incoming = incomingResult.ok ? incomingResult.requests : [];
   const outgoing = outgoingResult.ok ? outgoingResult.requests : [];
 
-  return (
-    <div className="px-4 py-8 sm:px-6">
-      <Link
-        href="/dashboard/vendor"
-        className="mb-4 inline-block text-sm text-zinc-500 hover:text-zinc-800"
-      >
-        ← Back to dashboard
-      </Link>
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-zinc-900">Collab</h1>
-        <p className="mt-0.5 text-sm text-zinc-500">
-          Approve and manage cross-store collaborations
-        </p>
-      </div>
-
-      <PartnerRequestsClient initialIncoming={incoming} initialOutgoing={outgoing} />
-    </div>
-  );
+  return <WorkspacePage eyebrow="Better together" title="Grow your circle." description="Feature complementary products, services and events with the owner's approval. Manage both sides of the partnership here." action={<Link href="/stores" className={styles.secondary}>Discover stores ↗</Link>}>
+    {(!incomingResult.ok || !outgoingResult.ok) && <p className={styles.error}>Collaborations could not be loaded. Please refresh and try again.</p>}
+    <PartnerRequestsClient initialIncoming={incoming} initialOutgoing={outgoing}/>
+  </WorkspacePage>;
 }

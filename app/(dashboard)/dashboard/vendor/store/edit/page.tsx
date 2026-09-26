@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { unstable_noStore as noStore } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { updateStore } from "@/app/actions/store";
+import StoreEditForm from "./StoreEditForm";
+import StoreIdentityFields from "@/components/vendor/StoreIdentityFields";
+import WorkspacePage from "@/components/vendor/WorkspacePage";
+import styles from "@/components/vendor/business-workspace.module.css";
 import StoreLocationPicker from "@/components/storefront/StoreLocationPicker";
 import OpeningHoursEditor from "@/components/vendor/OpeningHoursEditor";
 import Input from "@/components/ui/Input";
@@ -13,7 +15,6 @@ import GalleryUploadWrapper from "./gallery-upload-wrapper";
 import StoreAmenitiesPicker from "./store-amenities-picker";
 import { StoreEditUploadProvider } from "./store-edit-upload-context";
 import { StoreEditFileInput } from "./store-edit-file-input";
-import { StoreEditSaveButton } from "./store-edit-save-button";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
@@ -48,7 +49,6 @@ const ERROR_MESSAGES: Record<string, string> = {
 type Props = { searchParams: Promise<{ error?: string; success?: string }> };
 
 export default async function VendorStoreEditPage({ searchParams }: Props) {
-  noStore();
   const session = await getSession();
   if (!session || session.role !== "VENDOR") {
     redirect("/");
@@ -99,22 +99,10 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
 
   return (
     <StoreEditUploadProvider>
-    <div className="mx-auto max-w-4xl px-6 pt-6 pb-12">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <a
-            href="/dashboard/vendor"
-            className="mb-1 inline-flex items-center gap-1 text-xs hover:underline"
-            style={{ color: "var(--blue)" }}
-          >
-            ← Back to dashboard
-          </a>
-          <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
-            Edit Store
-          </h1>
-        </div>
-      </div>
-
+    <WorkspacePage eyebrow="Your business, beautifully presented" title="Make your store feel like you." description="Shape your first impression, tell your story and make the practical details easy to find." action={<Link className={styles.secondary} href={publicStorePath} target="_blank" rel="noopener noreferrer">Preview storefront ↗</Link>}>
+      <nav aria-label="Store profile sections" className="sticky top-0 z-10 mb-6 flex gap-2 overflow-x-auto rounded-2xl border border-[#dce5d8] bg-white/95 p-2 backdrop-blur">
+        {[["identity","Identity"],["details","About"],["cover","Branding"],["hours","Hours"],["location","Location"],["policies","Customer care"],["gallery","Gallery"]].map(([id,label])=><a key={id} href={`#store-${id}`} className="shrink-0 rounded-xl px-4 py-3 text-xs font-bold text-[#345440] hover:bg-[#eef3e7]">{label}</a>)}
+      </nav>
       {showStoreSuccess ? (
         <p
           className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
@@ -139,43 +127,16 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
         </p>
       ) : null}
 
-      <form action={updateStore} className="flex flex-col" id="vendor-store-edit-form">
+      <StoreEditForm>
         <input name="storeId" type="hidden" value={store.id} />
         <input name="hasHours" type="hidden" value="1" />
 
-        <div
-          className="mb-5 rounded-xl bg-white p-5 sm:p-6"
-          style={{ border: "1px solid var(--card-border)" }}
-        >
+        <section id="store-identity" data-tour="store-identity" className="mb-5 scroll-mt-24 rounded-[20px] border border-[#dce5d8] bg-white p-5 sm:p-7">
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Store Identity
           </h2>
           <div className="flex flex-col gap-6">
-            <Input
-              required
-              className="text-base"
-              defaultValue={store.name}
-              label="Store name"
-              name="name"
-              type="text"
-            />
-            <Input
-              required
-              className="font-mono text-base"
-              defaultValue={store.slug}
-              helperText={`Your public store: linkwe.tt/store/${store.slug}`}
-              label="Store slug"
-              name="slug"
-              type="text"
-            />
-            <Input
-              className="text-base"
-              defaultValue={store.tagline ?? ""}
-              label="Tagline"
-              name="tagline"
-              placeholder="Short line under your store name"
-              type="text"
-            />
+            <StoreIdentityFields initialName={store.name} initialSlug={store.slug} initialTagline={store.tagline ?? ""} />
             <div className="flex items-start gap-4">
               <div className="min-w-0 flex-1">
                 <StoreEditFileInput
@@ -196,12 +157,9 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
               ) : null}
             </div>
           </div>
-        </div>
+        </section>
 
-        <div
-          className="mb-5 rounded-xl bg-white p-5 sm:p-6"
-          style={{ border: "1px solid var(--card-border)" }}
-        >
+        <section id="store-details" data-tour="store-details" className="mb-5 scroll-mt-24 rounded-[20px] border border-[#dce5d8] bg-white p-5 sm:p-7">
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Details
           </h2>
@@ -229,12 +187,9 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
               rows={4}
             />
           </div>
-        </div>
+        </section>
 
-        <div
-          className="mb-5 rounded-xl bg-white p-5 sm:p-6"
-          style={{ border: "1px solid var(--card-border)" }}
-        >
+        <section id="store-cover" data-tour="store-cover" className="mb-5 scroll-mt-24 rounded-[20px] border border-[#dce5d8] bg-white p-5 sm:p-7">
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Cover Photo
           </h2>
@@ -258,12 +213,9 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
               />
             ) : null}
           </div>
-        </div>
+        </section>
 
-        <div
-          className="mb-5 rounded-xl bg-white p-5 sm:p-6"
-          style={{ border: "1px solid var(--card-border)" }}
-        >
+        <section id="store-hours" data-tour="store-hours" className="mb-5 scroll-mt-24 rounded-[20px] border border-[#dce5d8] bg-white p-5 sm:p-7">
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Opening Hours
           </h2>
@@ -271,12 +223,9 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
             Set your opening hours for each day. Add multiple slots for split hours like a lunch break.
           </p>
           <OpeningHoursEditor initialHours={hours} />
-        </div>
+        </section>
 
-        <div
-          className="mb-5 rounded-xl bg-white p-5 sm:p-6"
-          style={{ border: "1px solid var(--card-border)" }}
-        >
+        <section id="store-location" data-tour="store-location" className="mb-5 scroll-mt-24 rounded-[20px] border border-[#dce5d8] bg-white p-5 sm:p-7">
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Location
           </h2>
@@ -288,12 +237,9 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
             initialLat={store.latitude ?? null}
             initialLng={store.longitude ?? null}
           />
-        </div>
+        </section>
 
-        <div
-          className="mb-5 rounded-xl bg-white p-5 sm:p-6"
-          style={{ border: "1px solid var(--card-border)" }}
-        >
+        <section id="store-policies" data-tour="store-policies" className="mb-5 scroll-mt-24 rounded-[20px] border border-[#dce5d8] bg-white p-5 sm:p-7">
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Tags &amp; Policies
           </h2>
@@ -305,6 +251,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
               <Input
                 className="text-base"
                 defaultValue={store.tags.join(", ")}
+                label="Store keywords"
                 name="tags"
                 placeholder="handmade, local, organic"
                 type="text"
@@ -320,6 +267,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
               <Textarea
                 className="min-h-[140px] text-base"
                 defaultValue={store.policies ?? ""}
+                label="Customer policies"
                 helperText="Max 2000 characters."
                 maxLength={2000}
                 name="policies"
@@ -387,7 +335,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
                       youtube.com/@
                     </span>
                     <input
-                      className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
+                      className="min-w-0 flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
                       defaultValue={parsedSocialLinks.youtube ?? ""}
                       name="social_youtube"
                       placeholder="yourchannel"
@@ -402,7 +350,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
                       x.com/
                     </span>
                     <input
-                      className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
+                      className="min-w-0 flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
                       defaultValue={parsedSocialLinks.x ?? ""}
                       name="social_x"
                       placeholder="yourhandle"
@@ -417,7 +365,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
                       linkedin.com/in/
                     </span>
                     <input
-                      className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
+                      className="min-w-0 flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
                       defaultValue={parsedSocialLinks.linkedin ?? ""}
                       name="social_linkedin"
                       placeholder="yourprofile"
@@ -432,7 +380,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
                       +1 (868)
                     </span>
                     <input
-                      className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
+                      className="min-w-0 flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
                       defaultValue={parsedSocialLinks.whatsapp ?? ""}
                       name="social_whatsapp"
                       placeholder="7001234 — business number"
@@ -447,7 +395,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
                       https://
                     </span>
                     <input
-                      className="flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
+                      className="min-w-0 flex-1 bg-white px-3 py-2 text-base text-zinc-900 outline-none"
                       defaultValue={parsedSocialLinks.website ?? ""}
                       name="social_website"
                       placeholder="yourwebsite.com"
@@ -458,24 +406,12 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
-      </form>
+      </StoreEditForm>
 
-      <GalleryUploadWrapper images={store.images} slotsAvailable={10 - store.images.length} />
-
-      <div className="mt-6 flex flex-col gap-3">
-        <StoreEditSaveButton />
-        <Link
-          className="inline-flex h-11 items-center justify-center rounded-lg border border-zinc-300 px-4 text-sm font-medium text-zinc-900 hover:bg-zinc-50"
-          href={publicStorePath}
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          View public store
-        </Link>
-      </div>
-    </div>
+      <section data-tour="store-gallery" id="store-gallery" className="scroll-mt-24 rounded-[20px] border border-[#dce5d8] bg-white p-5 sm:p-7"><p className={styles.muted}>Gallery changes are saved separately as you add or remove photos.</p><GalleryUploadWrapper images={store.images} slotsAvailable={10 - store.images.length} /></section>
+    </WorkspacePage>
     </StoreEditUploadProvider>
   );
 }

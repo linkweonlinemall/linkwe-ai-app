@@ -1,3 +1,4 @@
+import {sellableStoreWhere,isStoreSellable} from "@/lib/store/sellable-store";
 import { prisma } from "@/lib/prisma";
 import { CONTENT_LINK_TYPES } from "@/lib/content-links/types";
 import type { ContentLinkType } from "@/lib/content-links/types";
@@ -31,7 +32,7 @@ export async function resolveContentRows(
         id: { in: ids },
         isService: type === "SERVICE",
         ...(options.publicOnly
-          ? { isPublished: true, isArchived: false }
+          ? { isPublished: true, isArchived: false, store:sellableStoreWhere() }
           : {}),
       },
       select: {
@@ -41,13 +42,14 @@ export async function resolveContentRows(
         images: true,
         price: true,
         storeId: true,
+        store:{select:{status:true,owner:{select:{idVerificationStatus:true}}}},
         isPublished: true,
         isArchived: true,
       },
     });
 
     for (const row of rows) {
-      const isPublic = row.isPublished && !row.isArchived;
+      const isPublic = row.isPublished && !row.isArchived && isStoreSellable(row.store);
       if (options.publicOnly && !isPublic) continue;
       map.set(row.id, {
         type,
@@ -66,7 +68,7 @@ export async function resolveContentRows(
   const rows = await prisma.event.findMany({
     where: {
       id: { in: ids },
-      ...(options.publicOnly ? { status: "PUBLISHED" } : {}),
+      ...(options.publicOnly ? { status: "PUBLISHED", store:sellableStoreWhere() } : {}),
     },
     select: {
       id: true,
@@ -74,12 +76,13 @@ export async function resolveContentRows(
       slug: true,
       coverImage: true,
       storeId: true,
+      store:{select:{status:true,owner:{select:{idVerificationStatus:true}}}},
       status: true,
     },
   });
 
   for (const row of rows) {
-    const isPublic = row.status === "PUBLISHED";
+    const isPublic = row.status === "PUBLISHED" && isStoreSellable(row.store);
     if (options.publicOnly && !isPublic) continue;
     map.set(row.id, {
       type: "EVENT",

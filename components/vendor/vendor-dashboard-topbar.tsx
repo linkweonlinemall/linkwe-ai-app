@@ -67,6 +67,10 @@ export default function VendorDashboardTopbar({
   }, []);
   useEffect(() => { addMenu.current?.removeAttribute("open"); }, [pathname, searchParams]);
   const pageTour: TutorialName | null =
+    pathname.startsWith("/dashboard/vendor/photo-studio") ? "photoStudio" :
+    pathname.startsWith("/dashboard/vendor/qr-studio") ? "qrStudio" :
+    pathname.startsWith("/dashboard/vendor/ai-assistant") ? "rex" :
+    pathname.startsWith("/dashboard/vendor/shipping") ? "shipping" :
     pathname.startsWith("/dashboard/vendor/service-desk") ? "serviceDesk" :
     pathname === "/dashboard/vendor" ? "essentials" :
     pathname === "/dashboard/vendor/creation/new" && creationType === "product" ? "productSimple" :
@@ -78,7 +82,7 @@ export default function VendorDashboardTopbar({
     pathname.startsWith("/dashboard/vendor/subscribers") ? "subscribers" :
     pathname === "/dashboard/vendor/creation/new" && creationType === "event" ? "eventCreate" :
     pathname.startsWith("/dashboard/vendor/events") ? "events" :
-    pathname.startsWith("/dashboard/vendor/creation") ? "products" :
+    pathname.startsWith("/dashboard/vendor/creation") ? "creationZone" :
     pathname.startsWith("/dashboard/vendor/requests") ? "requests" :
     pathname.startsWith("/dashboard/vendor/store") ? "store" :
     pathname.startsWith("/dashboard/vendor/partners") ? "partners" :
@@ -131,14 +135,22 @@ export default function VendorDashboardTopbar({
             <span className="hidden sm:inline">Create</span>
             <ChevronDown className="hidden size-3.5 transition group-open:rotate-180 sm:block" aria-hidden />
           </summary>
-          <div className="absolute right-0 top-[calc(100%+.55rem)] z-[80] w-56 overflow-hidden rounded-2xl border border-orange-100 bg-white p-2 shadow-[0_18px_55px_rgba(28,28,26,.20)]">
-            <Link href="/dashboard/vendor/creation/new?type=product" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-zinc-800 hover:bg-orange-50 hover:text-[#D4450A]"><span className="flex size-9 items-center justify-center rounded-xl bg-orange-100 text-[#D4450A]"><Package className="size-4" /></span>Add product</Link>
-            <Link href="/dashboard/vendor/creation/new?type=service" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-zinc-800 hover:bg-amber-50 hover:text-amber-700"><span className="flex size-9 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><ConciergeBell className="size-4" /></span>Add service</Link>
-            <Link href="/dashboard/vendor/creation/new?type=event" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-zinc-800 hover:bg-rose-50 hover:text-rose-700"><span className="flex size-9 items-center justify-center rounded-xl bg-rose-100 text-rose-700"><CalendarDays className="size-4" /></span>Add event</Link>
-              <Link href="/dashboard/vendor/creation/new?type=ticket"><Ticket size={17}/> Add tickets</Link>
-              <Link href="/dashboard/vendor/creation/coupons"><Tag size={17}/> Coupons</Link>
-              <Link href="/dashboard/vendor/creation"><Layers3 size={17}/> Open Creation Zone</Link>
-          </div>
+          <nav className={s.createDropdown} aria-label="Create and manage">
+            <p className={s.createDropdownHeading}>MAKE SOMETHING NEW</p>
+            {[
+              { href: "/dashboard/vendor/creation/new?type=product", label: "Add product", detail: "Something to sell", icon: Package },
+              { href: "/dashboard/vendor/creation/new?type=service", label: "Add service", detail: "Your skills, bookable", icon: ConciergeBell },
+              { href: "/dashboard/vendor/creation/new?type=event", label: "Add event", detail: "Bring people together", icon: CalendarDays },
+              { href: "/dashboard/vendor/creation/new?type=ticket", label: "Add tickets", detail: "Tickets for your event", icon: Ticket },
+              { href: "/dashboard/vendor/creation/coupons", label: "Coupons", detail: "Give customers a little extra", icon: Tag },
+            ].map(({ href, label, detail, icon: Icon }) => (
+              <Link key={href} href={href} className={s.createDropdownItem}>
+                <span className={s.createDropdownIcon}><Icon size={18} aria-hidden /></span>
+                <span><strong>{label}</strong><small>{detail}</small></span>
+              </Link>
+            ))}
+            <Link href="/dashboard/vendor/creation" className={s.createDropdownFooter}><Layers3 size={18} aria-hidden /><span>Open Creation Zone</span><span aria-hidden>↗</span></Link>
+          </nav>
         </details>
 
       </div>

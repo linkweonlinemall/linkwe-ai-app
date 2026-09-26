@@ -29,3 +29,10 @@
 @media(max-width:360px){.hero{padding:22px 19px}.hero h1{font-size:29px;letter-spacing:-1.2px}.heroButtons{gap:12px}.quickAction small{display:none}.quickAction{min-height:74px}.quickIcon{width:31px;height:37px}.quickAction strong{font-size:11px}.menuFooter :is(a,button){font-size:10px;gap:4px}}
 
 @media(max-width:767px){.mainScroll.messageThreadScroll{padding-bottom:0;overflow:hidden}}
+.createDropdown{position:absolute;right:0;top:calc(100% + 10px);z-index:80;width:284px;max-width:calc(100vw - 24px);max-height:calc(100dvh - 100px);overflow-y:auto;padding:9px;background:#fffefb;border:1px solid #eadfd3;border-radius:20px;box-shadow:0 22px 64px #183d3a24,0 4px 12px #183d3a0d}
+.createDropdownHeading{margin:7px 10px 8px;font-size:9px;letter-spacing:1.7px;font-weight:800;color:#7d8980}
+.createDropdownItem{display:flex;align-items:center;gap:12px;padding:10px;border-radius:13px;color:#173d37;transition:background .15s}
+.createDropdownItem:hover{background:#f5f1e9}.createDropdownItem:focus-visible,.createDropdownFooter:focus-visible{outline:2px solid #d4450a;outline-offset:-2px}
+.createDropdownIcon{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:39px;height:39px;border-radius:12px;background:#fdf0e0;color:#bf480e}
+.createDropdownItem>span:last-child{display:grid;gap:3px}.createDropdownItem strong{font-size:13px;font-weight:750}.createDropdownItem small{font-size:11px;color:#78837b}
+.createDropdownFooter{display:flex;align-items:center;gap:11px;margin-top:6px;padding:15px 11px 10px;border-top:1px solid #e9e9df;font-size:12px;font-weight:750;color:#294f45;border-radius:0 0 12px 12px}.createDropdownFooter>span:last-child{margin-left:auto}.createDropdownFooter:hover{background:#f0f3eb}

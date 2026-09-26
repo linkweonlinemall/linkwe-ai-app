@@ -42,6 +42,7 @@ export async function getIntendedPlanCookie(): Promise<IntendedPlan | null> {
 export async function clearIntendedPlanCookie(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.set(INTENDED_PLAN_COOKIE_NAME, "", { ...intendedPlanCookieOptions, maxAge: 0 });
+  cookieStore.set(PLAN_PICKER_CONFIRMED_COOKIE_NAME, "", { ...intendedPlanCookieOptions, maxAge: 0 });
 }
 
 export async function setPlanPickerConfirmedCookie(): Promise<void> {

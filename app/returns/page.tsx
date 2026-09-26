@@ -23,7 +23,7 @@ export default function ReturnsPage() {
       eyebrow="Customer care"
       title="Returns, Cancellations & Refunds"
       subtitle="A clear route to help when a product, service, booking, digital purchase, or ticket does not go as expected."
-      updated="11 September 2026"
+      updated="25 September 2026"
     >
       <section>
         <div className="flex items-start gap-4">
@@ -44,8 +44,8 @@ export default function ReturnsPage() {
         </p>
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           {ISSUE_STEPS.map((step) => (
-            <div key={step.title} className="rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50 to-white p-4">
-              <step.Icon className="size-5 text-[#1A7FB5]" />
+            <div key={step.title} className="rounded-2xl border border-[#dce3d5] bg-gradient-to-br from-[#f0f4e9] to-white p-4">
+              <step.Icon className="size-5 text-[#436b51]" />
               <h3 className="mt-3 text-sm font-black text-zinc-900">{step.title}</h3>
               <p className="mt-1 text-xs leading-5 text-zinc-600">{step.text}</p>
             </div>
@@ -64,7 +64,7 @@ export default function ReturnsPage() {
         <h2 className="text-xl font-black text-zinc-900">Services, bookings and requests</h2>
         <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-600">
           <p>Each bookable service can have its own cancellation window. When self-service cancellation is still available in your Bookings page, any eligible amount paid is submitted for refund through WiPay. After the displayed cancellation window has passed, message the vendor to discuss the booking.</p>
-          <p>Custom and on-demand services may have different stages, deposits, quotations, attendance rules, and cancellation treatment. Review the listing and confirmed booking details before paying. A provider cancellation, service not delivered, or service materially different from the agreed description may qualify for redress.</p>
+          <p>Custom and on-demand services may have different stages, deposits, quotations, attendance rules, and cancellation treatment. Review the listing and confirmed booking details before paying. A provider cancellation, service not delivered, or service materially different from the agreed description may qualify for redress. For money paid directly to a provider on arrival, contact that provider about repayment; LinkWe cannot issue a WiPay refund for money it did not process. You can still ask LinkWe for support with a platform dispute.</p>
           <p>Recurring service subscriptions can be ended for future periods from the customer dashboard. Cancellation ordinarily stops future renewals and does not automatically refund a period already purchased, unless the service terms, the circumstances, or applicable law require otherwise.</p>
         </div>
       </section>
@@ -101,7 +101,7 @@ export default function ReturnsPage() {
         </p>
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
           <Link href="/contact" className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-gradient-to-r from-[#D4450A] to-[#F06A2A] px-5 text-sm font-black text-white shadow-[0_12px_28px_rgba(212,69,10,.24)]">Contact LinkWe Support</Link>
-          <a href="https://consumeraffairs.gov.tt/services/redress/" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-sky-100 bg-white px-5 text-sm font-black text-[#1A7FB5] shadow-sm">Consumer Affairs guidance</a>
+          <a href="https://consumeraffairs.gov.tt/services/redress/" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-[#dce3d5] bg-white px-5 text-sm font-black text-[#436b51] shadow-sm">Consumer Affairs guidance</a>
         </div>
       </section>
     </PublicStaticPageShell>

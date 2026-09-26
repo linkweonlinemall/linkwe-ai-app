@@ -1,0 +1,31 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const ts = require('typescript');
+const Module=require('node:module'),path=require('node:path'),originalLoad=Module._load;Module._load=function(request,parent,main){if(request.startsWith('@/'))request=path.join(process.cwd(),request.slice(2));return originalLoad.call(this,request,parent,main);};
+require.extensions['.ts'] = (mod, file) => mod._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);
+const {publicQrUrl,qrFilename,escapeQrText} = require('../lib/vendor/qr-studio.ts');
+assert.equal(publicQrUrl('http://linkweonlinemall.com/store/island'), 'https://www.linkweonlinemall.com/store/island');
+for (const bad of ['javascript:alert(1)', 'https://linkweonlinemall.com.evil.test/store/test', 'https://user:pass@linkweonlinemall.com/store/test', 'https://www.linkweonlinemall.com:8080/store/test', 'https://www.linkweonlinemall.com/dashboard/vendor', 'https://www.linkweonlinemall.com/api/vendor/photo-studio', 'broken']) assert.throws(()=>publicQrUrl(bad));
+for (const kind of ['store','products','service','events']) assert.ok(publicQrUrl(`https://www.linkweonlinemall.com/${kind}/sample`).includes(`/${kind}/sample`));
+assert.equal(qrFilename('Coffee & Cake!'), 'coffee-cake'); assert.equal(qrFilename('!!!'),'linkwe-qr');
+assert.equal(escapeQrText('<script>"&'), '&lt;script&gt;&quot;&amp;');
+const saved = new Map(); global.localStorage = {getItem:k=>saved.get(k)??null,setItem:(k,v)=>saved.set(k,v)};
+const {readTutorialProgress,saveTutorialProgress} = require('../lib/vendor/tutorial-progress.ts');
+assert.deepEqual(readTutorialProgress(), {});
+saveTutorialProgress('qrStudio', 2); assert.deepEqual(readTutorialProgress().qrStudio,{step:2,complete:false});
+saveTutorialProgress('qrStudio', 3,true); assert.equal(readTutorialProgress().qrStudio.complete,true);
+saveTutorialProgress('qrStudio',999); assert.equal(readTutorialProgress().qrStudio.step,3);
+global.localStorage.getItem=()=>'{invalid';assert.deepEqual(readTutorialProgress(),{});
+global.localStorage.setItem=()=>{throw Error('storage unavailable')};assert.doesNotThrow(()=>saveTutorialProgress('qrStudio',1));
+console.log('PASS Public QR destinations, printable text escaping, filenames, tutorial resume and unavailable browser storage');
+
+const {upcomingCustomerBookingsWhere,activeCustomerTicketsWhere,safeAccountHref}=require('../lib/customer/dashboard.ts');
+const localEvening=new Date('2026-09-26T02:00:00Z'),where=upcomingCustomerBookingsWhere('customer-1',localEvening);
+assert.equal(where.customerId,'customer-1');assert.ok(where.status.in.includes('DEPOSIT_PAID'));assert.equal(where.OR[1].bookingDate.gte.toISOString(),'2026-09-25T00:00:00.000Z');assert.equal(where.OR[1].endTime.gt,'22:00');assert.equal(where.OR[0].bookingDate.gte.toISOString(),'2026-09-26T00:00:00.000Z');
+const tickets=activeCustomerTicketsWhere('customer-1',localEvening);assert.equal(tickets.transferredAt,null);assert.equal(tickets.ticketOrder.is.status,'PAID');assert.deepEqual(tickets.event.status.notIn,['CANCELLED','COMPLETED']);
+for(const bad of ['javascript:alert(1)','https://evil.test','//evil.test','/\\evil.test'])assert.equal(safeAccountHref(bad),null);assert.equal(safeAccountHref('/bookings#booking-1'),'/bookings#booking-1');
+const {validateStaffSchedule,staffAssignmentConflict}=require('../lib/vendor/staff-schedule.ts');assert.ok(validateStaffSchedule([{dayOfWeek:0,startTime:'17:00',endTime:'09:00',slotDurationMins:60,slotBufferMins:0,isActive:true}]));assert.equal(staffAssignmentConflict('12:00','13:00',15,[{startTime:'11:00',endTime:'12:00'}]),true);assert.equal(staffAssignmentConflict('12:15','13:15',15,[{startTime:'11:00',endTime:'12:00'}]),false);
+console.log('PASS Trinidad midnight/day boundaries, deposit-paid bookings, active ticket exclusions, safe account links and staff buffers.');
+
+const {bookingDateLabel}=require('../lib/services/upcoming-bookings.ts');assert.equal(bookingDateLabel('2026-09-25T00:00:00Z'),bookingDateLabel('2026-09-25T16:00:00Z'));
+console.log('PASS Legacy and current booking date anchors show the same calendar day.');

@@ -44,7 +44,7 @@ const productBasics: TutorialStep[] = [
 ];
 
 const productFulfilment: TutorialStep[] = [
-  field(PRODUCT_ROUTE, "allowDelivery", "Allow delivery", "Enable this when the item can be sent to the customer. Delivery pricing follows the shipping methods and zones configured in your dashboard."),
+  field(PRODUCT_ROUTE, "allowDelivery", "Allow delivery", "Enable this when the item can be sent to the customer. LinkWe calculates delivery from the destination and packaged product details at checkout."),
   field(PRODUCT_ROUTE, "weight", "Weight", "Enter the packaged shipping weight—not only the bare item—so LinkWe delivery can calculate correctly."),
   field(PRODUCT_ROUTE, "weightUnit", "Weight unit", "Choose the unit that matches the number entered. A wrong unit can produce a seriously incorrect delivery charge."),
   field(PRODUCT_ROUTE, "length", "Package length", "Enter the packaged length in centimetres. Measure the parcel ready for delivery."),
@@ -70,6 +70,42 @@ const serviceMediaAndPublish: TutorialStep[] = [
 ];
 
 export const tutorialCatalog = {
+  creationZone: {
+    label: "Find your way around Creation Zone", description: "One place for products, services, events, tickets and coupons.", category: "Create & sell", duration: "2 min",
+    steps: [
+      routeStep("/dashboard/vendor/creation", "Your whole catalogue", "Use the type filters to switch between products, services and events. Search by name when you know what you need."),
+      { route: "/dashboard/vendor/creation", selector: '[data-tour="creation-library"]', title: "Check before you publish", body: "Each row shows the current listing state. Open an item to review its photos, pricing and details. You can keep unfinished work as a draft." },
+      routeStep("/dashboard/vendor/creation/coupons", "Give an offer a clear purpose", "Create a coupon for eligible items, choose the saving and set its dates and limits. Review the final discount before sharing the code."),
+      { title: "Keep learning", body: "Open Help & tutorials for a full lesson on simple, variable or digital products, each service type, and events. The Create button is always at the top right." },
+    ],
+  },
+  photoStudio: {
+    label: "Prepare a product photo", description: "Clean up a background, adjust the finish and review the result.", category: "Create & sell", duration: "3 min",
+    steps: [
+      routeStep("/dashboard/vendor/photo-studio", "Start with a clear original", "Choose one JPG, PNG or WebP with the product fully visible. Avoid hands covering important details. Starter includes one free image; active Growth and Pro plans have continuing access within usage limits."),
+      { route: "/dashboard/vendor/photo-studio", selector: 'input[type="file"]', title: "Choose and process", body: "Add your photo, choose whether to include a soft shadow, then process it. Your original stays available for comparison." },
+      { title: "Make the finish yours", body: "Fine-tune lighting, warmth, straightening and crop after processing. These local adjustments do not spend another image. Use zoom to inspect wording and small details." },
+      { title: "Review, then use", body: "Compare with the original and confirm that the product is accurate. Download the finished photo, or add it to your listing when opening the studio from a product form. Save the product to keep that change." },
+    ],
+  },
+  qrStudio: {
+    label: "Share your business with a QR code", description: "Make a code for your store or a published item, ready for print.", category: "Create & sell", duration: "2 min",
+    steps: [
+      routeStep("/dashboard/vendor/qr-studio", "Choose where a scan goes", "Select your storefront, a published product or service, or an event. You can also paste a LinkWe link."),
+      { route: "/dashboard/vendor/qr-studio", selector: '[data-tour="qr-destination"]', title: "Check the destination", body: "Use the customer-facing page you intend to share. A draft, deleted listing or private dashboard is not a useful destination for customers." },
+      { route: "/dashboard/vendor/qr-studio", selector: '[data-tour="qr-design"]', title: "Make it recognisable", body: "Choose a colour and a short heading for your printable card. Keep the code dark on white and leave its clear border intact." },
+      { route: "/dashboard/vendor/qr-studio", selector: '[data-tour="qr-preview"]', title: "Test before you print", body: "Download the code or print the card, then scan a sample with your phone. Check the destination before making a full print run." },
+    ],
+  },
+  shipping: {
+    label: "Prepare deliveries and pickups", description: "Find orders to prepare and keep parcel details accurate.", category: "Customers & fulfilment", duration: "3 min",
+    steps: [
+      routeStep("/dashboard/vendor/shipping", "Your fulfilment starting point", "Use Shipping to prepare physical orders. LinkWe delivery charges come from the destination and packaged item details."),
+      { route: "/dashboard/vendor/shipping", selector: '[data-tour="shipping-orders"]', title: "Prepare the right order", body: "Open an order to check payment, items and whether it is delivery or pickup. Follow the available action on that order so its status stays accurate." },
+      { route: "/dashboard/vendor/shipping", selector: '[data-tour="shipping-readiness"]', title: "Check the parcel", body: "Keep packaged weight, dimensions, pickup location and contact instructions current. Digital products do not need a parcel." },
+      { title: "Follow the handover", body: "Mark only work you have actually completed. Review the order again after pickup or courier handover, and keep customer communication in Messages." },
+    ],
+  },
   essentials: {
     label: "Start here: Vendor dashboard",
     description: "Understand the complete control centre and the correct order to set up your business.",
@@ -350,13 +386,16 @@ export const tutorialCatalog = {
     label: "Collab", description: "Review, approve, cancel and manage cross-store collaborations.", category: "Business operations", duration: "4 min",
     steps: [routeStep("/dashboard/vendor/partners", "Store collaborations", "Collab lets approved vendors showcase one another’s products, services or events."),
       { route: "/dashboard/vendor/partners", selector: '[data-tour="collab-incoming"]', title: "Requests to feature your work", body: "Review the requesting store and exact item. Approve only relevant collaborations; reject unclear or unsuitable requests." },
-      { route: "/dashboard/vendor/partners", selector: '[data-tour="collab-outgoing"]', title: "Requests you sent", body: "Track pending, approved and rejected requests. Cancel pending requests when plans change and remove collaborations that are no longer useful." },
+      { route: "/dashboard/vendor/partners", selector: '[data-tour="collab-outgoing-tab"]', activateSelector: '[data-tour="collab-outgoing-tab"]', title: "Requests you sent", body: "Track pending, approved and rejected requests. Cancel pending requests when plans change and remove collaborations that are no longer useful." },
       { title: "Start a collaboration", body: "Open an eligible product, service or event from another vendor and use its collaboration request control. Review the public item before requesting it." }],
   },
   staff: {
     label: "Staff & availability", description: "Build schedules and prevent appointment conflicts.", category: "Business operations", duration: "6 min",
     steps: [routeStep("/dashboard/vendor/staff", "Availability centre", "Availability controls when customers can book each service and prevents unrealistic schedules."),
-      { route: "/dashboard/vendor/staff", selector: '[data-tour="availability-store-hours"]', title: "Master store hours", body: "These are the default hours inherited by services. Edit the store schedule first when the whole business follows the same hours." },
+      { route: "/dashboard/vendor/staff", selector: '[data-tour="staff-team-tab"]', activateSelector: '[data-tour="staff-team-tab"]', title: "Team and assignments", body: "Add yourself or your team. Set each person’s services, working hours and time off. Assign appointments below; conflicts and buffers are checked before saving." },
+      { route: "/dashboard/vendor/staff", selector: '[data-tour="staff-visibility-tab"]', activateSelector: '[data-tour="staff-visibility-tab"]', title: "What customers can see", body: "Store activity and verification control public availability. Published listings and booking availability are separate. On-demand availability can be paused without cancelling existing work." },
+      { route: "/dashboard/vendor/staff", selector: '[data-tour="staff-availability-tab"]', activateSelector: '[data-tour="staff-availability-tab"]', title: "Service schedules", body: "Return to service availability to manage the hours customers can book." },
+      { route: "/dashboard/vendor/staff", selector: '[data-tour="availability-store-hours"]' , title: "Master store hours", body: "These are the default hours inherited by services. Edit the store schedule first when the whole business follows the same hours." },
       { route: "/dashboard/vendor/staff", selector: '[data-tour="availability-services"]', title: "Service availability", body: "Each service shows duration, buffer, schedule and booking limit. The switch temporarily accepts or stops bookings for that service." },
       { route: "/dashboard/vendor/staff", selector: '[data-tour="availability-edit"]', activateSelector: '[data-tour="availability-edit"]', title: "Edit a service schedule", body: "Open the editor to set duration, buffer, inherited or custom hours and a maximum number of bookings per day." },
       { route: "/dashboard/vendor/staff", selector: '[data-tour="availability-editor"]', title: "Build realistic bookable time", body: "Choose only days and hours you can honour. Include setup, travel and recovery time in the buffer." },
@@ -366,10 +405,10 @@ export const tutorialCatalog = {
     label: "Finance & payouts", description: "Understand balances, fees, transactions, plans and payout requests.", category: "Business operations", duration: "7 min",
     steps: [routeStep("/dashboard/vendor/finance", "Finance dashboard", "Finance records eligible sales, commission, balance activity, plan billing and payouts."),
       { route: "/dashboard/vendor/finance", selector: '[data-tour="finance-balances"]', title: "Balance cards", body: "Gross sales, pending funds and available balance are different. Only eligible net funds can be requested for payout." },
-      { route: "/dashboard/vendor/finance", selector: '[data-tour="finance-plan"]', title: "Plan and commission", body: "Review Starter, Growth or Pro pricing, product/service commission and plan limits. Event tickets use their separate current rate." },
-      { route: "/dashboard/vendor/finance", selector: '[data-tour="finance-transactions"]', title: "Transactions", body: "Open the ledger detail to understand the order, gross amount, commission, net credit, adjustments or payout debit." },
-      { route: "/dashboard/vendor/finance", selector: '[data-tour="finance-payout-details"]', title: "Bank details", body: "Keep bank name, account holder and account number accurate. Never send bank credentials through customer messages." },
-      { route: "/dashboard/vendor/finance", selector: '[data-tour="finance-payout-request"]', title: "Request a payout", body: "Request no more than the available balance. Confirm bank details and wait for the payout status rather than counting it twice." },
+      { route: "/dashboard/vendor/finance?tab=plan", selector: '[data-tour="finance-plan"]', title: "Plan and commission", body: "Review Starter, Growth or Pro pricing, product/service commission and plan limits. Event tickets use their separate current rate." },
+      { route: "/dashboard/vendor/finance?tab=earnings", selector: '[data-tour="finance-transactions"]', title: "Transactions", body: "Open the ledger detail to understand the order, gross amount, commission, net credit, adjustments or payout debit." },
+      { route: "/dashboard/vendor/finance?tab=bank", selector: '[data-tour="finance-payout-details"]', title: "Bank details", body: "Keep bank name, account holder and account number accurate. Never send bank credentials through customer messages." },
+      { route: "/dashboard/vendor/finance?tab=history", title: "Request a payout", body: "Request no more than the available balance. Confirm bank details and wait for the payout status rather than counting it twice." },
       { title: "Pay on arrival", body: "Pay-on-arrival service money is collected directly and must not count as LinkWe available balance or payout funds." },
       { title: "Refunds and reversals", body: "A refund or cancellation can reduce earnings. Review the related transaction before promising a vendor balance amount." }],
   },
@@ -412,7 +451,7 @@ export const tutorialCatalog = {
   rex: {
     label: "Rex business assistant", description: "Use AI safely for analysis, listings and store work.", category: "Business operations", duration: "5 min",
     steps: [routeStep("/dashboard/vendor/ai-assistant", "Meet Rex", "Rex can help eligible vendors analyse the business and create or improve store content. Review every proposed change before accepting it."),
-      { route: "/dashboard/vendor/ai-assistant", selector: '[data-tour="rex-usage"]', title: "AI allowance", body: "Growth and Pro include monthly uses. Each message consumes a use; top-ups follow current pricing." },
+      { route: "/dashboard/vendor/ai-assistant", selector: '[data-tour="rex-usage"]', title: "AI allowance", body: "The percentage bar shows how much of your plan allowance remains. Starter has a one-time gift; paid allowances renew with the plan. A purchased top-up reserve is shown separately." },
       { route: "/dashboard/vendor/ai-assistant", selector: '[data-tour="rex-history"]', title: "Chat history", body: "Open prior conversations when continuing the same task. Start a new chat for unrelated work." },
       { route: "/dashboard/vendor/ai-assistant", selector: '[data-tour="rex-images"]', title: "Product images", body: "Upload clear images when asking Rex to build a listing. Remove private or unrelated images first." },
       { route: "/dashboard/vendor/ai-assistant", selector: '[data-tour="rex-prompts"]', title: "Ask a precise question", body: "State the goal, product/service, audience, constraints and what Rex may change. Specific instructions produce safer results." },

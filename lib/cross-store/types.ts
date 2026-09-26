@@ -6,6 +6,7 @@ export type CrossStoreResolvedItem = {
   type: ContentLinkType;
   name: string;
   image: string | null;
+  href?: string | null;
 };
 
 export type CrossStoreRequestRow = {

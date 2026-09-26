@@ -1,104 +1,35 @@
 "use client";
-
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-
+import { LoaderCircle } from "lucide-react";
 import { resetPassword } from "@/app/actions/password-reset";
 import PasswordInput from "@/components/ui/PasswordInput";
+import AuthShell from "@/components/auth/AuthShell";
+import FormNotice from "@/components/auth/FormNotice";
+import s from "@/components/auth/auth.module.css";
 
 function ResetPasswordForm() {
-  const searchParams = useSearchParams();
+  const token = useSearchParams().get("token") ?? "";
   const router = useRouter();
-  const token = searchParams.get("token") ?? "";
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    const formData = new FormData(e.currentTarget);
-    formData.set("token", token);
-    const result = await resetPassword(formData);
-    setLoading(false);
-    if ("error" in result) {
-      setError(result.error);
-    } else {
-      router.push("/login?message=Password+reset+successfully");
-    }
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setError("");
+    const formData = new FormData(event.currentTarget);
+    if (formData.get("password") !== formData.get("confirm")) { setError("The passwords don’t match. Please check them and try again."); return; }
+    formData.set("token", token); setLoading(true);
+    try { const result = await resetPassword(formData); if ("error" in result) setError(result.error); else router.push("/login?message=Password+reset+successfully"); }
+    catch { setError("We couldn’t update your password. Please try again."); }
+    finally { setLoading(false); }
   }
-
-  if (!token) {
-    return (
-      <div className="text-center">
-        <p className="mb-4 text-sm text-red-500">Invalid reset link. Please request a new one.</p>
-        <Link href="/forgot-password" className="text-sm font-medium text-[#D4450A] hover:underline">
-          Request new link
-        </Link>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <h1 className="mb-1 text-xl font-bold text-zinc-900">Set new password</h1>
-      <p className="mb-6 text-sm text-zinc-500">Choose a strong password for your LinkWe account.</p>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-700">New password</label>
-          <PasswordInput
-            name="password"
-            type="password"
-            required
-            minLength={8}
-            placeholder="At least 8 characters"
-            className="w-full rounded-xl border border-zinc-200 px-4 py-3 text-sm outline-none focus:border-[#D4450A] focus:ring-0"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-700">Confirm password</label>
-          <PasswordInput
-            name="confirm"
-            type="password"
-            required
-            placeholder="Repeat your password"
-            className="w-full rounded-xl border border-zinc-200 px-4 py-3 text-sm outline-none focus:border-[#D4450A] focus:ring-0"
-          />
-        </div>
-        {error ? <p className="text-sm text-red-500">{error}</p> : null}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-xl bg-[#D4450A] py-3 text-sm font-bold text-white hover:opacity-90 disabled:opacity-50"
-        >
-          {loading ? "Updating..." : "Reset password"}
-        </button>
-      </form>
-    </>
-  );
+  if (!token) return <div className={s.form}><FormNotice message="This reset link is missing or incomplete. Request a new one to continue."/><Link href="/forgot-password" className={s.primary}>Request a new link</Link></div>;
+  return <form className={s.form} onSubmit={handleSubmit} aria-busy={loading}>
+    <div className={`${s.field} ${s.password}`}><label htmlFor="new-password">New password</label><PasswordInput id="new-password" name="password" autoComplete="new-password" required minLength={8} aria-describedby="reset-help"/><p id="reset-help" className={s.help}>Use at least 8 characters.</p></div>
+    <div className={`${s.field} ${s.password}`}><label htmlFor="confirm-password">Confirm new password</label><PasswordInput id="confirm-password" name="confirm" autoComplete="new-password" required minLength={8}/></div>
+    <FormNotice message={error}/><button type="submit" disabled={loading} className={s.primary}>{loading ? <><LoaderCircle size={17} className={s.spinner}/>Updating…</> : "Save new password"}</button>
+  </form>;
 }
-
 export default function ResetPasswordPage() {
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#F5F5F5] px-4">
-      <div className="w-full max-w-md">
-        <div className="mb-8 flex justify-center">
-          <Image
-            src="/linkwe-logo-on-dark.png"
-            alt="LinkWe"
-            width={180}
-            height={56}
-            className="h-14 w-auto object-contain"
-          />
-        </div>
-        <div className="rounded-2xl border border-zinc-100 bg-white p-8 shadow-sm">
-          <Suspense fallback={<p className="text-sm text-zinc-500">Loading...</p>}>
-            <ResetPasswordForm />
-          </Suspense>
-        </div>
-      </div>
-    </div>
-  );
+  return <AuthShell eyebrow="Account recovery" title="A new password. A fresh start." description="Choose a password you haven’t used elsewhere, then get back to your LinkWe."><Suspense fallback={<p className={s.help}>Loading your reset link…</p>}><ResetPasswordForm/></Suspense><p className={s.bottomText}><Link href="/login">Back to sign in</Link></p></AuthShell>;
 }

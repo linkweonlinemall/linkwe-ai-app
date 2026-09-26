@@ -1,6 +1,8 @@
 "use server"
 import { getSession } from "@/lib/auth/session"
 import { prisma } from "@/lib/prisma"
+import { revalidatePath } from "next/cache"
+import { vendorReviewWhere, type ReviewFilter } from "@/lib/vendor/review-query"
 
 export type VendorReview = {
   id: string
@@ -17,10 +19,7 @@ export type VendorReview = {
   type: "product" | "service" | "store"
 }
 
-export async function getVendorReviews(filter?: {
-  type?: "product" | "service" | "store" | "all"
-  rating?: number
-}): Promise<VendorReview[]> {
+export async function getVendorReviews(filter?: ReviewFilter): Promise<VendorReview[]> {
   const session = await getSession()
   if (!session || session.role !== "VENDOR") return []
 
@@ -31,14 +30,7 @@ export async function getVendorReviews(filter?: {
   if (!store) return []
 
   const reviews = await prisma.review.findMany({
-    where: {
-      OR: [
-        { product: { storeId: store.id } },
-        { store: { id: store.id } },
-        { booking: { product: { storeId: store.id } } }
-      ],
-      ...(filter?.rating ? { rating: filter.rating } : {})
-    },
+    where: vendorReviewWhere(store.id, filter),
     select: {
       id: true,
       rating: true,
@@ -49,12 +41,13 @@ export async function getVendorReviews(filter?: {
       vendorReply: true,
       vendorRepliedAt: true,
       user: { select: { fullName: true } },
-      product: { select: { name: true } },
+      product: { select: { name: true, isService: true } },
       store: { select: { id: true } },
       booking: { select: { product: { select: { name: true } } } }
     },
     orderBy: { createdAt: "desc" },
-    take: 100
+    take: Math.max(1, Math.min(100, Math.trunc(filter?.take ?? 100))),
+    skip: Math.max(0, Math.trunc(filter?.skip ?? 0))
   })
 
   return reviews.map(r => {
@@ -64,9 +57,9 @@ export async function getVendorReviews(filter?: {
 
     if (r.store) {
       type = "store"
-    } else if (r.booking) {
+    } else if (r.booking || r.product?.isService) {
       type = "service"
-      serviceName = r.booking.product?.name ?? null
+      serviceName = r.booking?.product?.name ?? r.product?.name ?? null
     } else {
       type = "product"
       productName = r.product?.name ?? null
@@ -86,9 +79,6 @@ export async function getVendorReviews(filter?: {
       serviceName,
       type
     }
-  }).filter(r => {
-    if (!filter?.type || filter.type === "all") return true
-    return r.type === filter.type
   })
 }
 
@@ -105,14 +95,13 @@ export async function replyToReview(
   })
   if (!store) return { error: "No store found" }
 
+  const text = reply.trim()
+  if (!text || text.length > 2000) return { error: "Write a reply between 1 and 2,000 characters." }
+
   const review = await prisma.review.findFirst({
     where: {
       id: reviewId,
-      OR: [
-        { product: { storeId: store.id } },
-        { store: { id: store.id } },
-        { booking: { product: { storeId: store.id } } }
-      ]
+      ...vendorReviewWhere(store.id)
     },
     select: { id: true }
   })
@@ -122,11 +111,15 @@ export async function replyToReview(
   await prisma.review.update({
     where: { id: reviewId },
     data: {
-      vendorReply: reply.trim(),
+      vendorReply: text,
       vendorRepliedAt: new Date()
     }
   })
 
+  revalidatePath("/dashboard/vendor/reviews")
+  revalidatePath("/store/[slug]", "page")
+  revalidatePath("/products/[slug]", "page")
+  revalidatePath("/service/[slug]", "page")
   return { ok: true }
 }
 
@@ -139,22 +132,9 @@ export async function getVendorReviewStats(): Promise<{
   const session = await getSession()
   if (!session || session.role !== "VENDOR") return { total: 0, average: 0, breakdown: {}, unanswered: 0 }
 
-  const store = await prisma.store.findFirst({
-    where: { ownerId: session.userId },
-    select: { id: true }
-  })
+  const store = await prisma.store.findFirst({ where: { ownerId: session.userId }, select: { id: true } })
   if (!store) return { total: 0, average: 0, breakdown: {}, unanswered: 0 }
-
-  const reviews = await prisma.review.findMany({
-    where: {
-      OR: [
-        { product: { storeId: store.id } },
-        { store: { id: store.id } },
-        { booking: { product: { storeId: store.id } } }
-      ]
-    },
-    select: { rating: true, vendorReply: true }
-  })
+  const reviews = await prisma.review.findMany({ where: vendorReviewWhere(store.id), select: { rating: true, vendorReply: true } })
 
   const total = reviews.length
   const average = total > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / total : 0

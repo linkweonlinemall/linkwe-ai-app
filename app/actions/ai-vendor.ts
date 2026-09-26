@@ -235,7 +235,7 @@ export async function assertVendorSession(): Promise<{ ok: true } | { ok: false 
 }
 
 export async function getMyAIUsage(): Promise<
-  | { ok: true; allowance: number; used: number; remaining: number; topupRemaining: number }
+  | { ok: true; allowance: number; used: number; remaining: number; topupRemaining: number; lifetime: boolean }
   | { ok: false }
 > {
   const session = await getSession()
@@ -251,8 +251,8 @@ export async function getMyAIUsage(): Promise<
     },
   })
   if (!store) return { ok: false }
-  const { allowance, used, remaining, topupRemaining } = await getAIUsageState(store)
-  return { ok: true, allowance, used, remaining, topupRemaining }
+  const { allowance, used, remaining, topupRemaining, periodKey } = await getAIUsageState(store)
+  return { ok: true, allowance, used, remaining, topupRemaining, lifetime: periodKey === "starter-lifetime" }
 }
 
 export async function generateCSVTemplate(): Promise<string> {

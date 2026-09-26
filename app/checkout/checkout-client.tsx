@@ -1,8 +1,11 @@
 "use client";
+import Link from "next/link";
+import { getFulfillmentOptions } from "@/lib/checkout/fulfillment-options";
+import s from "./checkout.module.css";
 import CouponInput, { type AppliedCoupon } from "@/components/checkout/CouponInput";
 
-import { Check, ChevronUp } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, ArrowRight, Check, ChevronUp, LockKeyhole, MapPin, PackageCheck, ShieldCheck, Truck } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createPaymentIntent,
@@ -18,7 +21,7 @@ import Select from "@/components/ui/Select";
 import { TRINIDAD_ONBOARDING_REGION_OPTIONS } from "@/lib/onboarding/tt-region-options";
 import { radius, spacing, tw } from "@/lib/design-system";
 import { normalizeTTPhone } from "@/lib/phone";
-import type { CheckoutField, CheckoutResponses } from "@/lib/checkout/custom-fields";
+import { validateCheckoutResponses, type CheckoutField, type CheckoutResponses } from "@/lib/checkout/custom-fields";
 
 export type CheckoutClientItem = {
   id: string;
@@ -66,24 +69,29 @@ function localPhoneDisplay(raw: string): string {
 }
 
 export default function CheckoutClient({ items, subtotal, initialPhone = "" }: CheckoutClientProps) {
-  const allDigital = useMemo(() => items.every((item) => item.product.isDigital), [items]);
-  const anyDelivery = useMemo(() => items.some((i) => i.product.allowDelivery), [items]);
-  const anyPickup = useMemo(() => items.some((i) => i.product.allowPickup), [items]);
-
-  const step = "details" as const;
+  const { allDigital, delivery: anyDelivery, pickup: anyPickup } = useMemo(() => getFulfillmentOptions(items), [items]);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const noticeRef = useRef<HTMLDivElement>(null);
+  const reviewRef = useRef<HTMLHeadingElement>(null);
+  const [step, setStep] = useState<"details" | "review">("details");
+  const [reviewAddress, setReviewAddress] = useState("");
+  const [quoteAttempt, setQuoteAttempt] = useState(0);
+  const [quoteFor, setQuoteFor] = useState("");
   const [deliveryRegion, setDeliveryRegion] = useState("");
   const [deliveryPhone, setDeliveryPhone] = useState(() => localPhoneDisplay(initialPhone));
   const [fulfillmentChoice, setFulfillmentChoice] = useState<"delivery" | "pickup" | null>(() => null);
   const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
   const [coupon,setCoupon]=useState<AppliedCoupon|null>(null);
   const [checkoutResponses, setCheckoutResponses] = useState<CheckoutResponses>({});
-  const [uploadingField, setUploadingField] = useState<string | null>(null);
+  const [uploadingFields, setUploadingFields] = useState<string[]>([]);
 
   const productQuestions = useMemo(() => {
     const groups: { key: string; storeId: string; title: string; fields: CheckoutField[] }[] = [];
     const legacyStores = new Set<string>();
+    const productsSeen = new Set<string>();
     for (const item of items) {
-      if (item.product.checkoutFields.length > 0) groups.push({ key: item.productId, storeId: item.product.storeId, title: item.product.name, fields: item.product.checkoutFields });
+      if (!productsSeen.has(item.productId) && item.product.checkoutFields.length > 0) groups.push({ key: item.productId, storeId: item.product.storeId, title: item.product.name, fields: item.product.checkoutFields });
+      productsSeen.add(item.productId);
       if (!legacyStores.has(item.product.storeId) && item.product.store.checkoutFields.length > 0) {
         legacyStores.add(item.product.storeId);
         groups.push({ key: `store:${item.product.storeId}`, storeId: item.product.storeId, title: item.product.store.name, fields: item.product.store.checkoutFields });
@@ -93,6 +101,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
   }, [items]);
   // Compatibility alias for the renderer while store-level questions phase out.
   const storeQuestions = productQuestions.map((group) => ({
+    key: group.key,
     storeId: group.storeId,
     storeName: group.title,
     fields: group.fields,
@@ -104,11 +113,15 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
 
   async function uploadResponse(storeId: string, fieldId: string, file: File | undefined) {
     if (!file) return;
-    setUploadingField(`${storeId}:${fieldId}`);
+    const key = `${storeId}:${fieldId}`;
+    setUploadingFields(current => [...current, key]);
+    setCheckoutResponse(storeId, fieldId, "");
     const body = new FormData(); body.set("file", file);
-    const result = await uploadCheckoutResponseFile(body);
-    if (result.ok) setCheckoutResponse(storeId, fieldId, result.url); else setError(result.error);
-    setUploadingField(null);
+    try {
+      const result = await uploadCheckoutResponseFile(body);
+      if (result.ok) setCheckoutResponse(storeId, fieldId, result.url); else setError(result.error);
+    } catch { setError("Your file could not be uploaded. Please try again."); }
+    finally { setUploadingFields(current => current.filter(value => value !== key)); }
   }
 
   const useDelivery = useMemo(() => {
@@ -130,7 +143,9 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
   const [shippingLoading, setShippingLoading] = useState(false);
   const [deliveryCoordinates, setDeliveryCoordinates] = useState<{ latitude: number | null; longitude: number | null }>({ latitude: null, longitude: null });
 
-  const regionLabel = deliveryRegion.replace(/_/g, " ");
+  const regionLabel = getRegionOptionLabel(deliveryRegion);
+  useEffect(() => { if (error) noticeRef.current?.focus(); }, [error]);
+  useEffect(() => { if (step === "review") reviewRef.current?.focus(); }, [step]);
 
   useEffect(() => {
     if (!useDelivery || allDigital) {
@@ -165,6 +180,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
 
   function clearDeliveryRegionSelection() {
     setDeliveryRegion("");
+    setDeliveryCoordinates({ latitude: null, longitude: null });
     setSuggestedRegion(null);
     setPinRegionUnmatched(false);
     setRegionNeedsConfirmation(false);
@@ -186,6 +202,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
     setRegionNeedsConfirmation(false);
   }
 
+  const quoteKey = `${deliveryRegion}:${deliveryCoordinates.latitude}:${deliveryCoordinates.longitude}:${quoteAttempt}`;
   const needsShippingQuote = !allDigital && useDelivery && Boolean(deliveryRegion);
 
   useEffect(() => {
@@ -205,16 +222,23 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
       deliveryCoordinates.longitude,
     ).then((result) => {
       if (cancelled) return;
+      setQuoteFor(quoteKey);
       setShippingBreakdown(result);
+      setShippingLoading(false);
+    }).catch(() => {
+      if (cancelled) return;
+      setQuoteFor(quoteKey);
+      setShippingBreakdown({ ok: false, error: "We couldn’t calculate delivery. Please try again." });
       setShippingLoading(false);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [needsShippingQuote, deliveryRegion, useDelivery, deliveryCoordinates.latitude, deliveryCoordinates.longitude]);
+  }, [needsShippingQuote, deliveryRegion, useDelivery, deliveryCoordinates.latitude, deliveryCoordinates.longitude, quoteKey]);
 
-  const totalShippingMinor = needsShippingQuote && shippingBreakdown?.ok
+  const quoteReady = quoteFor === quoteKey && shippingBreakdown?.ok === true && !shippingLoading;
+  const totalShippingMinor = needsShippingQuote && quoteReady && shippingBreakdown?.ok
     ? shippingBreakdown.totalShippingMinor
     : 0;
 
@@ -228,17 +252,18 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
   const deliveryPhoneValid = !useDelivery || allDigital || normalizeTTPhone(deliveryPhone).ok;
 
   const payBlocked =
-    loading ||
+    loading || uploadingFields.length > 0 ||
     (!allDigital && !anyDelivery && !anyPickup) ||
     hasCoverageFailure ||
     !deliveryPhoneValid ||
     needsRegionConfirmation ||
-    (needsShippingQuote && shippingLoading);
+    (needsShippingQuote && !quoteReady);
 
-  async function proceedToPayment() {
-    const addressInput = document.querySelector('input[name="locationAddress"]') as HTMLInputElement | null;
-    const latInput = document.querySelector('input[name="locationLat"]') as HTMLInputElement | null;
-    const lngInput = document.querySelector('input[name="locationLng"]') as HTMLInputElement | null;
+  async function proceedToPayment(reviewOnly = false) {
+    if (payBlocked) return;
+    const addressInput = rootRef.current?.querySelector('input[name="locationAddress"]') as HTMLInputElement | null;
+    const latInput = rootRef.current?.querySelector('input[name="locationLat"]') as HTMLInputElement | null;
+    const lngInput = rootRef.current?.querySelector('input[name="locationLng"]') as HTMLInputElement | null;
     const address = addressInput?.value ?? "";
     const latRaw = latInput?.value?.trim() ?? "";
     const lngRaw = lngInput?.value?.trim() ?? "";
@@ -264,8 +289,14 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
       return;
     }
 
-    setLoading(true);
+    for (const group of storeQuestions) {
+      const responseError = validateCheckoutResponses(group.fields, checkoutResponses[group.storeId]);
+      if (responseError) { setError(`${group.storeName}: ${responseError}`); return; }
+    }
     setError(null);
+    if (reviewOnly) { setReviewAddress(address); setStep("review"); setMobileSummaryOpen(false); return; }
+    setLoading(true);
+    try {
     trackGoogleAnalyticsEvent("begin_checkout", { currency: "TTD", value: displayTotal, items: items.map((item) => ({ item_id: item.productId, item_name: item.product.name, price: item.product.price, quantity: item.quantity })) });
     const result = await createPaymentIntent(
       address,
@@ -276,6 +307,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
       deliveryPhone.trim() || null,
       checkoutResponses,
       coupon?.code,
+      Math.round(displayTotal * 100),
     );
     if (result.ok) {
       window.location.assign(result.checkoutUrl);
@@ -283,7 +315,8 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
     } else {
       setError(result.error);
     }
-    setLoading(false);
+    } catch { setError("We couldn’t open payment. Please try again. If you already paid, check Orders before retrying."); }
+    finally { setLoading(false); }
   }
 
   function renderShippingLines() {
@@ -291,7 +324,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
       return (
         <div className="flex justify-between py-2 text-sm">
           <span>Delivery</span>
-          <span className="font-semibold text-emerald-600">Free — instant download</span>
+          <span className="font-semibold text-emerald-600">No shipping fee</span>
         </div>
       );
     }
@@ -314,7 +347,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
       );
     }
 
-    if (shippingLoading) {
+    if (shippingLoading || quoteFor !== quoteKey) {
       return (
         <div className="flex justify-between py-2 text-sm" style={{ color: "var(--text-secondary)" }}>
           <span>Delivery</span>
@@ -361,7 +394,8 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
         {items.map((item) => {
           const line = item.product.price * item.quantity;
           return (
-            <li key={item.id} className="flex justify-between py-1.5 text-xs" style={{ color: "var(--text-primary)" }}>
+            <li key={item.id} className={s.orderItem}>
+              {item.product.images[0] ? <img src={item.product.images[0]} alt="" width={48} height={48}/> : <span className={s.itemPlaceholder}><PackageCheck size={20}/></span>}
               <span>
                 {item.product.name} × {item.quantity}
               </span>
@@ -375,12 +409,12 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
         <span>Subtotal</span>
         <span>TTD {subtotal.toFixed(2)}</span>
       </div>
-      <CouponInput kind="cart" value={coupon} onChange={setCoupon}/>{coupon&&<div className="flex justify-between py-2 text-sm text-emerald-700"><span>Coupon · {coupon.code}</span><span>− TTD {(coupon.discountMinor/100).toFixed(2)}</span></div>}
+      <CouponInput kind="cart" disabled={loading} value={coupon} onChange={setCoupon}/>{coupon&&<div className="flex justify-between py-2 text-sm text-emerald-700"><span>Coupon · {coupon.code}</span><span>− TTD {(coupon.discountMinor/100).toFixed(2)}</span></div>}
       {renderShippingLines()}
       <div className="my-3 border-t" style={{ borderColor: "var(--card-border-subtle)" }} />
       <div className="flex justify-between">
         <span className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
-          Total
+          {useDelivery && !allDigital && !quoteReady ? "Items total · delivery pending" : "Order total"}
         </span>
         <span className="text-base font-bold" style={{ color: "var(--scarlet)" }}>
           TTD {displayTotal.toFixed(2)}
@@ -399,23 +433,23 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
   );
 
   return (
-    <div className={`grid grid-cols-1 lg:grid-cols-3 ${spacing.cardGap} max-lg:pb-40 lg:pb-0`}>
+    <div ref={rootRef} className={`${s.checkout} grid grid-cols-1 lg:grid-cols-3 ${spacing.cardGap} max-lg:pb-64 lg:pb-0`}>
+      <ol className={s.steps} aria-label="Checkout progress">{["Your details", "Review order", "WiPay payment"].map((label,index) => <li key={label} aria-current={(step === "details" ? 0 : 1) === index ? "step" : undefined}><span>{index === 0 && step === "review" ? <Check size={15}/> : index + 1}</span>{label}</li>)}</ol>
+      {error && <div ref={noticeRef} className={s.error} role="alert" tabIndex={-1}>{error}</div>}
+
       <div className="order-1 flex w-full min-w-0 flex-col gap-5 lg:order-none lg:col-span-2">
-        {step === "details" ? (
-          <div
+        <div hidden={step !== "details"}><div
             className={`${radius.card} bg-white ${spacing.cardPadding}`}
             style={{ border: "1px solid var(--card-border)" }}
           >
             <div id="checkout-delivery-form">
-              <h2 className="mb-4 text-base font-semibold" style={{ color: "var(--text-primary)" }}>
-                Delivery details
-              </h2>
+              <div className={s.sectionHeading}><span>{allDigital ? <PackageCheck size={21}/> : <Truck size={21}/>}</span><div><h2>{allDigital ? "Your digital order" : "How would you like your order?"}</h2><p>{allDigital ? "No address needed. Your files follow confirmed payment." : "Choose an available method for the physical items in your cart."}</p></div></div>
 
               {!allDigital ? (
                 <>
                   {anyDelivery && anyPickup ? (
-                    <div className="mt-4 space-y-4">
-                      <label className="flex min-h-[44px] cursor-pointer items-center gap-3 py-1">
+                    <div className={s.methods}>
+                      <label className={s.method}>
                         <input
                           type="radio"
                           name="fulfillment"
@@ -425,7 +459,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
                         />
                         <span className="text-base font-medium text-zinc-800">Deliver to my address</span>
                       </label>
-                      <label className="flex min-h-[44px] cursor-pointer items-center gap-3 py-1">
+                      <label className={s.method}>
                         <input
                           type="radio"
                           name="fulfillment"
@@ -448,8 +482,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
 
                   {!anyDelivery && !anyPickup ? (
                     <p className="mt-4 text-base text-amber-700">
-                      These products have no delivery or pickup options set. Contact the vendor or try another
-                      cart.
+                      These products do not share an available delivery or pickup method. Adjust your cart or order them separately.
                     </p>
                   ) : null}
 
@@ -576,13 +609,14 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
                 </>
               ) : (
                 <p className="mt-4 text-base text-zinc-600">
-                  Digital delivery — instant download after payment. No shipping address required.
+                  Digital delivery — access after confirmed payment. No shipping address required.
                 </p>
               )}
             </div>
 
-            {storeQuestions.length > 0 ? <div className="mt-6 space-y-4 border-t border-zinc-100 pt-5"><div><h2 className="text-base font-semibold text-zinc-900">Details for your vendors</h2><p className="mt-1 text-xs text-zinc-500">These answers help each vendor prepare your order correctly.</p></div>{storeQuestions.map((group) => <section key={group.storeId} className="rounded-2xl border border-orange-100 bg-orange-50/40 p-4"><h3 className="text-sm font-bold text-zinc-900">{group.storeName}</h3><div className="mt-3 space-y-4">{group.fields.map((field) => { const value = checkoutResponses[group.storeId]?.[field.id]; const inputClass = "min-h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm outline-none focus:border-[#D4450A] focus:ring-4 focus:ring-orange-500/10"; return <label key={field.id} className="block text-xs font-semibold text-zinc-700"><span>{field.label}{field.required ? <span className="text-[#D4450A]"> *</span> : null}</span>{field.type === "text" ? <input value={typeof value === "string" ? value : ""} onChange={(e) => setCheckoutResponse(group.storeId, field.id, e.target.value)} className={`${inputClass} mt-1.5`} /> : null}{field.type === "select" ? <select value={typeof value === "string" ? value : ""} onChange={(e) => setCheckoutResponse(group.storeId, field.id, e.target.value)} className={`${inputClass} mt-1.5`}><option value="">Choose one…</option>{field.options.map((option) => <option key={option}>{option}</option>)}</select> : null}{field.type === "multiselect" || field.type === "checklist" ? <span className="mt-2 grid gap-2 sm:grid-cols-2">{field.options.map((option) => { const values = Array.isArray(value) ? value : []; return <span key={option} className="flex min-h-11 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 font-medium"><input type="checkbox" checked={values.includes(option)} onChange={(e) => setCheckoutResponse(group.storeId, field.id, e.target.checked ? [...values, option] : values.filter((item) => item !== option))} className="size-4 accent-[#D4450A]" />{option}</span>; })}</span> : null}{field.type === "upload" ? <span className="mt-1.5 block"><input type="file" onChange={(e) => void uploadResponse(group.storeId, field.id, e.target.files?.[0])} className={`${inputClass} file:mr-3 file:border-0 file:bg-transparent file:text-xs file:font-bold`} />{uploadingField === `${group.storeId}:${field.id}` ? <span className="mt-1 block text-[11px] text-zinc-500">Uploading…</span> : typeof value === "string" && value ? <span className="mt-1 block text-[11px] text-emerald-700">Uploaded successfully</span> : null}</span> : null}</label>; })}</div></section>)}</div> : null}
+            {storeQuestions.length > 0 ? <div className="mt-6 space-y-4 border-t border-zinc-100 pt-5"><div><h2 className="text-base font-semibold text-zinc-900">Details for your vendors</h2><p className="mt-1 text-xs text-zinc-500">These answers help each vendor prepare your order correctly.</p></div>{storeQuestions.map((group) => <section key={group.key} className="rounded-2xl border border-orange-100 bg-orange-50/40 p-4"><h3 className="text-sm font-bold text-zinc-900">{group.storeName}</h3><div className="mt-3 space-y-4">{group.fields.map((field) => { const value = checkoutResponses[group.storeId]?.[field.id]; const inputClass = "min-h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm outline-none focus:border-[#D4450A] focus:ring-4 focus:ring-orange-500/10"; return <label key={field.id} className="block text-xs font-semibold text-zinc-700"><span>{field.label}{field.required ? <span className="text-[#D4450A]"> *</span> : null}</span>{field.type === "text" ? <input value={typeof value === "string" ? value : ""} onChange={(e) => setCheckoutResponse(group.storeId, field.id, e.target.value)} className={`${inputClass} mt-1.5`} /> : null}{field.type === "select" ? <select value={typeof value === "string" ? value : ""} onChange={(e) => setCheckoutResponse(group.storeId, field.id, e.target.value)} className={`${inputClass} mt-1.5`}><option value="">Choose one…</option>{field.options.map((option) => <option key={option}>{option}</option>)}</select> : null}{field.type === "multiselect" || field.type === "checklist" ? <span className="mt-2 grid gap-2 sm:grid-cols-2">{field.options.map((option) => { const values = Array.isArray(value) ? value : []; return <span key={option} className="flex min-h-11 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 font-medium"><input type="checkbox" checked={values.includes(option)} onChange={(e) => setCheckoutResponse(group.storeId, field.id, e.target.checked ? [...values, option] : values.filter((item) => item !== option))} className="size-4 accent-[#D4450A]" />{option}</span>; })}</span> : null}{field.type === "upload" ? <span className="mt-1.5 block"><input type="file" disabled={uploadingFields.includes(`${group.storeId}:${field.id}`)} onChange={(e) => void uploadResponse(group.storeId, field.id, e.target.files?.[0])} className={`${inputClass} file:mr-3 file:border-0 file:bg-transparent file:text-xs file:font-bold`} />{uploadingFields.includes(`${group.storeId}:${field.id}`) ? <span className="mt-1 block text-[11px] text-zinc-500">Uploading…</span> : typeof value === "string" && value ? <span className="mt-1 block text-[11px] text-emerald-700">Uploaded successfully</span> : null}</span> : null}</label>; })}</div></section>)}</div> : null}
 
+            {needsShippingQuote && !shippingLoading && quoteFor === quoteKey && shippingBreakdown?.ok === false && <div className={s.quoteError} role="alert"><p>We couldn’t get your delivery quote. Check your region and try again.</p><button type="button" onClick={() => setQuoteAttempt(value => value + 1)}>Retry delivery quote</button></div>}
             {coverageWarning ? <div className="mt-4">{coverageWarning}</div> : null}
 
             {needsRegionConfirmation ? (
@@ -593,7 +627,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
 
             <button
               type="button"
-              onClick={() => void proceedToPayment()}
+              onClick={() => void proceedToPayment(step === "details")}
               disabled={payBlocked}
               className={`${mobilePrimaryBtn} mt-4 hidden gap-2 lg:flex`}
             >
@@ -603,13 +637,20 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
                   Processing…
                 </>
               ) : (
-                "Continue to payment"
+                "Review my order"
               )}
             </button>
-            {error ? <p className={`mt-3 text-base ${tw.textDangerToken}`}>{error}</p> : null}
-          </div>
-        ) : null}
 
+          </div></div>
+        {step === "review" && <section className={s.review}>
+          <button type="button" className={s.back} onClick={() => { setStep("details"); setError(null); }} disabled={loading}><ArrowLeft size={15}/> Edit my details</button>
+          <div className={s.sectionHeading}><span><ShieldCheck size={22}/></span><div><h2 ref={reviewRef} tabIndex={-1}>One last look.</h2><p>Check these details before you continue to payment.</p></div></div>
+          <div className={s.deliveryReview}><MapPin size={20}/><div><strong>{allDigital ? "Digital delivery" : useDelivery ? "Delivery to your address" : "LinkWe warehouse pickup"}</strong><p>{allDigital ? "Access your purchases in your account after payment is confirmed." : useDelivery ? reviewAddress : "Wait for your ready-for-pickup notification and collection instructions."}</p>{useDelivery && !allDigital && <><p>{getRegionOptionLabel(deliveryRegion)}</p><p>+1 (868) {deliveryPhone}</p></>}</div></div>
+          {storeQuestions.map(group => <div className={s.answers} key={group.key}><h3>{group.storeName}</h3>{group.fields.map(field => { const value = checkoutResponses[group.storeId]?.[field.id]; return <p key={field.id}><span>{field.label}</span><strong>{field.type === "upload" ? value ? "File uploaded" : "Not supplied" : Array.isArray(value) ? value.join(", ") || "Not supplied" : value || "Not supplied"}</strong></p>; })}</div>)}
+          <div className={s.paymentNote}><LockKeyhole size={21}/><div><strong>Payment happens securely with WiPay</strong><p>LinkWe will open the payment page. Your order is confirmed when payment succeeds. Never share card details in Messages.</p></div></div>
+          <p className={s.terms}>By continuing, you agree to the <Link href="/terms">Terms</Link> and have reviewed our <Link href="/returns">returns policy</Link> and <Link href="/shipping-info">delivery information</Link>.</p>
+          <button type="button" onClick={() => void proceedToPayment()} disabled={payBlocked} className={`${mobilePrimaryBtn} mt-5 hidden gap-2 lg:flex`}>{loading ? <><InlineSpinner className="size-5"/> Opening payment…</> : <>Continue to WiPay <ArrowRight size={17}/></>}</button>
+        </section>}
       </div>
 
       <div className="hidden w-full min-w-0 lg:order-none lg:col-span-1 lg:block">
@@ -622,19 +663,21 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
       </div>
 
       {/* Mobile: sticky dock — order summary toggle + primary CTA */}
-      <div className="fixed inset-x-0 bottom-[var(--mobile-tab-offset)] z-[95] lg:hidden safe-area-bottom">
+      <div className={s.mobileDock}>
         <div className="border-t border-zinc-200 bg-white shadow-[0_-4px_24px_rgba(0,0,0,0.08)] pb-[env(safe-area-inset-bottom,0px)]">
           {mobileSummaryOpen ? (
-            <div className="max-h-[42vh] overflow-y-auto border-b border-zinc-100 p-4">{summaryBody}</div>
+            <div id="mobile-checkout-summary" className="max-h-[42vh] overflow-y-auto border-b border-zinc-100 p-4">{summaryBody}</div>
           ) : null}
 
           <button
             type="button"
             onClick={() => setMobileSummaryOpen((o) => !o)}
+            aria-expanded={mobileSummaryOpen}
+            aria-controls="mobile-checkout-summary"
             className="flex w-full min-h-[44px] items-center justify-between gap-3 border-zinc-100 px-4 py-2 text-left text-sm font-semibold text-zinc-900"
           >
             <span>
-              View order{" "}
+              {useDelivery && !allDigital && !quoteReady ? "Items · delivery pending" : "Your order"}{" "}
               <span style={{ color: "var(--scarlet)" }} className="font-bold">
                 (TTD {displayTotal.toFixed(2)})
               </span>
@@ -645,8 +688,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
             />
           </button>
 
-          {step === "details" ? (
-            <div className="px-4 pb-2 pt-1">
+          <div className="px-4 pb-2 pt-1">
               {needsRegionConfirmation ? (
                 <p className="mb-2 text-sm text-amber-700">
                   Confirm your delivery region before continuing.
@@ -654,7 +696,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
               ) : null}
               <button
                 type="button"
-                onClick={() => void proceedToPayment()}
+                onClick={() => void proceedToPayment(step === "details")}
                 disabled={payBlocked}
                 className={`${mobilePrimaryBtn} gap-2`}
               >
@@ -664,11 +706,10 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
                     Processing…
                   </>
                 ) : (
-                  "Continue to payment"
+                  step === "details" ? "Review my order" : "Continue to WiPay"
                 )}
               </button>
             </div>
-          ) : null}
         </div>
       </div>
     </div>

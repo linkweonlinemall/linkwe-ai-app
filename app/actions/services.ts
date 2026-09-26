@@ -767,6 +767,9 @@ export async function updateServiceAvailability(
     }
   }
 
+  if(!Number.isInteger(data.durationMinutes)||!Number.isInteger(data.bufferMinutes)||data.maxPerDay!==null&&(!Number.isInteger(data.maxPerDay)||data.maxPerDay<1||data.maxPerDay>1000))return {error:"Use whole numbers for duration, buffer and daily booking limit."};
+  if(!data.useStoreHours && (!/^([01]\d|2[0-3]):[0-5]\d$/.test(data.availableFrom??"") || !/^([01]\d|2[0-3]):[0-5]\d$/.test(data.availableTo??"") || data.availableFrom!>=data.availableTo! || data.availableDays.some(day=>!["monday","tuesday","wednesday","thursday","friday","saturday","sunday"].includes(day))))return {error:"Choose valid working days and a start time before the end time."};
+
   try {
     await prisma.product.update({
       where: { id: serviceId },

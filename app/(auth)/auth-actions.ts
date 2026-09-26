@@ -11,7 +11,7 @@ import { resolveAuthLandingPath } from "@/lib/auth/landing";
 import { safeInternalPath } from "@/lib/auth/redirects";
 import { roleForSignup, type SignupKind } from "@/lib/auth/signup-kinds";
 import { logPrismaError } from "@/lib/log-prisma-error";
-import { parseIntendedPlanParam, setIntendedPlanCookie } from "@/lib/onboarding/intended-plan";
+import { clearIntendedPlanCookie, parseIntendedPlanParam, setIntendedPlanCookie } from "@/lib/onboarding/intended-plan";
 import { checkRateLimit, resetRateLimit } from "@/lib/security/rate-limit";
 
 export type AuthFormState = {
@@ -51,6 +51,9 @@ export async function registerAction(
   const signupKind = parseSignupKind(formData.get("signupKind"));
   if (!signupKind) {
     return { error: "Invalid registration type." };
+  }
+  if (formData.get("termsAccepted") !== "yes") {
+    return { error: "Please accept the terms and confirm you are at least 18 to continue." };
   }
 
   const emailRaw = String(formData.get("email") ?? "");
@@ -92,7 +95,7 @@ export async function registerAction(
   }
 
   if (!process.env.DATABASE_URL) {
-    return { error: "Server is missing DATABASE_URL. Add it to .env and restart the dev server." };
+    return { error: "Account creation is temporarily unavailable. Please try again shortly." };
   }
 
   let existing;
@@ -125,8 +128,10 @@ export async function registerAction(
     user = await prisma.user.create({ data });
   } catch (error) {
     logPrismaError("REGISTER CREATE ERROR:", error);
-    const message = error instanceof Error ? error.message : String(error);
-    return { error: message };
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return { error: "An account with this email already exists. Try signing in." };
+    }
+    return { error: "We couldn’t create your account. Please try again in a moment." };
   }
 
   try {
@@ -137,6 +142,7 @@ export async function registerAction(
 
   await createSessionFromUser(user);
 
+  await clearIntendedPlanCookie();
   if (signupKind === "BUSINESS") {
     const plan = parseIntendedPlanParam(String(formData.get("intendedPlan") ?? ""));
     if (plan) {
@@ -197,5 +203,6 @@ export async function loginAction(_prev: AuthFormState, formData: FormData): Pro
 
 export async function logoutAction(): Promise<void> {
   await destroySession();
+  await clearIntendedPlanCookie();
   redirect("/login");
 }

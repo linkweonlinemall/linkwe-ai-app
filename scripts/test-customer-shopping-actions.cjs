@@ -43,7 +43,11 @@ require.extensions['.ts']=(mod,file)=>mod._compile(ts.transpileModule(fs.readFil
   session={userId:customer.id,role:'CUSTOMER'};
   const code='SHOPPING25';await tx.storeCoupon.create({data:{storeId:store.id,code,discountType:'PERCENT',discountValue:25,scopes:['product'],targets:[`product:${product.id}`]}});
   const preview=await coupons.previewStoreCoupon({kind:'cart',code});assert.equal(preview.totalMinor,37125);assert.equal(preview.discountMinor,12375);
-  const payment=await checkout.createPaymentIntent('','',false,null,null,null,{},code);assert.equal(payment.ok,true,JSON.stringify(payment));assert.equal(paymentCalls.at(-1).amountMinor,37125);
+  const wrongTotal=await checkout.createPaymentIntent('','',false,null,null,null,{},code,37126);assert.equal(wrongTotal.ok,false);assert.match(wrongTotal.error,/changed/);assert.equal(paymentCalls.length,0,'changed totals must not reach WiPay');
+  await tx.product.update({where:{id:product.id},data:{allowPickup:false,allowDelivery:true}});
+  const unsupported=await checkout.createPaymentIntent('','',false,null,null,null,{},code,37125);assert.equal(unsupported.ok,false);assert.match(unsupported.error,/do not support pickup/);assert.equal(paymentCalls.length,0);
+  await tx.product.update({where:{id:product.id},data:{allowPickup:true}});
+  const payment=await checkout.createPaymentIntent('','',false,null,null,null,{},code,37125);assert.equal(payment.ok,true,JSON.stringify(payment));assert.equal(paymentCalls.at(-1).amountMinor,37125);
   const order=await tx.mainOrder.findUniqueOrThrow({where:{id:payment.orderId},include:{items:true}});assert.equal(order.totalMinor,37125);assert.equal(order.items.reduce((sum,item)=>sum+item.quantity*item.priceMinor,0),37125);assert.equal(order.items.reduce((sum,item)=>sum+item.quantity,0),3);assert.ok(order.items.every(item=>item.titleSnapshot.includes('Ocean / Large')));
   const secondVariant=await tx.productVariant.create({data:{productId:product.id,name:'Coral / Large',price:170,stock:3,attributes:[]}});
   await tx.productCartItem.create({data:{userId:customer.id,productId:product.id,productVariantId:secondVariant.id,quantity:1}});

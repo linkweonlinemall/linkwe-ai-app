@@ -1,122 +1,33 @@
 "use client";
-
-import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState, useTransition } from "react";
-
+import { Suspense, useEffect, useRef, useState, useTransition } from "react";
+import { LoaderCircle } from "lucide-react";
 import { verifyEmail, resendVerificationEmail } from "@/app/actions/email-verification";
+import AuthShell from "@/components/auth/AuthShell";
+import FormNotice from "@/components/auth/FormNotice";
+import s from "@/components/auth/auth.module.css";
 
-type Status = "loading" | "success" | "error";
-
-function VerifyEmailContent() {
-  const searchParams = useSearchParams();
-  const token = searchParams.get("token") ?? "";
-  const [status, setStatus] = useState<Status>("loading");
-  const [error, setError] = useState("");
-  const [isPending, startTransition] = useTransition();
-  const [resendResult, setResendResult] = useState<{ ok: boolean; error?: string } | null>(null);
-
+function VerificationResult({ token }: { token: string }) {
+  const verification = useRef<ReturnType<typeof verifyEmail> | null>(null);
+  const [result, setResult] = useState<{error?: string; ok?: boolean} | null>(null);
+  const [pending, startTransition] = useTransition();
+  const [resend, setResend] = useState<{ok: boolean; error?: string} | null>(null);
   useEffect(() => {
-    if (!token) {
-      setStatus("error");
-      setError("Invalid or missing verification link.");
-      return;
-    }
-    (async () => {
-      const result = await verifyEmail(token);
-      if ("error" in result) {
-        setStatus("error");
-        setError(result.error);
-      } else {
-        setStatus("success");
-      }
-    })();
+    if (!token) return;
+    let cancelled = false;
+    // Reuse the request during Strict Mode's effect replay: verification links
+    // are single-use, so a second request could incorrectly report an expired link.
+    verification.current ??= verifyEmail(token);
+    verification.current.then(response => { if(!cancelled) setResult("error" in response ? {error:response.error} : {ok:true}); }).catch(() => { if(!cancelled) setResult({error:"We couldn’t check this link. Please try again."}); });
+    return () => { cancelled = true; };
   }, [token]);
-
-  function handleResend() {
-    setResendResult(null);
-    startTransition(async () => {
-      const result = await resendVerificationEmail();
-      setResendResult(result.ok ? { ok: true } : { ok: false, error: result.error });
-    });
-  }
-
-  if (status === "loading") {
-    return <p className="text-center text-sm text-zinc-500">Verifying your email...</p>;
-  }
-
-  if (status === "success") {
-    return (
-      <div className="text-center">
-        <h1 className="mb-2 text-xl font-bold text-zinc-900">Your email is verified ✓</h1>
-        <p className="mb-6 text-sm text-zinc-500">Thanks for confirming your email address.</p>
-        <Link
-          href="/login"
-          className="inline-block w-full rounded-xl bg-[#D4450A] py-3 text-sm font-bold text-white hover:opacity-90"
-        >
-          Continue to LinkWe
-        </Link>
-      </div>
-    );
-  }
-
-  const alreadyVerified = resendResult && !resendResult.ok && resendResult.error === "Your email is already verified.";
-
-  return (
-    <div className="text-center">
-      <h1 className="mb-1 text-xl font-bold text-zinc-900">Link invalid or expired</h1>
-      <p className="mb-6 text-sm text-red-500">{error}</p>
-
-      {alreadyVerified ? (
-        <p className="mb-4 text-sm font-medium text-emerald-600">Your email is already verified — you&apos;re all set.</p>
-      ) : resendResult?.ok ? (
-        <p className="mb-4 text-sm font-medium text-emerald-600">A new verification email is on its way.</p>
-      ) : (
-        <>
-          <button
-            onClick={handleResend}
-            disabled={isPending}
-            className="mb-3 w-full rounded-xl bg-[#D4450A] py-3 text-sm font-bold text-white hover:opacity-90 disabled:opacity-50"
-          >
-            {isPending ? "Sending..." : "Resend verification email"}
-          </button>
-          {resendResult && !resendResult.ok ? (
-            <p className="mb-2 text-sm text-red-500">{resendResult.error}</p>
-          ) : null}
-        </>
-      )}
-
-      <p className="mt-2 text-xs text-zinc-400">
-        Not logged in?{" "}
-        <Link href="/login" className="font-medium text-[#D4450A] hover:underline">
-          Log in
-        </Link>{" "}
-        and resend from there.
-      </p>
-    </div>
-  );
+  if (token && !result) return <p className={s.help} role="status"><LoaderCircle size={17} className={s.spinner} style={{display:"inline",marginRight:8}}/>Verifying your email…</p>;
+  const alreadyVerified = resend?.error === "Your email is already verified.";
+  if (result?.ok || alreadyVerified) return <div className={s.form}><FormNotice success message="Your email is verified. Thanks for confirming it!"/><Link href="/login" className={s.primary}>Continue to LinkWe</Link></div>;
+  return <div className={s.form}><FormNotice message={result?.error || "This verification link is missing or incomplete."}/>{resend?.ok ? <FormNotice success message="A new verification email is on its way. Check your inbox and spam folder."/> : <><button type="button" className={s.primary} disabled={pending} onClick={() => startTransition(async () => { try { setResend(await resendVerificationEmail()); } catch { setResend({ok:false,error:"We couldn’t send the email. Please try again."}); } })}>{pending ? "Sending…" : "Resend verification email"}</button><FormNotice message={resend?.error}/></>}<p className={s.help}>You’ll need to be signed in to resend your verification email.</p><Link href="/login" className={s.textLink}>Back to sign in</Link></div>;
 }
-
+function VerifyEmailContent() { const token = useSearchParams().get("token") ?? ""; return <VerificationResult key={token} token={token}/>; }
 export default function VerifyEmailPage() {
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#F5F5F5] px-4">
-      <div className="w-full max-w-md">
-        <div className="mb-8 flex justify-center">
-          <Image
-            src="/linkwe-logo-on-dark.png"
-            alt="LinkWe"
-            width={180}
-            height={56}
-            className="h-14 w-auto object-contain"
-          />
-        </div>
-        <div className="rounded-2xl border border-zinc-100 bg-white p-8 shadow-sm">
-          <Suspense fallback={<p className="text-sm text-zinc-500">Loading...</p>}>
-            <VerifyEmailContent />
-          </Suspense>
-        </div>
-      </div>
-    </div>
-  );
+  return <AuthShell eyebrow="One little check" title="Let’s confirm it’s you." description="Verifying your email helps keep your account connected and ready to use."><Suspense fallback={<p className={s.help}>Loading…</p>}><VerifyEmailContent/></Suspense></AuthShell>;
 }

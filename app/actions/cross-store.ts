@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import type { RelationshipStatus } from "@prisma/client";
 
 import { createNotification } from "@/lib/notifications/create";
@@ -39,7 +40,7 @@ async function requireCallerStore(): Promise<
   | { ok: false; error: string }
 > {
   const session = await getSession();
-  if (!session) return { ok: false, error: "Sign in required." };
+  if (!session || session.role !== "VENDOR") return { ok: false, error: "A vendor account is required." };
 
   const store = await prisma.store.findUnique({
     where: { ownerId: session.userId },
@@ -55,6 +56,7 @@ function toPreviewItem(row: ResolvedRow): CrossStoreResolvedItem {
     type: row.type,
     name: row.name,
     image: row.image,
+    href: row.isPublic ? hrefForType(row.type, row.slug) : null,
   };
 }
 
@@ -128,7 +130,7 @@ export async function getCrossStoreFeatureButtonState(
   if (!trimmedId) return hidden;
 
   const session = await getSession();
-  if (!session) return hidden;
+  if (!session || session.role !== "VENDOR") return hidden;
 
   const callerStore = await prisma.store.findUnique({
     where: { ownerId: session.userId },
@@ -207,37 +209,17 @@ export async function requestCrossStoreFeature(
     return { ok: false, error: "Target store not found." };
   }
 
-  const existing = await prisma.storeContentRelationship.findUnique({
-    where: {
-      requestingStoreId_targetStoreId_contentType_contentId: {
-        requestingStoreId,
-        targetStoreId: targetStore.id,
-        contentType: targetContentType,
-        contentId: trimmedContentId,
-      },
-    },
-  });
-
+  const key = { requestingStoreId, targetStoreId: targetStore.id, contentType: targetContentType, contentId: trimmedContentId };
+  const existing = await prisma.storeContentRelationship.findUnique({ where: { requestingStoreId_targetStoreId_contentType_contentId: key }, select: {id:true,status:true} });
+  if (existing && existing.status !== "REJECTED") return { ok:true, alreadyRequested:true };
   if (existing) {
-    if (existing.status === "PENDING" || existing.status === "APPROVED") {
-      return { ok: true, alreadyRequested: true };
-    }
-
-    await prisma.storeContentRelationship.update({
-      where: { id: existing.id },
-      data: { status: "PENDING" },
-    });
+    const changed = await prisma.storeContentRelationship.updateMany({where:{id:existing.id,status:"REJECTED"},data:{status:"PENDING"}});
+    if (!changed.count) return {ok:true,alreadyRequested:true};
   } else {
-    await prisma.storeContentRelationship.create({
-      data: {
-        requestingStoreId,
-        targetStoreId: targetStore.id,
-        contentType: targetContentType,
-        contentId: trimmedContentId,
-        status: "PENDING",
-      },
-    });
+    try { await prisma.storeContentRelationship.create({data:{...key,status:"PENDING"}}); }
+    catch (error) { if (typeof error === "object" && error && "code" in error && error.code === "P2002") return {ok:true,alreadyRequested:true}; throw error; }
   }
+  revalidatePath(PARTNERS_URL);
 
   await notifySafely({
     userId: targetStore.ownerId,
@@ -256,6 +238,7 @@ export async function respondToCrossStoreRequest(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const trimmedId = relationshipId?.trim();
   if (!trimmedId) return { ok: false, error: "Invalid request." };
+  if (decision !== "APPROVED" && decision !== "REJECTED") return { ok:false,error:"Invalid decision." };
 
   const storeResult = await requireCallerStore();
   if (!storeResult.ok) return storeResult;
@@ -280,15 +263,13 @@ export async function respondToCrossStoreRequest(
     return { ok: true };
   }
 
-  await prisma.storeContentRelationship.update({
-    where: { id: trimmedId },
-    data: { status: decision },
-  });
-
-  const itemMap = await loadResolvedMap(
-    [{ contentType: relationship.contentType, contentId: relationship.contentId }],
-    false,
-  );
+  const itemMap = await loadResolvedMap([{contentType:relationship.contentType,contentId:relationship.contentId}],false);
+  const item = itemMap.get(relationship.contentId);
+  if (decision === "APPROVED" && (!item?.isPublic || item.storeId !== storeResult.storeId)) return {ok:false,error:"This item is no longer published by your store. Decline the request or publish the item first."};
+  const changed=await prisma.storeContentRelationship.updateMany({where:{id:trimmedId,targetStoreId:storeResult.storeId,status:"PENDING"},data:{status:decision}});
+  if(!changed.count)return {ok:false,error:"This request changed. Refresh to see its latest status."};
+  revalidatePath(PARTNERS_URL);
+  revalidatePath("/store/[slug]", "page");
   const itemName =
     itemMap.get(relationship.contentId)?.name ?? "item";
 
@@ -400,9 +381,11 @@ export async function removeCrossStoreFeature(
     return { ok: false, error: "You are not authorized to remove this feature." };
   }
 
-  await prisma.storeContentRelationship.delete({
-    where: { id: trimmedId },
+  await prisma.storeContentRelationship.updateMany({
+    where: { id: trimmedId, OR: [{requestingStoreId:storeResult.storeId},{targetStoreId:storeResult.storeId}] }, data:{status:"REJECTED"}
   });
+  revalidatePath(PARTNERS_URL);
+  revalidatePath("/store/[slug]", "page");
 
   return { ok: true };
 }
@@ -422,6 +405,7 @@ export async function getApprovedPartnerContent(
     select: {
       contentType: true,
       contentId: true,
+      targetStoreId: true,
     },
   });
 
@@ -433,7 +417,7 @@ export async function getApprovedPartnerContent(
   for (const rel of relationships) {
     if (!isContentLinkType(rel.contentType)) continue;
     const row = resolved.get(rel.contentId);
-    if (!row || !row.isPublic) continue;
+    if (!row || !row.isPublic || row.storeId !== rel.targetStoreId) continue;
     items.push(toPartnerItem(row));
   }
 

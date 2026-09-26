@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, PackageCheck, ShoppingBag, Sparkles, Ticket, CalendarDays } from "lucide-react";
+import { LayoutDashboard, ArrowUpRight, PackageCheck, ShoppingBag, Sparkles, Ticket, CalendarDays } from "lucide-react";
 import styles from "./customer.module.css";
 
 type Page = "orders" | "cart" | "bookings" | "tickets";
@@ -15,6 +15,7 @@ export default function CustomerPageIntro({ page, count = 0 }: { page: Page; cou
   const Icon = page === "bookings" ? CalendarDays : page === "tickets" ? Ticket : page === "cart" ? ShoppingBag : PackageCheck;
   return <>
     <nav className={styles.accountNav} aria-label="Your shopping">
+      <Link href="/dashboard/customer"><LayoutDashboard size={17}/>My dashboard</Link>
       {links.map(link => <Link key={link.page} href={link.href} aria-current={page === link.page ? "page" : undefined}><link.icon size={17} />{link.text}</Link>)}
       <Link href={copy.href} className={styles.shopLink}>Keep exploring<ArrowUpRight size={16} /></Link>
     </nav>

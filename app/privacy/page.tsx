@@ -36,7 +36,7 @@ export default function PrivacyPolicyPage() {
       eyebrow="Legal"
       title="Privacy Policy"
       subtitle="This policy explains what LinkWe handles across shopping, selling, delivery, community features, and Rex—and the choices available to you."
-      updated="11 September 2026"
+      updated="25 September 2026"
       legal
     >
       <section>
@@ -51,7 +51,7 @@ export default function PrivacyPolicyPage() {
         <h2 className="text-xl font-black text-zinc-900">2. Information we collect</h2>
         <div className="mt-5 grid gap-3">
           {collectedInformation.map(([title, text]) => (
-            <div key={title} className="rounded-2xl border border-sky-100 bg-gradient-to-r from-sky-50/80 to-white p-4">
+            <div key={title} className="rounded-2xl border border-[#dce3d5] bg-gradient-to-r from-sky-50/80 to-white p-4">
               <h3 className="text-sm font-black text-zinc-900">{title}</h3>
               <p className="mt-1 text-sm leading-6 text-zinc-600">{text}</p>
             </div>
@@ -74,7 +74,7 @@ export default function PrivacyPolicyPage() {
         <h2 className="text-xl font-black text-zinc-900">4. Public and shared marketplace information</h2>
         <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-600">
           <p>Published store profiles, listings, events, reviews, Timeline posts, photos, search tags, comments, replies, likes, and similar community activity may be visible to other users or the public. Search engines or recipients of shared links may also retain copies.</p>
-          <p>Transaction details are shared only as operationally necessary. A relevant vendor may receive the customer&apos;s name, order or booking details, vendor-specific checkout responses, delivery information, and contact details needed for fulfilment. LinkWe staff and assigned fulfilment partners may access the information needed to coordinate delivery, pickup, support, safety, or disputes.</p>
+          <p>Identity uploads, private appointment notes and bank details are not public storefront content. Staff profile information you choose to publish may be visible to customers. Transaction details are shared only as operationally necessary. A relevant vendor may receive the customer&apos;s name, order or booking details, vendor-specific checkout responses, delivery information, and contact details needed for fulfilment. LinkWe staff and assigned fulfilment partners may access the information needed to coordinate delivery, pickup, support, safety, or disputes.</p>
           <p>Do not publish sensitive information in public content or send card details, passwords, or one-time codes through Timeline, reviews, or Messages.</p>
         </div>
       </section>
@@ -83,10 +83,10 @@ export default function PrivacyPolicyPage() {
         <h2 className="text-xl font-black text-zinc-900">5. Service providers and disclosures</h2>
         <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-600">
           <p><strong className="text-zinc-900">Payments:</strong> WiPay processes card payments, enrolments, payment confirmations, and refunds. LinkWe stores transaction references and status information, not full card numbers or card security codes.</p>
-          <p><strong className="text-zinc-900">Hosting and operations:</strong> Infrastructure, database, file or image storage providers—including Cloudinary where used—help host and deliver LinkWe content.</p>
+          <p><strong className="text-zinc-900">Hosting and operations:</strong> Infrastructure, database, file or image storage providers—including Vercel and Cloudinary where used—help host and deliver LinkWe content.</p>
           <p><strong className="text-zinc-900">Maps and sign-in:</strong> Google and/or Mapbox services may process search, map, geocoding, location, or authentication information when those features are used.</p>
-          <p><strong className="text-zinc-900">Communications and analytics:</strong> Providers such as Resend, OneSignal, and Google Analytics may process email delivery, push identifiers, device activity, or usage measurements needed for the enabled feature.</p>
-          <p><strong className="text-zinc-900">Artificial intelligence:</strong> AI providers may process Rex prompts, images, selected listing information, and generated responses to fulfil a request. Do not submit secrets or unnecessary personal data to Rex.</p>
+          <p><strong className="text-zinc-900">Communications and analytics:</strong> Providers such as Resend, OneSignal, Google Analytics and Sentry may process email delivery, push identifiers, device activity, or usage measurements needed for the enabled feature.</p>
+          <p><strong className="text-zinc-900">Artificial intelligence:</strong> AI providers, including Anthropic for Rex and PhotoRoom for enabled image tools, may process prompts, selected images, authorised store context and generated responses to fulfil a request. Rex tools may access relevant order summaries, service records, reviews or private appointment notes within the account’s permissions. Do not submit secrets or unnecessary personal data to Rex.</p>
           <p>We may also disclose information to professional advisers, insurers, acquirers in a business transaction, or public authorities when reasonably necessary to comply with law, establish or defend rights, investigate fraud, or protect people and the platform. We do not sell personal information.</p>
         </div>
       </section>
@@ -94,7 +94,7 @@ export default function PrivacyPolicyPage() {
       <section>
         <h2 className="text-xl font-black text-zinc-900">6. Cookies, local storage and analytics</h2>
         <p className="mt-3 text-sm leading-7 text-zinc-600">
-          LinkWe uses cookies and similar browser storage for sign-in, session security, carts, preferences, app functionality, fraud prevention, and performance measurement. Where configured, Google Analytics helps us understand visits and feature usage. Browser controls can block or clear storage, but essential account and checkout functions may then stop working. Push notifications are optional and can be disabled in your browser, device, or LinkWe settings.
+          LinkWe uses cookies and similar browser storage for sign-in, session security, carts, preferences, app functionality, fraud prevention, and performance measurement. Where configured, Google Analytics helps us understand visits and feature usage. Browser controls can block or clear storage, but essential account and checkout functions may then stop working. Push notifications are optional and can be disabled in your browser, device, or LinkWe settings. Onboarding may keep a non-sensitive storefront draft in account-scoped session storage; ID files and passwords are not part of that draft. See our <Link href="/cookies" className="font-bold text-[#a74320] hover:underline">Cookies &amp; Browser Storage page</Link> for more detail and controls.
         </p>
       </section>
 
@@ -131,7 +131,7 @@ export default function PrivacyPolicyPage() {
       <section>
         <h2 className="text-xl font-black text-zinc-900">11. Changes and governing framework</h2>
         <p className="mt-3 text-sm leading-7 text-zinc-600">
-          We may update this policy as LinkWe changes or legal requirements develop. The effective date above identifies the current version. Material changes may also be communicated through LinkWe or email. This policy is intended to operate consistently with applicable Trinidad and Tobago law, including the provisions of the Data Protection Act, 2011 that are in force.
+          We may update this policy as LinkWe changes or legal requirements develop. The update date above identifies the current version. Material changes may also be communicated through LinkWe or email. This policy is intended to operate consistently with applicable Trinidad and Tobago law, including the provisions of the Data Protection Act, 2011 that are in force.
         </p>
       </section>
     </PublicStaticPageShell>

@@ -85,6 +85,7 @@ export default function AboutPage() {
           </p>
         </div>
       </section>
+      <section><h2 className="text-xl font-semibold">A connected place to shop and grow</h2><p className="mt-3 text-sm leading-7 text-zinc-600">Today, LinkWe brings together customer shopping, services, events and the tools independent businesses use to manage their work—from store creation and fulfilment to Rex, QR Studio, collaborations and reviews.</p><a href="/features" className="mt-4 inline-flex text-sm font-semibold text-[#a74320]">Explore all LinkWe features →</a></section>
     </PublicStaticPageShell>
   );
 }

@@ -1,4 +1,4 @@
-export const STARTER_PHOTO_TRIAL = 5;
+export const STARTER_PHOTO_TRIAL = 1;
 export type PhotoPlanStore = { ownerId: string; subscriptionPlan: string; subscriptionStatus: string; planRenewsAt: Date | null };
 export const photoPlanSelect = { id: true, ownerId: true, subscriptionPlan: true, subscriptionStatus: true, planRenewsAt: true } as const;
 

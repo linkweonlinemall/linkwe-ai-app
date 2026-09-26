@@ -1,136 +1,54 @@
 "use client";
-
-import { useActionState, useState } from "react";
-
-import CompressedFileInput from "@/components/ui/CompressedFileInput";
-import Input from "@/components/ui/Input";
+import { useActionState, useEffect, useState } from "react";
+import Link from "next/link";
+import { Store } from "lucide-react";
 import RegionSelect from "@/components/ui/RegionSelect";
-import CategoryPicker from "@/components/ui/CategoryPicker";
+import FormNotice from "@/components/auth/FormNotice";
+import FormActions from "@/components/onboarding/FormActions";
+import { suggestStoreSlug } from "@/components/vendor/StoreIdentityFields";
+import { STORE_CATEGORY_GROUPS } from "@/lib/onboarding/store-categories";
+import { validateOnboardingFile } from "@/lib/onboarding/upload-validation";
+import type { IntendedPlan } from "@/lib/onboarding/intended-plan";
+import s from "@/components/onboarding/onboarding.module.css";
 import { saveBusinessOnboardingStep3, type BusinessOnboardingState } from "../actions";
 
-type Props = {
-  defaultName: string;
-  defaultSlug: string;
-  defaultCategoryId: string;
-  defaultRegion: string;
-  defaultTagline: string;
-};
-
-function WizardFormFooter({
-  currentStep,
-  showBack,
-  backHref,
-  isLastStep,
-  pending,
-  pendingLabel,
-  disabled = false,
-}: {
-  currentStep: number;
-  showBack: boolean;
-  backHref?: string;
-  isLastStep: boolean;
-  pending: boolean;
-  pendingLabel: string;
-  /** Extra disable condition (e.g. image upload in flight). Button is blocked
-   *  but the label doesn't change to pendingLabel. */
-  disabled?: boolean;
-}) {
-  const stepsLength = 3;
-  const isDisabled = pending || disabled;
-  return (
-    <div
-      className="mt-8 flex flex-wrap items-center justify-between gap-3 pt-6"
-      style={{ borderTop: "1px solid var(--card-border-subtle)" }}
-    >
-      <div>
-        {showBack && backHref ? (
-          <a
-            href={backHref}
-            className="rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors hover:bg-zinc-50"
-            style={{ color: "var(--text-secondary)", borderColor: "var(--card-border)" }}
-          >
-            ← Back
-          </a>
-        ) : null}
-      </div>
-      <span className="text-xs" style={{ color: "var(--text-faint)" }}>
-        Step {currentStep + 1} of {stepsLength}
-      </span>
-      <button
-        type="submit"
-        disabled={isDisabled}
-        title={disabled && !pending ? "Wait for image uploads to finish" : undefined}
-        className="rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-        style={{ backgroundColor: "var(--scarlet)" }}
-      >
-        {pending ? pendingLabel : isLastStep ? "Complete Setup" : "Continue →"}
-      </button>
-    </div>
-  );
-}
-
-export function BusinessStep3Form({
-  defaultName,
-  defaultSlug,
-  defaultCategoryId,
-  defaultRegion,
-  defaultTagline,
-}: Props) {
-  const [state, formAction, pending] = useActionState(saveBusinessOnboardingStep3, {} as BusinessOnboardingState);
-  const [categoryId, setCategoryId] = useState(defaultCategoryId);
-  const [imagesUploading, setImagesUploading] = useState(false);
-
-  return (
-    <form className="flex flex-col gap-4" action={formAction}>
-      <Input required className="text-base" defaultValue={defaultName} label="Store name" name="name" type="text" />
-      <Input
-        required
-        className="font-mono text-base"
-        defaultValue={defaultSlug}
-        label="Store slug"
-        name="slug"
-        placeholder="my-store"
-        type="text"
-      />
-      <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-zinc-700">
-          Category <span className="text-[#D4450A]">*</span>
-        </label>
-        <CategoryPicker name="categoryId" value={categoryId} onChange={setCategoryId} />
-      </div>
-      <RegionSelect name="region" defaultValue={defaultRegion} required label="Store region" />
-      <Input
-        required
-        className="text-base"
-        defaultValue={defaultTagline}
-        label="Tagline"
-        name="tagline"
-        placeholder="Short line shoppers see first"
-        type="text"
-      />
-      <CompressedFileInput
-        accept="image/jpeg,image/png,image/webp"
-        className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5"
-        label="Logo (optional)"
-        name="logo"
-        onUploadingChange={setImagesUploading}
-      />
-
-      {state.error ? (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
-          {state.error}
-        </p>
-      ) : null}
-
-      <WizardFormFooter
-        currentStep={2}
-        showBack
-        backHref="/onboarding/business/step-2"
-        isLastStep
-        pending={pending}
-        pendingLabel="Saving…"
-        disabled={imagesUploading}
-      />
-    </form>
-  );
+type Props = { userId: string; defaultName: string; defaultSlug: string; defaultCategoryId: string; defaultRegion: string; defaultTagline: string; plan: IntendedPlan; planLabel: string };
+export function BusinessStep3Form(props: Props) {
+  const [state, action, pending] = useActionState(saveBusinessOnboardingStep3, {} as BusinessOnboardingState);
+  const [draft, setDraft] = useState({name:props.defaultName,slug:props.defaultSlug,categoryId:props.defaultCategoryId,region:props.defaultRegion,tagline:props.defaultTagline});
+  const [slugEdited, setSlugEdited] = useState(Boolean(props.defaultSlug));
+  const [ready, setReady] = useState(false);
+  const [fileError, setFileError] = useState<string>();
+  const storageKey = `linkwe:onboarding:store:${props.userId}`;
+  useEffect(() => {
+    // Hydrate only this account's non-sensitive storefront draft after mount.
+    // Passwords, personal details and uploaded identity documents are never stored here.
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(storageKey) || "null");
+      if (saved && typeof saved === "object") {
+        const fields = ["name", "slug", "categoryId", "region", "tagline"] as const;
+        if (fields.every(key => typeof saved[key] === "string" && saved[key].length <= 200)) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect -- restore the browser draft after server hydration
+          setDraft({name:saved.name,slug:saved.slug,categoryId:saved.categoryId,region:saved.region,tagline:saved.tagline});
+          setSlugEdited(Boolean(saved.slug));
+        }
+      }
+    } catch { /* Storage may be disabled; the form still works normally. */ }
+    setReady(true);
+  }, [storageKey]);
+  useEffect(() => {
+    if (ready) { try { sessionStorage.setItem(storageKey, JSON.stringify(draft)); } catch { /* Optional browser draft. */ } }
+  }, [draft, ready, storageKey]);
+  return <form className={s.form} action={action} onReset={event => event.preventDefault()} aria-busy={pending}>
+    <div className={s.preview}><span><Store size={14} style={{display:"inline",marginRight:7,verticalAlign:"text-bottom"}}/>Your storefront, taking shape</span><h2>{draft.name || "Your business belongs here."}</h2><p>{draft.tagline || "A little introduction to what makes you, you."}</p></div>
+    <div className={s.field}><label htmlFor="store-name">Business name</label><input id="store-name" name="name" autoComplete="organization" required maxLength={120} placeholder="The name your customers know" value={draft.name} onChange={event => { const name = event.target.value; setDraft({...draft,name,slug:slugEdited ? draft.slug : suggestStoreSlug(name)}); }}/></div>
+    <div className={s.field}><label htmlFor="store-tagline">Your business in a sentence</label><textarea id="store-tagline" name="tagline" required maxLength={200} placeholder="What do you offer, and what makes it special?" value={draft.tagline} onChange={event => setDraft({...draft,tagline:event.target.value})} aria-describedby="tagline-help"/><p className={s.help} id="tagline-help">A short introduction for your storefront. {draft.tagline.length}/200</p></div>
+    <div className={s.field}><label htmlFor="store-slug">Store link</label><input id="store-slug" name="slug" required minLength={3} maxLength={64} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" autoCapitalize="none" spellCheck={false} value={draft.slug} onChange={event => {setSlugEdited(true);setDraft({...draft,slug:event.target.value.toLowerCase()});}} aria-describedby="store-link-help"/><p className={s.help} id="store-link-help">Your address: /store/{draft.slug || "your-business"}. Use lowercase letters, numbers and single hyphens.</p></div>
+    <div className={s.twoColumns}><div className={s.field}><label htmlFor="store-category">Business category</label><select id="store-category" name="categoryId" required value={draft.categoryId} onChange={event => setDraft({...draft,categoryId:event.target.value})}><option value="" disabled>Choose a category</option>{STORE_CATEGORY_GROUPS.map(group => <optgroup label={group.group} key={group.group}>{group.items.map(item => <option value={item.value} key={item.value}>{item.label}</option>)}</optgroup>)}</select></div><RegionSelect name="region" required label="Store region" value={draft.region} onChange={region => setDraft({...draft,region})}/></div>
+    <div className={s.field}><label htmlFor="store-logo">Business logo <span className={s.optional}>Optional</span></label><input id="store-logo" type="file" name="logo" accept="image/jpeg,image/png,image/webp" aria-describedby="logo-help" onChange={event => { const file = event.target.files?.[0]; const error = file ? validateOnboardingFile(file, "logo") : null; setFileError(error ?? undefined); if(error) event.target.value = ""; }}/><p id="logo-help" className={s.help}>A square JPG, PNG or WebP, up to 3 MB. You can add this later.</p></div>
+    <div className={s.review}><div><strong>{props.planLabel}</strong><p>{props.plan === "STARTER" ? "No monthly payment. Create your storefront and continue to your dashboard." : "Your storefront will be saved before you continue to subscription checkout."}</p></div><Link href="/onboarding/business/plan">Change</Link></div>
+    <FormNotice message={fileError || state.error}/>
+    <p className={s.help}>Your store starts as a draft. Complete verification and the launch checklist in your dashboard before going live.</p>
+    <FormActions back="/onboarding/business/step-2" pending={pending} disabled={!ready} label={props.plan === "STARTER" ? "Create my storefront" : "Save & continue to checkout"} pendingLabel="Creating your storefront…"/>
+  </form>;
 }

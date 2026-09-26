@@ -1,33 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
-  IconBell,
-  IconBookmark,
-  IconBuildingStore,
-  IconCalendarEvent,
-  IconChevronRight,
-  IconClipboardList,
-  IconDownload,
   IconHeart,
   IconHome,
-  IconLogout,
   IconMenu2,
   IconNews,
-  IconPackage,
   IconSearch,
-  IconSettings,
   IconShoppingBag,
   IconShoppingCart,
-  IconTag,
-  IconTools,
 } from "@tabler/icons-react";
 
-import { logoutAction } from "@/app/(auth)/auth-actions";
 import PublicBrowseBar from "./PublicBrowseBar";
+import PublicMenuDrawer from "./PublicMenuDrawer";
 import styles from "./public-nav.module.css";
 import NavSearchInput, { MobileSearchOverlay } from "@/components/layout/NavSearchInput";
 import MessageNavBadge from "@/components/messages/MessageNavBadge";
@@ -80,13 +68,6 @@ function initialsDisplay(name: string): string {
   return name.slice(0, 2).toUpperCase() || "U";
 }
 
-function accountRoleLabel(dashboardHref: string | undefined, userHref: string | undefined): string {
-  const h = dashboardHref ?? userHref ?? "";
-  if (h.includes("/dashboard/vendor")) return "Vendor";
-  if (h.includes("/dashboard/admin")) return "Admin";
-  return "Customer";
-}
-
 const subscribeToHydration = () => () => {};
 const clientReady = () => true;
 const serverReady = () => false;
@@ -105,7 +86,7 @@ export default function PublicNav({
   const pathname = usePathname() ?? "";
   const hash = useHashFragment();
   const drawerOpen = useDrawerOpenControlled();
-  const moreSheetOpen = useDrawerOpenControlled();
+  const moreSheetOpen = drawerOpen;
   const toggleDrawerCart = useCartStore((s) => s.toggleDrawer);
   const cartBumpNonce = useCartStore((s) => s.cartBumpNonce);
   const itemCount = useCartStore((s) => s.itemCount());
@@ -153,14 +134,14 @@ export default function PublicNav({
       isActive: (p) => p.startsWith("/cart") || p.startsWith("/checkout"),
     },
     {
-      label: "More",
+      label: "Menu",
       Icon: IconMenu2,
       action: "more",
       isActive: () => false,
     },
   ];
 
-  const roleLabel = user ? accountRoleLabel(dashboardHref, user.href) : "Customer";
+
 
 
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -176,155 +157,6 @@ export default function PublicNav({
 
   return (
     <>
-      {user ? (
-        <>
-          {/* Overlay */}
-          <div
-            role="presentation"
-            className={`fixed inset-0 z-[120] bg-black/50 transition-opacity duration-200 md:z-[118] ${drawerOpen.value ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}
-            onClick={drawerOpen.close}
-            aria-hidden={!drawerOpen.value}
-          />
-          {/* Slide panel */}
-          <div
-            className={`fixed right-0 top-0 z-[121] flex h-[100dvh] w-[min(20rem,85vw)] max-w-[85vw] flex-col bg-white shadow-2xl transition-transform duration-[200ms] ease-out md:z-[119] md:backdrop-blur-0 ${drawerOpen.value ? "translate-x-0" : "translate-x-full"}`}
-            aria-hidden={!drawerOpen.value}
-          >
-            <div className="shrink-0 px-4 py-5 shadow-[inset_0_-1px_0_rgba(255,255,255,0.06)]" style={{ backgroundColor: "#1C1C1A" }}>
-              <div className="relative flex items-start gap-3 pr-11">
-                <div
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[2.5px] border-white/20 text-sm font-black text-white"
-                  style={{ backgroundColor: SCARLET }}
-                  aria-hidden
-                >
-                  {initialsDisplay(user.name)}
-                </div>
-                <div className="min-w-0 pt-0.5">
-                  <p className="truncate text-[14px] font-semibold text-white">{user.name}</p>
-                  <p className="mt-2 inline-block rounded bg-[#E8820C] px-2 py-[2px] text-[10px] font-bold uppercase tracking-wide text-[#1C1C1A]">
-                    {roleLabel}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  aria-label="Close menu"
-                  onClick={drawerOpen.close}
-                  className="absolute right-4 top-5 flex h-[30px] w-[30px] items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/15"
-                >
-                  <svg width={16} height={16} viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
-                  </svg>
-                </button>
-              </div>
-              <Link
-                href={dashTarget}
-                onClick={drawerOpen.close}
-                className="mt-3 flex items-center gap-3 rounded-[10px] px-3.5 py-3"
-                style={{ backgroundColor: "#1C1C1A", borderWidth: "0.5px", borderStyle: "solid", borderColor: "rgba(255,255,255,0.12)" }}
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-[12px] font-semibold text-white">My dashboard</p>
-                  <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "#E8820C" }}>
-                    Orders · Wishlist · Account
-                  </p>
-                </div>
-                <span
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-white"
-                  style={{ backgroundColor: SCARLET }}
-                  aria-hidden
-                >
-                  <IconChevronRight className="size-4" stroke={2} aria-hidden />
-                </span>
-              </Link>
-            </div>
-
-            <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain pb-6 [-webkit-overflow-scrolling:touch]">
-              <p className="px-5 pt-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">Browse</p>
-              <div className="mt-2 space-y-[2px] px-4">
-                {(
-                  [
-                    { href: "/", label: "Home", Icon: IconHome, active: pathname === "/" },
-                    {
-                      href: "/shop",
-                      label: "Shop",
-                      Icon: IconShoppingBag,
-                      active:
-                        pathname.startsWith("/shop") ||
-                        pathname.startsWith("/products") ||
-                        pathname.startsWith("/checkout"),
-                    },
-                    { href: "/services", label: "Services", Icon: IconTools, active: pathname.startsWith("/services") || pathname.startsWith("/service") },
-                    {
-                      href: "/stores",
-                      label: "Stores",
-                      Icon: IconBuildingStore,
-                      active: pathname.startsWith("/stores") || pathname.startsWith("/store"),
-                    },
-                    { href: "/events", label: "Events", Icon: IconCalendarEvent, active: pathname.startsWith("/events") },
-                  ] as const
-                ).map((item) => (
-                  <DrawerRowLink
-                    key={item.href}
-                    href={item.href}
-                    label={item.label}
-                    Icon={item.Icon}
-                    active={item.active}
-                    onNavigate={drawerOpen.close}
-                  />
-                ))}
-              </div>
-
-              <div className="mx-4 my-[6px] h-px bg-[#f0f0f0]" role="presentation" />
-
-              <p className="px-5 pt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">Account</p>
-              <div className="mt-2 space-y-[2px] px-4 py-2">
-                <div className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5">
-                  <span className="flex items-center gap-2 text-[13px] font-medium text-[#1C1C1A]">
-                    <IconBell className="size-[18px] shrink-0 text-[#1C1C1A]" stroke={1.75} aria-hidden /> Notifications
-                  </span>
-                  <NotificationBell initialUnreadCount={unreadCount} variant="light" compactToolbar />
-                </div>
-              </div>
-              <div className="space-y-[2px] px-4 pb-2">
-                {(
-                  [
-                    { href: "/orders", label: "My orders", Icon: IconPackage },
-                    { href: "/wishlist", label: "My wishlist", Icon: IconHeart },
-                    { href: "/saved-stores", label: "Saved stores", Icon: IconBookmark },
-                    { href: "/timeline", label: "Timeline", Icon: IconNews },
-                    { href: "/event-collections", label: "Event collections", Icon: IconCalendarEvent },
-                    { href: "/my-requests", label: "My requests", Icon: IconClipboardList },
-                    { href: `${user.href}/settings`, label: "Settings", Icon: IconSettings },
-                  ] as const
-                ).map((item) => (
-                  <DrawerRowLink
-                    key={item.href}
-                    href={item.href}
-                    label={item.label}
-                    Icon={item.Icon}
-                    active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
-                    onNavigate={drawerOpen.close}
-                  />
-                ))}
-              </div>
-
-              <div className="mx-4 my-[6px] h-px bg-[#f0f0f0]" role="presentation" />
-
-              <form action={logoutAction} className="px-4 pt-2">
-                <button
-                  type="submit"
-                  className="flex min-h-[44px] w-full items-center gap-2 rounded-lg px-[11px] py-2 text-left text-[13px] font-medium transition-colors hover:bg-[#FEF0EB]"
-                  style={{ color: SCARLET }}
-                  onClick={drawerOpen.close}
-                >
-                  <IconLogout className="size-[18px] shrink-0" stroke={1.75} style={{ color: SCARLET }} aria-hidden /> Sign out
-                </button>
-              </form>
-            </div>
-          </div>
-        </>
-      ) : null}
-
       <header className={`${glassHeader} ${isHomeAppearance ? "home-public-nav" : "marketplace-public-nav"}`}>
         {/* Mobile */}
         <nav aria-label="Primary mobile" className="flex px-3 py-3 md:hidden sm:px-4">
@@ -381,13 +213,13 @@ export default function PublicNav({
                   </button>
                 </>
               ) : showSignIn ? (
-                <Link
+                <><button type="button" aria-label="Open LinkWe menu" aria-haspopup="dialog" aria-expanded={drawerOpen.value} onClick={drawerOpen.toggle} className={`flex h-9 w-9 items-center justify-center rounded-full ${navIsLight ? "bg-zinc-100 text-[#193c3b]" : "bg-white/10 text-white"}`}><IconMenu2 size={19}/></button><Link
                   href={loginHref}
                   className="flex h-8 shrink-0 items-center justify-center rounded-lg px-3.5 text-[12px] font-bold leading-none text-white"
                   style={{ backgroundColor: SCARLET }}
                 >
                   Sign in
-                </Link>
+                </Link></>
               ) : null}
             </div>
           </div>
@@ -448,9 +280,9 @@ export default function PublicNav({
                 </button>
               </>
             ) : showSignIn ? (
-              <Link href={loginHref} className="flex h-9 shrink-0 items-center justify-center rounded-[10px] px-5 text-[13px] font-semibold text-white" style={{ backgroundColor: SCARLET }}>
+              <><button type="button" aria-label="Open LinkWe menu" aria-haspopup="dialog" aria-expanded={drawerOpen.value} onClick={drawerOpen.toggle} className={`flex h-9 w-9 items-center justify-center rounded-full ${navIsLight ? "bg-zinc-100 text-[#193c3b]" : "bg-white/10 text-white"}`}><IconMenu2 size={19}/></button><Link href={loginHref} className="flex h-9 shrink-0 items-center justify-center rounded-[10px] px-5 text-[13px] font-semibold text-white" style={{ backgroundColor: SCARLET }}>
                 Sign in
-              </Link>
+              </Link></>
             ) : null}
           </div>
         </nav>
@@ -462,7 +294,7 @@ export default function PublicNav({
         onClose={() => setMobileSearchOpen(false)}
       />
 
-      <PublicMoreSheet
+      <PublicMenuDrawer
         open={moreSheetOpen.value}
         onClose={moreSheetOpen.close}
         user={user}
@@ -475,15 +307,15 @@ export default function PublicNav({
       <div
         role="navigation"
         aria-label="Mobile bottom navigation"
-        className="fixed bottom-[max(.55rem,env(safe-area-inset-bottom,0px))] left-3 right-3 z-[100] overflow-hidden rounded-[24px] border border-white/90 bg-white/92 shadow-[0_18px_50px_rgba(28,28,26,0.24)] backdrop-blur-xl lg:hidden"
+        className={styles.bottomNav}
       >
-        <div className="mx-auto grid h-[66px] max-w-lg grid-cols-5 gap-1 px-1.5">
+        <div className={styles.bottomInner}>
           {mobileTabs.map((tab) => {
             const active =
-              tab.label === "More"
+              tab.label === "Menu"
                 ? moreSheetOpen.value
                 : tab.isActive(pathname, hash);
-            const tabClass = `relative my-1.5 flex min-w-0 flex-col items-center justify-center gap-[3px] rounded-[18px] px-1 transition-all duration-300 ${active ? "bg-gradient-to-b from-orange-50 to-[#fff7f2] shadow-[inset_0_0_0_1px_rgba(212,69,10,0.08)]" : "hover:bg-zinc-50"}`;
+            const tabClass = `${styles.bottomItem} ${active ? styles.bottomActive : ""}`;
 
             const tabInner = (
               <>
@@ -500,7 +332,7 @@ export default function PublicNav({
                     key={tab.label === "Cart" ? cartBumpNonce : tab.label}
                     className={`size-[22px] shrink-0 transition-colors duration-150 ${
                       tab.label === "Cart" && cartBumpPlay ? "lw-cart-icon-bump" : ""
-                    } ${active ? "text-[#D4450A]" : "text-[var(--color-text-secondary)]"}`}
+                    } ${active ? "text-[#193c3b]" : "text-[var(--color-text-secondary)]"}`}
                     stroke={active ? 2.25 : 1.75}
                     aria-hidden
                   />
@@ -528,6 +360,7 @@ export default function PublicNav({
                   key={tab.label}
                   type="button"
                   className={tabClass}
+                  aria-label="Open LinkWe menu"
                   aria-expanded={moreSheetOpen.value}
                   aria-haspopup="dialog"
                   onClick={() => moreSheetOpen.toggle()}
@@ -556,176 +389,9 @@ export default function PublicNav({
   );
 }
 
-function PublicMoreSheet({
-  open,
-  onClose,
-  user,
-  loginHref,
-  dashTarget,
-  isInstalled,
-}: {
-  open: boolean;
-  onClose: () => void;
-  user: { name: string; href: string } | null;
-  loginHref: string;
-  dashTarget: string;
-  isInstalled: boolean;
-}) {
-  const gridLinks: {
-    href: string;
-    label: string;
-    Icon: TablerOutlineIcon;
-    authOnly?: boolean;
-  }[] = [
-    { href: "/services", label: "Services", Icon: IconTools },
-    { href: "/stores", label: "Stores", Icon: IconBuildingStore },
-    { href: "/events", label: "Events", Icon: IconCalendarEvent },
-    { href: "/pricing", label: "Pricing", Icon: IconTag },
-    { href: "/orders", label: "My Orders", Icon: IconPackage, authOnly: true },
-    { href: "/wishlist", label: "My Wishlist", Icon: IconHeart, authOnly: true },
-    { href: "/saved-stores", label: "Saved Stores", Icon: IconBookmark, authOnly: true },
-    { href: "/timeline", label: "Timeline", Icon: IconNews, authOnly: true },
-    { href: "/event-collections", label: "Event Collections", Icon: IconCalendarEvent, authOnly: true },
-    { href: "/get-app", label: "Get App", Icon: IconDownload },
-  ];
-
-  const visibleLinks = gridLinks.filter((item) => {
-    if (item.href === "/get-app" && isInstalled) return false;
-    if (item.authOnly && !user) return false;
-    return true;
-  });
-
-  if (!open) return null;
-
-  return (
-    <>
-      <div
-        role="presentation"
-        className="fixed inset-0 z-[110] bg-[rgba(0,0,0,0.5)] lg:hidden"
-        onClick={onClose}
-        aria-hidden={false}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="More menu"
-        className={`fixed inset-x-0 bottom-0 z-[111] max-h-[min(85vh,560px)] overflow-y-auto rounded-t-2xl bg-white pb-[calc(env(safe-area-inset-bottom,0px)+12px)] shadow-[0_-8px_32px_rgba(0,0,0,0.12)] transition-transform duration-200 ease-out lg:hidden ${
-          open ? "translate-y-0" : "translate-y-full"
-        }`}
-      >
-        <div className="flex justify-center pt-3 pb-2">
-          <span className="h-1 w-10 rounded-full bg-[var(--color-border-tertiary)]" aria-hidden />
-        </div>
-
-        {user ? (
-          <div className="flex items-center gap-3 border-b border-[0.5px] border-[var(--color-border-tertiary)] px-4 pb-4">
-            <div
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-black text-white"
-              style={{ backgroundColor: SCARLET }}
-              aria-hidden
-            >
-              {initialsDisplay(user.name)}
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-[15px] font-semibold text-[#1C1C1A]">Hi {user.name.split(/\s+/)[0] ?? user.name}</p>
-              <Link
-                href={dashTarget}
-                onClick={onClose}
-                className="mt-0.5 text-[12px] font-medium text-[#D4450A] hover:underline"
-              >
-                My dashboard →
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <div className="border-b border-[0.5px] border-[var(--color-border-tertiary)] px-4 pb-4">
-            <p className="text-[15px] font-semibold text-[#1C1C1A]">Welcome to LinkWe</p>
-            <Link href={loginHref} onClick={onClose} className="mt-1 text-[12px] font-medium text-[#D4450A] hover:underline">
-              Sign in →
-            </Link>
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-3 p-4">
-          {visibleLinks.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex flex-col items-center justify-center gap-2 rounded-xl bg-white p-4 text-center transition-colors hover:bg-[#F7F7F6]"
-              style={{ border: "0.5px solid var(--color-border-tertiary)" }}
-            >
-              <item.Icon className="size-6 text-[#D4450A]" stroke={1.75} aria-hidden />
-              <span className="text-[11px] font-medium text-[#1C1C1A]">{item.label}</span>
-            </Link>
-          ))}
-        </div>
-
-        {user ? (
-          <form action={logoutAction} className="px-4 pt-1">
-            <button
-              type="submit"
-              className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-[0.5px] border-[var(--color-border-tertiary)] text-[13px] font-semibold text-[#D4450A] transition-colors hover:bg-[#FEF0EB]"
-            >
-              <IconLogout className="size-[18px]" stroke={1.75} aria-hidden />
-              Sign out
-            </button>
-          </form>
-        ) : null}
-      </div>
-    </>
-  );
-}
-
-function DrawerRowLink({
-  href,
-  label,
-  Icon,
-  active,
-  onNavigate,
-}: {
-  href: string;
-  label: string;
-  Icon: TablerOutlineIcon;
-  active: boolean;
-  onNavigate: () => void;
-}) {
-  return (
-    <Link
-      href={href}
-      onClick={onNavigate}
-      className={`flex items-center gap-3 rounded-lg px-[11px] py-2 text-[13px] font-medium transition-colors ${
-        active ? "bg-[#FEF0EB]" : "hover:bg-[#FEF0EB]"
-      } ${active ? "text-[#D4450A]" : "text-[#1C1C1A]"}`}
-    >
-      <Icon className="size-[18px] shrink-0" stroke={1.75} style={{ color: active ? SCARLET : "#1C1C1A" }} aria-hidden />
-      {label}
-    </Link>
-  );
-}
-
 function useDrawerOpenControlled() {
   const [open, setOpen] = useState(false);
-
   const close = useCallback(() => setOpen(false), []);
-  const toggle = useCallback(() => setOpen((o) => !o), []);
-
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("keydown", onEsc);
-    return () => window.removeEventListener("keydown", onEsc);
-  }, [open]);
-
-  return { value: open, toggle, close };
+  const toggle = useCallback(() => setOpen(value => !value), []);
+  return { value: open, close, toggle };
 }

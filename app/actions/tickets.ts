@@ -1,5 +1,7 @@
 "use server";
 
+import {getSession} from "@/lib/auth/session";
+import {activeCustomerTicketsWhere} from "@/lib/customer/dashboard";
 import { prisma } from "@/lib/prisma";
 
 export type UpcomingTicketEventPreview = {
@@ -16,17 +18,13 @@ export async function getUpcomingTicketsPreview(
   limit = 3,
 ): Promise<UpcomingTicketEventPreview[]> {
   const trimmedUserId = userId?.trim();
-  if (!trimmedUserId) return [];
+  const session=await getSession();
+  if (!session || session.userId!==trimmedUserId) return [];
 
   const now = new Date();
 
   const tickets = await prisma.ticket.findMany({
-    where: {
-      userId: trimmedUserId,
-      status: "VALID",
-      ticketOrder: { is: { status: "PAID" } },
-      event: { startDate: { gt: now } },
-    },
+    where: activeCustomerTicketsWhere(trimmedUserId,now),
     select: {
       eventId: true,
       event: {
@@ -57,5 +55,5 @@ export async function getUpcomingTicketsPreview(
     }
   }
 
-  return Array.from(byEvent.values()).slice(0, limit);
+  return Array.from(byEvent.values()).slice(0, Math.max(1,Math.min(20,Math.trunc(limit))));
 }

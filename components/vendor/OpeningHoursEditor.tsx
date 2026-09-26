@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { normalizeOpeningHoursForDb } from "@/lib/store/opening-hours-utils";
 
 type TimeSlot = { from: string; to: string };
 type DaySchedule = { closed: boolean; allDay: boolean; slots: TimeSlot[] };
@@ -10,30 +11,9 @@ const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"
 
 const DEFAULT_SLOT = { from: "08:00", to: "17:00" };
 
-function defaultDaySchedule(day: (typeof DAYS)[number]): DaySchedule {
-  const isWeekend = day === "saturday" || day === "sunday";
-  return {
-    closed: isWeekend,
-    allDay: false,
-    slots: isWeekend ? [] : [{ ...DEFAULT_SLOT }],
-  };
-}
-
 /** In-memory only — coerces malformed DB JSON so slots is always an array. */
 function normalizeHours(initialHours: WeekSchedule): WeekSchedule {
-  const normalized: WeekSchedule = {};
-  for (const day of DAYS) {
-    const entry = initialHours[day];
-    if (!entry || typeof entry !== "object") {
-      normalized[day] = defaultDaySchedule(day);
-      continue;
-    }
-    const closed = typeof entry.closed === "boolean" ? entry.closed : defaultDaySchedule(day).closed;
-    const allDay = typeof entry.allDay === "boolean" ? entry.allDay : false;
-    const slots = Array.isArray(entry.slots) ? entry.slots : [];
-    normalized[day] = { closed, allDay, slots };
-  }
-  return normalized;
+  return normalizeOpeningHoursForDb(initialHours) ?? normalizeOpeningHoursForDb({})!;
 }
 
 type Props = {
@@ -106,6 +86,8 @@ export default function OpeningHoursEditor({ initialHours }: Props) {
 
                 <button
                   type="button"
+                  aria-label={`${day} closed`}
+                  aria-pressed={d.closed}
                   onClick={() => {
                     const nowClosed = !d.closed;
                     updateDay(day, {
@@ -126,6 +108,8 @@ export default function OpeningHoursEditor({ initialHours }: Props) {
                 {!d.closed ? (
                   <button
                     type="button"
+                    aria-label={`${day} open 24 hours`}
+                    aria-pressed={d.allDay}
                     onClick={() => updateDay(day, { allDay: !d.allDay })}
                     className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all ${
                       d.allDay
@@ -169,6 +153,8 @@ export default function OpeningHoursEditor({ initialHours }: Props) {
                   <div key={i} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto] items-center gap-2">
                     <input
                       type="time"
+                      aria-label={`${day} opening time ${i + 1}`}
+                      required
                       value={slot.from}
                       onChange={(e) => updateSlot(day, i, "from", e.target.value)}
                       name={`hours_${day}_from_${i}`}
@@ -177,6 +163,8 @@ export default function OpeningHoursEditor({ initialHours }: Props) {
                     <span className="text-xs font-medium text-zinc-400">to</span>
                     <input
                       type="time"
+                      aria-label={`${day} closing time ${i + 1}`}
+                      required
                       value={slot.to}
                       onChange={(e) => updateSlot(day, i, "to", e.target.value)}
                       name={`hours_${day}_to_${i}`}

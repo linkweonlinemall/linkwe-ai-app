@@ -1,38 +1,19 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-
-import { getVendorAvailabilityPageData } from "@/app/actions/services";
-import { getSession } from "@/lib/auth/session";
-
-import AvailabilityClient from "./AvailabilityClient";
-
-export default async function VendorAvailabilityPage() {
-  const session = await getSession();
-  if (!session) redirect("/login");
-
-  const data = await getVendorAvailabilityPageData();
-  if (!data) redirect("/onboarding/business/step-3");
-
-  return (
-    <div className="min-h-full bg-[#F7F5F2] px-4 py-6 md:px-6 md:py-8">
-      <div className="mx-auto max-w-3xl">
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-[#1C1C1A]">Availability</h1>
-            <p className="mt-1 text-sm text-[#7c7b77]">
-              Control when customers can book your services
-            </p>
-          </div>
-          <Link
-            href="/dashboard/vendor/services/new"
-            className="inline-flex shrink-0 items-center justify-center rounded-lg bg-[#D4450A] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#B83A08]"
-          >
-            Add service
-          </Link>
-        </div>
-
-        <AvailabilityClient openingHours={data.openingHours} services={data.services} />
-      </div>
-    </div>
-  );
+import {redirect} from "next/navigation";
+import {getVendorAvailabilityPageData} from "@/app/actions/services";
+import {getVendorStaff} from "@/app/actions/staff";
+import {getSession} from "@/lib/auth/session";
+import {assertDashboardRole} from "@/lib/auth/assert-role";
+import {prisma} from "@/lib/prisma";
+import {upcomingBookingsWhere} from "@/lib/services/upcoming-bookings";
+import {isStoreSellable} from "@/lib/store/sellable-store";
+import WorkspacePage from "@/components/vendor/WorkspacePage";
+import s from "@/components/vendor/business-workspace.module.css";
+import StaffWorkspace from "./StaffWorkspace";
+export default async function VendorAvailabilityPage(){
+ const session=await getSession();if(!session)redirect("/login");assertDashboardRole(session,"VENDOR");
+ const [data,staff,store]=await Promise.all([getVendorAvailabilityPageData(),getVendorStaff(),prisma.store.findFirst({where:{ownerId:session.userId},select:{id:true,name:true,slug:true,status:true,isAvailableNow:true,owner:{select:{idVerificationStatus:true}},products:{where:{isService:true,isArchived:false},select:{id:true,name:true,isPublished:true,isAvailable:true}}}})]);
+ if(!data||!store)redirect("/onboarding/business/step-3");
+ const bookings=await prisma.productBooking.findMany({where:{product:{storeId:store.id},...upcomingBookingsWhere()},select:{id:true,productId:true,bookingDate:true,startTime:true,endTime:true,staffMemberId:true,product:{select:{name:true}}},orderBy:[{bookingDate:"asc"},{startTime:"asc"}],take:100});
+ return <WorkspacePage eyebrow="People, hours & visibility" title="Ready when customers need you." description="Manage your service hours, organise the team and see what customers can discover." action={<Link className={s.secondary} href="/dashboard/vendor/service-desk">Open Service Desk ↗</Link>}><StaffWorkspace availability={data} staff={staff} bookings={bookings.map(b=>({...b,bookingDate:b.bookingDate.toISOString()}))} store={{name:store.name,slug:store.slug,visible:isStoreSellable(store),status:store.status,verification:store.owner.idVerificationStatus,isAvailableNow:store.isAvailableNow,services:store.products}}/></WorkspacePage>;
 }

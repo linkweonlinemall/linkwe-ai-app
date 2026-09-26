@@ -11,7 +11,7 @@ Module._load = function(request, parent, main) {
   if (request === 'server-only') return {};
   if (request === '@/lib/auth/current-user') return { getCurrentUser: async () => user };
   if (request === '@/lib/prisma') return { prisma: { store: { findFirst: async args => { assert.equal(args.where.ownerId, 'owner'); return store; } } } };
-  if (request === '@/lib/photo-studio/usage') return { getPhotoAccess: async () => ({ plan:'STARTER', paid:false, allowed:true, trialLimit:5, trialRemaining:5 }), settlePhotoTrial: async () => {}, reservePhotoAttempt: async () => { reservations++; if (failedReservation) throw new Error('database unavailable'); return null; } };
+  if (request === '@/lib/photo-studio/usage') return { getPhotoAccess: async () => ({ plan:'STARTER', paid:false, allowed:true, trialLimit:1, trialRemaining:1 }), settlePhotoTrial: async () => {}, reservePhotoAttempt: async () => { reservations++; if (failedReservation) throw new Error('database unavailable'); return null; } };
   if (request.startsWith('@/')) request = path.join(process.cwd(), request.slice(2));
   return originalLoad.call(this, request, parent, main);
 };
@@ -33,7 +33,12 @@ const pass = text => { checks++; console.log('PASS ' + text); };
   pass('Disabled by default; sandbox keys enforced; live usage requires an explicit valid budget');
   const {photoAccess, photoTrialKey} = require('../lib/photo-studio/access.ts');
   const starter={ownerId:'one-vendor',subscriptionPlan:'STARTER',subscriptionStatus:'NONE',planRenewsAt:null};
-  assert.equal(photoAccess(starter,4).allowed,true); assert.equal(photoAccess(starter,5).allowed,false);
+  assert.equal(photoAccess(starter,0).allowed,true);
+  assert.equal(photoAccess(starter,0).trialRemaining,1);
+  for (const used of [1, 4, 5]) {
+    assert.equal(photoAccess(starter,used).allowed,false);
+    assert.equal(photoAccess(starter,used).trialRemaining,0);
+  }
   for(const subscriptionPlan of ['GROWTH','PRO']) {
     const paid={...starter,subscriptionPlan,subscriptionStatus:'ACTIVE'};
     assert.equal(photoAccess(paid,5).allowed,true);
@@ -42,7 +47,7 @@ const pass = text => { checks++; console.log('PASS ' + text); };
   }
   assert.notEqual(photoTrialKey('one-vendor',true),photoTrialKey('one-vendor',false));
   assert.equal(photoStudioConfig({PHOTOROOM_API_KEY:'example',PHOTO_STUDIO_LIFETIME_LIMIT:'0'}).ready,false);
-  pass('Only active Growth/Pro have continuing access; Starter gets exactly five lifetime edits; sandbox and live trials are separate');
+  pass('Only active Growth/Pro have continuing access; Starter gets one lifetime image; previous usage stays counted; sandbox and live trials are separate');
   const png = await sharp({ create: { width: 800, height: 600, channels: 3, background: '#526b92' } }).png().toBuffer();
   const photo = new File([png], 'real-product.png', { type: 'image/png' });
   await assert.rejects(() => preparePhoto(new File(['<svg/>'], 'fake.png', { type: 'image/png' }), true));

@@ -32,11 +32,17 @@ function editRedirect(query: string): never {
   redirect(`${EDIT_PATH}?${query}`);
 }
 
+class StoreProfileError extends Error {}
+const PROFILE_ERRORS:Record<string,string>={name_required:"Enter your store name.",slug_required:"Enter a store web address.",slug_invalid:"Use 3–64 lowercase letters, numbers and single hyphens for your web address.",slug_taken:"That store web address is taken. Choose another.",region_required:"Choose your operating region.",region_invalid:"Choose a valid operating region.",category_required:"Choose your store category.",upload_failed:"The image could not be uploaded. Check its size and try again.",profile_too_long:"Keep the name within 120 characters, tagline within 200, description within 1,000 and policies within 2,000."};
+PROFILE_ERRORS.hours_invalid = "Each open day needs valid opening and closing times, with closing after opening and no overlapping time slots.";
+export async function updateStore(formData:FormData):Promise<void>{try{await applyStoreUpdates(formData);}catch(error){if(error instanceof StoreProfileError)editRedirect(`error=${error.message}`);throw error;}}
+export async function saveStoreProfile(_previous:{error?:string},formData:FormData):Promise<{error?:string}>{try{await applyStoreUpdates(formData);return {};}catch(error){if(error instanceof StoreProfileError)return {error:PROFILE_ERRORS[error.message]??"Please check your store details."};throw error;}}
+
 /**
  * Updates the signed-in vendor's store from FormData (expects hidden `storeId`).
  * Uses redirects with query params so a Server Component form can show feedback without a client boundary.
  */
-export async function updateStore(formData: FormData): Promise<void> {
+async function applyStoreUpdates(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
   if (!user || user.role !== "VENDOR") {
     redirect("/");
@@ -61,18 +67,18 @@ export async function updateStore(formData: FormData): Promise<void> {
 
   const name = String(formData.get("name") ?? "").trim();
   if (!name) {
-    editRedirect("error=name_required");
+    throw new StoreProfileError("name_required");
   }
 
   const slugRaw = String(formData.get("slug") ?? "");
   const slug = sanitizeSlug(slugRaw);
   if (!slug) {
-    editRedirect("error=slug_required");
+    throw new StoreProfileError("slug_required");
   }
 
   const slugValidation = validateStoreSlug(slug);
   if (slugValidation) {
-    editRedirect("error=slug_invalid");
+    throw new StoreProfileError("slug_invalid");
   }
 
   const tagline = String(formData.get("tagline") ?? "").trim() || null;
@@ -80,11 +86,13 @@ export async function updateStore(formData: FormData): Promise<void> {
   const region = String(formData.get("region") ?? "").trim();
   const categoryId = String(formData.get("categoryId") ?? "").trim();
 
+  if(name.length>120 || (tagline?.length??0)>200 || (description?.length??0)>1000 || String(formData.get("policies")??"").length>2000) throw new StoreProfileError("profile_too_long");
+
   const logoEntry = formData.get("logo");
   if (logoEntry instanceof File && logoEntry.size > 0) {
     const saved = await saveKycDocumentUpload(logoEntry);
     if (!saved.ok) {
-      editRedirect("error=upload_failed");
+      throw new StoreProfileError("upload_failed");
     }
     logoUrl = saved.publicPath;
   }
@@ -94,21 +102,21 @@ export async function updateStore(formData: FormData): Promise<void> {
   if (coverPhotoEntry instanceof File && coverPhotoEntry.size > 0) {
     const savedCover = await saveGalleryUpload(coverPhotoEntry);
     if (!savedCover.ok) {
-      editRedirect("error=upload_failed");
+      throw new StoreProfileError("upload_failed");
     }
     newCoverPhotoUrl = savedCover.publicPath;
   }
 
   if (!region) {
-    editRedirect("error=region_required");
+    throw new StoreProfileError("region_required");
   }
   const normalizedRegion = normalizeRegion(region);
   if (!isValidRegion(normalizedRegion)) {
-    editRedirect("error=region_invalid");
+    throw new StoreProfileError("region_invalid");
   }
 
   if (!categoryId) {
-    editRedirect("error=category_required");
+    throw new StoreProfileError("category_required");
   }
 
   const slugOwner = await prisma.store.findFirst({
@@ -116,7 +124,7 @@ export async function updateStore(formData: FormData): Promise<void> {
     select: { id: true },
   });
   if (slugOwner) {
-    editRedirect("error=slug_taken");
+    throw new StoreProfileError("slug_taken");
   }
 
   const hasHours = formData.get("hasHours") === "1";
@@ -134,10 +142,11 @@ export async function updateStore(formData: FormData): Promise<void> {
         for (let i = 0; i < slotCount; i++) {
           const from = String(formData.get(`hours_${day}_from_${i}`) ?? "").trim();
           const to = String(formData.get(`hours_${day}_to_${i}`) ?? "").trim();
-          if (from && to) {
-            slots.push({ from, to });
-          }
+          if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(from) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(to) || from >= to) throw new StoreProfileError("hours_invalid");
+          slots.push({ from, to });
         }
+        slots.sort((a, b) => a.from.localeCompare(b.from));
+        if (slots.some((slot, index) => index > 0 && slot.from < slots[index - 1].to)) throw new StoreProfileError("hours_invalid");
       }
       openingHours[day] = { closed, allDay, slots };
     }
@@ -192,7 +201,7 @@ export async function updateStore(formData: FormData): Promise<void> {
     latitude: safeLat,
     longitude: safeLng,
     socialLinks: Object.keys(socialLinks).length > 0 ? socialLinks : Prisma.DbNull,
-    checkoutFields: checkoutFields.length > 0 ? checkoutFields : Prisma.DbNull,
+    ...(formData.has("checkoutFields") ? {checkoutFields: checkoutFields.length > 0 ? checkoutFields : Prisma.DbNull} : {}),
   };
   if (newCoverPhotoUrl !== undefined) {
     updateData.coverPhotoUrl = newCoverPhotoUrl;
@@ -210,7 +219,7 @@ export async function updateStore(formData: FormData): Promise<void> {
     // The lookup above gives immediate feedback; the database constraint closes
     // the small race where two stores try to claim the same slug together.
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      editRedirect("error=slug_taken");
+      throw new StoreProfileError("slug_taken");
     }
     throw error;
   }
@@ -220,7 +229,7 @@ export async function updateStore(formData: FormData): Promise<void> {
   revalidatePath(`/store/${oldSlug}`);
   revalidatePath(`/store/${slug}`);
 
-  redirect("/dashboard/vendor?success=store_saved");
+  redirect(`${EDIT_PATH}?success=1`);
 }
 
 export async function addStoreImage(formData: FormData): Promise<void> {

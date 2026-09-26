@@ -1,6 +1,8 @@
 "use client"
 
 import Link from "next/link"
+import { readSSEData } from "@/lib/chat/read-sse-data"
+import RexUsageMeter from "@/components/vendor/RexUsageMeter"
 import { usePathname } from "next/navigation"
 import { useState, useEffect, useRef, useCallback } from "react"
 import ReactMarkdown from "react-markdown"
@@ -121,6 +123,8 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
   const [attachedPreviews, setAttachedPreviews] = useState<string[]>([])
   const [aiRemaining, setAiRemaining] = useState<number | null>(null)
   const [aiAllowance, setAiAllowance] = useState<number | null>(null)
+  const [aiTopupRemaining, setAiTopupRemaining] = useState(0)
+  const [aiLifetime, setAiLifetime] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -131,6 +135,8 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
         if (r.ok) {
           setAiAllowance(r.allowance)
           setAiRemaining(r.remaining)
+          setAiTopupRemaining(r.topupRemaining)
+          setAiLifetime(r.lifetime)
         }
       })
       setTimeout(() => inputRef.current?.focus(), 100)
@@ -353,21 +359,17 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
           },
         ])
 
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          const chunk = new TextDecoder().decode(value)
-          const lines = chunk.split("\n").filter((l) => l.startsWith("data: "))
-          for (const line of lines) {
-            const data = line.slice(6)
-            if (data === "[DONE]") break
+        for await (const data of readSSEData(reader)) {
+          if (data === "[DONE]") break
             try {
               const parsed = JSON.parse(data) as {
                 productId?: string
                 focusProductId?: string
                 focusEventId?: string
                 text?: string
+                error?: string
                 aiRemaining?: number
+                aiTopupRemaining?: number
                 galleryUpdate?: {
                   productId: string
                   images: string[]
@@ -377,6 +379,7 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
               if (typeof parsed.aiRemaining === "number") {
                 setAiRemaining(parsed.aiRemaining)
               }
+              if (typeof parsed.aiTopupRemaining === "number") setAiTopupRemaining(parsed.aiTopupRemaining)
               if (parsed.productId) {
                 setCreatedProductId(parsed.productId)
                 setFocusedProductId(parsed.productId)
@@ -385,14 +388,18 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
                 setFocusedProductId(parsed.focusProductId)
               if (parsed.focusEventId)
                 setFocusedEventId(parsed.focusEventId)
+              if (parsed.error) {
+                fullText += `\n${parsed.error}`
+                buf.pending += `\n${parsed.error}`
+                break
+              }
               if (parsed.text) {
                 fullText += parsed.text
                 buf.pending += parsed.text
               }
             } catch {
-              // ignore parse errors in stream
+              // Ignore non-JSON events.
             }
-          }
         }
 
         buf.done = true
@@ -479,11 +486,7 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
                   aria-hidden
                 />
               </div>
-              {aiAllowance != null && aiAllowance > 0 ? (
-                <span className="text-[10px] text-zinc-500">
-                  {aiRemaining ?? aiAllowance} of {aiAllowance} uses left
-                </span>
-              ) : null}
+              <RexUsageMeter allowance={aiAllowance} remaining={aiRemaining} topupRemaining={aiTopupRemaining} lifetime={aiLifetime} compact/>
             </div>
             <div className="flex items-center gap-2">
               <a

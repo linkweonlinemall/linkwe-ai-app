@@ -1,94 +1,31 @@
 "use client";
+import { useActionState, useState } from "react";
+import { useFormStatus } from "react-dom";
+import { Camera, CheckCircle2, FileCheck2, LoaderCircle, ShieldCheck } from "lucide-react";
+import FormNotice from "@/components/auth/FormNotice";
+import FormActions from "@/components/onboarding/FormActions";
+import s from "@/components/onboarding/onboarding.module.css";
+import { validateOnboardingFile } from "@/lib/onboarding/upload-validation";
+import { saveBusinessOnboardingStep2, skipBusinessIdentityVerification, type BusinessOnboardingState } from "../actions";
 
-import { useActionState } from "react";
-
-import Input from "@/components/ui/Input";
-import { saveBusinessOnboardingStep2, type BusinessOnboardingState } from "../actions";
-
-function WizardFormFooter({
-  currentStep,
-  showBack,
-  backHref,
-  isLastStep,
-  pending,
-  pendingLabel,
-}: {
-  currentStep: number;
-  showBack: boolean;
-  backHref?: string;
-  isLastStep: boolean;
-  pending: boolean;
-  pendingLabel: string;
-}) {
-  const stepsLength = 3;
-  return (
-    <div
-      className="mt-8 flex flex-wrap items-center justify-between gap-3 pt-6"
-      style={{ borderTop: "1px solid var(--card-border-subtle)" }}
-    >
-      <div>
-        {showBack && backHref ? (
-          <a
-            href={backHref}
-            className="rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors hover:bg-zinc-50"
-            style={{ color: "var(--text-secondary)", borderColor: "var(--card-border)" }}
-          >
-            ← Back
-          </a>
-        ) : null}
-      </div>
-      <span className="text-xs" style={{ color: "var(--text-faint)" }}>
-        Step {currentStep + 1} of {stepsLength}
-      </span>
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-        style={{ backgroundColor: "var(--scarlet)" }}
-      >
-        {pending ? pendingLabel : isLastStep ? "Complete Setup" : "Continue →"}
-      </button>
-    </div>
-  );
+function SkipButton({ disabled, label }: { disabled: boolean; label: string }) {
+  const { pending } = useFormStatus();
+  return <button type="submit" disabled={disabled || pending} className={`${s.button} ${s.secondary}`}>{pending ? <><LoaderCircle size={16} className={s.spinner}/>Continuing…</> : label}</button>;
 }
 
-export function BusinessStep2Form() {
-  const [state, formAction, pending] = useActionState(saveBusinessOnboardingStep2, {} as BusinessOnboardingState);
-
-  return (
-    <form className="flex flex-col gap-4" action={formAction}>
-      <Input
-        accept="image/jpeg,image/png,image/webp,application/pdf"
-        className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5"
-        label="ID document (optional)"
-        name="document"
-        type="file"
-      />
-      <Input
-        accept="image/jpeg,image/png,image/webp"
-        className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5"
-        label="Selfie holding your ID (optional)"
-        name="selfieWithId"
-        type="file"
-      />
-      <p className="-mt-2 text-xs text-zinc-500">
-        You can skip both files now and upload them from your vendor dashboard when you are ready to verify your store. If uploading now, provide both files together.
-      </p>
-
-      {state.error ? (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
-          {state.error}
-        </p>
-      ) : null}
-
-      <WizardFormFooter
-        currentStep={1}
-        showBack
-        backHref="/onboarding/business/step-1"
-        isLastStep={false}
-        pending={pending}
-        pendingLabel="Continuing…"
-      />
-    </form>
-  );
+export function BusinessStep2Form({ verificationStatus, hasDocuments }: { verificationStatus: string; hasDocuments: boolean }) {
+  const [state, action, pending] = useActionState(saveBusinessOnboardingStep2, {} as BusinessOnboardingState);
+  const [files, setFiles] = useState<Record<string, string>>({});
+  const [fileError, setFileError] = useState<string>();
+  const submitted = hasDocuments && (verificationStatus === "APPROVED" || verificationStatus === "PENDING");
+  return <>
+    {submitted ? <div className={s.info}><CheckCircle2 size={22}/><div><strong>{verificationStatus === "APPROVED" ? "Your identity is verified" : "Your documents are ready for review"}</strong>You don’t need to upload them again. Continue to your storefront.</div></div> : <form action={action} onReset={event => event.preventDefault()} className={s.form} aria-busy={pending}>
+      <div className={s.info}><ShieldCheck size={21}/><div><strong>Your ID stays off your storefront</strong>Upload a clear government-issued ID and a selfie holding it. Verification is required before your store can go live, but you can finish setting up first.</div></div>
+      <div className={s.uploadGrid}>{([{name:"document",title:"Your photo ID",hint:"JPG, PNG, WebP or PDF · Up to 3 MB",accept:"image/jpeg,image/png,image/webp,application/pdf",icon:FileCheck2}, {name:"selfieWithId",title:"Selfie holding your ID",hint:"JPG, PNG or WebP · Up to 3 MB",accept:"image/jpeg,image/png,image/webp",icon:Camera}]).map(item => <label key={item.name} className={s.upload} data-selected={Boolean(files[item.name])}><item.icon size={29}/><strong>{item.title}</strong><span>{files[item.name] || "Choose a file"}</span><span>{item.hint}</span><input disabled={pending} type="file" name={item.name} aria-label={item.title} accept={item.accept} onChange={event => { const file = event.target.files?.[0]; const error = file ? validateOnboardingFile(file, item.name === "document" ? "document" : "selfie") : null; if(error) event.target.value = ""; setFileError(error ?? undefined); setFiles(previous => ({...previous, [item.name]: error ? "" : file?.name ?? ""})); }}/></label>)}</div>
+      <p className={s.help}>Keep your face and all four corners of your ID visible. Choose both files to submit them for review.</p>
+      <FormNotice message={fileError || state.error}/>
+      <FormActions back="/onboarding/business/step-1" pending={pending} label="Submit & continue" pendingLabel="Uploading securely…" disabled={!files.document || !files.selfieWithId}/>
+    </form>}
+    <form action={skipBusinessIdentityVerification} className={s.skip}><div><strong>{submitted ? "On to the good part." : "Don’t have your ID handy?"}</strong><p>{submitted ? "Give your business a storefront of its own." : "Finish your storefront now. Add your ID later from the verification checklist in your dashboard."}</p></div><SkipButton disabled={pending} label={submitted ? "Continue to storefront" : "Skip for now"}/></form>
+  </>;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
   IconCalendar,
@@ -32,7 +32,6 @@ import {
   parseStoreOpeningHours,
   WEEKDAY_KEYS,
   WEEKDAY_SHORT,
-  type WeekSchedule,
 } from "@/lib/services/opening-hours";
 
 export type VendorServiceAvailability = {
@@ -111,14 +110,19 @@ function nextPreviewDate(availableDays: string[], useStoreHours: boolean): strin
   return `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
 }
 
-const CARD = "rounded-[12px] border-[0.5px] border-[#e8e8e8] bg-white";
+const CARD = "rounded-[20px] border border-[#dce5d8] bg-white";
 
 export default function AvailabilityClient({ openingHours: rawHours, services: initialServices }: Props) {
   const openingHours = useMemo(() => parseStoreOpeningHours(rawHours), [rawHours]);
   const [services, setServices] = useState(initialServices);
+  const [search, setSearch] = useState("");
+  const [togglePending, setTogglePending] = useState<string | null>(null);
+  const editorRef = useRef<HTMLDialogElement>(null);
   const [editing, setEditing] = useState<VendorServiceAvailability | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => { if(editing) editorRef.current?.showModal(); }, [editing]);
 
   const [durationMinutes, setDurationMinutes] = useState(60);
   const [customDuration, setCustomDuration] = useState("");
@@ -202,12 +206,9 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
   ]);
 
   async function handleToggle(serviceId: string, next: boolean) {
-    const prev = services;
-    setServices((list) => list.map((s) => (s.id === serviceId ? { ...s, isAvailable: next } : s)));
-    const result = await toggleServiceAvailability(serviceId, next);
-    if ("error" in result) {
-      setServices(prev);
-    }
+    setTogglePending(serviceId);setError(null);
+    try {const result=await toggleServiceAvailability(serviceId,next);if("error" in result){setError(result.error);return;}setServices(list=>list.map(service=>service.id===serviceId?{...service,isAvailable:next}:service));}
+    catch{setError("Could not update availability. Please try again.");}finally{setTogglePending(null);}
   }
 
   async function handleSave() {
@@ -226,6 +227,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
       isAvailable: editing.isAvailable,
     };
 
+    try {
     const result = await updateServiceAvailability(editing.id, payload);
     setSaving(false);
 
@@ -251,6 +253,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
       ),
     );
     closeEdit();
+    } catch { setError("Could not save availability. Please try again."); } finally { setSaving(false); }
   }
 
   function toggleDay(day: string) {
@@ -264,7 +267,8 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
     : "custom";
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <div className="space-y-5">
+      {error && !editing && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-800">{error}</p>}
       {/* Store hours */}
       <section data-tour="availability-store-hours" className={`${CARD} p-4 md:p-5`}>
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -273,15 +277,15 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
               <IconClock className="size-5" stroke={1.75} aria-hidden />
             </span>
             <div>
-              <h2 className="text-[13px] font-semibold text-[#1C1C1A]">Store hours — your master schedule</h2>
-              <p className="mt-0.5 text-[12px] text-[#7c7b77]">
+              <h2 className="text-sm font-semibold text-[#1C1C1A]">Store hours — your master schedule</h2>
+              <p className="mt-0.5 text-sm text-[#7c7b77]">
                 All services use these hours by default unless overridden
               </p>
             </div>
           </div>
           <Link
             href="/dashboard/vendor/store/edit"
-            className="shrink-0 text-[12px] font-semibold text-[#1A7FB5] hover:underline"
+            className="shrink-0 text-sm font-semibold text-[#1A7FB5] hover:underline"
           >
             Edit hours
           </Link>
@@ -321,7 +325,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
             })}
           </div>
         ) : (
-          <p className="mt-4 rounded-lg bg-[#F7F5F2] px-3 py-3 text-[12px] text-[#45443f]">
+          <p className="mt-4 rounded-lg bg-[#F7F5F2] px-3 py-3 text-sm text-[#45443f]">
             No store hours set yet.{" "}
             <Link href="/dashboard/vendor/store/edit" className="font-semibold text-[#1A7FB5] hover:underline">
               Add your opening hours
@@ -339,21 +343,22 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
               <IconTools className="size-5" stroke={1.75} aria-hidden />
             </span>
             <div>
-              <h2 className="text-[13px] font-semibold text-[#1C1C1A]">Your services</h2>
-              <p className="text-[12px] text-[#7c7b77]">
+              <h2 className="text-sm font-semibold text-[#1C1C1A]">Your services</h2>
+              <p className="text-sm text-[#7c7b77]">
                 {services.length} service{services.length === 1 ? "" : "s"}
               </p>
             </div>
           </div>
         </div>
 
-        {services.length === 0 ? (
+        <div className="px-5 py-4"><input aria-label="Search service availability" placeholder="Find a service…" value={search} onChange={e=>setSearch(e.target.value)} className="w-full rounded-xl border border-[#dce5d8] px-4 py-3 text-sm"/></div>
+        {services.filter(service=>service.name.toLowerCase().includes(search.toLowerCase())).length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-[#7c7b77] md:px-5">
-            No services yet. Add a bookable service to manage availability.
+            {services.length ? "No services match your search." : "Add a bookable service to manage availability."}
           </p>
         ) : (
           <ul>
-            {services.map((service, index) => {
+            {services.filter(service=>service.name.toLowerCase().includes(search.toLowerCase())).map((service, index) => {
               const Icon = categoryIcon(service.category);
               const scheduleLabel = formatScheduleSummary(
                 service.useStoreHours,
@@ -375,7 +380,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
                       <Icon className="size-5" stroke={1.75} aria-hidden />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-[13px] font-medium text-[#1C1C1A]">{service.name}</p>
+                      <p className="text-sm font-medium text-[#1C1C1A]">{service.name}</p>
                       <div className="mt-1.5 flex flex-wrap gap-1.5">
                         <span className="inline-flex items-center gap-1 rounded-md bg-[#EAF3DE] px-2 py-0.5 text-[10px] font-medium text-[#3B6D11]">
                           <IconClock className="size-3" stroke={1.75} aria-hidden />
@@ -414,6 +419,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
                       <input
                         type="checkbox"
                         className="peer sr-only"
+                        disabled={togglePending !== null}
                         checked={service.isAvailable}
                         onChange={(e) => void handleToggle(service.id, e.target.checked)}
                         aria-label={`${service.name} available for booking`}
@@ -424,8 +430,9 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
                     <button
                       data-tour={index === 0 ? "availability-edit" : undefined}
                       type="button"
+                      disabled={togglePending !== null}
                       onClick={() => openEdit(service)}
-                      className="flex size-7 items-center justify-center rounded-lg bg-[#F7F5F2] text-[#45443f] hover:bg-[#eceae6]"
+                      className="flex size-10 items-center justify-center rounded-lg bg-[#F7F5F2] text-[#45443f] hover:bg-[#eceae6]"
                       aria-label={`Edit availability for ${service.name}`}
                     >
                       <IconEdit className="size-4" stroke={1.75} aria-hidden />
@@ -439,7 +446,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
 
         <Link
           href="/dashboard/vendor/services/new"
-          className="flex items-center gap-2 border-t border-[#e8e8e8] px-4 py-3.5 text-[13px] font-medium text-[#1A7FB5] hover:bg-[#F7F5F2] md:px-4"
+          className="flex items-center gap-2 border-t border-[#e8e8e8] px-4 py-3.5 text-sm font-medium text-[#1A7FB5] hover:bg-[#F7F5F2] md:px-4"
           style={{ padding: "14px 16px" }}
         >
           <IconPlus className="size-4" stroke={1.75} aria-hidden />
@@ -449,9 +456,10 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
 
       {/* Editor modal */}
       {editing ? (
-        <div
-          className="fixed inset-0 z-[200] flex items-end justify-center bg-black/50 p-0 md:items-center md:p-4"
-          role="dialog"
+        <dialog
+          ref={editorRef}
+          onCancel={e=>{e.preventDefault();if(!saving)closeEdit();}}
+          className="fixed inset-0 z-[200] m-0 h-screen max-h-none w-screen max-w-none items-end justify-center bg-black/50 p-0 open:flex md:items-center md:p-4"
           aria-modal="true"
           aria-labelledby="availability-editor-title"
         >
@@ -462,6 +470,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
               </h3>
               <button
                 type="button"
+                disabled={saving}
                 onClick={closeEdit}
                 className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[#45443f] hover:bg-[#F7F5F2]"
                 aria-label="Close"
@@ -479,7 +488,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <label className="block">
-                  <span className="mb-1 block text-[12px] font-medium text-[#45443f]">Duration</span>
+                  <span className="mb-1 block text-sm font-medium text-[#45443f]">Duration</span>
                   <select
                     value={durationSelectValue}
                     onChange={(e) => {
@@ -513,7 +522,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
                   ) : null}
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-[12px] font-medium text-[#45443f]">Buffer</span>
+                  <span className="mb-1 block text-sm font-medium text-[#45443f]">Buffer</span>
                   <select
                     value={String(bufferMinutes)}
                     onChange={(e) => setBufferMinutes(parseInt(e.target.value, 10))}
@@ -529,7 +538,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
               </div>
 
               <div>
-                <p className="mb-2 text-[12px] font-medium text-[#45443f]">Availability type</p>
+                <p className="mb-2 text-sm font-medium text-[#45443f]">Availability type</p>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <button
                     type="button"
@@ -540,7 +549,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
                         : "border-[#e8e8e8] bg-white hover:border-[#d4d3cf]"
                     }`}
                   >
-                    <p className="text-[13px] font-semibold text-[#1C1C1A]">Follow store hours</p>
+                    <p className="text-sm font-semibold text-[#1C1C1A]">Follow store hours</p>
                     <p className="mt-1 text-[11px] text-[#7c7b77]">
                       {hasStoreHours ? "Uses your master store schedule" : "Set store hours first"}
                     </p>
@@ -554,7 +563,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
                         : "border-[#e8e8e8] bg-white hover:border-[#d4d3cf]"
                     }`}
                   >
-                    <p className="text-[13px] font-semibold text-[#1C1C1A]">Custom schedule</p>
+                    <p className="text-sm font-semibold text-[#1C1C1A]">Custom schedule</p>
                     <p className="mt-1 text-[11px] text-[#7c7b77]">Pick specific days and times</p>
                   </button>
                 </div>
@@ -563,7 +572,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
               {!useStoreHours ? (
                 <div className="space-y-3">
                   <div>
-                    <p className="mb-2 text-[12px] font-medium text-[#45443f]">Days</p>
+                    <p className="mb-2 text-sm font-medium text-[#45443f]">Days</p>
                     <div className="grid grid-cols-7 gap-1">
                       {WEEKDAY_KEYS.map((day, i) => {
                         const active = availableDays.includes(day);
@@ -586,7 +595,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
                   </div>
                   <div className="flex items-center gap-2">
                     <label className="flex-1">
-                      <span className="mb-1 block text-[12px] font-medium text-[#45443f]">From</span>
+                      <span className="mb-1 block text-sm font-medium text-[#45443f]">From</span>
                       <input
                         type="time"
                         value={availableFrom}
@@ -594,9 +603,9 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
                         className="w-full rounded-lg border-[0.5px] border-[#e8e8e8] px-3 py-2 text-sm"
                       />
                     </label>
-                    <span className="mt-5 shrink-0 text-[12px] text-[#7c7b77]">to</span>
+                    <span className="mt-5 shrink-0 text-sm text-[#7c7b77]">to</span>
                     <label className="flex-1">
-                      <span className="mb-1 block text-[12px] font-medium text-[#45443f]">To</span>
+                      <span className="mb-1 block text-sm font-medium text-[#45443f]">To</span>
                       <input
                         type="time"
                         value={availableTo}
@@ -633,7 +642,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
               </div>
 
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[12px] font-medium text-[#45443f]">Max bookings per day</span>
+                <span className="text-sm font-medium text-[#45443f]">Max bookings per day</span>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -672,6 +681,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
             <div className="flex gap-2 border-t border-[#e8e8e8] px-4 py-3">
               <button
                 type="button"
+                disabled={saving}
                 onClick={closeEdit}
                 className="flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold text-[#45443f] hover:bg-[#F7F5F2]"
               >
@@ -688,7 +698,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
               </button>
             </div>
           </div>
-        </div>
+        </dialog>
       ) : null}
     </div>
   );

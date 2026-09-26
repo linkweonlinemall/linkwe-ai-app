@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link"
+import { readSSEData } from "@/lib/chat/read-sse-data"
+import RexUsageMeter from "@/components/vendor/RexUsageMeter"
+import RexLaunchpad from "@/components/vendor/RexLaunchpad"
 import { useRouter } from "next/navigation"
 import { Sora } from "next/font/google"
 import ReactMarkdown from "react-markdown"
@@ -59,12 +62,7 @@ const CARD_BORDER_STYLE = {
   borderColor: "rgba(255,255,255,0.08)",
 } as const
 
-const QUICK_CHIP_MESSAGES = [
-  "📊 Show my sales",
-  "🏪 Update my store",
-  "📦 Check inventory",
-  "💬 How am I doing?",
-] as const
+
 
 async function compressImage(
   dataUrl: string,
@@ -133,6 +131,8 @@ export default function VendorAIAssistantPage() {
   const [focusedEventId, setFocusedEventId] = useState<string | null>(null)
   const [aiRemaining, setAiRemaining] = useState<number | null>(null)
   const [aiAllowance, setAiAllowance] = useState<number | null>(null)
+  const [aiTopupRemaining, setAiTopupRemaining] = useState(0)
+  const [aiLifetime, setAiLifetime] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const chatFileInputRef = useRef<HTMLInputElement>(null)
@@ -153,6 +153,8 @@ export default function VendorAIAssistantPage() {
         if (usage.ok) {
           setAiAllowance(usage.allowance)
           setAiRemaining(usage.remaining)
+          setAiTopupRemaining(usage.topupRemaining)
+          setAiLifetime(usage.lifetime)
         }
       })
     })
@@ -453,21 +455,16 @@ export default function VendorAIAssistantPage() {
         }
 
         const reader = res.body?.getReader()
-        const decoder = new TextDecoder()
+        if (!reader) throw new Error("Rex response is unavailable.")
 
-        stream: while (reader) {
-          const { done, value } = await reader.read()
-          if (done) break
-          const chunk = decoder.decode(value)
-          for (const line of chunk.split("\n")) {
-            if (!line.startsWith("data: ")) continue
-            const data = line.slice(6)
-            if (data === "[DONE]") break stream
+        stream: for await (const data of readSSEData(reader)) {
+          if (data === "[DONE]") break
             try {
               const p = JSON.parse(data) as {
                 text?: string
                 error?: string
                 aiRemaining?: number
+                aiTopupRemaining?: number
                 productId?: string
                 focusProductId?: string
                 focusEventId?: string
@@ -479,6 +476,7 @@ export default function VendorAIAssistantPage() {
               if (typeof p.aiRemaining === "number") {
                 setAiRemaining(p.aiRemaining)
               }
+              if (typeof p.aiTopupRemaining === "number") setAiTopupRemaining(p.aiTopupRemaining)
               if (p.galleryUpdate?.images?.length) {
                 setProductImages(p.galleryUpdate.images)
               }
@@ -509,9 +507,8 @@ export default function VendorAIAssistantPage() {
                 buf.pending += p.text
               }
             } catch {
-              // ignore
+              // Ignore non-JSON events.
             }
-          }
         }
 
         buf.done = true
@@ -675,12 +672,12 @@ export default function VendorAIAssistantPage() {
   return (
     <div
       className={`rex-studio flex h-full min-h-0 flex-col overflow-hidden ${REX_FONT.className}`}
-      style={{ background: "radial-gradient(circle at 72% -10%, rgba(71,207,255,0.18), transparent 38%), radial-gradient(circle at 18% 105%, rgba(124,58,237,0.18), transparent 42%), #07111F" }}
+      style={{ background: "radial-gradient(ellipse at 80% 0%, #45684f45, transparent 60%), #102b2c" }}
     >
       <header
         className="shrink-0 border-b px-3 py-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.18)] sm:px-4 md:py-4"
         style={{
-          backgroundColor: "rgba(9, 22, 38, .84)",
+          backgroundColor: "rgba(14, 39, 39, .94)",
           borderColor: CARD_BORDER_STYLE.borderColor,
         }}
       >
@@ -693,7 +690,7 @@ export default function VendorAIAssistantPage() {
           >
             ☰
           </button>
-          <div data-tour="rex-usage" className="flex min-w-0 flex-1 flex-col items-start md:absolute md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:items-center">
+          <div data-tour="rex-usage" className="flex min-w-0 flex-1 flex-col items-start md:items-start">
             <div className="flex items-center gap-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#D4450A] to-[#F59E0B] text-xs shadow-lg shadow-orange-950/30 sm:h-8 sm:w-8 sm:rounded-xl sm:text-sm" aria-hidden>⚡</div>
               <h1 className="text-lg font-black leading-none tracking-tight text-white sm:text-xl">
@@ -709,14 +706,9 @@ export default function VendorAIAssistantPage() {
               />
             </div>
             <p className="mt-0.5 hidden text-[10px] leading-tight text-zinc-400 min-[390px]:block sm:text-[11px]">
-              LinkWe business intelligence
+              YOUR LINKWE BUSINESS PARTNER
             </p>
-            {aiAllowance != null && aiAllowance > 0 ? (
-              <p className="mt-0.5 text-[9px] leading-tight text-zinc-400 sm:text-[11px]">
-                {aiRemaining ?? aiAllowance} of {aiAllowance} uses left this
-                period
-              </p>
-            ) : null}
+            <div className="mt-2"><RexUsageMeter allowance={aiAllowance} remaining={aiRemaining} topupRemaining={aiTopupRemaining} lifetime={aiLifetime}/></div>
           </div>
           <Link
             href="/dashboard/vendor"
@@ -770,7 +762,7 @@ export default function VendorAIAssistantPage() {
           <div
             className="flex shrink-0 border-b"
             style={{
-              backgroundColor: "rgba(8, 20, 35, .76)",
+              backgroundColor: "rgba(14, 39, 39, .76)",
               borderColor: CARD_BORDER_STYLE.borderColor,
             }}
           >
@@ -817,13 +809,14 @@ export default function VendorAIAssistantPage() {
                 ⚡
               </div>
               <h2 className="mt-3 text-xl font-bold text-white sm:mt-6 md:text-[28px]">
-                Rex
+                What shall we work on?
               </h2>
               <p className="mt-2 max-w-[420px] text-xs leading-relaxed text-zinc-400 sm:mt-3 md:text-sm">
-                Your AI business partner for LinkWe. I can update your store,
-                manage products, analyse your sales, and run your business with
-                you.
+                Your business, with a little backup. Plan your day, prepare a listing,
+                understand your money and turn customer feedback into your next move.
               </p>
+
+              <RexLaunchpad onChoose={prompt => { setInput(prompt); inputRef.current?.focus(); }}/>
 
               <div
                 data-tour="rex-images"
@@ -924,25 +917,7 @@ export default function VendorAIAssistantPage() {
                 ) : null}
               </div>
 
-              <div className="mt-8 grid w-full max-w-lg grid-cols-2 gap-2 md:flex md:flex-wrap md:justify-center md:gap-2">
-                {QUICK_CHIP_MESSAGES.map((chip) => (
-                  <button
-                    key={chip}
-                    type="button"
-                    onClick={() => {
-                      void handleSend(chip)
-                      setSidebarOpen(false)
-                    }}
-                    className="rounded-full border px-4 py-2 text-left text-[13px] leading-snug text-zinc-300 transition-colors hover:bg-[rgba(255,255,255,0.03)] md:text-center"
-                    style={{
-                      backgroundColor: "rgba(255,255,255,0.06)",
-                      borderColor: "rgba(255,255,255,0.1)",
-                    }}
-                  >
-                    {chip}
-                  </button>
-                ))}
-              </div>
+
             </div>
           ) : null}
 
@@ -958,8 +933,8 @@ export default function VendorAIAssistantPage() {
               <div
                 className={`text-[14px] ${
                   m.role === "user"
-                    ? "rex-user-bubble max-w-[90%] md:max-w-[80%] lg:max-w-[72%] bg-gradient-to-br from-[#6D5DFD] via-[#7357E9] to-[#3C8DFF] px-4 py-3 text-white [border-radius:22px_22px_6px_22px]"
-                    : `rex-assistant-bubble max-w-[92%] md:max-w-[82%] border bg-[#11253A] px-[18px] py-[14px] text-[#EAF4FF] [border-radius:6px_22px_22px_22px]`
+                    ? "rex-user-bubble max-w-[90%] md:max-w-[80%] lg:max-w-[72%] bg-gradient-to-br from-[#375b4d] to-[#466954] px-4 py-3 text-white [border-radius:22px_22px_6px_22px]"
+                    : `rex-assistant-bubble max-w-[92%] md:max-w-[82%] border bg-[#1d3b3b] px-[18px] py-[14px] text-[#EAF4FF] [border-radius:6px_22px_22px_22px]`
                 } ${m.role === "user" ? "whitespace-pre-wrap" : ""}`}
                 style={
                   m.role === "assistant"
@@ -1325,7 +1300,7 @@ export default function VendorAIAssistantPage() {
             </div>
           )}
 
-          <div data-tour="rex-prompts" className="rex-composer flex items-center gap-1.5 rounded-xl border border-cyan-200/15 bg-[#0D2136]/90 p-1.5 shadow-[0_18px_46px_rgba(0,0,0,0.38)] backdrop-blur-xl focus-within:border-cyan-300/50 focus-within:ring-2 focus-within:ring-cyan-300/10 sm:gap-2 sm:rounded-2xl sm:p-2">
+          <div data-tour="rex-prompts" className="rex-composer flex items-center gap-1.5 rounded-xl border border-cyan-200/15 bg-[#163434]/90 p-1.5 shadow-[0_18px_46px_rgba(0,0,0,0.38)] backdrop-blur-xl focus-within:border-cyan-300/50 focus-within:ring-2 focus-within:ring-cyan-300/10 sm:gap-2 sm:rounded-2xl sm:p-2">
             {/* Paperclip / attach button */}
             <button
               type="button"
@@ -1365,7 +1340,7 @@ export default function VendorAIAssistantPage() {
                   void handleSend()
                 }
               }}
-              placeholder="Ask Rex…"
+              placeholder="Tell Rex what you want to get done…"
               disabled={loading}
               className="min-h-9 max-h-28 min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-1.5 py-2 text-[13px] leading-5 text-white outline-none placeholder:text-zinc-500 focus:outline-none focus:ring-0 disabled:opacity-50 sm:min-h-11 sm:max-h-48 sm:px-2 sm:py-3 sm:text-sm"
               style={{
@@ -1384,7 +1359,7 @@ export default function VendorAIAssistantPage() {
                     startImagePreviews.length > 0
                   ))
               }
-              className="h-9 shrink-0 rounded-lg bg-gradient-to-br from-[#7C5CFF] to-[#199CF2] px-3 text-xs font-bold text-white shadow-lg shadow-blue-950/40 transition-all hover:-translate-y-0.5 hover:brightness-110 disabled:translate-y-0 disabled:grayscale disabled:opacity-40 sm:h-11 sm:rounded-xl sm:px-5 sm:text-sm"
+              className="h-9 shrink-0 rounded-lg bg-gradient-to-br from-[#c15a23] to-[#da6a28] px-3 text-xs font-bold text-white shadow-lg shadow-blue-950/40 transition-all hover:-translate-y-0.5 hover:brightness-110 disabled:translate-y-0 disabled:grayscale disabled:opacity-40 sm:h-11 sm:rounded-xl sm:px-5 sm:text-sm"
             >
               Send
             </button>

@@ -1,347 +1,44 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Bot, Check, Minus } from "lucide-react";
-
-import PublicNav from "@/components/layout/PublicNav";
-import { getRoleDashboardPath } from "@/lib/auth/redirects";
+import { ArrowRight, Check, ChevronDown, Sparkles } from "lucide-react";
+import PublicStaticPageShell from "@/components/layout/PublicStaticPageShell";
 import { getSession } from "@/lib/auth/session";
-import type { CommissionPlan } from "@/lib/finance/commission";
 import { resolveVendorPlan } from "@/lib/finance/vendor-plan";
-import { getNavUnreadCount } from "@/lib/notifications/get-unread-count";
 import { prisma } from "@/lib/prisma";
+import { PUBLIC_PLANS, planDestination } from "@/lib/pricing/catalog";
+import s from "./pricing.module.css";
 
-export const metadata: Metadata = {
-  title: "Pricing · LinkWe",
-  description:
-    "Start free on LinkWe and only pay when you sell. Compare Starter, Growth, and Pro plans for Trinidad & Tobago vendors.",
-};
-
-type PlanFeature = {
-  text: string;
-  included: boolean;
-  highlight?: boolean;
-};
-
-type VendorPlanId = CommissionPlan;
-
-type PricingPlan = {
-  planId: VendorPlanId;
-  name: string;
-  tagline: string;
-  price: string;
-  priceNote: string;
-  commission: string;
-  cta: string;
-  featured?: boolean;
-  features: PlanFeature[];
-};
-
-type PlanCta = {
-  label: string;
-  href: string | null;
-};
-
-const PLAN_TIER: Record<VendorPlanId, number> = {
-  STARTER: 0,
-  GROWTH: 1,
-  PRO: 2,
-};
-
-
-function registerPlanParam(planId: VendorPlanId): string {
-  return planId.toLowerCase();
-}
-
-function computePlanCta(plan: PricingPlan, viewerPlan: VendorPlanId | null): PlanCta {
-  const registerHref = `/register/business?plan=${registerPlanParam(plan.planId)}`;
-
-  // State A — logged-out, non-vendor, or vendor without store
-  if (viewerPlan === null) {
-    return { label: plan.cta, href: registerHref };
-  }
-
-  // State B — this card matches the viewer's current plan
-  if (viewerPlan === plan.planId) {
-    return { label: "Your current plan", href: null };
-  }
-
-  // Downgrade to Starter — not self-serve
-  if (plan.planId === "STARTER") {
-    return { label: "Free tier included", href: null };
-  }
-
-  // States C/D — upgrade or sidegrade via finance subscribe UI
-  const label =
-    PLAN_TIER[plan.planId] > PLAN_TIER[viewerPlan]
-      ? `Upgrade to ${plan.name}`
-      : `Switch to ${plan.name}`;
-
-  return { label, href: `/dashboard/vendor/finance?upgrade=${plan.planId}` };
-}
-
-const PLANS: PricingPlan[] = [
-  {
-    planId: "STARTER",
-    name: "Starter",
-    tagline: "Everything you need to start selling.",
-    price: "Free",
-    priceNote: "No monthly fee — pay only when you sell",
-    commission: "15% products · 8% services",
-    cta: "Start free",
-    features: [
-      { text: "Up to 30 products", included: true },
-      { text: "Up to 3 services (maximum TTD 100 each)", included: true },
-      { text: "Your own storefront", included: true },
-      { text: "Orders, payouts & delivery tools", included: true },
-      { text: "Sell events & tickets (6%)", included: true },
-      { text: "5 complimentary Rex prompts — lifetime", included: true },
-      { text: "Featured placement", included: false },
-      { text: "Priority support", included: false },
-    ],
-  },
-  {
-    planId: "GROWTH",
-    name: "Growth",
-    tagline: "For shops ready to scale and sell smarter.",
-    price: "TTD 300",
-    priceNote: "per month",
-    commission: "5% products · No service commission",
-    cta: "Upgrade to Growth",
-    featured: true,
-    features: [
-      { text: "Up to 300 products", included: true },
-      { text: "Your own storefront", included: true },
-      { text: "Orders, payouts & delivery tools", included: true },
-      { text: "Sell events & tickets (6%)", included: true },
-      { text: "AI assistant — 300 uses/mo", included: true, highlight: true },
-      { text: "Top up AI anytime (TTD 1 = 1 use)", included: true },
-      { text: "Eligible for featured placement", included: true },
-    ],
-  },
-  {
-    planId: "PRO",
-    name: "Pro",
-    tagline: "Maximum reach, lowest fees, full power.",
-    price: "TTD 500",
-    priceNote: "per month",
-    commission: "No commission on products or services",
-    cta: "Upgrade to Pro",
-    features: [
-      { text: "Unlimited products", included: true },
-      { text: "Your own storefront", included: true },
-      { text: "Orders, payouts & delivery tools", included: true },
-      { text: "Sell events & tickets (6%)", included: true },
-      { text: "AI assistant — 1,000 uses/mo", included: true, highlight: true },
-      { text: "Top up AI anytime (TTD 1 = 1 use)", included: true },
-      { text: "Priority placement + support", included: true },
-    ],
-  },
+export const metadata: Metadata = { title: "Plans & Pricing", description: "Compare LinkWe Starter, Growth and Pro. See monthly prices in TTD, selling commission, listing limits and Rex allowances." };
+const common = ["Your branded storefront", "Products, services, events & tickets", "Orders, messages & customer reviews", "Finance, bank details & payout tools", "QR Studio & guided tutorials", "Staff, schedules & collaboration tools"];
+const faqs = [
+  ["What will I pay?", "Starter has no monthly subscription fee. Growth and Pro have the monthly price shown above. Commission applies to eligible sales at your plan’s rate; event ticket commission is 6% on every plan. Delivery, optional top-ups and any bank or provider charges shown at payment are separate."],
+  ["Can I change plans?", "Use Finance → Plan & Rex to manage your subscription or upgrade. Upgrades use the price shown before payment; do not assume a prorated credit. Contact support to downgrade. Cancelling a renewal does not automatically refund a paid period."],
+  ["How does Rex’s allowance work?", "Starter includes a one-time welcome allowance. Growth and Pro include a monthly allowance. Your workspace shows remaining included use as a percentage, with purchased top-ups separate. Current top-up pricing appears in Finance before you pay."],
+  ["Can customers pay for services on arrival?", "Eligible non-virtual bookings from an active Growth or Pro store can offer pay on arrival, depending on the service’s settings. The customer sees the available choices before confirming. Money collected directly by a provider is outside the LinkWe payout balance."],
+  ["Do I need to upload ID straight away?", "You can skip identity upload while setting up a draft store. Return to the dashboard checklist to complete verification and any other launch requirements before your store becomes sellable."],
+  ["How do payouts work?", "Eligible online earnings are released under the relevant fulfilment rules. Request a payout from Finance using verified bank details. Your available balance, the displayed minimum, refunds and other applicable holds affect eligibility."],
 ];
-
-const FAQ_ITEMS = [
-  {
-    question: "Do I pay anything to start?",
-    answer: "No. Starter is free forever — you only pay commission when you make a sale.",
-  },
-  {
-    question: "Can I change plans later?",
-    answer: "Yes. Upgrade or downgrade anytime as your business grows.",
-  },
-  {
-    question: "What are AI uses?",
-    answer:
-      "Each message you send to your AI assistant is one use. Plans include a monthly amount, and you can top up at TTD 1 per use.",
-  },
-  {
-    question: "How do I get paid?",
-    answer:
-      "Your earnings build as orders complete, and you request payouts to your bank from your dashboard.",
-  },
-] as const;
-
-function FeatureRow({ feature }: { feature: PlanFeature }) {
-  if (feature.included) {
-    return (
-      <li className="flex items-start gap-2.5">
-        <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#D4450A]" strokeWidth={2.5} aria-hidden />
-        <span
-          className={
-            feature.highlight
-              ? "text-sm font-bold leading-6 text-[#D4450A]"
-              : "text-sm leading-6 text-zinc-700"
-          }
-        >
-          {feature.text}
-        </span>
-      </li>
-    );
-  }
-
-  return (
-    <li className="flex items-start gap-2.5">
-      <Minus className="mt-0.5 h-4 w-4 shrink-0 text-zinc-300" strokeWidth={2} aria-hidden />
-      <span className="text-sm leading-6 text-zinc-400">{feature.text}</span>
-    </li>
-  );
-}
-
-function PricingCard({ plan, cta }: { plan: PricingPlan; cta: PlanCta }) {
-  const isFeatured = plan.featured === true;
-
-  const ctaBaseClass =
-    "mt-6 inline-flex h-11 w-full items-center justify-center rounded-xl text-sm font-semibold transition-colors";
-
-  const ctaActiveClass = isFeatured
-    ? "bg-[#D4450A] text-white hover:bg-[#B83A09]"
-    : "border-2 border-[#D4450A] text-[#D4450A] hover:bg-[#D4450A] hover:text-white";
-
-  const ctaMutedClass = "cursor-default border border-zinc-200 bg-zinc-100 text-zinc-500";
-
-  return (
-    <article
-      className={[
-        "relative flex h-full flex-col rounded-[18px] bg-white p-6 sm:p-7",
-        isFeatured
-          ? "border-2 border-[#D4450A] shadow-[0_20px_50px_-12px_rgba(212,69,10,0.28)] lg:-translate-y-2"
-          : "border border-zinc-200 shadow-[0_8px_30px_-12px_rgba(28,28,26,0.12)] transition-shadow hover:shadow-[0_12px_40px_-12px_rgba(28,28,26,0.18)]",
-      ].join(" ")}
-    >
-      {isFeatured ? (
-        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#D4450A] px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
-          MOST POPULAR
-        </span>
-      ) : null}
-
-      <div>
-        <h2 className="font-display text-xl font-bold text-zinc-900">{plan.name}</h2>
-        <p className="mt-1.5 text-sm leading-6 text-zinc-500">{plan.tagline}</p>
-      </div>
-
-      <div className="mt-6">
-        <p className="font-display text-4xl font-bold tracking-tight text-zinc-900">{plan.price}</p>
-        <p className="mt-1 text-sm text-zinc-500">{plan.priceNote}</p>
-      </div>
-
-      <div className="mt-5 rounded-xl bg-zinc-50 px-4 py-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Commission</p>
-        <p className="mt-1 text-sm font-semibold text-zinc-800">{plan.commission}</p>
-      </div>
-
-      {cta.href ? (
-        <Link href={cta.href} className={`${ctaBaseClass} ${ctaActiveClass}`}>
-          {cta.label}
-        </Link>
-      ) : (
-        <span className={`${ctaBaseClass} ${ctaMutedClass}`} aria-disabled="true">
-          {cta.label}
-        </span>
-      )}
-
-      <ul className="mt-6 flex flex-1 flex-col gap-3 border-t border-zinc-100 pt-6">
-        {plan.features.map((feature) => (
-          <FeatureRow key={feature.text} feature={feature} />
-        ))}
-      </ul>
-    </article>
-  );
-}
-
 export default async function PricingPage() {
   const session = await getSession();
-  const user = session ? await prisma.user.findUnique({ where: { id: session.userId } }) : null;
-  const continueHref = user ? getRoleDashboardPath(user.role) : null;
-  const unreadCount = await getNavUnreadCount();
-
-  let viewerPlan: VendorPlanId | null = null;
-  if (session?.role === "VENDOR") {
-    const store = await prisma.store.findFirst({
-      where: { ownerId: session.userId },
-      select: { subscriptionPlan: true },
-    });
-    if (store) {
-      viewerPlan = resolveVendorPlan(store.subscriptionPlan);
-    }
-  }
-
-  return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
-      <PublicNav
-        user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null}
-        dashboardHref={continueHref ?? undefined}
-        unreadCount={unreadCount}
-      />
-
-      <section className="bg-[#1C1C1A] px-4 pb-32 pt-14 sm:px-6 sm:pt-16 lg:pb-36 lg:pt-20">
-        <div className="mx-auto max-w-3xl text-center">
-          <span className="inline-flex rounded-full bg-[#D4450A]/15 px-4 py-1.5 text-xs font-semibold text-[#E8820C]">
-            The only T&amp;T marketplace with a built-in AI assistant
-          </span>
-          <h1 className="font-display mt-6 text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
-            Plans that grow with your business
-          </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-zinc-400 sm:text-base">
-            Start free and only pay when you sell. Upgrade when you&apos;re ready for lower fees, more
-            products, and your own AI store assistant.
-          </p>
-        </div>
-      </section>
-
-      <section className="relative z-10 mx-auto max-w-6xl -mt-24 px-4 sm:px-6">
-        <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
-          {PLANS.map((plan) => (
-            <PricingCard key={plan.planId} plan={plan} cta={computePlanCta(plan, viewerPlan)} />
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 pt-12 sm:px-6 sm:pt-16">
-        <div className="flex flex-col gap-5 rounded-[18px] border border-zinc-200 bg-white p-6 sm:flex-row sm:items-start sm:gap-6 sm:p-8">
-          <div
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#D4450A]/10 text-[#D4450A]"
-            aria-hidden
-          >
-            <Bot className="h-6 w-6" strokeWidth={1.75} />
-          </div>
-          <div>
-            <h2 className="font-display text-lg font-bold text-zinc-900">Meet Rex, your AI store assistant</h2>
-            <p className="mt-2 text-sm leading-7 text-zinc-600">
-              Add products, edit listings, manage events, and get sales insights — just by chatting.
-              Included on Growth and Pro, and you can top up anytime at TTD 1 per use. No other Trinidad
-              &amp; Tobago marketplace offers this.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
-        <h2 className="font-display text-center text-2xl font-bold text-zinc-900">Common questions</h2>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          {FAQ_ITEMS.map((item) => (
-            <div
-              key={item.question}
-              className="rounded-[18px] border border-zinc-200 bg-white p-5 shadow-[0_4px_20px_-10px_rgba(28,28,26,0.1)]"
-            >
-              <h3 className="text-sm font-bold text-zinc-900">{item.question}</h3>
-              <p className="mt-2 text-sm leading-6 text-zinc-600">{item.answer}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 sm:pb-20">
-        <div className="rounded-[18px] bg-[#1C1C1A] px-6 py-10 text-center sm:px-10 sm:py-12">
-          <h2 className="font-display text-2xl font-bold text-white sm:text-3xl">Ready to open your store?</h2>
-          <p className="mx-auto mt-3 max-w-lg text-sm leading-7 text-zinc-400 sm:text-base">
-            Start free today. Upgrade whenever you&apos;re ready.
-          </p>
-          <Link
-            href="/register/business"
-            className="mt-6 inline-flex h-11 items-center justify-center rounded-xl bg-[#D4450A] px-8 text-sm font-semibold text-white transition-colors hover:bg-[#B83A09]"
-          >
-            Become a vendor
-          </Link>
-        </div>
-      </section>
-    </div>
-  );
+  const store = session?.role === "VENDOR" ? await prisma.store.findFirst({ where: { ownerId: session.userId }, select: { subscriptionPlan: true } }) : null;
+  const current = store ? resolveVendorPlan(store.subscriptionPlan) : null;
+  return <PublicStaticPageShell eyebrow="Built for your next chapter" title="Start small. Grow your way." subtitle="Straightforward plans for Trinidad & Tobago businesses. Choose the tools and selling rates that fit where you are today." wide>
+    <div className={s.intro}><span><span className={s.dot}/> All prices in Trinidad & Tobago dollars</span><a href="#compare">Compare every plan <ArrowRight size={14}/></a></div>
+    <div className={s.plans}>{PUBLIC_PLANS.map(plan => { const cta = planDestination(plan.id,current); return <section key={plan.id} className={`${s.plan} ${plan.id === "GROWTH" ? s.featured : ""}`}><div className={s.planTop}><p>{plan.name}</p>{current === plan.id ? <span>Your plan</span> : plan.id === "GROWTH" ? <span><Sparkles size={12}/> Room to grow</span> : null}</div><p className={s.description}>{plan.description}</p><div className={s.price}>{plan.price === 0 ? "Free" : <><span>TT$</span>{plan.price}</>}<small>{plan.price === 0 ? "No monthly fee" : "per month"}</small></div><div className={s.commission}><div><strong>{plan.productCommission}</strong><span>Product commission</span></div><div><strong>{plan.serviceCommission}</strong><span>Service commission</span></div></div><Link href={cta.href} className={s.cta}>{cta.label}<ArrowRight size={16}/></Link><ul>{[plan.products, `${plan.services} · ${plan.servicePrice}`, `Rex: ${plan.rex}`, plan.timeline ? "Publish shoppable Timeline posts" : "Storefront & marketplace discovery", `Event tickets · ${plan.ticketCommission} commission`].map(text => <li key={text}><Check size={15}/><span>{text}</span></li>)}</ul></section>; })}</div>
+    <section className={s.shared}><div><p className={s.kicker}>A strong foundation</p><h2>Every plan starts here.</h2><Link href="/features">Explore all LinkWe features <ArrowRight size={15}/></Link></div><ul>{common.map(text => <li key={text}><Check size={16}/>{text}</li>)}</ul></section>
+    <section id="compare" className={s.compare}><p className={s.kicker}>The details, side by side</p><h2>Find your fit.</h2><p className={s.hint}>On smaller screens, swipe the table to compare plans.</p><div className={s.tableWrap} tabIndex={0} role="region" aria-label="Scrollable plan comparison"><table><caption className="sr-only">LinkWe plan prices, commission and allowances</caption><thead><tr><th scope="col">What’s included</th>{PUBLIC_PLANS.map(p => <th scope="col" key={p.id}>{p.name}</th>)}</tr></thead><tbody>{[
+      ["Monthly subscription", ...PUBLIC_PLANS.map(p => p.price ? `TT$${p.price}` : "Free")],
+      ["Product commission", ...PUBLIC_PLANS.map(p => p.productCommission)],
+      ["Service commission", ...PUBLIC_PLANS.map(p => p.serviceCommission)],
+      ["Event ticket commission", ...PUBLIC_PLANS.map(p => p.ticketCommission)],
+      ["Product listings", ...PUBLIC_PLANS.map(p => p.products)],
+      ["Service listings", ...PUBLIC_PLANS.map(p => p.services)],
+      ["Service price limit", ...PUBLIC_PLANS.map(p => p.servicePrice)],
+      ["Rex allowance", ...PUBLIC_PLANS.map(p => p.rex)],
+      ["Timeline publishing", ...PUBLIC_PLANS.map(p => p.timeline ? "Included while active" : "Growth or Pro required")],
+      ["Eligible pay-on-arrival bookings", "Online payment only", "Available while active", "Available while active"],
+    ].map(([label,...values]) => <tr key={label}><th scope="row">{label}</th>{values.map((value,i) => <td key={i}>{value}</td>)}</tr>)}</tbody></table></div><p className={s.footnote}>Listing limits, approval and feature-specific conditions apply. Photo Studio has separate image allowances and availability controls, shown inside the tool. A subscription does not guarantee sales or featured placement.</p></section>
+    <section className={s.faq}><div><p className={s.kicker}>Before you decide</p><h2>A little clarity<br/>goes a long way.</h2><Link href="/contact">Talk to the LinkWe team <ArrowRight size={15}/></Link></div><div>{faqs.map(([q,a]) => <details key={q}><summary>{q}<ChevronDown size={17}/></summary><p>{a}</p></details>)}</div></section>
+    <div className={s.end}><h2>Your business belongs here.</h2><p>Build your draft storefront, explore the tools and take your next step.</p><Link href={store ? "/dashboard/vendor" : "/register/business"}>{store ? "Open your workspace" : "Create your business account"}<ArrowRight size={16}/></Link><span>By subscribing, you agree to our <Link href="/terms">Terms</Link> and <Link href="/privacy">Privacy Policy</Link>.</span></div>
+  </PublicStaticPageShell>;
 }

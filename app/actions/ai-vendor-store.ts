@@ -25,6 +25,7 @@ export async function getVendorStoreSummary() {
       openingHours: true,
       socialLinks: true,
       status: true,
+      owner: { select: { idVerificationStatus: true } },
       createdAt: true,
       _count: {
         select: {
@@ -44,7 +45,7 @@ export async function getVendorStoreSummary() {
     where: { storeId: store.id, isPublished: false },
   })
 
-  const { _count: count, categoryId, coverPhotoUrl, status, ...storeRest } =
+  const { _count: count, categoryId, coverPhotoUrl, status, owner, ...storeRest } =
     store
 
   return {
@@ -52,7 +53,9 @@ export async function getVendorStoreSummary() {
     categoryId,
     category: categoryId,
     coverUrl: coverPhotoUrl,
-    isVerified: status === "ACTIVE",
+    status,
+    isVerified: owner.idVerificationStatus === "APPROVED",
+    isPublic: status === "ACTIVE" && owner.idVerificationStatus === "APPROVED",
     publishedProducts: publishedCount,
     draftProducts: draftCount,
     totalProducts: count.products,
@@ -72,55 +75,34 @@ export async function getVendorSalesInsights() {
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-  const recentOrders = await prisma.orderItem.findMany({
+  const groups = await prisma.orderItem.groupBy({
+    by: ["titleSnapshot", "priceMinor"],
     where: {
       storeId: store.id,
-      mainOrder: { createdAt: { gte: thirtyDaysAgo } },
+      mainOrder: { createdAt: { gte: thirtyDaysAgo }, status: { notIn: ["DRAFT", "PENDING_PAYMENT", "CANCELLED", "REFUNDED"] } },
     },
-    select: {
-      mainOrderId: true,
-      quantity: true,
-      priceMinor: true,
-      titleSnapshot: true,
-      mainOrder: {
-        select: {
-          status: true,
-          createdAt: true,
-        },
-      },
-    },
-    orderBy: { mainOrder: { createdAt: "desc" } },
-    take: 100,
+    _sum: { quantity: true },
+    _count: { _all: true },
   })
-
-  const totalRevenueMinor = recentOrders.reduce(
-    (sum, item) => sum + item.priceMinor * item.quantity,
-    0,
-  )
-
-  const productSales: Record<
-    string,
-    { name: string; quantity: number; revenue: number }
-  > = {}
-
-  for (const item of recentOrders) {
-    const key = item.titleSnapshot
-    if (!productSales[key]) {
-      productSales[key] = { name: key, quantity: 0, revenue: 0 }
-    }
-    productSales[key].quantity += item.quantity
-    productSales[key].revenue += (item.priceMinor * item.quantity) / 100
+  const productSales = new Map<string, { name: string; quantity: number; grossItemValueTTD: number }>()
+  let totalMinor = 0
+  let totalOrderItems = 0
+  for (const group of groups) {
+    const quantity = group._sum.quantity ?? 0
+    const value = quantity * group.priceMinor
+    totalMinor += value
+    totalOrderItems += group._count._all
+    const previous = productSales.get(group.titleSnapshot) ?? { name: group.titleSnapshot, quantity: 0, grossItemValueTTD: 0 }
+    previous.quantity += quantity
+    previous.grossItemValueTTD += value / 100
+    productSales.set(group.titleSnapshot, previous)
   }
-
-  const topProducts = Object.values(productSales)
-    .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 5)
-
   return {
-    period: "Last 30 days",
-    totalRevenue: totalRevenueMinor / 100,
-    totalOrderItems: recentOrders.length,
-    topProducts,
+    period: "Last 30 days by order creation date",
+    grossItemValueTTD: totalMinor / 100,
+    totalOrderItems,
+    topProducts: [...productSales.values()].sort((a, b) => b.grossItemValueTTD - a.grossItemValueTTD).slice(0, 5),
+    note: "All eligible rows included; unpaid, draft, cancelled and refunded main orders excluded. Gross item value is before order-level discounts, fees and refunds. It is not cash received or available earnings. Use get_finance_position for actual released net earnings.",
   }
 }
 

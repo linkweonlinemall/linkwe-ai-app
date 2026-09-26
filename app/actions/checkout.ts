@@ -1,4 +1,5 @@
 "use server";
+import { fulfillmentError } from "@/lib/checkout/fulfillment-options";
 import { priceCoupon } from "@/lib/coupons/server";
 import { CouponError } from "@/lib/coupons/pricing";
 import { allocateDiscount, discountedUnits, type CouponSnapshot } from "@/lib/coupons/pricing";
@@ -79,6 +80,7 @@ export async function createPaymentIntent(
   deliveryPhone?: string | null,
   checkoutResponses: CheckoutResponses = {},
   couponCode?: string,
+  expectedTotalMinor?: number,
 ): Promise<CreatePaymentIntentResult> {
 
   const session = await getSession();
@@ -86,6 +88,9 @@ export async function createPaymentIntent(
 
   const cartItems = await loadCheckoutCart(session.userId);
   if (cartItems.length === 0) return { ok: false, error: "cart_empty" };
+
+  const methodError = fulfillmentError(cartItems, useDelivery);
+  if (methodError) return { ok: false, error: methodError };
 
   const productQuantities = new Map<string, number>();
   for (const item of cartItems) {
@@ -168,6 +173,9 @@ export async function createPaymentIntent(
   }
   const discountMinor=couponSnapshots.reduce((sum,row)=>sum+row.discountMinor,0);
   const totalMinor = subtotalMinor - discountMinor + shippingMinor;
+  if (expectedTotalMinor !== undefined && (!Number.isSafeInteger(expectedTotalMinor) || expectedTotalMinor !== totalMinor)) {
+    return { ok: false, error: "Your cart price or delivery quote has changed. Refresh checkout and review the updated total before paying." };
+  }
   const paymentEnvironment =
     session.role === "ADMIN" && (await isAdminPaymentTestMode(session.userId))
       ? "sandbox" as const

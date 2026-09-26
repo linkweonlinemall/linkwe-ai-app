@@ -34,14 +34,14 @@ export default function ShippingInfoPage() {
       eyebrow="Orders & fulfilment"
       title="Shipping, Delivery & Pickup"
       subtitle="One checkout, one coordinated fulfilment journey—even when your cart includes products from several local stores."
-      updated="11 September 2026"
+      updated="25 September 2026"
     >
       <section>
         <div className="grid gap-4 sm:grid-cols-3">
           {STEPS.map((step, index) => (
-            <div key={step.title} className="rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50 to-white p-4 shadow-sm">
+            <div key={step.title} className="rounded-2xl border border-[#dce3d5] bg-gradient-to-br from-[#f0f4e9] to-white p-4 shadow-sm">
               <div className="flex items-center justify-between">
-                <span className="flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#1A7FB5] to-[#2D9AD1] text-white shadow-md"><step.Icon className="size-5" /></span>
+                <span className="flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#193c3b] to-[#365e4d] text-white shadow-md"><step.Icon className="size-5" /></span>
                 <span className="text-[10px] font-black tracking-widest text-sky-700/45">0{index + 1}</span>
               </div>
               <h2 className="mt-4 text-base font-black text-zinc-900">{step.title}</h2>
@@ -54,8 +54,8 @@ export default function ShippingInfoPage() {
       <section>
         <h2 className="text-xl font-black text-zinc-900">Your fulfilment choices</h2>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50 to-white p-5">
-            <Truck className="size-6 text-[#1A7FB5]" />
+          <div className="rounded-2xl border border-[#dce3d5] bg-gradient-to-br from-[#f0f4e9] to-white p-5">
+            <Truck className="size-6 text-[#436b51]" />
             <h3 className="mt-3 font-black text-zinc-900">Combined delivery</h3>
             <p className="mt-2 text-sm leading-7 text-zinc-600">
               LinkWe coordinates delivery of eligible physical products to the address and map pin you confirm at checkout. When you buy from more than one store, the checkout displays one combined delivery charge instead of charging a separate customer-delivery fee for every vendor.
@@ -65,7 +65,7 @@ export default function ShippingInfoPage() {
             <MapPin className="size-6 text-[#D4450A]" />
             <h3 className="mt-3 font-black text-zinc-900">LinkWe warehouse pickup</h3>
             <p className="mt-2 text-sm leading-7 text-zinc-600">
-              Pickup is shown only when the products in your cart support it. Wait until your account says the complete order is ready; multi-vendor parcels may reach LinkWe at different times before they are combined for collection.
+              Pickup is offered when all physical products in your cart support it. Digital items do not affect physical delivery eligibility. If products require incompatible fulfilment methods, adjust your cart or place separate orders. Wait until your account says the complete order is ready; multi-vendor parcels may reach LinkWe at different times before they are combined for collection. Follow the pickup location and collection instructions in your order or ready notification; do not travel based on a store’s address alone.
             </p>
           </div>
         </div>
@@ -78,7 +78,7 @@ export default function ShippingInfoPage() {
         </p>
         <div className="mt-4 flex items-start gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 text-sm leading-6 text-emerald-900">
           <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600" />
-          <p>The total product price and delivery charge are displayed before you continue to WiPay. Digital-only orders have no physical delivery charge.</p>
+          <p>Review your fulfilment method, address, contact number, eligible coupon savings and total before continuing to WiPay. Wait for the delivery quote to finish; if it fails, retry before paying. Digital-only orders have no physical delivery charge.</p>
         </div>
       </section>
 
@@ -110,8 +110,8 @@ export default function ShippingInfoPage() {
           <p>For delivery, provide a reachable Trinidad and Tobago telephone number and accurate address/map pin. For collection or delivery confirmation, you may be asked to sign in and confirm receipt, including through the order&apos;s secure QR flow.</p>
         </div>
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-          <Link href="/orders" className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-gradient-to-r from-[#1A7FB5] to-[#2D9AD1] px-5 text-sm font-black text-white shadow-[0_12px_28px_rgba(26,127,181,.24)]">Track my orders</Link>
-          <Link href="/contact" className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-sky-100 bg-white px-5 text-sm font-black text-zinc-800 shadow-sm">Get delivery help</Link>
+          <Link href="/orders" className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-gradient-to-r from-[#193c3b] to-[#365e4d] px-5 text-sm font-black text-white shadow-[0_12px_28px_rgba(26,127,181,.24)]">Track my orders</Link>
+          <Link href="/contact" className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-[#dce3d5] bg-white px-5 text-sm font-black text-zinc-800 shadow-sm">Get delivery help</Link>
         </div>
       </section>
     </PublicStaticPageShell>

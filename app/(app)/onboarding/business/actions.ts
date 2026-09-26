@@ -17,6 +17,8 @@ import { normalizeStoreSlug, validateStoreSlug } from "@/lib/store/slug";
 import { logPrismaError } from "@/lib/log-prisma-error";
 import { isValidRegion, normalizeRegion } from "@/lib/regions/tt-regions";
 import { startSubscriptionCheckout } from "@/app/actions/vendor";
+import { validateOnboardingFile } from "@/lib/onboarding/upload-validation";
+import { STORE_CATEGORY_GROUPS } from "@/lib/onboarding/store-categories";
 
 export type BusinessOnboardingState = { error?: string };
 
@@ -115,6 +117,8 @@ export async function saveBusinessOnboardingStep2(
   const user = await getCurrentUser();
   const gate = requireVendor(user);
   if (gate) return { error: gate };
+  if (!user!.fullName?.trim() || !user!.region?.trim()) return { error: "Save your personal details before continuing." };
+  if (user!.idVerificationStatus === "APPROVED") redirect("/onboarding/business/step-3");
 
   const file = formData.get("document");
   const selfie = formData.get("selfieWithId");
@@ -125,11 +129,10 @@ export async function saveBusinessOnboardingStep2(
     redirect("/onboarding/business/step-3");
   }
   if (!hasDocument || !hasSelfie) {
-    return { error: "Upload both files together, or leave both blank and verify your store later." };
+    return { error: "Choose both your ID and selfie, or use Skip for now below." };
   }
-  if (!selfie.type.startsWith("image/")) {
-    return { error: "The selfie must be a JPEG, PNG, or WebP image." };
-  }
+  const fileError = validateOnboardingFile(file, "document") || validateOnboardingFile(selfie, "selfie");
+  if (fileError) return { error: fileError };
 
   const saved = await saveKycDocumentUpload(file);
   if (!saved.ok) return { error: saved.error };
@@ -145,6 +148,15 @@ export async function saveBusinessOnboardingStep2(
     },
   });
 
+  redirect("/onboarding/business/step-3");
+}
+
+// A separate action deliberately receives no upload fields. Skipping must never
+// upload a selected file or change the account's verification status.
+export async function skipBusinessIdentityVerification(): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "VENDOR") redirect("/login");
+  if (!user.fullName?.trim() || !user.region?.trim()) redirect("/onboarding/business/step-1");
   redirect("/onboarding/business/step-3");
 }
 
@@ -169,6 +181,13 @@ export async function saveBusinessOnboardingStep3(
   const user = await getCurrentUser();
   const gate = requireVendor(user);
   if (gate) return { error: gate };
+  if (!user!.fullName?.trim() || !user!.region?.trim()) return { error: "Save your personal details before creating your storefront." };
+  const existing = await prisma.store.findFirst({
+    where: { ownerId: user!.id },
+    select: { id: true, logoUrl: true, onboardingStep: true },
+  });
+  // Replaying setup must not reset an established store or start a second checkout.
+  if (existing && existing.onboardingStep >= 3) redirect("/dashboard/vendor");
 
   const name = String(formData.get("name") ?? "");
   const slugRaw = String(formData.get("slug") ?? "");
@@ -183,7 +202,7 @@ export async function saveBusinessOnboardingStep3(
   if (slugErr) return { error: slugErr };
   const slug = normalizeStoreSlug(slugRaw);
 
-  if (!categoryId) return { error: "Select a store category." };
+  if (!STORE_CATEGORY_GROUPS.some(group => group.items.some(item => item.value === categoryId))) return { error: "Select a store category." };
   if (!region) return { error: "Select your store region." };
   const normalizedRegion = normalizeRegion(region);
   if (!isValidRegion(normalizedRegion)) {
@@ -196,21 +215,19 @@ export async function saveBusinessOnboardingStep3(
   const logoEntry = formData.get("logo");
   let logoUrl: string | null = null;
   if (logoEntry instanceof File && logoEntry.size > 0) {
+    const logoError = validateOnboardingFile(logoEntry, "logo");
+    if (logoError) return { error: logoError };
     const logoSaved = await saveKycDocumentUpload(logoEntry);
     if (!logoSaved.ok) return { error: logoSaved.error };
     logoUrl = logoSaved.publicPath;
   }
 
-  const existing = await prisma.store.findFirst({
-    where: { ownerId: user!.id },
-    select: { id: true, logoUrl: true },
-  });
   const slugConflict = await prisma.store.findFirst({
     where: existing ? { slug, NOT: { id: existing.id } } : { slug },
     select: { id: true },
   });
   if (slugConflict) {
-    return { error: "That store slug is already taken. Pick another." };
+    return { error: "That store web address is already taken. Try another in the Store link field." };
   }
 
   try {
@@ -245,8 +262,10 @@ export async function saveBusinessOnboardingStep3(
     }
   } catch (error) {
     logPrismaError("BUSINESS ONBOARDING STEP 3:", error);
-    const message = error instanceof Error ? error.message : "Could not save your store.";
-    return { error: message };
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return { error: "That store web address is already taken. Try another in the Store link field." };
+    }
+    return { error: "We couldn’t save your storefront. Your details are still here—please try again." };
   }
 
   const intendedPlan = await getIntendedPlanCookie();

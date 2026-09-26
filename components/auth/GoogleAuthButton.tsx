@@ -1,3 +1,5 @@
+import s from "./auth.module.css";
+
 type Props = {
   mode: "login" | "signup";
   signupKind?: "CUSTOMER" | "BUSINESS";
@@ -14,15 +16,12 @@ export default function GoogleAuthButton({ mode, signupKind = "CUSTOMER", intend
 
   return (
     <>
-      <div className="my-5 flex items-center gap-3" aria-hidden>
-        <div className="h-px flex-1 bg-zinc-200" />
-        <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">or</span>
-        <div className="h-px flex-1 bg-zinc-200" />
-      </div>
+      <div className={s.googleDivider} aria-hidden>or continue with</div>
       <a
         href={disabled ? undefined : `/api/auth/google/start?${params.toString()}`}
         aria-disabled={disabled}
-        className={`flex w-full items-center justify-center gap-3 rounded-lg border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 shadow-sm transition-colors ${disabled ? "cursor-not-allowed opacity-50" : "hover:bg-zinc-50"}`}
+        tabIndex={disabled ? -1 : undefined}
+        className={`${s.secondary} ${s.google}`}
       >
         <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden>
           <path fill="#4285F4" d="M17.64 9.205c0-.638-.057-1.252-.164-1.841H9v3.482h4.844a4.14 4.14 0 0 1-1.797 2.715v2.258h2.909c1.702-1.567 2.684-3.874 2.684-6.614Z" />

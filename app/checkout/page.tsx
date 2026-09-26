@@ -7,8 +7,9 @@ import { prisma } from "@/lib/prisma";
 import PublicNav from "@/components/layout/PublicNav";
 
 import CheckoutClient from "./checkout-client";
-import { typography, tw } from "@/lib/design-system";
-import Image from "next/image";
+import Link from "next/link";
+import { ArrowLeft, LockKeyhole } from "lucide-react";
+import s from "./checkout.module.css";
 import { parseCheckoutFields } from "@/lib/checkout/custom-fields";
 
 export const metadata: Metadata = {
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
 
 export default async function CheckoutPage() {
   const session = await getSession();
-  if (!session) redirect("/login");
+  if (!session) redirect("/login?callbackUrl=%2Fcheckout");
 
   const userRecord = await prisma.user.findUnique({ where: { id: session.userId } });
   const continueHref = userRecord ? getRoleDashboardPath(userRecord.role) : null;
@@ -53,7 +54,7 @@ export default async function CheckoutPage() {
   const subtotal = items.reduce((sum, i) => sum + (i.variant?.price ?? i.product.price) * i.quantity, 0);
 
   return (
-    <div className={`min-h-screen ${tw.bgPage} pb-mobile-public lg:pb-0 ${tw.fontSans}`}>
+    <div className={`${s.page} pb-mobile-public lg:pb-0`}>
       <PublicNav
         user={
           userRecord
@@ -62,20 +63,10 @@ export default async function CheckoutPage() {
         }
         dashboardHref={continueHref ?? undefined}
       />
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-10">
-        <div className="mb-6 overflow-hidden rounded-3xl border border-orange-100 bg-gradient-to-br from-white via-orange-50 to-amber-50 p-5 shadow-sm sm:p-7">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-md ring-1 ring-orange-100">
-              <Image src="/linkwe-logo-on-dark.png" alt="LinkWe" width={44} height={44} className="h-11 w-11 object-contain" />
-            </div>
-            <div>
-              <h1 className={`${typography.h3} ${tw.textPrimary}`}>Secure checkout</h1>
-              <p className="mt-1 text-sm text-zinc-600">Review your order and pay securely with WiPay.</p>
-            </div>
-          </div>
-        </div>
+      <main className={s.wrap}>
+        <header className={s.hero}><Link href="/cart"><ArrowLeft size={14}/> Back to your cart</Link><div><div><p>THE GOOD STUFF IS ALMOST YOURS</p><h1>Let’s bring it home.</h1></div><span><LockKeyhole size={15}/> Secure WiPay checkout</span></div><p>Choose how your order reaches you, review the details and pay securely.</p></header>
         <CheckoutClient items={items.map((item) => ({ ...item, product: { ...item.product, price: item.variant?.price ?? item.product.price, name: item.variant ? `${item.product.name} · ${item.variant.name}` : item.product.name, images: item.variant?.images.length ? item.variant.images : item.product.images, checkoutFields: parseCheckoutFields(item.product.checkoutFields), store: { ...item.product.store, checkoutFields: parseCheckoutFields(item.product.store.checkoutFields) } } }))} subtotal={subtotal} initialPhone={userRecord?.phone ?? ""} />
-      </div>
+      </main>
     </div>
   );
 }

@@ -32,7 +32,7 @@ export default function TermsOfServicePage() {
       eyebrow="Legal"
       title="Terms of Service"
       subtitle="The rules that keep LinkWe’s marketplace, community, fulfilment, payments, and business tools useful and trustworthy."
-      updated="11 September 2026"
+      updated="25 September 2026"
       legal
     >
       <section>
@@ -54,7 +54,7 @@ export default function TermsOfServicePage() {
         <h2 className="text-xl font-black text-zinc-900">3. Customers and transactions</h2>
         <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-600">
           <p>A customer must review the listing, seller, price, variants, availability, policies, fulfilment method, checkout questions, and order total before paying. Orders containing several vendors are divided into vendor portions for preparation while remaining part of the customer&apos;s main order.</p>
-          <p>A transaction is not confirmed until LinkWe receives successful payment confirmation. Stock, capacity, tickets, appointments, and promotions may remain subject to availability. LinkWe or a vendor may cancel an order where payment fails, stock is unavailable, a listing or price is clearly erroneous, fraud is suspected, fulfilment is unsafe or impossible, or law requires it; any amount properly due back will be handled through the applicable refund process.</p>
+          <p>An online-paid transaction is not confirmed until LinkWe receives successful payment confirmation. Eligible pay-on-arrival service bookings follow the confirmation and direct-payment instructions shown for that booking. Stock, capacity, tickets, appointments, and promotions may remain subject to availability. LinkWe or a vendor may cancel an order where payment fails, stock is unavailable, a listing or price is clearly erroneous, fraud is suspected, fulfilment is unsafe or impossible, or law requires it; any amount properly due back will be handled through the applicable refund process.</p>
           <p>Customers must provide accurate contact, delivery, map-pin, attendee, booking, and customisation information, be available for delivery or collection, inspect purchases reasonably promptly, and use products or services lawfully.</p>
         </div>
       </section>
@@ -67,7 +67,8 @@ export default function TermsOfServicePage() {
           ))}
         </ul>
         <div className="mt-4 space-y-3 text-sm leading-7 text-zinc-600">
-          <p><strong className="text-zinc-900">Plans and commission:</strong> Starter is currently free with 15% product commission and 8% service commission; Growth is currently TTD 300 monthly with 5% product commission and no service commission; Pro is currently TTD 500 monthly with no product or service commission. Event tickets currently carry 6% commission on every plan. Product, service, Rex, placement, support, and other plan limits are shown on the <Link href="/pricing" className="font-bold text-[#D4450A] hover:underline">Pricing page</Link>, which controls if displayed pricing conflicts with this summary.</p>
+          <p><strong className="text-zinc-900">Plans and commission:</strong> Starter is currently free with 15% product commission and 8% service commission; Growth is currently TTD 300 monthly with 5% product commission and no service commission; Pro is currently TTD 500 monthly with no product or service commission. Event tickets currently carry 6% commission on every plan. Product, service, Rex and other plan limits are shown on the <Link href="/pricing" className="font-bold text-[#D4450A] hover:underline">Pricing page</Link>, which controls if displayed pricing conflicts with this summary.</p>
+          <p>Manage paid plans in Finance → Plan &amp; Rex. Upgrades use the amount shown before payment; contact support for downgrades. Cancellation stops future billing according to the displayed subscription flow and does not automatically refund a paid period. Optional top-ups and image allowances are separate and shown in the relevant tool.</p>
           <p><strong className="text-zinc-900">Payouts:</strong> Eligible earnings enter the LinkWe balance under the applicable fulfilment rules. Payouts require verified bank details and are subject to the displayed minimum, available balance, refunds, chargebacks, disputes, fraud review, corrections, and lawful holds.</p>
         </div>
       </section>
@@ -83,7 +84,7 @@ export default function TermsOfServicePage() {
         <h2 className="text-xl font-black text-zinc-900">6. Services, bookings and subscriptions</h2>
         <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-600">
           <p>Services may be bookable, quoted, on-demand, virtual, recurring, or otherwise described on the listing. The vendor controls the service description, eligibility, schedule, capacity, location, deposit, balance, cancellation window, and service-specific conditions, subject to law and LinkWe rules.</p>
-          <p>Customers and vendors must attend, deliver, reschedule, cancel, or record completion honestly. Cancellation after a self-service window may require direct vendor assistance. A recurring subscription continues according to its displayed interval until it ends or is cancelled; cancellation for a future period does not automatically refund the current period.</p>
+          <p>Eligible non-virtual bookings from active Growth or Pro stores may offer pay on arrival. The provider collects that payment directly, and it does not enter the LinkWe payout balance. This is an authorised payment option where displayed; it does not permit moving other LinkWe transactions off-platform to avoid fees. Customers and vendors must attend, deliver, reschedule, cancel, or record completion honestly. Cancellation after a self-service window may require direct vendor assistance. A recurring subscription continues according to its displayed interval until it ends or is cancelled; cancellation for a future period does not automatically refund the current period.</p>
         </div>
       </section>
 
@@ -106,7 +107,7 @@ export default function TermsOfServicePage() {
       <section>
         <h2 className="text-xl font-black text-zinc-900">9. Rex and AI-assisted features</h2>
         <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-600">
-          <p>Rex can help vendors draft listings and Timeline posts, work with images and marketplace data, answer operational questions, and prepare actions. AI output may be incomplete, inaccurate, or unsuitable. The user must review prices, stock, policies, claims, images, attachments, recipients, and any proposed action before relying on or publishing it.</p>
+          <p>Rex can help vendors draft listings and Timeline posts, work with images and authorised store data, answer operational questions, and carry out supported actions. Those actions may affect listings, coupons, review replies or private appointment notes. Review each request and its result. Photo Studio may send selected images to an image-processing provider. AI output may be incomplete, inaccurate, or unsuitable. The user must review prices, stock, policies, claims, images, attachments, recipients, and any proposed action before relying on or publishing it.</p>
           <p>Do not submit secrets, card data, unnecessary personal information, illegal content, or material you lack permission to use. LinkWe may apply usage allowances, top-up charges, safety limits, or feature changes shown in the product. Rex is not legal, financial, medical, tax, or other professional advice.</p>
         </div>
       </section>
@@ -118,6 +119,11 @@ export default function TermsOfServicePage() {
           <p>Refunds, returns, booking cancellations, digital goods, subscriptions, and event tickets follow the applicable listing terms, LinkWe process, payment-provider limits, and mandatory consumer rights. A refund request is not complete until processed by the payment provider and financial institution. See <Link href="/returns" className="font-bold text-[#D4450A] hover:underline">Returns, Cancellations & Refunds</Link>.</p>
           <p>Users must contact LinkWe promptly before filing a chargeback where practical, must not seek duplicate recovery, and must cooperate with reasonable transaction verification. LinkWe may offset valid refunds, reversals, fees, or losses against a vendor balance where the governing transaction permits.</p>
         </div>
+      </section>
+
+      <section>
+        <h2 className="text-xl font-black text-zinc-900">Promotions, collaborations and QR links</h2>
+        <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-600"><p>Coupons apply only to eligible listings, dates, usage limits and minimum-spend conditions. The final server-validated price controls checkout. A collaboration approves a listing placement; it does not transfer ownership, move checkout away from the original seller or create a revenue-sharing agreement. Either party can end a placement through the available controls.</p><p>QR Studio links to eligible public LinkWe pages. A generated code does not certify a business or guarantee that a listing will stay published. Do not confuse a public promotional QR with a private ticket or order credential.</p><p>You may defer ID upload while creating a draft store. Skipping this step does not verify the account or waive the approval requirements for launch. Staff and visibility tools remain subject to account ownership, availability and publication rules.</p></div>
       </section>
 
       <section>
@@ -154,7 +160,7 @@ export default function TermsOfServicePage() {
       <section>
         <h2 className="text-xl font-black text-zinc-900">15. Changes and contact</h2>
         <p className="mt-3 text-sm leading-7 text-zinc-600">
-          We may update these Terms to reflect platform, operational, payment, or legal changes. The effective date above identifies the current version, and material changes may be communicated through LinkWe or email. Questions may be sent to <a href="mailto:admin@linkwemall.com" className="font-bold text-[#D4450A] hover:underline">admin@linkwemall.com</a> or through our <Link href="/contact" className="font-bold text-[#D4450A] hover:underline">contact page</Link>.
+          We may update these Terms to reflect platform, operational, payment, or legal changes. The update date above identifies the current version, and material changes may be communicated through LinkWe or email. Questions may be sent to <a href="mailto:admin@linkwemall.com" className="font-bold text-[#D4450A] hover:underline">admin@linkwemall.com</a> or through our <Link href="/contact" className="font-bold text-[#D4450A] hover:underline">contact page</Link>.
         </p>
       </section>
     </PublicStaticPageShell>
