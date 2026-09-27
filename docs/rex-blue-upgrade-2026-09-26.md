@@ -69,4 +69,4 @@ This keeps support separate from customer sales conversations and gives both sid
 
 ## Publication notes
 
-The live site still has the previous release. Publishing this batch requires the Services plan, support-ticket and service-offer-detail database migrations together with the application update. The three migrations have been applied to the local database only. Preview PDFs are in `output/pdf/`.
+Published in release `926b05a`, including all three production database migrations. See `complete-site-release-2026-09-26.md` for verification. Invoice preview PDFs remain local in `output/pdf/`.

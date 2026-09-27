@@ -1,6 +1,6 @@
 # Discovery, notifications, app installation and product swatches
 
-Status: completed locally. This batch has not been deployed to the live website.
+Status: published in release `926b05a`. See `complete-site-release-2026-09-26.md` for production verification.
 
 ## What you can try
 

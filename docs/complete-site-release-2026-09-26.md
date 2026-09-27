@@ -28,4 +28,6 @@ Native app installation needs a supported device/browser; the embedded browser c
 
 ## Publication
 
-Prepared for production publication to `origin/main` through the existing Vercel integration. Final deployment details are recorded in the task after Vercel reports Ready and the live checks pass.
+Release commit `926b05a4f007c014457c1e5e0e8ac0e9a91fb41a` was pushed to `origin/main`. Vercel deployment `G1fSxLUjejijc7oxTZJCgw3r8LHT` reached Ready and applied all three migrations. The live homepage, pricing, feature directory, search, product/services/stores/events directories, Timeline, installation and policy pages returned HTTP 200; database health and the updated service worker passed. Live browser checks verified search suggestions/results, the Services price/allowance, orange ribbon, menu and empty cart. No production transaction was submitted.
+
+Final verification identified a Notifications entry issue for logged-out visitors. The follow-up correction redirects before page streaming and preserves `/notifications` in the login callback. Its production build passed and the compiled route returned HTTP 307 with the correct sign-in destination. Final follow-up deployment details are recorded in the task.
