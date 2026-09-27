@@ -7,7 +7,7 @@ const {PrismaClient}=require('@prisma/client');const prisma=new PrismaClient();l
 const load=Module._load;Module._load=function(request,parent,isMain){if(request==='server-only')return {};if(request==='@/lib/prisma')return {get prisma(){return db;}};if(request.startsWith('@/'))request=path.join(process.cwd(),request.slice(2));return load.call(this,request,parent,isMain);};
 require.extensions['.ts']=(mod,file)=>mod._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,file);
 const {parseStoreQuery,selectStores,storesHref,storeDistance,validCoordinates,storeHref}=require('../lib/stores/directory-query.ts');
-const {getStoreDirectory}=require('../lib/stores/directory.ts');
+const {getStoreDirectory}=require('../lib/stores/directory.ts'),{storePreview}=require('../lib/stores/directory-preview.ts');
 let checks=0;const pass=name=>{checks++;console.log('PASS '+name);};
 const example={id:'a',name:'A photo studio',slug:'a',tagline:'Portraits with personality',description:'Local photography',categoryId:'photography_media',region:'port_of_spain',tags:['Headshots'],latitude:10.654,longitude:-61.51,createdAt:new Date('2026-09-01'),productCount:0,serviceCount:3,eventCount:0,listingCount:0,offers:['services'],averageRating:4.5,reviewCount:2,distanceKm:null,coverPhotoUrl:null,logoUrl:null};
 (async()=>{
@@ -20,7 +20,7 @@ const example={id:'a',name:'A photo studio',slug:'a',tagline:'Portraits with per
  result=selectStores([{...example,id:'unrated',reviewCount:0,averageRating:null},example],parseStoreQuery({sort:'rating'}));assert.equal(result.stores[0].id,'a');pass('Highest-rated ordering uses real reviews and puts unrated stores last');
  result=selectStores([example,{...example,id:'event-host',eventCount:8,serviceCount:0,offers:['events']}],parseStoreQuery({sort:'popular'}));assert.equal(result.stores[0].id,'event-host');pass('Most-to-explore sorting includes products, services and events');
  const many=Array.from({length:29},(_,i)=>({...example,id:String(i),name:'Store '+String(i).padStart(2,'0')}));const first=selectStores(many,parseStoreQuery({})),second=selectStores(many,parseStoreQuery({page:'2'}));assert.equal(first.stores.length,12);assert.equal(second.stores.length,12);assert.ok(second.stores.every(s=>!first.stores.some(a=>a.id===s.id)));assert.equal(selectStores(many,parseStoreQuery({page:'999'})).page,3);pass('Pagination is stable, complete and clamps impossible pages');
- assert.equal(storeHref({...example,preview:true}),'https://www.linkweonlinemall.com/store/a');pass('Store links use the correct public storefront');
+ assert.deepEqual(storePreview(),[]);assert.equal(storeHref({...example,preview:true}),'https://www.linkweonlinemall.com/store/a');pass('Preview data is development-only and links to real stores');
  const marker='stores-check-'+Date.now(),rollback=new Error('ROLLBACK_TEST');
  try{await prisma.$transaction(async tx=>{db=tx;
   const owner=await tx.user.create({data:{email:marker+'@linkwe.test',fullName:'Store directory test',role:'VENDOR',idVerificationStatus:'APPROVED'}});

@@ -1,4 +1,6 @@
 "use client";
+import {ColourSwatches,FilterSelect,FilterChoices} from "@/components/filters/FilterControls";
+import {getProductCategoryLabel} from "@/lib/categories";
 
 type Props = {
   search: string;
@@ -45,110 +47,14 @@ export default function StoreProductFiltersPanel({
   availableColours,
   availableSizes,
 }: Props) {
-  return (
-    <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-[0_16px_45px_rgba(24,24,27,0.08)]">
-      <div className="flex items-center justify-between bg-gradient-to-br from-zinc-950 to-[#3a1b0f] px-5 py-4">
-        <div><p className="text-sm font-black text-white">Shop filters</p><p className="text-[10px] text-white/50">Refine this store</p></div>
-        <button type="button" onClick={onClear} className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20">
-          Clear all
-        </button>
-      </div>
-
-      {availableColours.length > 0 ? <div className="border-b border-zinc-100 px-4 py-3"><p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-zinc-500">Colour</p><div className="flex flex-wrap gap-2.5">{availableColours.map((option) => <button key={option.value} type="button" aria-label={`Filter by ${option.value}`} title={option.value} onClick={() => setColour(colour === option.value ? "" : option.value)} className={`h-9 w-9 rounded-full border border-black/10 shadow-sm ${colour === option.value ? "ring-2 ring-[#D4450A] ring-offset-2" : ""}`} style={{ background: option.hex }} />)}</div></div> : null}
-
-      {availableSizes.length > 0 ? <div className="border-b border-zinc-100 px-4 py-3"><p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-zinc-500">Size</p><div className="flex flex-wrap gap-2">{availableSizes.map((option) => <button key={option} type="button" onClick={() => setSize(size === option ? "" : option)} className={`min-w-10 rounded-lg border px-2.5 py-1.5 text-xs font-bold ${size === option ? "border-[#D4450A] bg-[#D4450A] text-white" : "border-zinc-200 text-zinc-600"}`}>{option}</button>)}</div></div> : null}
-
-      <div className="border-b border-[var(--color-border-tertiary)] px-4 py-3">
-        <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Search</p>
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search products…"
-          className="min-h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-[#D4450A] focus:ring-2 focus:ring-orange-100"
-        />
-      </div>
-
-      <div className="border-b border-[var(--color-border-tertiary)] px-4 py-3">
-        <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Sort by</p>
-        <div className="flex flex-wrap gap-2">
-          {[
-            { value: "default", label: "Featured" },
-            { value: "price_asc", label: "Price Low-High" },
-            { value: "price_desc", label: "Price High-Low" },
-            { value: "name", label: "Name A-Z" },
-            { value: "name_desc", label: "Name Z-A" },
-            { value: "newest", label: "Newest" },
-            { value: "stock", label: "Most in stock" },
-          ].map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => setSortBy(opt.value)}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                sortBy === opt.value
-                  ? "bg-[#D4450A] text-white"
-                  : "bg-[var(--color-background-secondary)] text-[var(--text-secondary)] hover:bg-zinc-200"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="border-b border-[var(--color-border-tertiary)] px-4 py-3">
-        <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Category</p>
-        <div className="flex flex-wrap gap-2">
-          {categories.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => setCategory(c)}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                category === c
-                  ? "bg-[#D4450A] text-white"
-                  : "bg-[var(--color-background-secondary)] text-[var(--text-secondary)]"
-              }`}
-            >
-              {c === "All" ? "All" : c.replace(/_/g, " ")}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="border-b border-[var(--color-border-tertiary)] px-4 py-3">
-        <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Price (TTD)</p>
-        <div className="flex items-center gap-2">
-          <input
-            type="number"
-            value={priceMin}
-            onChange={(e) => setPriceMin(e.target.value)}
-            placeholder="Min"
-            className="w-full rounded-lg border border-[0.5px] border-[var(--color-border-tertiary)] bg-[var(--color-background-secondary)] px-3 py-2 text-sm outline-none focus:border-[#D4450A]"
-          />
-          <span className="text-[var(--text-muted)]">–</span>
-          <input
-            type="number"
-            value={priceMax}
-            onChange={(e) => setPriceMax(e.target.value)}
-            placeholder="Max"
-            className="w-full rounded-lg border border-[0.5px] border-[var(--color-border-tertiary)] bg-[var(--color-background-secondary)] px-3 py-2 text-sm outline-none focus:border-[#D4450A]"
-          />
-        </div>
-      </div>
-
-      <div className="px-4 py-3">
-        <label className="flex cursor-pointer items-center gap-2.5">
-          <input
-            type="checkbox"
-            checked={inStockOnly}
-            onChange={() => setInStockOnly((v) => !v)}
-            className="size-4 rounded border-zinc-300 text-[#D4450A] focus:ring-[#D4450A]"
-          />
-          <span className="text-sm text-[var(--text-secondary)]">In stock only</span>
-        </label>
-      </div>
-    </div>
-  );
+  return <section className="overflow-hidden rounded-3xl border border-sky-100 bg-white shadow-sm" aria-label="Store product filters">
+    <header className="flex items-center justify-between border-t-4 border-[#e07838] bg-[#173f58] px-5 py-5"><div><h3 className="text-sm font-bold text-white">Make it your find.</h3><p className="mt-1 text-xs text-sky-100/75">Refine this store’s collection.</p></div><button type="button" onClick={onClear} className="rounded-xl bg-white/10 px-3 py-2 text-xs font-bold text-white">Clear all</button></header>
+    <div className="grid gap-5 p-5"><label className="grid gap-2 text-xs font-bold text-[#284f65]">Search this store<input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Name or product category…" className="min-h-11 min-w-0 rounded-xl border border-sky-100 bg-slate-50 px-3 text-sm font-normal"/></label>
+    <FilterSelect label="Category" value={category==="All"?"":category} options={categories.filter(c=>c!=="All").map(value=>({value,label:getProductCategoryLabel(value)}))} onChange={v=>setCategory(v||"All")} placeholder="All categories"/>
+    <FilterSelect label="Sort products" value={sortBy==="default"?"":sortBy} options={[{value:"price_asc",label:"Price: low to high"},{value:"price_desc",label:"Price: high to low"},{value:"name",label:"Name: A to Z"},{value:"name_desc",label:"Name: Z to A"},{value:"newest",label:"Newest first"},{value:"stock",label:"Most in stock"}]} onChange={v=>setSortBy(v||"default")} placeholder="Recommended"/>
+    {availableColours.length>0&&<ColourSwatches value={colour} options={availableColours} onChange={setColour}/>}
+    {availableSizes.length>0&&<FilterChoices label="Size" value={size} options={availableSizes.map(value=>({value,label:value}))} onChange={setSize}/>}
+    <fieldset><legend className="mb-2 text-xs font-bold text-[#284f65]">Price range · TTD</legend><div className="flex items-center gap-2"><input aria-label="Minimum product price" type="number" min="0" step="0.01" value={priceMin} onChange={e=>setPriceMin(e.target.value)} placeholder="Min" className="min-w-0 w-full rounded-xl border border-sky-100 bg-slate-50 px-3 py-3 text-sm"/><span>–</span><input aria-label="Maximum product price" type="number" min="0" step="0.01" value={priceMax} onChange={e=>setPriceMax(e.target.value)} placeholder="Max" className="min-w-0 w-full rounded-xl border border-sky-100 bg-slate-50 px-3 py-3 text-sm"/></div>{priceMin&&priceMax&&Number(priceMin)>Number(priceMax)&&<p role="alert" className="mt-2 text-xs text-orange-800">Set a maximum that is at least the minimum.</p>}</fieldset>
+    <label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={inStockOnly} onChange={e=>setInStockOnly(e.target.checked)} className="size-4 accent-[#d1551c]"/>In stock only</label><p className="text-xs leading-5 text-slate-500">Results update as you refine.</p></div>
+  </section>;
 }

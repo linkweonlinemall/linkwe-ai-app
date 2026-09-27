@@ -67,7 +67,11 @@ export function getEventOffer(event: Pick<EventRecord, "ticketTypes" | "startDat
 export function parseEventQuery(params: EventParams) {
   const text = (key: string) => (Array.isArray(params[key]) ? params[key][0] : params[key])?.trim() ?? "";
   const choice = (key: string, values: string[]) => values.includes(text(key)) ? text(key) : "";
+  const price = (key: string) => { const raw = text(key), n = Number(raw); return raw && Number.isFinite(n) && n >= 0 ? n : undefined; };
+  let minPrice = price("minPrice"), maxPrice = price("maxPrice");
+  if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice) [minPrice,maxPrice] = [maxPrice,minPrice];
   return {
+    minPrice, maxPrice, availability: choice("availability", ["on_sale","not_started","sold_out"]),
     q: text("q"), category: text("category") === "all" ? "" : text("category"), region: text("region") === "all" ? "" : normalizedRegion(text("region")),
     date: choice("date", EVENT_DATES.map(date => date.value)),
     format: choice("format", ["online", "in_person"]), pricing: choice("pricing", ["free", "paid"]),
@@ -125,6 +129,11 @@ export function selectEvents(events: DirectoryEvent[], query: EventQuery, now = 
     if (range.start && event.startDate < range.start || range.end && event.startDate > range.end) return false;
     if (query.format === "online" && !event.isOnline || query.format === "in_person" && event.isOnline) return false;
     if (query.pricing === "free" && !event.offer.hasFree || query.pricing === "paid" && !event.offer.hasPaid) return false;
+    if (query.availability && event.offer.state !== query.availability) return false;
+    if (query.minPrice !== undefined || query.maxPrice !== undefined) {
+      if (event.offer.price === null) return false;
+      if (query.minPrice !== undefined && event.offer.price < query.minPrice || query.maxPrice !== undefined && event.offer.price > query.maxPrice) return false;
+    }
     return true;
   }).sort((a, b) => {
     let diff = 0;

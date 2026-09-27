@@ -17,7 +17,7 @@ interface BadgeProps {
 
 const variantMap: Record<BadgeVariant, string> = {
   pending: "bg-amber-100 text-amber-700",
-  active: "bg-green-100 text-green-700",
+  active: "bg-sky-100 text-sky-700",
   completed: "bg-blue-100 text-blue-700",
   cancelled: "bg-red-100 text-red-700",
   draft: "bg-zinc-100 text-zinc-600",

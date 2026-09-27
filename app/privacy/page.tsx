@@ -51,7 +51,7 @@ export default function PrivacyPolicyPage() {
         <h2 className="text-xl font-black text-zinc-900">2. Information we collect</h2>
         <div className="mt-5 grid gap-3">
           {collectedInformation.map(([title, text]) => (
-            <div key={title} className="rounded-2xl border border-[#dce3d5] bg-gradient-to-r from-sky-50/80 to-white p-4">
+            <div key={title} className="rounded-2xl border border-[#d4dee4] bg-gradient-to-r from-sky-50/80 to-white p-4">
               <h3 className="text-sm font-black text-zinc-900">{title}</h3>
               <p className="mt-1 text-sm leading-6 text-zinc-600">{text}</p>
             </div>

@@ -6,7 +6,7 @@ export default function ServiceWorkerRegistration() {
     if ("serviceWorker" in navigator) {
       const register = () => {
         navigator.serviceWorker
-          .register("/sw.js")
+          .register("/sw.js", { updateViaCache: "none" })
           .then((registration) => {
             console.log("SW registered:", registration.scope);
           })

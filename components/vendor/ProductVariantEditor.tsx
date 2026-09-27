@@ -634,7 +634,7 @@ export default function ProductVariantEditor({
           ) : null}
 
           {saved ? (
-            <p className="mt-2 text-center text-xs font-medium text-emerald-600">✓ Variants saved successfully</p>
+            <p className="mt-2 text-center text-xs font-medium text-sky-600">✓ Variants saved successfully</p>
           ) : null}
         </div>
       ) : null}

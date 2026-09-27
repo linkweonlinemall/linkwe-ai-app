@@ -1,0 +1,56 @@
+// Integration checks use a loopback database and roll back every write.
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),ts=require('typescript');
+require('dotenv').config({path:'.env.local',quiet:true});require('dotenv').config({path:'.env',quiet:true});
+if(!['localhost','127.0.0.1','[::1]'].includes(new URL(process.env.DATABASE_URL||'').hostname))throw Error('Loopback database required');
+process.env.NODE_ENV='test';
+const {PrismaClient}=require('@prisma/client');const prisma=new PrismaClient();let db=prisma,session=null;
+const original=Module._load;Module._load=function(request,parent,main){if(request==='server-only'||request==='next/cache')return {revalidatePath(){}};if(request==='@/lib/prisma')return {get prisma(){return db;}};if(request==='@/lib/auth/session')return {getSession:async()=>session};if(request.startsWith('@/'))request=path.join(process.cwd(),request.slice(2));return original.call(this,request,parent,main);};
+require.extensions['.ts']=(m,f)=>m._compile(ts.transpileModule(fs.readFileSync(f,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,f);
+const {catalogueCategories,canonicalStoreCategory}=require('../lib/catalog/categories.ts');
+const {matchesProductOptions}=require('../lib/catalog/variant-filters.ts'),{swatchPaint}=require('../lib/variant-options.ts'),{safeNotificationHref}=require('../lib/notifications/display.ts'),{detectInstallPlatform}=require('../lib/pwa/install.ts');
+const {runUniversalSearch}=require('../lib/search/run-search.ts'),notifications=require('../app/actions/notifications.ts'),{parseEventQuery,selectEvents,getEventOffer}=require('../lib/events/directory-query.ts');
+const {parseDirectoryQuery,selectDirectory}=require('../lib/services/directory-query.ts'),{parseStoreQuery,selectStores}=require('../lib/stores/directory-query.ts');
+const {getShopCatalog}=require('../lib/shop/catalog.ts'),{parseShopQuery}=require('../lib/shop/query.ts');
+(async()=>{
+ for(const kind of ['products','services','stores','events','tickets']){const cats=catalogueCategories(kind);assert.equal(new Set(cats.map(c=>c.value)).size,cats.length);}
+ assert.equal(canonicalStoreCategory('beauty_cosmetics'),'beauty_wellness');assert.equal(canonicalStoreCategory('professional_services'),'professional_services');assert.equal(canonicalStoreCategory('toString'),'toString');
+ const variant={hasVariants:true,stock:0,variants:[{stock:0,attributes:[{name:'Colour',value:'red'},{name:'Size',value:'S'}]},{stock:2,attributes:[{name:'Colour',value:'blue'},{name:'Size',value:'M'}]}]};
+ assert.equal(matchesProductOptions(variant,'red','M',false),false);assert.equal(matchesProductOptions(variant,'red','S',true),false);assert.equal(matchesProductOptions(variant,'blue','M',true),true);assert.equal(matchesProductOptions(variant,'','',true),true);
+ assert.ok(!swatchPaint('red','url(https://invalid.test/image)').includes('url'));assert.notEqual(swatchPaint('unknown','#12345'),'#12345');
+ assert.equal(safeNotificationHref('//elsewhere.test'),null);assert.equal(safeNotificationHref('/\\elsewhere.test'),null);assert.equal(safeNotificationHref('javascript:alert(1)'),null);assert.equal(safeNotificationHref('/orders/abc'),'/orders/abc');
+ assert.equal(detectInstallPlatform('Mozilla Macintosh Safari',5),'ios');assert.equal(detectInstallPlatform('Mozilla Macintosh Safari',0),'mac');assert.equal(detectInstallPlatform('Mozilla Android Chrome',5),'android');console.log('PASS matching swatches, stock, CSS validation, notification links and iPad/phone/desktop detection');
+ const durationRows=[{id:'a',name:'A',store:{name:'A'},tags:[],isAvailable:true,durationMinutes:30,serviceType:'BOOKABLE'},{id:'b',name:'B',store:{name:'B'},tags:[],isAvailable:false,durationMinutes:60,serviceType:'BOOKABLE'},{id:'c',name:'C',store:{name:'C'},tags:[],isAvailable:true,durationMinutes:null,serviceType:'QUOTE'}];
+ assert.deepEqual(selectDirectory(durationRows,parseDirectoryQuery({availableOnly:'true',maxDuration:'60'})).services.map(s=>s.id),['a']);
+ const ratingRows=[{id:'a',name:'A',tags:[],reviewCount:3,averageRating:4.6},{id:'b',name:'B',tags:[],reviewCount:0,averageRating:5}];assert.deepEqual(selectStores(ratingRows,parseStoreQuery({minimumRating:'4.5'})).stores.map(s=>s.id),['a']);
+ const future=new Date(Date.now()+86400000*5),ticket={price:120,quantity:10,quantitySold:0,isVisible:true,saleStartDate:null,saleEnds:null};
+ const eventBase={startDate:future,endDate:null,title:'Event',id:'event',store:{name:'Store'},tags:[]};const events=[{...eventBase,offer:getEventOffer({...eventBase,ticketTypes:[ticket]})},{...eventBase,id:'sold',offer:getEventOffer({...eventBase,ticketTypes:[{...ticket,quantitySold:10}]})}];
+ assert.equal(selectEvents(events,parseEventQuery({availability:'on_sale',maxPrice:'150'})).total,1);assert.equal(selectEvents(events,parseEventQuery({availability:'on_sale',maxPrice:'100'})).total,0);assert.equal(selectEvents(events,parseEventQuery({availability:'sold_out'})).total,1);console.log('PASS new duration, availability, rating and ticket-budget filters');
+ const marker='discovery-'+Date.now(),rollback=Error('ROLLBACK');
+ try{await prisma.$transaction(async tx=>{db=tx;
+  const vendor=await tx.user.create({data:{email:marker+'-v@linkwe.test',fullName:'Discovery vendor',role:'VENDOR',idVerificationStatus:'APPROVED'}});
+  const buyer=await tx.user.create({data:{email:marker+'-c@linkwe.test',fullName:'Discovery customer',role:'CUSTOMER'}});
+  const store=await tx.store.create({data:{ownerId:vendor.id,name:marker,slug:marker,categoryId:'other',region:'san fernando',status:'ACTIVE'}});
+  const base={storeId:store.id,isPublished:true,category:marker,images:[],tags:[]};
+  await tx.product.createMany({data:Array.from({length:26},(_,i)=>({...base,name:marker+' product '+i,slug:marker+'-'+i,price:i+1,stock:3,allowPickup:i===0,allowDelivery:i===1,isDigital:i===2}))});
+  const rated=await tx.product.findFirstOrThrow({where:{slug:marker+'-25'}});await tx.review.create({data:{userId:buyer.id,productId:rated.id,rating:5}});
+  let r=await runUniversalSearch({q:marker,type:'products',sort:'price_asc'});assert.equal(r.counts.products,26);assert.equal(r.results.products[0].price,1);assert.equal(r.results.products.length,12);let second=await runUniversalSearch({q:marker,type:'products',sort:'price_asc',page:2});assert.equal(second.results.products[0].price,13);assert.ok(second.results.products.every(p=>!r.results.products.some(a=>a.id===p.id)));
+  r=await runUniversalSearch({q:marker,type:'products',rating:4});assert.equal(r.counts.products,1);assert.equal(r.results.products[0].id,rated.id);
+  const vp=await tx.product.create({data:{...base,name:marker+' swatches',slug:marker+'-variant',price:200,...variant,variants:{create:variant.variants.map((v,i)=>({...v,name:'Variant '+i,price:i===0?0:165,images:[]}))}}});
+  assert.equal((await runUniversalSearch({q:marker,type:'products',colour:'red',size:'M'})).counts.products,0);assert.equal((await runUniversalSearch({q:marker,type:'products',colour:'red',inStock:true})).counts.products,0);assert.equal((await runUniversalSearch({q:marker,type:'products',colour:'blue',size:'M',inStock:true})).results.products[0].id,vp.id);
+  const matchedPrice=await runUniversalSearch({q:marker,type:'products',colour:'blue',size:'M',inStock:true,maxPrice:166});assert.equal(matchedPrice.results.products[0].price,165);assert.equal((await runUniversalSearch({q:marker,type:'products',colour:'red',size:'S',maxPrice:1})).results.products[0].price,0);
+  for(const fulfilment of ['pickup','delivery','digital'])assert.equal((await getShopCatalog(parseShopQuery({q:marker,fulfilment}))).total,1);
+  await tx.product.create({data:{...base,name:marker+' quote',slug:marker+'-quote',isService:true,serviceType:'QUOTE',quotePriceType:'FREE_QUOTE',price:0}});assert.equal((await runUniversalSearch({q:marker,type:'services',maxPrice:100})).counts.services,0);
+  await tx.event.create({data:{storeId:store.id,title:marker+' show',slug:marker+'-show',status:'PUBLISHED',startDate:future,tags:[],galleryImages:[],ticketTypes:{create:{...ticket,name:'Admission'}}}});r=await runUniversalSearch({q:marker,type:'events',availability:'on_sale',maxPrice:150});assert.equal(r.counts.events,1);assert.equal(r.results.events[0].price,120);
+  console.log('PASS real search: complete pagination, global rating, same-variant colour/size stock, fulfilment, unpriced quotes and ticket availability');
+  session={userId:buyer.id,role:'CUSTOMER'};const cutoff=new Date(Date.now()-2000);
+  await tx.notification.createMany({data:Array.from({length:23},(_,i)=>({userId:buyer.id,title:'Update '+i,type:i===0?'MESSAGE_RECEIVED':'ORDER_PLACED',createdAt:new Date(cutoff.getTime()-1000)}))});
+  const other=await tx.notification.create({data:{userId:vendor.id,title:'Private vendor update'}});
+  r=await notifications.getNotificationPage();assert.equal(r.total,23);assert.equal(r.items.length,20);second=await notifications.getNotificationPage({page:2});assert.equal(second.items.length,3);assert.ok(second.items.every(p=>!r.items.some(a=>a.id===p.id)));
+  assert.equal((await notifications.getNotificationPage({category:'messages'})).total,1);assert.equal((await notifications.getNotificationPage({category:'toString'})).total,23);
+  await notifications.markNotificationRead(other.id);assert.equal((await tx.notification.findUniqueOrThrow({where:{id:other.id}})).isRead,false);
+  const arriving=await tx.notification.create({data:{userId:buyer.id,title:'Arrived later',createdAt:new Date()}});await notifications.markAllNotificationsRead(cutoff.toISOString());assert.equal((await notifications.getNotificationPage({unread:true})).total,1);assert.equal((await tx.notification.findUniqueOrThrow({where:{id:arriving.id}})).isRead,false);
+  session=null;assert.equal((await notifications.getNotificationPage()).total,0);console.log('PASS notifications: private ownership, paging, categories, malformed category, read snapshot and signed-out access');
+  await tx.store.update({where:{id:store.id},data:{status:'DRAFT'}});r=await runUniversalSearch({q:marker});assert.equal(r.results.total,0);console.log('PASS hidden stores never leak into any search result');throw rollback;
+ },{timeout:60000});}catch(e){if(e!==rollback)throw e;}
+ assert.equal(await prisma.store.count({where:{slug:marker}}),0);console.log('PASS all fixture writes rolled back; no external messages or payments');
+})().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>prisma.$disconnect());

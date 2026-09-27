@@ -21,6 +21,7 @@ export function parseShopQuery(params: ShopParams) {
     sort: SHOP_SORTS.some(option => option.value === text("sort")) ? text("sort") : "featured",
     minPrice, maxPrice, inStock: text("inStock") === "true",
     condition: (["NEW", "USED", "REFURBISHED"].includes(text("condition")) ? text("condition") : "") as "NEW" | "USED" | "REFURBISHED" | "",
+    fulfilment: ["delivery","pickup","digital"].includes(text("fulfilment")) ? text("fulfilment") : "",
     brand: text("brand"), colour: text("colour"), size: text("size"),
     page: Math.min(100000, Math.max(1, Math.floor(Number(text("page"))) || 1)),
   };

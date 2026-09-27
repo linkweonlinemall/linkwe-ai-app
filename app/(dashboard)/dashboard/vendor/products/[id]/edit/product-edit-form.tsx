@@ -476,14 +476,14 @@ export function ProductEditForm({
                 </label>
                 <input ref={digitalFileRef} type="file" className="hidden" onChange={handleDigitalUpload} />
                 {digitalFileUrl ? (
-                  <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2">
+                  <div className="flex items-center gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1b5c80" strokeWidth="2">
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                       <polyline points="14 2 14 8 20 8" />
                     </svg>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-emerald-900">{digitalFileName}</p>
-                      <p className="text-xs text-emerald-700">
+                      <p className="truncate text-sm font-semibold text-sky-900">{digitalFileName}</p>
+                      <p className="text-xs text-sky-700">
                         {digitalFileType.toUpperCase()}
                         {digitalFileSizeKb
                           ? ` · ${
@@ -504,7 +504,7 @@ export function ProductEditForm({
                         setDigitalFileSizeKb(null);
                         if (digitalFileRef.current) digitalFileRef.current.value = "";
                       }}
-                      className="shrink-0 text-xs font-medium text-emerald-700 hover:text-red-600"
+                      className="shrink-0 text-xs font-medium text-sky-700 hover:text-red-600"
                     >
                       Remove
                     </button>

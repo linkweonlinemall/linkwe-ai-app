@@ -1,4 +1,6 @@
 "use client";
+import {FilterSelect} from "@/components/filters/FilterControls";
+import {getServiceCategoryLabel} from "@/lib/categories";
 
 const SERVICE_TYPE_FILTERS = [
   { value: "All", label: "All types" },
@@ -46,108 +48,11 @@ export default function StoreServiceFiltersPanel({
   categories,
   onClear,
 }: Props) {
-  return (
-    <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-[0_16px_45px_rgba(24,24,27,0.08)]">
-      <div className="flex items-center justify-between bg-gradient-to-br from-zinc-950 to-[#3a1b0f] px-5 py-4">
-        <div><p className="text-sm font-black text-white">Service filters</p><p className="text-[10px] text-white/50">Find the right service</p></div>
-        <button type="button" onClick={onClear} className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20">
-          Clear all
-        </button>
-      </div>
-
-      <div className="border-b border-[var(--color-border-tertiary)] px-4 py-3">
-        <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Category</p>
-        <select value={serviceCategory} onChange={(e) => setServiceCategory(e.target.value)} className="min-h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-sm outline-none focus:border-[#D4450A]">
-          <option value="All">All categories</option>
-          {categories.map((value) => <option key={value} value={value}>{value.replace(/_/g, " ")}</option>)}
-        </select>
-      </div>
-
-      <div className="border-b border-[var(--color-border-tertiary)] px-4 py-3">
-        <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Where it happens</p>
-        <select value={serviceLocation} onChange={(e) => setServiceLocation(e.target.value)} className="min-h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-sm outline-none focus:border-[#D4450A]">
-          <option value="All">Any location</option><option value="AT_VENDOR">At provider</option><option value="AT_CUSTOMER">At customer</option><option value="FLEXIBLE">Flexible</option><option value="VIRTUAL">Online</option>
-        </select>
-      </div>
-
-      <div className="border-b border-[var(--color-border-tertiary)] px-4 py-3">
-        <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Search</p>
-        <input
-          type="search"
-          value={serviceSearch}
-          onChange={(e) => setServiceSearch(e.target.value)}
-          placeholder="Search services…"
-          className="min-h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-[#D4450A] focus:ring-2 focus:ring-orange-100"
-        />
-      </div>
-
-      <div className="border-b border-[var(--color-border-tertiary)] px-4 py-3">
-        <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Service type</p>
-        <div className="flex flex-wrap gap-2">
-          {SERVICE_TYPE_FILTERS.map((t) => (
-            <button
-              key={t.value}
-              type="button"
-              onClick={() => setServiceType(t.value)}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                serviceType === t.value
-                  ? "bg-[#D4450A] text-white"
-                  : "bg-[var(--color-background-secondary)] text-[var(--text-secondary)]"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="border-b border-[var(--color-border-tertiary)] px-4 py-3">
-        <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Sort by</p>
-        <div className="flex flex-wrap gap-2">
-          {[
-            { value: "default", label: "Featured" },
-            { value: "price_asc", label: "Price Low-High" },
-            { value: "price_desc", label: "Price High-Low" },
-            { value: "name", label: "Name A-Z" },
-            { value: "name_desc", label: "Name Z-A" },
-            { value: "duration", label: "Shortest duration" },
-          ].map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => setServiceSort(opt.value)}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                serviceSort === opt.value
-                  ? "bg-[#D4450A] text-white"
-                  : "bg-[var(--color-background-secondary)] text-[var(--text-secondary)]"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="px-4 py-3">
-        <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Price (TTD)</p>
-        <div className="flex items-center gap-2">
-          <input
-            type="number"
-            value={servicePriceMin}
-            onChange={(e) => setServicePriceMin(e.target.value)}
-            placeholder="Min"
-            className="w-full rounded-lg border border-[0.5px] border-[var(--color-border-tertiary)] bg-[var(--color-background-secondary)] px-3 py-2 text-sm outline-none focus:border-[#D4450A]"
-          />
-          <span className="text-[var(--text-muted)]">–</span>
-          <input
-            type="number"
-            value={servicePriceMax}
-            onChange={(e) => setServicePriceMax(e.target.value)}
-            placeholder="Max"
-            className="w-full rounded-lg border border-[0.5px] border-[var(--color-border-tertiary)] bg-[var(--color-background-secondary)] px-3 py-2 text-sm outline-none focus:border-[#D4450A]"
-          />
-        </div>
-      </div>
-    </div>
-  );
+  return <section className="overflow-hidden rounded-3xl border border-sky-100 bg-white shadow-sm" aria-label="Store service filters"><header className="flex items-center justify-between border-t-4 border-[#e07838] bg-[#173f58] px-5 py-5"><div><h3 className="text-sm font-bold text-white">Find your kind of expert.</h3><p className="mt-1 text-xs text-sky-100/75">A service that fits your day.</p></div><button type="button" onClick={onClear} className="rounded-xl bg-white/10 px-3 py-2 text-xs font-bold text-white">Clear all</button></header>
+  <div className="grid gap-5 p-5"><label className="grid gap-2 text-xs font-bold text-[#284f65]">Search services<input type="search" value={serviceSearch} onChange={e=>setServiceSearch(e.target.value)} placeholder="What do you need help with?" className="min-h-11 min-w-0 rounded-xl border border-sky-100 bg-slate-50 px-3 text-sm font-normal"/></label>
+  <FilterSelect label="Category" value={serviceCategory==="All"?"":serviceCategory} options={categories.filter(c=>c!=="All").map(value=>({value,label:getServiceCategoryLabel(value)}))} onChange={v=>setServiceCategory(v||"All")} placeholder="Every kind of expertise"/>
+  <FilterSelect label="How to book" value={serviceType==="All"?"":serviceType} options={SERVICE_TYPE_FILTERS.filter(t=>t.value!=="All")} onChange={v=>setServiceType(v||"All")} placeholder="All service types"/>
+  <FilterSelect label="Where it happens" value={serviceLocation==="All"?"":serviceLocation} options={[{value:"AT_VENDOR",label:"At the provider"},{value:"AT_CUSTOMER",label:"At your location"},{value:"FLEXIBLE",label:"Flexible location"},{value:"VIRTUAL",label:"Online"}]} onChange={v=>setServiceLocation(v||"All")} placeholder="Any location"/>
+  <FilterSelect label="Sort services" value={serviceSort==="default"?"":serviceSort} options={[{value:"price_asc",label:"Price: low to high"},{value:"price_desc",label:"Price: high to low"},{value:"name",label:"Name: A to Z"},{value:"name_desc",label:"Name: Z to A"},{value:"duration",label:"Shortest session"}]} onChange={v=>setServiceSort(v||"default")} placeholder="Recommended"/>
+  <fieldset><legend className="mb-2 text-xs font-bold text-[#284f65]">Listed fee · TTD</legend><div className="flex items-center gap-2"><input aria-label="Minimum service price" type="number" min="0" step="0.01" value={servicePriceMin} onChange={e=>setServicePriceMin(e.target.value)} placeholder="Min" className="min-w-0 w-full rounded-xl border border-sky-100 bg-slate-50 px-3 py-3 text-sm"/><span>–</span><input aria-label="Maximum service price" type="number" min="0" step="0.01" value={servicePriceMax} onChange={e=>setServicePriceMax(e.target.value)} placeholder="Max" className="min-w-0 w-full rounded-xl border border-sky-100 bg-slate-50 px-3 py-3 text-sm"/></div>{servicePriceMin&&servicePriceMax&&Number(servicePriceMin)>Number(servicePriceMax)&&<p role="alert" className="mt-2 text-xs text-orange-800">Set a maximum that is at least the minimum.</p>}<p className="mt-3 text-xs leading-5 text-slate-500">Price filters use listed fees. Custom quotes are agreed with the provider.</p></fieldset><p className="text-xs text-slate-500">Results update as you refine.</p></div></section>;
 }

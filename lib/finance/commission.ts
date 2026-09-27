@@ -1,4 +1,4 @@
-export type CommissionPlan = "STARTER" | "GROWTH" | "PRO";
+export type CommissionPlan = "STARTER" | "SERVICES" | "GROWTH" | "PRO";
 export type CommissionItemType = "product" | "service";
 
 /** Flat platform commission on event ticket sales (not plan-tiered). */
@@ -13,8 +13,8 @@ export function getCommissionRate(
   plan: CommissionPlan,
 ): number {
   const rates = {
-    product: { STARTER: 0.15, GROWTH: 0.05, PRO: 0 },
-    service: { STARTER: 0.08, GROWTH: 0, PRO: 0 },
+    product: { STARTER: 0.15, SERVICES: 0.15, GROWTH: 0.05, PRO: 0 },
+    service: { STARTER: 0.08, SERVICES: 0.08, GROWTH: 0, PRO: 0 },
   };
   return rates[type][plan];
 }

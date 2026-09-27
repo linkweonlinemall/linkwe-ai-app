@@ -124,7 +124,7 @@ function renderSocialIcon(key: string) {
     case "linkedin":
       return <Linkedin style={{ color: "#0A66C2" }} size={18} strokeWidth={1.75} aria-hidden />;
     case "whatsapp":
-      return <MessageCircle style={{ color: "#25D366" }} size={18} strokeWidth={1.75} aria-hidden />;
+      return <MessageCircle style={{ color: "#2b93cd" }} size={18} strokeWidth={1.75} aria-hidden />;
     case "website":
       return <Globe style={{ color: "#D4450A" }} size={18} strokeWidth={1.75} aria-hidden />;
     default:
@@ -526,13 +526,13 @@ export default function StoreAboutTab({
                     <li
                       key={day}
                       className={`flex items-center justify-between px-4 py-[7px] ${
-                        isToday ? "bg-[#EAF3DE]" : ""
+                        isToday ? "bg-[#deebf3]" : ""
                       } ${isLast ? "" : "border-b border-[0.5px] border-[var(--color-border-tertiary)]"}`}
                     >
                       <span
                         className={`text-xs ${
                           isToday
-                            ? "font-medium text-[#3B6D11]"
+                            ? "font-medium text-[#174766]"
                             : "text-[var(--text-secondary)]"
                         }`}
                       >
@@ -541,7 +541,7 @@ export default function StoreAboutTab({
                       <span
                         className={`text-xs ${
                           isToday
-                            ? "font-medium text-[#3B6D11]"
+                            ? "font-medium text-[#174766]"
                             : isClosed
                               ? "text-[var(--text-muted)]"
                               : "font-medium text-[var(--text-primary)]"
@@ -574,7 +574,7 @@ export default function StoreAboutTab({
                           : ""
                       }`}
                     >
-                      <Check className="size-3.5 shrink-0 text-[#3B6D11]" strokeWidth={2.5} aria-hidden />
+                      <Check className="size-3.5 shrink-0 text-[#174766]" strokeWidth={2.5} aria-hidden />
                       <span className="text-xs text-[var(--text-secondary)]">{label}</span>
                     </li>
                   );

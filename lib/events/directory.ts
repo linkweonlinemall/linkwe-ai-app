@@ -1,3 +1,4 @@
+import {categoryFacets} from "@/lib/catalog/categories";
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { sellableStoreWhere } from "@/lib/store/sellable-store";
@@ -27,7 +28,7 @@ export async function getEventDirectory(query: EventQuery, now = new Date()) {
     if (event.region && !event.isOnline) regions.add(event.region.replaceAll("_", " ").toLowerCase().trim());
   }
   const options = {
-    categories: [...categories].map(([value, count]) => ({ value, count, label: eventCategoryLabel(value) })).sort((a, b) => b.count - a.count || a.label.localeCompare(b.label)),
+    categories: categoryFacets("events",categories),
     regions: [...regions].map(value => ({ value, label: eventRegionLabel(value) })).sort((a, b) => a.label.localeCompare(b.label)),
   };
   const highlight = selectEvents(events.filter(event => !!event.coverImage), parseEventQuery({ date: "upcoming" }), now).events[0] ?? null;

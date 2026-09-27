@@ -1,6 +1,8 @@
 "use client";
 
-import { Info } from "lucide-react";
+import { Check, Info } from "lucide-react";
+import {swatchPaint} from "@/lib/variant-options";
+import s from "./variants.module.css";
 import { useState } from "react";
 import { selectProductAttribute, type ProductOption } from "@/lib/product/display";
 
@@ -74,43 +76,34 @@ export default function VariantSelector({ variants, onVariantChange }: Props) {
         const values = getValuesForAttribute(attrName);
         const colour = isColourName(attrName);
         return (
-          <div key={attrName}>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">{attributeLabel(attrName)}</p>
-            <div className="mb-3 flex flex-wrap gap-2">
+          <fieldset key={attrName} className={s.group}>
+            <legend>{attributeLabel(attrName)}<span>{selected[attrName] || "Choose your favourite"}</span></legend>
+            <div className={colour?s.colours:s.options}>
               {values.map((attr) => {
                 const isSelected = selected[attrName] === attr.value;
-                const swatchBg = colour && attr.hex ? attr.hex : undefined;
+                const swatchBg = swatchPaint(attr.value,attr.hex);
+                const matching = variants.filter(v=>v.attributes.some(a=>a.name===attrName&&a.value===attr.value));
+                const available = matching.some(v=>v.stock===null||v.stock>0);
+                const matchesOtherChoices = matching.some(v=>Object.entries(selected).every(([key,value])=>key===attrName||v.attributes.some(a=>a.name===key&&a.value===value)));
                 return (
                   <button
                     key={attr.value}
                     type="button"
                     aria-pressed={isSelected}
                     onClick={() => handleSelect(attrName, attr.value)}
-                    className={`relative inline-flex min-h-11 items-center gap-2 overflow-hidden rounded-2xl border px-4 py-2 text-sm font-bold transition-all ${
-                      isSelected
-                        ? "border-[#D4450A] bg-[#D4450A] text-white shadow-[0_9px_24px_rgba(212,69,10,.22)]"
-                        : "border-stone-200 bg-white text-zinc-800 shadow-sm hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md"
-                    }`}
+                    className={colour?s.colour:s.option}
+                    data-selected={isSelected}
+                    data-sold-out={!available}
+                    title={!available?`${attr.value} · Out of stock`:!matchesOtherChoices?`${attr.value} · Selecting this changes other options`:attr.value}
+                    aria-label={`${attributeLabel(attrName)}: ${attr.value}${!available?", out of stock":""}`}
                   >
-                    {colour && swatchBg ? (
-                      <span
-                        className={`size-3.5 shrink-0 rounded-full ring-2 ring-offset-2 ${
-                          isSelected ? "ring-white/70 ring-offset-[#D4450A]" : "ring-transparent ring-offset-white"
-                        }`}
-                        style={{
-                          background: swatchBg,
-                          boxShadow:
-                            swatchBg === "#FFFFFF" || swatchBg === "#ffffff" ? "inset 0 0 0 1px #d4d4d8" : undefined,
-                        }}
-                        aria-hidden
-                      />
-                    ) : null}
-                    <span>{attr.value}</span>
+                    {colour && <span className={s.paint} style={{background:swatchBg}} aria-hidden>{isSelected&&<Check size={18}/>}</span>}
+                    <span>{attr.value}</span>{!available&&<small>Sold out</small>}
                   </button>
                 );
               })}
             </div>
-          </div>
+          </fieldset>
         );
       })}
 

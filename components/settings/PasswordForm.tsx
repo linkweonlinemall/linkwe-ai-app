@@ -100,7 +100,7 @@ export default function PasswordForm() {
                             ? "bg-amber-400"
                             : strength === "good"
                               ? "bg-blue-400"
-                              : "bg-emerald-400"
+                              : "bg-sky-400"
                         : "bg-zinc-200"
                     }`}
                   />
@@ -114,7 +114,7 @@ export default function PasswordForm() {
                       ? "text-amber-500"
                       : strength === "good"
                         ? "text-blue-500"
-                        : "text-emerald-500"
+                        : "text-sky-500"
                 }`}
               >
                 {strength}
@@ -146,8 +146,8 @@ export default function PasswordForm() {
           </div>
         ) : null}
         {success ? (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-            <p className="text-xs font-semibold text-emerald-700">
+          <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
+            <p className="text-xs font-semibold text-sky-700">
               Password changed successfully ✓
             </p>
           </div>

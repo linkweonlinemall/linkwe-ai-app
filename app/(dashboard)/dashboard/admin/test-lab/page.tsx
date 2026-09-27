@@ -33,8 +33,8 @@ export default async function AdminTestLabPage() {
               Experience a complete purchase and fulfilment cycle without sending a real WiPay charge. Test mode applies only to this signed-in administrator for eight hours.
             </p>
           </div>
-          <span className={`inline-flex w-fit items-center gap-2 rounded-full px-4 py-2 text-xs font-bold ${enabled ? "bg-amber-300 text-amber-950" : "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-300/25"}`}>
-            <span className={`h-2 w-2 rounded-full ${enabled ? "bg-amber-700" : "bg-emerald-400"}`} />
+          <span className={`inline-flex w-fit items-center gap-2 rounded-full px-4 py-2 text-xs font-bold ${enabled ? "bg-amber-300 text-amber-950" : "bg-sky-400/15 text-sky-300 ring-1 ring-sky-300/25"}`}>
+            <span className={`h-2 w-2 rounded-full ${enabled ? "bg-amber-700" : "bg-sky-400"}`} />
             {enabled ? "SANDBOX TEST ACTIVE" : "NORMAL PAYMENT MODE"}
           </span>
         </div>

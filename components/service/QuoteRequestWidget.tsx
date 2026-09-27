@@ -121,15 +121,15 @@ export default function QuoteRequestWidget({
 
   if (step === "submitted") {
     return (
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
+      <div className="rounded-2xl border border-sky-200 bg-sky-50 p-6 text-center">
         <span className="mb-3 block text-4xl">✅</span>
-        <p className="text-sm font-bold text-emerald-900">Quote requested</p>
-        <p className="mt-1 text-xs leading-relaxed text-emerald-700">
+        <p className="text-sm font-bold text-sky-900">Quote requested</p>
+        <p className="mt-1 text-xs leading-relaxed text-sky-700">
           The provider will respond with a price. You&apos;ll be notified.
         </p>
         <Link
           href="/my-requests"
-          className="mt-4 inline-block text-xs font-semibold text-emerald-700 hover:underline"
+          className="mt-4 inline-block text-xs font-semibold text-sky-700 hover:underline"
         >
           View my requests →
         </Link>

@@ -164,7 +164,7 @@ export default function OnboardingStudio({
             {steps.map((item, index) => (
               <li
                 key={item.name}
-                className={`rounded-xl p-3 text-center ${step === index ? "bg-[#1d4547] text-white" : step > index ? "bg-[#e9f3ee] text-[#3d7158]" : "bg-[#f1f4f4] text-[#819197]"}`}
+                className={`rounded-xl p-3 text-center ${step === index ? "bg-[#174766] text-white" : step > index ? "bg-[#e9eff3] text-[#3d5e71]" : "bg-[#f0f3f5] text-[#819197]"}`}
               >
                 <span className="mx-auto mb-2 flex h-6 items-center justify-center">
                   {step > index ? <Check size={18} /> : <item.icon size={18} />}
@@ -445,7 +445,7 @@ export default function OnboardingStudio({
               </div>
               <div className="max-h-80 overflow-auto rounded-xl border border-zinc-200">
                 <table className="w-full min-w-[650px] text-left text-xs">
-                  <thead className="sticky top-0 bg-[#eef4f3]">
+                  <thead className="sticky top-0 bg-[#eef2f4]">
                     <tr>
                       {[
                         "Row",
@@ -538,7 +538,7 @@ export default function OnboardingStudio({
             </div>
           ))}
           {result.credentials.length > 0 && (
-            <div className="rounded-xl bg-[#f3f7f6] p-4">
+            <div className="rounded-xl bg-[#f3f6f7] p-4">
               <button
                 className="admin-button"
                 type="button"

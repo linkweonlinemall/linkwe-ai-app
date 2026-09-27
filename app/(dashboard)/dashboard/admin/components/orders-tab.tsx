@@ -41,13 +41,13 @@ const STATUS_CONFIG: Record<
   PAID: { label: "Order placed", color: "#1A7FB5", bg: "#EFF8FF" },
   PROCESSING: { label: "Processing", color: "#E8820C", bg: "#FFF7ED" },
   SHIPPED: { label: "Shipped", color: "#1A7FB5", bg: "#EFF8FF" },
-  DELIVERED: { label: "Delivered", color: "#1B8C5A", bg: "#F0FDF4" },
+  DELIVERED: { label: "Delivered", color: "#1d638a", bg: "#f1f8fc" },
   CUSTOMER_RECEIVED: {
     label: "Customer Received",
-    color: "#059669",
-    bg: "#F0FDF4",
+    color: "#1b5c80",
+    bg: "#f1f8fc",
   },
-  COMPLETED: { label: "Completed", color: "#1B8C5A", bg: "#F0FDF4" },
+  COMPLETED: { label: "Completed", color: "#1d638a", bg: "#f1f8fc" },
   CANCELLED: { label: "Cancelled", color: "#DC2626", bg: "#FEF2F2" },
   REFUNDED: { label: "Refunded", color: "#DC2626", bg: "#FEF2F2" },
 };
@@ -106,11 +106,11 @@ function splitStatusPill(status: string): { color: string; bg: string } {
       "BUNDLED_FOR_DISPATCH",
     ].includes(status)
   )
-    return { color: "#1B8C5A", bg: "#F0FDF4" };
+    return { color: "#1d638a", bg: "#f1f8fc" };
   if (["SHIPPED", "OUT_FOR_DELIVERY", "DISPATCHED"].includes(status))
     return { color: "#1D4ED8", bg: "#EFF6FF" };
   if (["DELIVERED", "COMPLETED"].includes(status))
-    return { color: "#1B8C5A", bg: "#F0FDF4" };
+    return { color: "#1d638a", bg: "#f1f8fc" };
   if (status === "CANCELLED") return { color: "#D4450A", bg: "#FEF0EC" };
   return { color: "#71717a", bg: "#f4f4f5" };
 }
@@ -191,7 +191,7 @@ function SplitStoreFulfillmentCard({
             Complete & release payout
           </button>
         ) : showPaidOut ? (
-          <p className="shrink-0 text-sm font-semibold text-emerald-700">
+          <p className="shrink-0 text-sm font-semibold text-sky-700">
             Paid out ✓
           </p>
         ) : null}
@@ -318,18 +318,18 @@ function makeRowItem(order: Order, isDone: boolean): RowMeta {
       : isMotion
         ? "#1A7FB5"
         : DELIVERED_GROUP_STATUSES.has(order.status)
-          ? "#1B8C5A"
+          ? "#1d638a"
           : "#E8820C";
 
   const pillColor =
     recvd === total && total > 0
-      ? "#1B8C5A"
+      ? "#1d638a"
       : recvd > 0
         ? "#E8820C"
         : "#1A7FB5";
   const pillBg =
     recvd === total && total > 0
-      ? "#F0FDF4"
+      ? "#f1f8fc"
       : recvd > 0
         ? "#FFF7ED"
         : "#EFF8FF";
@@ -347,7 +347,7 @@ function makeRowItem(order: Order, isDone: boolean): RowMeta {
     : order.status === "SHIPPED"
       ? { text: "In transit", color: "#1A7FB5" }
       : order.status === "DELIVERED"
-        ? { text: "Delivered", color: "#1B8C5A" }
+        ? { text: "Delivered", color: "#1d638a" }
         : stale
           ? { text: `Waiting ${staleAge(order)}`, color: "#D4450A" }
           : pending === total
@@ -541,8 +541,8 @@ export default function OrdersTab() {
     tableItems.push({
       kind: "header",
       label: "Delivered",
-      color: "#1B8C5A",
-      bg: "#F0FDF4",
+      color: "#1d638a",
+      bg: "#f1f8fc",
       count: deliveredGroup.length,
     });
     deliveredGroup.forEach((o) => tableItems.push(makeRowItem(o, false)));
@@ -630,7 +630,7 @@ export default function OrdersTab() {
                 {cleaning ? "Cleaning..." : "Clean abandoned"}
               </button>
               {cleanedCount !== null ? (
-                <span className="text-xs font-medium text-emerald-600">
+                <span className="text-xs font-medium text-sky-600">
                   ✓ {cleanedCount} removed
                 </span>
               ) : null}
@@ -667,7 +667,7 @@ export default function OrdersTab() {
       )}
       <nav
         aria-label="Order pages"
-        className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#dfe8e6] bg-white p-3"
+        className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#dde5ea] bg-white p-3"
       >
         <p className="admin-muted">
           Page {page} · {loading ? "Loading…" : `${orders.length} orders shown`}{" "}
@@ -803,7 +803,7 @@ export default function OrdersTab() {
                 }
               }}
               className="rounded-lg px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
-              style={{ backgroundColor: "#059669" }}
+              style={{ backgroundColor: "#1b5c80" }}
             >
               Complete all delivered ({deliveredSplitCount})
             </button>

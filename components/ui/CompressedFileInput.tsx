@@ -178,7 +178,7 @@ export default function CompressedFileInput({
             fileStatuses.map((f, i) => {
               if (f.status.state === "done") {
                 return (
-                  <p key={i} className="flex items-center gap-1.5 text-xs text-emerald-600">
+                  <p key={i} className="flex items-center gap-1.5 text-xs text-sky-600">
                     <span aria-hidden className="shrink-0 font-semibold">✓</span>
                     <span className="truncate">{f.name}</span>
                   </p>

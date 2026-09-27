@@ -1323,6 +1323,7 @@ enum CustomerSubscriptionStatus {
 
 enum VendorSubscriptionPlan {
   STARTER
+  SERVICES
   GROWTH
   PRO
 }
@@ -1688,6 +1689,9 @@ enum RefundPolicyType {
 }
 
 model Product {
+  serviceInclusions String?
+  serviceRequirements String?
+  serviceDeliverables String?
   id      String @id @default(cuid())
   storeId String
   store   Store  @relation(fields: [storeId], references: [id])
@@ -2770,4 +2774,30 @@ model StoreCoupon {
   @@unique([storeId, code])
   @@index([storeId, active])
   @@map("store_coupons")
+}
+
+model VendorSupportTicket {
+  id          String   @id @default(cuid())
+  storeId     String
+  subject     String
+  category    String
+  priority    String   @default("NORMAL")
+  status      String   @default("OPEN")
+  reference   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  messages    VendorSupportMessage[]
+  @@index([storeId, updatedAt])
+  @@index([status, updatedAt])
+}
+
+model VendorSupportMessage {
+  id          String   @id @default(cuid())
+  ticketId    String
+  authorId    String
+  authorRole  String
+  body        String
+  createdAt   DateTime @default(now())
+  ticket      VendorSupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  @@index([ticketId, createdAt])
 }

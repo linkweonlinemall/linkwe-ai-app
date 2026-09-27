@@ -43,7 +43,7 @@ async function targetIsClosed(attempt: PaymentAttempt): Promise<boolean> {
   if (attempt.purpose === "VENDOR_SUBSCRIPTION") {
     const data = attempt.providerData as { targetPlan?: string } | null;
     const targetPlan = data?.targetPlan;
-    if (targetPlan !== "GROWTH" && targetPlan !== "PRO") return true;
+    if (targetPlan !== "SERVICES" && targetPlan !== "GROWTH" && targetPlan !== "PRO") return true;
     const store = await prisma.store.findUnique({
       where: { id: attempt.targetId },
       select: { ownerId: true, subscriptionPlan: true },
@@ -52,7 +52,7 @@ async function targetIsClosed(attempt: PaymentAttempt): Promise<boolean> {
       !store ||
       store.ownerId !== attempt.userId ||
       attempt.amountMinor !== PLAN_PRICE_MINOR[targetPlan] ||
-      (store.subscriptionPlan === "PRO" && targetPlan === "GROWTH")
+      (PLAN_PRICE_MINOR[targetPlan] < PLAN_PRICE_MINOR[store.subscriptionPlan])
     );
   }
 

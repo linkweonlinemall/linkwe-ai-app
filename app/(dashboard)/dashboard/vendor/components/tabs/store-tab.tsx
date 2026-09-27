@@ -171,7 +171,7 @@ export default function StoreTab({
           {completenessItems.map((item, index) => (
             <li key={`store-profile-complete-${index}`} className="flex items-center justify-between text-sm">
               <span className="flex items-center gap-2">
-                <span className={item.done ? "text-emerald-500" : "text-zinc-300"}>
+                <span className={item.done ? "text-sky-500" : "text-zinc-300"}>
                   {item.done ? "✓" : "○"}
                 </span>
                 <span className={item.done ? "text-zinc-700" : "text-zinc-400"}>

@@ -1,7 +1,7 @@
 .card {
-  --tropic: #45d5bb;
-  --tropic-light: #bcf5dd;
-  --tropic-ink: #164f46;
+  --tropic: #45a1d5;
+  --tropic-light: #bfe0f2;
+  --tropic-ink: #174766;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -53,7 +53,7 @@
   pointer-events: none;
 }
 .identity { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-top: -29px; }
-.logo { display: grid; place-items: center; flex: none; width: 76px; height: 76px; padding: 5px; overflow: hidden; border: 1px solid #163b4510; border-radius: 21px; background: #fffefa; box-shadow: 0 7px 15px #123f3820; transform: rotate(-4deg); transition: transform .3s ease; }
+.logo { display: grid; place-items: center; flex: none; width: 76px; height: 76px; padding: 5px; overflow: hidden; border: 1px solid #163b4510; border-radius: 21px; background: #fffefa; box-shadow: 0 7px 15px #122d3f20; transform: rotate(-4deg); transition: transform .3s ease; }
 .logo img { width: 100%; height: 100%; object-fit: contain; border-radius: 14px; }
 .card:hover .logo, .card:focus-visible .logo { transform: rotate(0); }
 .region { display: inline-flex; align-items: center; gap: 5px; min-width: 0; margin-bottom: 4px; padding: 6px 9px; border: 1px solid #ffffff60; border-radius: 100px; background: #ffffff45; color: var(--tropic-ink); font-size: 11px; font-weight: 500; line-height: 1.4; }

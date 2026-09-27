@@ -26,6 +26,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
   const dashboard = user ? getRoleDashboardPath(user.role) : undefined;
   const label = catalog.options.categories.find(c => c.value === query.category)?.label ?? PRODUCT_CATEGORIES.find(c => c.value === query.category)?.label ?? categoryLabel(query.category);
   const chips = [
+    ...(query.fulfilment ? [{key:"fulfilment",label:query.fulfilment === "delivery" ? "Delivery available" : query.fulfilment === "pickup" ? "Store pickup" : "Digital downloads"}] : []),
     ...(query.q ? [{ key:"q", label:`Search: ${query.q}` }] : []), ...(query.category ? [{key:"category",label}] : []),
     ...(query.region ? [{key:"region",label:getRegionLabel(query.region)}] : []), ...(query.minPrice !== undefined ? [{key:"minPrice",label:`From TTD ${query.minPrice}`}] : []), ...(query.maxPrice !== undefined ? [{key:"maxPrice",label:`Up to TTD ${query.maxPrice}`}] : []),
     ...(query.inStock ? [{key:"inStock",label:"In stock"}] : []), ...["condition","brand","colour","size"].flatMap(key => { const value=query[key as "condition"|"brand"|"colour"|"size"]; return value ? [{key,label:key === "condition" ? categoryLabel(value.toLowerCase()) : `${categoryLabel(key)}: ${value}`}] : []; }),

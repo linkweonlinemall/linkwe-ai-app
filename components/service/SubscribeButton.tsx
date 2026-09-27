@@ -172,7 +172,7 @@ export default function SubscribeButton({
           </>
         ) : (
           <>
-            <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center text-sm font-medium text-emerald-800">
+            <p className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-center text-sm font-medium text-sky-800">
               You have access through {periodEndLabel}. Renew from My subscriptions near the end date.
             </p>
             <button
@@ -228,7 +228,7 @@ export default function SubscribeButton({
   return (
     <div className="flex flex-col gap-2">
       <CouponInput kind="service" id={productId} onChange={setCoupon} disabled={loading} subscription/>
-      {coupon&&<p className="text-center text-sm font-bold text-emerald-800">Due now: TTD {(coupon.totalMinor/100).toFixed(2)}</p>}
+      {coupon&&<p className="text-center text-sm font-bold text-sky-800">Due now: TTD {(coupon.totalMinor/100).toFixed(2)}</p>}
       <button
         type="button"
         disabled={loading}

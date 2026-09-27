@@ -1,5 +1,6 @@
 "use server";
 
+import { sellableStoreWhere } from "@/lib/store/sellable-store";
 import { revalidatePath } from "next/cache";
 import { getApprovedPartnerContent } from "@/app/actions/cross-store";
 import { getSession } from "@/lib/auth/session";
@@ -97,9 +98,9 @@ const postInclude = (userId?: string) => ({
   _count: { select: { likes: true, comments: true } },
 });
 
-export type TimelineSearchOptions = { query?: string; type?: string; photos?: boolean; scope?: "following" | "all" };
+export type TimelineSearchOptions = { query?: string; type?: string; photos?: boolean; scope?: "following" | "all"; cursor?: string };
 
-const timelinePlanWhere: Prisma.StoreWhereInput = { subscriptionPlan: { in: ["GROWTH", "PRO"] }, subscriptionStatus: "ACTIVE" };
+const timelinePlanWhere: Prisma.StoreWhereInput = { ...sellableStoreWhere(), subscriptionPlan: { in: ["GROWTH", "PRO"] }, subscriptionStatus: "ACTIVE" };
 
 function normalizeSearchTags(values: string[]) {
   return [...new Set(values.flatMap((value) => value.split(",")).map((value) =>
@@ -109,33 +110,44 @@ function normalizeSearchTags(values: string[]) {
 
 export async function getTimelineFeed(options: TimelineSearchOptions = {}) {
   const session = await getSession();
-  if (!session) return { session: null, posts: [] };
+  if (!session) return { session: null, posts: [], hasMore: false, nextCursor: null };
   const followed = await prisma.savedStore.findMany({ where: { userId: session.userId }, select: { storeId: true } });
   const storeIds = followed.map((row) => row.storeId);
   const query = options.query?.trim().slice(0, 120) ?? "";
   const type = ["PRODUCT", "SERVICE", "EVENT", "STORE", "TICKET"].includes(options.type ?? "") ? options.type! : "";
   const scope = options.scope === "all" ? "all" : "following";
-  if (scope === "following" && storeIds.length === 0) return { session, posts: [] };
+  if (scope === "following" && storeIds.length === 0) return { session, posts: [], hasMore: false, nextCursor: null };
   const conditions: Prisma.Sql[] = [Prisma.sql`bp."published" = true`, Prisma.sql`s."subscription_plan" IN ('GROWTH', 'PRO')`, Prisma.sql`s."subscription_status" = 'ACTIVE'`];
+  conditions.push(Prisma.sql`s."status" = 'active' AND EXISTS (SELECT 1 FROM "users" u WHERE u."id" = s."owner_id" AND u."id_verification_status" = 'APPROVED')`);
+  if (options.cursor) {
+    const cursor=await prisma.businessPost.findFirst({where:{id:options.cursor,published:true,store:timelinePlanWhere},select:{id:true,createdAt:true}});
+    // Compare the database timestamps directly to preserve precision and avoid
+    // session-timezone conversion of a timestamp-without-time-zone cursor.
+    if(cursor)conditions.push(Prisma.sql`(bp."created_at", bp."id") < (SELECT "created_at", "id" FROM "business_posts" WHERE "id" = ${cursor.id})`);
+  }
   if (scope === "following") conditions.push(Prisma.sql`bp."store_id" IN (${Prisma.join(storeIds)})`);
   if (query) {
     const pattern = `%${query}%`;
     conditions.push(Prisma.sql`(bp."caption" ILIKE ${pattern} OR s."name" ILIKE ${pattern} OR bp."attachments"::text ILIKE ${pattern} OR array_to_string(bp."search_tags", ' ') ILIKE ${pattern})`);
   }
-  if (type) conditions.push(Prisma.sql`bp."attachments"::text ILIKE ${`%${type}%`}`);
+  if (type) conditions.push(Prisma.sql`EXISTS (
+    SELECT 1 FROM jsonb_array_elements(CASE WHEN jsonb_typeof(bp."attachments") = 'array' THEN bp."attachments" ELSE '[]'::jsonb END) AS attachment
+    WHERE attachment->>'kind' IN (${type}, ${`COLLAB_${type}`})
+  )`);
   if (options.photos) conditions.push(Prisma.sql`cardinality(bp."images") > 0`);
   const matches = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
     SELECT bp."id" FROM "business_posts" bp
     JOIN "stores" s ON s."id" = bp."store_id"
     WHERE ${Prisma.join(conditions, " AND ")}
-    ORDER BY bp."created_at" DESC
-    LIMIT 120
+    ORDER BY bp."created_at" DESC, bp."id" DESC
+    LIMIT 25
   `);
   const posts = await prisma.businessPost.findMany({
-    where: { id: { in: matches.map((row) => row.id) } },
-    orderBy: { createdAt: "desc" }, take: 60, include: postInclude(session.userId),
+    where: { id: { in: matches.map((row) => row.id) }, published:true, store:timelinePlanWhere },
+    orderBy: [{ createdAt: "desc" }, {id:"desc"}], take: 25, include: postInclude(session.userId),
   });
-  return { session, posts };
+  const page=posts.slice(0,24);
+  return { session, posts:page, hasMore:posts.length>24, nextCursor:page.at(-1)?.id??null };
 }
 
 export async function getBusinessPost(postId: string) {

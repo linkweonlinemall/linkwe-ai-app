@@ -59,8 +59,8 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string 
   },
   CONFIRMED: {
     label: "Confirmed",
-    color: "bg-emerald-50 text-emerald-700 border-emerald-100",
-    dot: "bg-emerald-500",
+    color: "bg-sky-50 text-sky-700 border-sky-100",
+    dot: "bg-sky-500",
   },
   CANCELLED: {
     label: "Cancelled",
@@ -281,8 +281,8 @@ export default function VendorBookingsClient({
           {
             label: "Upcoming",
             value: stats.upcoming,
-            color: "text-emerald-600",
-            bg: "bg-emerald-50 border-emerald-100",
+            color: "text-sky-600",
+            bg: "bg-sky-50 border-sky-100",
           },
           {
             label: "Completed",
@@ -359,7 +359,7 @@ export default function VendorBookingsClient({
               type="button"
               disabled={bulkLoading}
               onClick={() => void handleBulkStatus("CONFIRMED")}
-              className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+              className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-sky-700 disabled:opacity-50"
             >
               ✓ Confirm all
             </button>
@@ -733,7 +733,7 @@ export default function VendorBookingsClient({
                             type="button"
                             disabled={loading}
                             onClick={() => void handleStatusUpdate(booking.id, "CONFIRMED")}
-                            className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                            className="rounded-xl bg-sky-600 px-4 py-2 text-xs font-bold text-white hover:bg-sky-700 disabled:opacity-50"
                           >
                             ✓ Confirm
                           </button>

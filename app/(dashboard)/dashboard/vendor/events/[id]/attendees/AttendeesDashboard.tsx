@@ -51,7 +51,7 @@ function statusBadge(status: AttendeeTicketRow["status"]) {
     case "VALID":
       return {
         label: "Valid",
-        className: "bg-emerald-50 text-emerald-800 ring-emerald-600/20",
+        className: "bg-sky-50 text-sky-800 ring-sky-600/20",
       };
     case "USED":
       return {
@@ -545,7 +545,7 @@ function ExternalSoldRow({
       </div>
       {error ? <p className="mt-2 text-xs font-medium text-red-600">{error}</p> : null}
       {saved ? (
-        <p className="mt-2 text-xs font-medium text-emerald-700">Saved</p>
+        <p className="mt-2 text-xs font-medium text-sky-700">Saved</p>
       ) : null}
     </li>
   );

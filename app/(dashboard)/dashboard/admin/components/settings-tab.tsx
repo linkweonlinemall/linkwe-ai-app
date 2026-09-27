@@ -40,31 +40,38 @@ export default function SettingsTab() {
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-zinc-900">Subscription Plans</h3>
           <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
-            Phase E
+            Current plans
           </span>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
             {
               name: "Starter",
               price: "Free",
               commission: "15% products · 8% services",
-              prompts: "5 lifetime",
+              capacity: "Welcome access · one-time gift",
               color: "#A1A1AA",
+            },
+            {
+              name: "Services",
+              price: "TTD 100/month",
+              commission: "15% products · 8% services",
+              capacity: "Welcome access · one-time gift",
+              color: "#0e4362",
             },
             {
               name: "Growth",
               price: "TTD 300/month",
               commission: "5% products · 0% services",
-              prompts: "300/month",
+              capacity: "Expanded monthly capacity",
               color: "#D4450A",
             },
             {
               name: "Pro",
               price: "TTD 500/month",
               commission: "0% products · 0% services",
-              prompts: "1,000/month",
-              color: "#1B8C5A",
+              capacity: "Maximum monthly capacity",
+              color: "#1d638a",
             },
           ].map((plan) => (
             <div key={plan.name} className="rounded-xl border-2 p-4" style={{ borderColor: plan.color }}>
@@ -77,7 +84,7 @@ export default function SettingsTab() {
                   Commission: <span className="font-semibold text-zinc-900">{plan.commission}</span>
                 </p>
                 <p className="text-xs text-zinc-500">
-                  AI Prompts: <span className="font-semibold text-zinc-900">{plan.prompts}</span>
+                  Rex access: <span className="font-semibold text-zinc-900">{plan.capacity}</span>
                 </p>
               </div>
             </div>
@@ -137,7 +144,7 @@ export default function SettingsTab() {
       </div>
 
       <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-6">
-        <h3 className="mb-3 text-sm font-semibold text-zinc-500">Coming in Phase E</h3>
+        <h3 className="mb-3 text-sm font-semibold text-zinc-500">Coming in Current plans</h3>
         <div className="grid grid-cols-3 gap-3">
           {[
             "Edit commission rates",

@@ -38,6 +38,7 @@ export async function GET(
       store: { ownerId: session.userId },
     },
     include: {
+      ledgerEntries: { where: { entryType: "CREDIT_ORDER_SETTLEMENT", ledgerEntryType: { in: ["ORDER_REVENUE", "ORDER_AUTO_COMPLETE"] } }, orderBy: { createdAt: "desc" }, take: 1, select: { grossMinor: true, commissionMinor: true, netMinor: true } },
       store: {
         select: {
           name: true,
@@ -101,6 +102,7 @@ export async function GET(
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
+      "Cache-Control": "private, no-store",
       "Content-Disposition": `attachment; filename="invoice-${refSlug}.pdf"`,
     },
   });

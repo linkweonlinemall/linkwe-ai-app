@@ -38,3 +38,5 @@ Local preview fixture scripts are guarded to `localhost`/`linkwe_dev`: `customer
 ## Release notes
 
 No schema changes or new environment variables. The release contains customer and Service Desk changes on top of the last deployed vendor release; earlier published work is retained. Existing fulfilment still uses shared product stock; this task does not add a new variant-inventory schema or change payment/refund policy.
+
+Published 25 September 2026 in commit `9e7f9d771953018eccff115283de01ff49e32bb6`. See `customer-service-desk-release.md`.

@@ -14,4 +14,10 @@ Local verification covered all 21 navigation destinations, product/service Order
 
 Release validation passed: scoped ESLint, git whitespace check, and the full optimized Next.js production build with TypeScript and all 108 static pages. The compiled release was then run against the local fixture database; Overview, Orders, Requests, Subscribers and Shipping rendered successfully. No payment, image-generation or customer-data mutations were performed during verification.
 
-Deployment outcome is recorded after completion in the working project release notes.
+## Published and verified
+
+Commit `9052a18a80e6cb73c819b531087ab726821061cb` was pushed to `origin/main`. Vercel deployment `dpl_EDxpzcxPVqKHKLw5Gm6zgZCjW8Ep` reached Ready in 1m 17s and was assigned to `www.linkweonlinemall.com`. The GitHub Vercel status is successful.
+
+Deployment: https://vercel.com/link-we-online-mall-s-projects/linkwe-ai-app/EDxpzcxPVqKHKLw5Gm6zgZCjW8Ep
+
+The live vendor route correctly redirected the signed-in Admin account to the Admin dashboard, which loaded successfully. No production vendor session was available for authenticated vendor UI verification; the compiled vendor dashboard and repaired routes passed against the local vendor fixture before release. No real customer data, fulfilment states, payments or Photo Studio credits were changed during verification. The temporary compiled test server was stopped.

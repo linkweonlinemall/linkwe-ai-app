@@ -113,12 +113,12 @@ export default function OpeningHoursEditor({ initialHours }: Props) {
                     onClick={() => updateDay(day, { allDay: !d.allDay })}
                     className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all ${
                       d.allDay
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        ? "border-sky-200 bg-sky-50 text-sky-700"
                         : "border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50"
                     }`}
                   >
                     <span
-                      className={`h-3 w-3 rounded-full transition-colors ${d.allDay ? "bg-emerald-500" : "bg-zinc-300"}`}
+                      className={`h-3 w-3 rounded-full transition-colors ${d.allDay ? "bg-sky-500" : "bg-zinc-300"}`}
                     />
                     24 hours
                   </button>
@@ -205,7 +205,7 @@ export default function OpeningHoursEditor({ initialHours }: Props) {
             ) : null}
 
             {d.allDay && !d.closed ? (
-              <p className="text-xs font-medium text-emerald-600 sm:ml-32">Open 24 hours</p>
+              <p className="text-xs font-medium text-sky-600 sm:ml-32">Open 24 hours</p>
             ) : null}
 
             <input type="hidden" name={`hours_${day}_closed`} value={d.closed ? "on" : ""} />

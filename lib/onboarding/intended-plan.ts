@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 export const INTENDED_PLAN_COOKIE_NAME = "lw_intended_plan";
 export const PLAN_PICKER_CONFIRMED_COOKIE_NAME = "lw_plan_picker_confirmed";
 
-export type IntendedPlan = "STARTER" | "GROWTH" | "PRO";
+export type IntendedPlan = "STARTER" | "SERVICES" | "GROWTH" | "PRO";
 
 const MAX_AGE_SECONDS = 60 * 60 * 24;
 
@@ -18,6 +18,7 @@ export const intendedPlanCookieOptions = {
 /** Normalize ?plan= query param (case-insensitive). Unknown values → null. */
 export function parseIntendedPlanParam(raw: string | null | undefined): IntendedPlan | null {
   const v = String(raw ?? "").trim().toLowerCase();
+  if (v === "services") return "SERVICES";
   if (v === "starter") return "STARTER";
   if (v === "growth") return "GROWTH";
   if (v === "pro") return "PRO";
@@ -25,7 +26,7 @@ export function parseIntendedPlanParam(raw: string | null | undefined): Intended
 }
 
 function parseStoredIntendedPlan(value: string | undefined): IntendedPlan | null {
-  if (value === "STARTER" || value === "GROWTH" || value === "PRO") return value;
+  if (value === "SERVICES" || value === "STARTER" || value === "GROWTH" || value === "PRO") return value;
   return parseIntendedPlanParam(value);
 }
 

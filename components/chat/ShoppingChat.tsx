@@ -457,7 +457,7 @@ function ProductCard({ product }: { product: ChatProduct }) {
             disabled={loading}
             className="mt-1 w-full rounded-lg py-1.5 text-xs font-semibold text-white transition-all disabled:opacity-60"
             style={{
-              backgroundColor: added ? "#15803D" : "var(--scarlet)",
+              backgroundColor: added ? "#1a587b" : "var(--scarlet)",
             }}
           >
             {loading ? "…" : added ? "✓ Added" : "Add to Cart"}

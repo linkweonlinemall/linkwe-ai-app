@@ -1,3 +1,4 @@
+import {categoryFacets} from "@/lib/catalog/categories";
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { sellableStoreWhere } from "@/lib/store/sellable-store";
@@ -15,7 +16,7 @@ export async function getServiceDirectory(query:DirectoryQuery){
   }
   const categoryCounts=new Map<string,number>();
   for(const service of services)if(service.category)categoryCounts.set(service.category,(categoryCounts.get(service.category)??0)+1);
-  const options={categories:[...categoryCounts].map(([value,count])=>({value,count,label:directoryCategory(value)})).sort((a,b)=>b.count-a.count),regions:[...new Set(services.map(s=>s.store.region).filter((s):s is string=>!!s))].map(value=>({value,label:getRegionLabel(value)})).sort((a,b)=>a.label.localeCompare(b.label))};
+  const options={categories:categoryFacets("services",categoryCounts),regions:[...new Set(services.map(s=>s.store.region).filter((s):s is string=>!!s))].map(value=>({value,label:getRegionLabel(value)})).sort((a,b)=>a.label.localeCompare(b.label))};
   const photographed=services.filter(s=>s.images[0]);
   const seen=new Set<string>();
   const diverse=photographed.filter(s=>{if(seen.has(s.store.slug))return false;seen.add(s.store.slug);return true;});

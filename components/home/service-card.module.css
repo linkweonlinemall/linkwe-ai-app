@@ -1,7 +1,7 @@
 .card {
   --card-base: #164c70;
   --card-deep: #103c59;
-  --card-accent: #a7ede0;
+  --card-accent: #a8d4ec;
   position: relative;
   display: flex;
   flex-direction: column;

@@ -1,6 +1,6 @@
 # Storefront redesign
 
-Status: release preparation authorized on 20 September 2026. The production release is isolated from unrelated work and does not change the database schema.
+Status: published and verified on 20 September 2026. The production release was isolated from unrelated work and did not change the database schema.
 
 ## Preview
 
@@ -60,3 +60,12 @@ Checked the public storefront against the Store schema and the vendor's store-ed
 Added event discovery and corrected service cards to distinguish call-out fees, starting prices, quote requests, recurring billing intervals, and on-demand availability. Variant products no longer show an incorrect out-of-stock badge based on parent stock.
 
 Owner contact/account credentials, identity-verification documents, payment details and internal subscription fields are private. Customer checkout questions remain in checkout. Optional public information is shown when supplied by the vendor; missing information is not invented. The development snapshot routes/data are excluded from the production release.
+
+## Production release
+
+- Commit: `8a598f18d873b8d0966c012ee089366177166de1`, pushed to `main` from `/private/tmp/linkwe-storefront-release`.
+- Vercel: https://vercel.com/link-we-online-mall-s-projects/linkwe-ai-app/GB68aFWwPr7gNp9eTxnXzYndJfVr — successful production deployment.
+- Isolated production build, TypeScript, targeted ESLint and whitespace checks passed. Focused assertions passed for quote/subscription prices, service location, valid/invalid map coordinates, address fallback, and contact links.
+- Live UDN Media: new design, three services with quote labels and service locations, full nine-image gallery, saved map pin/directions, seven days of hours, public contact links and full store information confirmed.
+- Live Speak Loud: 66 products, published Aloha & Mimosas event with correct date and ticket link, Events tab, review summary and existing review confirmed.
+- No checkout, follow, wishlist, message, ticket-purchase or review submission was made during verification.

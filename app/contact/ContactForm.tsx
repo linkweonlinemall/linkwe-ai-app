@@ -55,10 +55,10 @@ export default function ContactForm({ userEmail = "", userName = "" }: Props) {
 
   if (submitted) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 p-12 text-center">
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-sky-200 bg-sky-50 p-12 text-center">
         <span className="mb-4 text-5xl">✅</span>
-        <h2 className="text-lg font-bold text-emerald-900">Message sent!</h2>
-        <p className="mt-2 text-sm text-emerald-700">
+        <h2 className="text-lg font-bold text-sky-900">Message sent!</h2>
+        <p className="mt-2 text-sm text-sky-700">
           Thank you for reaching out. We will get back to you within 24 hours at{" "}
           <strong>{email}</strong>.
         </p>
@@ -69,7 +69,7 @@ export default function ContactForm({ userEmail = "", userName = "" }: Props) {
             setMessage("");
             setTopic("");
           }}
-          className="mt-6 text-xs font-semibold text-emerald-700 hover:underline"
+          className="mt-6 text-xs font-semibold text-sky-700 hover:underline"
         >
           Send another message
         </button>

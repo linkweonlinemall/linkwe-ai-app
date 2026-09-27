@@ -37,7 +37,7 @@ export default function GoLiveButton({ storeId }: { storeId: string }) {
         type="button"
         disabled={pending}
         onClick={() => void handleClick()}
-        className="inline-flex items-center justify-center rounded-lg bg-emerald-700 px-3 py-1.5 text-[11px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+        className="inline-flex items-center justify-center rounded-lg bg-sky-700 px-3 py-1.5 text-[11px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
       >
         {pending ? "Publishing…" : "Go live"}
       </button>

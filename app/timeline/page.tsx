@@ -19,5 +19,5 @@ export default async function TimelinePage({ searchParams }: { searchParams: Pro
     getNavUnreadCount(),
   ]);
   const dashboardHref = user ? getRoleDashboardPath(user.role) : "/dashboard";
-  return <div className="min-h-screen bg-[#F7F5F2] pb-mobile-public"><PublicNav user={user ? { name: user.fullName, href: dashboardHref } : null} dashboardHref={dashboardHref} unreadCount={unreadCount} /><TimelineClient posts={JSON.parse(JSON.stringify(data.posts))} search={{ query, type, scope, photos }} /></div>;
+  return <div className="min-h-screen bg-[#F7F5F2] pb-mobile-public"><PublicNav user={user ? { name: user.fullName, href: dashboardHref } : null} dashboardHref={dashboardHref} unreadCount={unreadCount} /><TimelineClient initialHasMore={data.hasMore} initialCursor={data.nextCursor} posts={JSON.parse(JSON.stringify(data.posts))} search={{ query, type, scope, photos }} /></div>;
 }

@@ -73,7 +73,7 @@ export default async function TicketEditor({ params, ticketId, addTicket }: Prop
     <div data-creation-form="true">
       <div className="mb-5 rounded-2xl border border-amber-100 bg-amber-50/70 px-5 py-4">
         <p className="text-xs font-semibold uppercase tracking-wider text-amber-800">Your event</p>
-        <h2 className="mt-1 text-xl font-bold text-[#173c39]">{event.title}</h2>
+        <h2 className="mt-1 text-xl font-bold text-[#174766]">{event.title}</h2>
         <p className="mt-1 text-sm text-zinc-500">{formatEventDateLong(event.startDate)} · {event.status.toLowerCase()}</p>
       </div>
       <div data-creation-heading="true" className="mb-6">
@@ -112,13 +112,13 @@ export default async function TicketEditor({ params, ticketId, addTicket }: Prop
             style={{
               backgroundColor:
                 event.status === "PUBLISHED"
-                  ? "#DCFCE7"
+                  ? "#e0eff8"
                   : event.status === "CANCELLED"
                     ? "#FEE2E2"
                     : "#F4F4F5",
               color:
                 event.status === "PUBLISHED"
-                  ? "#15803D"
+                  ? "#1a587b"
                   : event.status === "CANCELLED"
                     ? "#DC2626"
                     : "var(--text-muted)",

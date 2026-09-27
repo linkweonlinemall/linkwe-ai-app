@@ -174,7 +174,7 @@ export default async function ServicesPage({
                 <img src={row.images[0]} alt={row.name} loading="lazy" />
               ) : (
                 <div className="flex h-full items-center justify-center">
-                  <Sparkles size={40} className="text-[#83a89a]" />
+                  <Sparkles size={40} className="text-[#7e9cad]" />
                 </div>
               )}
               <span className="admin-badge">
@@ -187,7 +187,7 @@ export default async function ServicesPage({
             </div>
             <div className="admin-service-body">
               <Link
-                className="text-[10px] font-semibold uppercase tracking-wider text-[#6d8887]"
+                className="text-[10px] font-semibold uppercase tracking-wider text-[#608295]"
                 href={`/dashboard/admin/records/store/${row.store.id}`}
               >
                 {row.store.name}

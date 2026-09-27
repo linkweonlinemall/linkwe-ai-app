@@ -45,7 +45,7 @@ type Props = {
 function statusBadgeClass(status: AdminProductStatus) {
   switch (status) {
     case "active":
-      return "bg-emerald-50 text-emerald-800 ring-emerald-700/20";
+      return "bg-sky-50 text-sky-800 ring-sky-700/20";
     case "archived":
       return "bg-amber-50 text-amber-800 ring-amber-700/20";
     case "draft":
@@ -244,7 +244,7 @@ export default function AdminProductsClient({
             type="button"
             disabled={pending || selected.size === 0}
             onClick={() => void runBulk("active")}
-            className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-900 disabled:opacity-40"
+            className="rounded border border-sky-200 bg-sky-50 px-2 py-1 text-xs font-medium text-sky-900 disabled:opacity-40"
           >
             Approve (publish)
           </button>

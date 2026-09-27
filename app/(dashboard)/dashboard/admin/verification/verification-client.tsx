@@ -56,9 +56,9 @@ const STORE_STATUS_CONFIG: Record<
 > = {
   ACTIVE: {
     label: "Active",
-    bg: "#F0FDF4",
-    color: "#1B8C5A",
-    border: "#BBF7D0",
+    bg: "#f1f8fc",
+    color: "#1d638a",
+    border: "#c0e0f2",
   },
   PENDING_APPROVAL: {
     label: "Pending approval",
@@ -442,7 +442,7 @@ export default function VerificationClient({ pending, reviewed }: Props) {
         .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; 
           font-size: 11px; font-weight: bold; margin-bottom: 8px; }
         .badge-pending { background: #fef3c7; color: #92400e; }
-        .badge-approved { background: #d1fae5; color: #065f46; }
+        .badge-approved { background: #d5eaf6; color: #174766; }
         .badge-rejected { background: #fee2e2; color: #991b1b; }
         .details { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; 
           font-size: 13px; margin-top: 8px; }
@@ -1327,7 +1327,7 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                                       <span
                                         className={`rounded-full px-2 py-0.5 text-[9px] font-medium ${
                                           p.isPublished
-                                            ? "bg-emerald-50 text-emerald-600"
+                                            ? "bg-sky-50 text-sky-600"
                                             : "bg-zinc-100 text-zinc-500"
                                         }`}
                                       >
@@ -1399,7 +1399,7 @@ export default function VerificationClient({ pending, reviewed }: Props) {
                   <span
                     className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${
                       vendor.idVerificationStatus === "APPROVED"
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        ? "border-sky-200 bg-sky-50 text-sky-700"
                         : "border-[#FECFBE] bg-[#FFF1ED] text-[#D4450A]"
                     }`}
                   >

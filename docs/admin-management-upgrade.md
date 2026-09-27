@@ -1,6 +1,6 @@
 # Admin management upgrade
 
-Approved for production by the user on 22 September 2026. This admin-only release is based on production commit `7ba4e61`; the existing production schema, migrations, public marketplace and payment lifecycle are retained.
+Local review only. No deployment or schema migration is part of this change.
 
 ## Staff workflow
 
@@ -15,7 +15,7 @@ Approved for production by the user on 22 September 2026. This admin-only releas
 
 ## Local verification
 
-- Production build and TypeScript validation passed in an isolated checkout using the production Prisma schema. All 23 integration checks also passed in that checkout against loopback-only test data.
+- Production build and TypeScript validation passed.
 - Scoped lint: no errors; three image-optimisation advisories remain for staff previews of vendor media.
 - The local integration suite exercises real database transactions with mocked session/cache adapters. It rejects non-loopback databases and removes its own generated records.
 - Checks cover creation, partial-save preservation, stale-edit rejection, product variation identity, service scheduling/deposits/subscriptions, payment policy, bank profiles, role protection, search, archive filtering, pagination, guided vendor setup, CSV retry and transactional rollback.

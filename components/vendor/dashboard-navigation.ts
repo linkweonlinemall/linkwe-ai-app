@@ -20,6 +20,7 @@ export const workspaceGroups: { label: string; items: WorkspaceLink[] }[] = [
     { label: "Messages", path: "/messages", description: "Conversations with customers", icon: MessageCircle },
   ] },
   { label: "Create & sell", items: [
+    { label: "Services", path: "/services", description: "Set up services, offers and customer journeys", icon: ConciergeBell },
     { label: "Creation Zone", path: "/creation", description: "Create and manage products, services, events, tickets and coupons", icon: Layers3 },
   ] },
   { label: "Your brand", items: [
@@ -36,6 +37,7 @@ export const workspaceGroups: { label: string; items: WorkspaceLink[] }[] = [
     { label: "Staff & availability", path: "/staff", description: "Team schedules and working hours", icon: Users },
     { label: "Shipping", path: "/shipping", description: "Delivery, pickup and order preparation", icon: Truck },
     { label: "Collaborations", path: "/partners", description: "Partner stores and shared products", icon: Handshake },
+    { label: "Support", path: "/support", description: "Private support tickets and replies from LinkWe", icon: MessageCircle },
     { label: "Settings", path: "/settings", description: "Account and notification preferences", icon: Settings },
   ] },
 ];

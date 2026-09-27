@@ -90,6 +90,8 @@ export async function createService(formData: FormData) {
 
   const name = formData.get("name") as string;
   const description = (formData.get("description") as string) || null;
+  const offerDetails = Object.fromEntries(["serviceInclusions", "serviceRequirements", "serviceDeliverables"].filter(key=>formData.has(key)).map(key=>[key,String(formData.get(key)??"").trim() || null]));
+  if(Object.values(offerDetails).some(value=>value && value.length>1500))return {error:"Keep each customer expectation field within 1,500 characters."};
   const categoryRaw = (formData.get("category") as string) || "";
   const category = categoryRaw.trim() || null;
   const serviceType = formData.get("serviceType") as string;
@@ -106,18 +108,10 @@ export async function createService(formData: FormData) {
   const price =
     serviceType === "QUOTE" && quotePriceType === "FREE_QUOTE"
       ? 0
-      : parseFloat(priceRaw) || 0;
+      : Number(priceRaw);
   const { limits } = getStorePlan(store);
   if (limits.serviceMaxPriceMinor !== null && Math.round(price * 100) > limits.serviceMaxPriceMinor) {
-    return { error: "Starter services are limited to TTD 100. Upgrade to Growth or Pro for higher-priced services." };
-  }
-  if (limits.serviceCap !== null) {
-    const serviceCount = await prisma.product.count({
-      where: { storeId: store.id, isService: true, isArchived: false },
-    });
-    if (serviceCount >= limits.serviceCap) {
-      return { error: `Starter includes up to ${limits.serviceCap} services. Upgrade to create more.` };
-    }
+    return { error: "Starter services are limited to TTD 100. Choose Services, Growth or Pro for higher-priced services." };
   }
   const serviceDuration = formData.get("serviceDuration")
     ? parseInt(formData.get("serviceDuration") as string, 10)
@@ -193,7 +187,7 @@ export async function createService(formData: FormData) {
     ? parseInt(formData.get("maxGroupSize") as string, 10)
     : null;
 
-  if (!name || !serviceType || Number.isNaN(price)) return { error: "Missing required fields" };
+  if (!name || !serviceType || !Number.isFinite(price) || price < 0) return { error: "Missing required fields" };
   if (serviceType === "QUOTE" && !quotePriceType) return { error: "Please choose a quote pricing type." };
   if ((serviceType === "BOOKABLE" || serviceType === "VIRTUAL") && (!serviceDuration || serviceDuration <= 0 || Number.isNaN(serviceDuration))) {
     return { error: "Enter a duration for this bookable service." };
@@ -226,12 +220,25 @@ export async function createService(formData: FormData) {
   const existing = await prisma.product.findUnique({ where: { slug } });
   if (existing) slug = `${slug}-${Date.now()}`;
 
-  await prisma.product.create({
+  const creation = await prisma.$transaction(async (tx) => {
+    // Creating and restoring listings share this store lock, keeping caps reliable
+    // when more than one tab submits at the same time.
+    await tx.$queryRaw`SELECT id FROM stores WHERE id = ${store.id} FOR UPDATE`;
+    const currentStore = await tx.store.findUniqueOrThrow({ where: { id: store.id } });
+    const currentLimits = getStorePlan(currentStore).limits;
+    if (currentLimits.serviceMaxPriceMinor !== null && Math.round(price * 100) > currentLimits.serviceMaxPriceMinor) {
+      return { error: "Your current plan limits services to TTD 100. Choose Services, Growth or Pro for higher-priced services." };
+    }
+    if (currentLimits.serviceCap !== null && await tx.product.count({ where: { storeId: store.id, isService: true, isArchived: false } }) >= currentLimits.serviceCap) {
+      return { error: `Your plan includes up to ${currentLimits.serviceCap} services. Archive an old service or upgrade to create more.` };
+    }
+    await tx.product.create({
     data: {
       storeId: store.id,
       name,
       slug,
       description,
+      ...offerDetails,
       category,
       price,
       isService: true,
@@ -293,6 +300,10 @@ export async function createService(formData: FormData) {
     },
   });
 
+    return { ok: true };
+  });
+  if ("error" in creation) return creation;
+
   revalidatePath("/dashboard/vendor/creation", "layout");
   revalidatePath("/dashboard/vendor/services");
   return { ok: true };
@@ -313,6 +324,8 @@ export async function updateService(id: string, formData: FormData) {
 
   const name = formData.get("name") as string;
   const description = (formData.get("description") as string) || null;
+  const offerDetails = Object.fromEntries(["serviceInclusions", "serviceRequirements", "serviceDeliverables"].filter(key=>formData.has(key)).map(key=>[key,String(formData.get(key)??"").trim() || null]));
+  if(Object.values(offerDetails).some(value=>value && value.length>1500))return {error:"Keep each customer expectation field within 1,500 characters."};
   const categoryRaw = (formData.get("category") as string) || "";
   const category = categoryRaw.trim() || null;
   const serviceType = formData.get("serviceType") as string;
@@ -329,10 +342,10 @@ export async function updateService(id: string, formData: FormData) {
   const price =
     serviceType === "QUOTE" && quotePriceType === "FREE_QUOTE"
       ? 0
-      : parseFloat(priceRaw) || 0;
+      : Number(priceRaw);
   const { limits } = getStorePlan(store);
   if (limits.serviceMaxPriceMinor !== null && Math.round(price * 100) > limits.serviceMaxPriceMinor) {
-    return { error: "Starter services are limited to TTD 100. Upgrade to Growth or Pro for higher-priced services." };
+    return { error: "Starter services are limited to TTD 100. Choose Services, Growth or Pro for higher-priced services." };
   }
   const serviceDuration = formData.get("serviceDuration")
     ? parseInt(formData.get("serviceDuration") as string, 10)
@@ -406,7 +419,7 @@ export async function updateService(id: string, formData: FormData) {
     ? parseInt(formData.get("maxGroupSize") as string, 10)
     : null;
 
-  if (!name || !serviceType || Number.isNaN(price)) return { error: "Missing required fields" };
+  if (!name || !serviceType || !Number.isFinite(price) || price < 0) return { error: "Missing required fields" };
   if (serviceType === "QUOTE" && !quotePriceType) return { error: "Please choose a quote pricing type." };
   if ((serviceType === "BOOKABLE" || serviceType === "VIRTUAL") && (!serviceDuration || serviceDuration <= 0 || Number.isNaN(serviceDuration))) {
     return { error: "Enter a duration for this bookable service." };
@@ -440,6 +453,7 @@ export async function updateService(id: string, formData: FormData) {
     data: {
       name,
       description,
+      ...offerDetails,
       category,
       price,
       serviceType: serviceType as ServiceType,

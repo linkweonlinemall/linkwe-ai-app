@@ -11,7 +11,7 @@ assert.deepEqual(getFulfillmentOptions([pickup,both,digital]),{allDigital:false,
 assert.equal(fulfillmentError([digital],false),null);assert.equal(fulfillmentError([digital],true),null);assert.match(fulfillmentError([delivery,both],false),/pickup/);assert.match(fulfillmentError([pickup,both],true),/delivery/);assert.equal(fulfillmentError([both,digital],false),null);
 console.log('PASS digital, mixed and incompatible cart fulfilment choices');
 const {PUBLIC_PLANS,planDestination}=require('../lib/pricing/catalog.ts');
-assert.equal(PUBLIC_PLANS.find(p=>p.id==='STARTER').rex,'5 complimentary uses, once');
+assert.equal(PUBLIC_PLANS.find(p=>p.id==='STARTER').rex,'Rex welcome access · one-time gift');
 for(const current of [null,'STARTER','GROWTH','PRO'])for(const target of ['STARTER','GROWTH','PRO']){
  const result=planDestination(target,current);
  if(!current)assert.equal(result.href,`/register/business?plan=${target.toLowerCase()}`);

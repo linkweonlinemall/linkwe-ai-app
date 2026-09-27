@@ -59,7 +59,7 @@ export default function AssemblyPanel({
               <div
                 key={so.id}
                 className="h-2.5 w-2.5 rounded-full"
-                style={{ backgroundColor: isPacked ? "#1B8C5A" : "#E4E4E7" }}
+                style={{ backgroundColor: isPacked ? "#1d638a" : "#E4E4E7" }}
                 title={so.store.name}
               />
             );
@@ -75,7 +75,7 @@ export default function AssemblyPanel({
           return (
             <div key={so.id} className="flex items-center gap-4 px-4 py-3">
               {isDispatched ? (
-                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 border-emerald-500 bg-emerald-500">
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 border-sky-500 bg-sky-500">
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
@@ -87,7 +87,7 @@ export default function AssemblyPanel({
                     type="submit"
                     className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors ${
                       isPacked
-                        ? "border-emerald-500 bg-emerald-500 hover:border-emerald-600 hover:bg-emerald-600"
+                        ? "border-sky-500 bg-sky-500 hover:border-sky-600 hover:bg-sky-600"
                         : "border-zinc-300 bg-white hover:border-[#D4450A]"
                     }`}
                     title={isPacked ? "Click to unpack" : "Click to mark as packed"}
@@ -108,7 +108,7 @@ export default function AssemblyPanel({
                 <p className="mt-0.5 text-xs text-zinc-400">
                   {so.referenceNumber ?? so.id.slice(-8)} · {formatTTD(so.subtotalMinor)}
                   {so.packagedAt && isPacked ? (
-                    <span className="ml-2 text-emerald-500">
+                    <span className="ml-2 text-sky-500">
                       Packed at{" "}
                       {new Date(so.packagedAt).toLocaleTimeString("en-TT", {
                         hour: "2-digit",
@@ -119,7 +119,7 @@ export default function AssemblyPanel({
                 </p>
               </div>
 
-              <span className={`shrink-0 text-xs font-medium ${isPacked ? "text-emerald-600" : "text-zinc-400"}`}>
+              <span className={`shrink-0 text-xs font-medium ${isPacked ? "text-sky-600" : "text-zinc-400"}`}>
                 {isPacked ? "✓ Packed" : "Needs packing"}
               </span>
             </div>
@@ -139,7 +139,7 @@ export default function AssemblyPanel({
             type="submit"
             disabled={!allPackaged}
             className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
-            style={{ backgroundColor: allPackaged ? "#1B8C5A" : "#9CA3AF" }}
+            style={{ backgroundColor: allPackaged ? "#1d638a" : "#9CA3AF" }}
           >
             Bundle & Dispatch →
           </button>

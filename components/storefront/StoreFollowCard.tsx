@@ -51,8 +51,8 @@ export default function StoreFollowCard({
     <div className="mb-3.5 rounded-xl bg-[#1C1C1A] p-[18px] text-center">
       {following ? (
         <>
-          <div className="mx-auto mb-2 flex size-10 items-center justify-center rounded-full bg-[#3B6D11]/20">
-            <IconCircleCheck className="size-6 text-[#3B6D11]" stroke={1.75} aria-hidden />
+          <div className="mx-auto mb-2 flex size-10 items-center justify-center rounded-full bg-[#174766]/20">
+            <IconCircleCheck className="size-6 text-[#174766]" stroke={1.75} aria-hidden />
           </div>
           <p className="text-[13px] font-medium text-white">You follow this store</p>
           <button

@@ -213,7 +213,7 @@ export default function PublicNav({
                   </button>
                 </>
               ) : showSignIn ? (
-                <><button type="button" aria-label="Open LinkWe menu" aria-haspopup="dialog" aria-expanded={drawerOpen.value} onClick={drawerOpen.toggle} className={`flex h-9 w-9 items-center justify-center rounded-full ${navIsLight ? "bg-zinc-100 text-[#193c3b]" : "bg-white/10 text-white"}`}><IconMenu2 size={19}/></button><Link
+                <><button type="button" aria-label="Open LinkWe menu" aria-haspopup="dialog" aria-expanded={drawerOpen.value} onClick={drawerOpen.toggle} className={`flex h-9 w-9 items-center justify-center rounded-full ${navIsLight ? "bg-zinc-100 text-[#174766]" : "bg-white/10 text-white"}`}><IconMenu2 size={19}/></button><Link
                   href={loginHref}
                   className="flex h-8 shrink-0 items-center justify-center rounded-lg px-3.5 text-[12px] font-bold leading-none text-white"
                   style={{ backgroundColor: SCARLET }}
@@ -280,7 +280,7 @@ export default function PublicNav({
                 </button>
               </>
             ) : showSignIn ? (
-              <><button type="button" aria-label="Open LinkWe menu" aria-haspopup="dialog" aria-expanded={drawerOpen.value} onClick={drawerOpen.toggle} className={`flex h-9 w-9 items-center justify-center rounded-full ${navIsLight ? "bg-zinc-100 text-[#193c3b]" : "bg-white/10 text-white"}`}><IconMenu2 size={19}/></button><Link href={loginHref} className="flex h-9 shrink-0 items-center justify-center rounded-[10px] px-5 text-[13px] font-semibold text-white" style={{ backgroundColor: SCARLET }}>
+              <><button type="button" aria-label="Open LinkWe menu" aria-haspopup="dialog" aria-expanded={drawerOpen.value} onClick={drawerOpen.toggle} className={`flex h-9 w-9 items-center justify-center rounded-full ${navIsLight ? "bg-zinc-100 text-[#174766]" : "bg-white/10 text-white"}`}><IconMenu2 size={19}/></button><Link href={loginHref} className="flex h-9 shrink-0 items-center justify-center rounded-[10px] px-5 text-[13px] font-semibold text-white" style={{ backgroundColor: SCARLET }}>
                 Sign in
               </Link></>
             ) : null}
@@ -332,7 +332,7 @@ export default function PublicNav({
                     key={tab.label === "Cart" ? cartBumpNonce : tab.label}
                     className={`size-[22px] shrink-0 transition-colors duration-150 ${
                       tab.label === "Cart" && cartBumpPlay ? "lw-cart-icon-bump" : ""
-                    } ${active ? "text-[#193c3b]" : "text-[var(--color-text-secondary)]"}`}
+                    } ${active ? "text-[#174766]" : "text-[var(--color-text-secondary)]"}`}
                     stroke={active ? 2.25 : 1.75}
                     aria-hidden
                   />

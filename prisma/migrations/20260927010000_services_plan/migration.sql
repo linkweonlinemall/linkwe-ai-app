@@ -1,0 +1,1 @@
+ALTER TYPE "VendorSubscriptionPlan" ADD VALUE IF NOT EXISTS 'SERVICES';

@@ -434,18 +434,18 @@ export default function BookingWidget({
   if (confirmed) {
     return (
       <div className="flex flex-col gap-3">
-        <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-5 text-center">
+        <div className="rounded-xl border border-sky-100 bg-sky-50 px-4 py-5 text-center">
           <p className="mb-2 text-3xl">✅</p>
-          <p className="text-sm font-bold text-emerald-900">
+          <p className="text-sm font-bold text-sky-900">
             {bookingStatus === "CONFIRMED" ? "Booking confirmed!" : "Booking request sent!"}
           </p>
-          <p className="mt-1.5 text-xs leading-relaxed text-emerald-700">
+          <p className="mt-1.5 text-xs leading-relaxed text-sky-700">
             {bookingStatus === "CONFIRMED"
               ? `You are booked for ${formatDateDisplay(confirmedDate ?? "")} at ${confirmedSlot ? formatTime(confirmedSlot.startTime) : ""}.`
               : `Your request for ${formatDateDisplay(confirmedDate ?? "")} at ${confirmedSlot ? formatTime(confirmedSlot.startTime) : ""} has been sent. The provider will confirm shortly.`}
           </p>
           {paymentCompleted && paidAmount != null ? (
-            <p className="mt-2 text-xs font-semibold text-emerald-800">
+            <p className="mt-2 text-xs font-semibold text-sky-800">
               💳 Paid TTD {paidAmount.toFixed(2)}{" "}
               {paymentMethod === "online" ? "online" : "deposit"}
               {paymentMethod === "arrival" && hasDepositAmount(depositAmount)
@@ -453,7 +453,7 @@ export default function BookingWidget({
                 : null}
             </p>
           ) : paymentMethod === "arrival" ? (
-            <p className="mt-2 text-xs font-semibold text-emerald-800">
+            <p className="mt-2 text-xs font-semibold text-sky-800">
               💵 Pay {formatTTDPrice(price)} on arrival
             </p>
           ) : null}
@@ -489,7 +489,7 @@ export default function BookingWidget({
                 step === s
                   ? "bg-[#D4450A] text-white"
                   : i < steps.indexOf(step)
-                    ? "bg-emerald-500 text-white"
+                    ? "bg-sky-500 text-white"
                     : "bg-zinc-100 text-zinc-400"
               }`}
             >

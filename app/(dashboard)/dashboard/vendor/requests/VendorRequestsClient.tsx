@@ -33,8 +33,8 @@ type Request = {
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   PENDING: { label: "Pending", color: "bg-amber-100 text-amber-700" },
-  ACCEPTED: { label: "Accepted", color: "bg-emerald-100 text-emerald-700" },
-  CONFIRMED: { label: "Paid", color: "bg-emerald-100 text-emerald-700" },
+  ACCEPTED: { label: "Accepted", color: "bg-sky-100 text-sky-700" },
+  CONFIRMED: { label: "Paid", color: "bg-sky-100 text-sky-700" },
   DECLINED: { label: "Declined", color: "bg-red-100 text-red-700" },
   COMPLETED: { label: "Completed", color: "bg-blue-100 text-blue-700" },
   CANCELLED: { label: "Cancelled", color: "bg-zinc-100 text-zinc-500" },
@@ -303,20 +303,20 @@ export default function VendorRequestsClient({ initialRequests, initialRequestId
                       ) : null}
 
                       {request.status === "ACCEPTED" ? (
-                        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-                          <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-emerald-600">
+                        <div className="rounded-xl border border-sky-200 bg-sky-50 p-3">
+                          <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-sky-600">
                             Your response
                           </p>
                           {request.quotedPrice ? (
-                            <p className="text-sm font-bold text-emerald-900">
+                            <p className="text-sm font-bold text-sky-900">
                               Quoted: TTD {request.quotedPrice.toFixed(2)}
                             </p>
                           ) : null}
                           {request.estimatedArrival ? (
-                            <p className="text-xs text-emerald-700">Arrival: {request.estimatedArrival}</p>
+                            <p className="text-xs text-sky-700">Arrival: {request.estimatedArrival}</p>
                           ) : null}
                           {request.vendorNotes ? (
-                            <p className="mt-1 text-xs text-emerald-700">{request.vendorNotes}</p>
+                            <p className="mt-1 text-xs text-sky-700">{request.vendorNotes}</p>
                           ) : null}
                         </div>
                       ) : null}
@@ -334,7 +334,7 @@ export default function VendorRequestsClient({ initialRequests, initialRequestId
                               <button
                                 type="button"
                                 onClick={() => setActionMode((prev) => ({ ...prev, [request.id]: "accept" }))}
-                                className="flex-1 rounded-xl bg-emerald-500 py-2.5 text-sm font-bold text-white transition-colors hover:bg-emerald-600"
+                                className="flex-1 rounded-xl bg-sky-500 py-2.5 text-sm font-bold text-white transition-colors hover:bg-sky-600"
                               >
                                 Accept ✓
                               </button>
@@ -347,8 +347,8 @@ export default function VendorRequestsClient({ initialRequests, initialRequestId
                               </button>
                             </div>
                           ) : mode === "accept" ? (
-                            <div className="flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                              <p className="text-xs font-bold text-emerald-800">Accept this request</p>
+                            <div className="flex flex-col gap-3 rounded-xl border border-sky-200 bg-sky-50 p-4">
+                              <p className="text-xs font-bold text-sky-800">Accept this request</p>
                               <div>
                                 <label className="mb-1 block text-xs font-semibold text-zinc-700">
                                   Your quote (TTD)
@@ -362,7 +362,7 @@ export default function VendorRequestsClient({ initialRequests, initialRequestId
                                     setQuotedPrice((prev) => ({ ...prev, [request.id]: e.target.value }))
                                   }
                                   placeholder="e.g. 250.00"
-                                  className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none"
+                                  className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-sky-400 focus:outline-none"
                                 />
                               </div>
                               {request.requestType === "ON_DEMAND" ? (
@@ -375,7 +375,7 @@ export default function VendorRequestsClient({ initialRequests, initialRequestId
                                     onChange={(e) =>
                                       setEstimatedArrival((prev) => ({ ...prev, [request.id]: e.target.value }))
                                     }
-                                    className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none"
+                                    className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-sky-400 focus:outline-none"
                                   >
                                     <option value="">Select estimated arrival *</option>
                                     <optgroup label="Quick response">
@@ -411,7 +411,7 @@ export default function VendorRequestsClient({ initialRequests, initialRequestId
                                   }
                                   placeholder="e.g. I'll call you when I'm on my way"
                                   rows={2}
-                                  className="w-full resize-none rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none"
+                                  className="w-full resize-none rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-sky-400 focus:outline-none"
                                 />
                               </div>
                               <div className="flex gap-2">
@@ -419,7 +419,7 @@ export default function VendorRequestsClient({ initialRequests, initialRequestId
                                   type="button"
                                   onClick={() => handleAccept(request.id, request.requestType)}
                                   disabled={actingId === request.id}
-                                  className="flex-1 rounded-xl bg-emerald-500 py-2.5 text-sm font-bold text-white hover:bg-emerald-600 disabled:opacity-50"
+                                  className="flex-1 rounded-xl bg-sky-500 py-2.5 text-sm font-bold text-white hover:bg-sky-600 disabled:opacity-50"
                                 >
                                   {actingId === request.id
                                     ? "Saving..."

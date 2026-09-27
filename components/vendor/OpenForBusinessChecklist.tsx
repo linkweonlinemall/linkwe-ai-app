@@ -33,7 +33,7 @@ function Row({ row }: { row: RowDef }) {
 
   const iconColor =
     row.state === "done"
-      ? "text-emerald-500"
+      ? "text-sky-500"
       : row.state === "warn"
         ? "text-amber-500"
         : row.state === "pending"
@@ -44,7 +44,7 @@ function Row({ row }: { row: RowDef }) {
 
   const helperColor =
     row.state === "done"
-      ? "text-emerald-600"
+      ? "text-sky-600"
       : row.state === "warn"
         ? "text-amber-700"
         : "text-zinc-500";
@@ -200,7 +200,7 @@ export default function OpenForBusinessChecklist({
   const rows = [emailRow, verifyRow, bankRow, productRow, liveRow];
 
   return (
-    <div className="mb-5 rounded-2xl border border-[#e3e9d9] bg-[#fafbf6] p-5">
+    <div className="mb-5 rounded-2xl border border-[#d9e3e9] bg-[#f6f9fb] p-5">
       <p className="mb-3 text-sm font-bold text-zinc-900">Open for business</p>
       <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {rows.map((row) => (

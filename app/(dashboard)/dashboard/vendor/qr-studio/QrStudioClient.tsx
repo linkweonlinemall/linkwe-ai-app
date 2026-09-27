@@ -7,7 +7,7 @@ import { escapeQrText, publicQrUrl, qrFilename } from "@/lib/vendor/qr-studio";
 import s from "./qr-studio.module.css";
 
 type Destination = { label: string; value: string; group: string };
-const colours = [{ label: "Forest", value: "#193E37" }, { label: "Ink", value: "#181818" }, { label: "Terracotta", value: "#923810" }];
+const colours = [{ label: "Forest", value: "#174766" }, { label: "Ink", value: "#181818" }, { label: "Terracotta", value: "#923810" }];
 
 export default function QrStudioClient({ destinations, storeName }: { destinations: Destination[]; storeName: string }) {
   const [url, setUrl] = useState(destinations[0]?.value ?? "");
@@ -50,7 +50,7 @@ export default function QrStudioClient({ destinations, storeName }: { destinatio
       printWindow.focus(); printWindow.print();
       window.setTimeout(() => frame.remove(), 120000);
     };
-    frame.srcdoc = `<!doctype html><html><head><title>${escapeQrText(title || storeName)} · LinkWe QR</title><style>@page{size:A4;margin:20mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:${colour};margin:0;display:grid;place-items:center}.card{width:120mm;max-width:100%;border:1px solid #dae0d6;border-radius:18px;padding:14mm;text-align:center;margin:12mm auto}.brand{font-size:10px;letter-spacing:3px;color:#7c886f}h1{font-size:27px;overflow-wrap:anywhere}svg{width:76mm;max-width:100%;height:auto}p{font-size:16px;line-height:1.5;overflow-wrap:anywhere}.url{font-size:10px;color:#6d7866;overflow-wrap:anywhere}</style></head><body><div class="card"><div class="brand">FIND US ON LINKWE</div><h1>${escapeQrText(title || storeName)}</h1>${ready.svg}<p>${escapeQrText(caption)}</p><div class="url">${escapeQrText(ready.url)}</div></div></body></html>`;
+    frame.srcdoc = `<!doctype html><html><head><title>${escapeQrText(title || storeName)} · LinkWe QR</title><style>@page{size:A4;margin:20mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:${colour};margin:0;display:grid;place-items:center}.card{width:120mm;max-width:100%;border:1px solid #d3dde3;border-radius:18px;padding:14mm;text-align:center;margin:12mm auto}.brand{font-size:10px;letter-spacing:3px;color:#608397}h1{font-size:27px;overflow-wrap:anywhere}svg{width:76mm;max-width:100%;height:auto}p{font-size:16px;line-height:1.5;overflow-wrap:anywhere}.url{font-size:10px;color:#667078;overflow-wrap:anywhere}</style></head><body><div class="card"><div class="brand">FIND US ON LINKWE</div><h1>${escapeQrText(title || storeName)}</h1>${ready.svg}<p>${escapeQrText(caption)}</p><div class="url">${escapeQrText(ready.url)}</div></div></body></html>`;
     document.body.appendChild(frame);
   }
 

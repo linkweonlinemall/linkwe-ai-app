@@ -1078,7 +1078,7 @@ export async function POST(req: NextRequest) {
               where: { storeId: store.id, isService: true, isArchived: false },
             })
             if (serviceCount >= serviceLimits.serviceCap) {
-              return { content: JSON.stringify({ ok: false, error: `Starter includes up to ${serviceLimits.serviceCap} services. Upgrade to create more.` }) }
+              return { content: JSON.stringify({ ok: false, error: `Your plan includes up to ${serviceLimits.serviceCap} services. Archive a service or upgrade to create more.` }) }
             }
           }
 
@@ -1114,7 +1114,13 @@ export async function POST(req: NextRequest) {
             : []
 
           try {
-            const service = await prisma.product.create({
+            const service = await prisma.$transaction(async tx => {
+              await tx.$queryRaw`SELECT id FROM stores WHERE id = ${store.id} FOR UPDATE`;
+              const currentStore = await tx.store.findUniqueOrThrow({ where: { id: store.id } });
+              const currentLimits = getStorePlan(currentStore).limits;
+              if (currentLimits.serviceMaxPriceMinor !== null && Math.round(price * 100) > currentLimits.serviceMaxPriceMinor) throw new Error("Your plan's service price limit has changed. Refresh and try again.");
+              if (currentLimits.serviceCap !== null && await tx.product.count({ where: { storeId: store.id, isService: true, isArchived: false } }) >= currentLimits.serviceCap) throw new Error("Your service listing limit has been reached.");
+              return tx.product.create({
               data: {
                 storeId: store.id,
                 name,
@@ -1140,18 +1146,11 @@ export async function POST(req: NextRequest) {
                 isPublished: raw.isPublished === true,
                 metaTitle: raw.metaTitle ? String(raw.metaTitle) : null,
                 metaDescription: raw.metaDescription ? String(raw.metaDescription) : null,
-                images: [],
+                images: uploadedImageUrlsPayload,
               },
             })
 
-            // Attach any uploaded images
-            if (uploadedImageUrlsPayload.length > 0) {
-              await prisma.product.update({
-                where: { id: service.id },
-                data: { images: uploadedImageUrlsPayload },
-              })
-            }
-
+            })
             return {
               content: JSON.stringify({
                 ok: true,

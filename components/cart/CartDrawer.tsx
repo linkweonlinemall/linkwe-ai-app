@@ -1,15 +1,12 @@
 "use client";
-
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
-
-import { getCart, removeFromCart, updateCartQuantity } from "@/app/actions/cart";
-import type { CartItem } from "@/lib/cart/cart-store";
-import { useCartStore } from "@/lib/cart/cart-store";
-import { toast } from "sonner";
-import { toastRemovedFromCart } from "@/lib/feedback/toasts";
-import { formatTTDPrice } from "@/lib/format/price";
-
+import {useCallback,useEffect,useMemo,useRef,useState} from "react";
+import {ArrowRight,ShoppingBag,Store,Trash2,X,Minus,Plus,Truck,Download,ShieldCheck} from "lucide-react";
+import {getCart,removeFromCart,updateCartQuantity} from "@/app/actions/cart";
+import {useCartStore,type CartItem} from "@/lib/cart/cart-store";
+import {formatTTDPrice} from "@/lib/format/price";
+import {toast} from "sonner";
+import s from "./cart-drawer.module.css";
 function mapRows(rows: Awaited<ReturnType<typeof getCart>>): CartItem[] {
   return rows.map((row) => ({
     id: row.id,
@@ -38,221 +35,13 @@ function mapRows(rows: Awaited<ReturnType<typeof getCart>>): CartItem[] {
   }));
 }
 
-export default function CartDrawer() {
-  const items = useCartStore((s) => s.items);
-  const isOpen = useCartStore((s) => s.isOpen);
-  const closeDrawer = useCartStore((s) => s.closeDrawer);
-  const setItems = useCartStore((s) => s.setItems);
-
-  const [busyItemId, setBusyItemId] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const refresh = useCallback(async () => {
-    const rows = await getCart();
-    setItems(mapRows(rows));
-  }, [setItems]);
-
-  const itemCount = useMemo(() => items.reduce((sum, i) => sum + i.quantity, 0), [items]);
-  const subtotalVal = useMemo(
-    () => items.reduce((sum, i) => sum + (i.variant?.price ?? i.product.price) * i.quantity, 0),
-    [items],
-  );
-  const allDigital = items.length > 0 && items.every((item) => item.product.isDigital);
-
-  const onQty = async (cartItemId: string, nextQty: number) => {
-    setBusyItemId(cartItemId);
-    try {
-      const result=await updateCartQuantity(cartItemId, nextQty);
-      if(!result.ok)toast.error(result.error);
-      await refresh();
-    } catch { toast.error("Could not update your cart. Please try again."); } finally { setBusyItemId(null); }
-  };
-
-  const onRemove = async (cartItemId: string, productName: string) => {
-    setBusyItemId(cartItemId);
-    await removeFromCart(cartItemId);
-    toastRemovedFromCart(productName);
-    await refresh();
-    setBusyItemId(null);
-  };
-
-  return (
-    <>
-      {isOpen ? (
-        <button
-          type="button"
-          aria-label="Close cart"
-          className="fixed inset-0 z-40 bg-black/40"
-          onClick={closeDrawer}
-        />
-      ) : null}
-
-      <aside
-        className={`fixed right-0 top-0 z-[130] flex h-[100dvh] w-full max-w-md flex-col bg-white pb-[env(safe-area-inset-bottom,0px)] shadow-2xl transition-transform duration-300 ease-in-out ${
-          isOpen ? "translate-x-0 pointer-events-auto" : "translate-x-full pointer-events-none"
-        }`}
-      >
-        <header className="flex items-center justify-between border-b border-zinc-100 px-4 py-4">
-          <div>
-            <h2 className="text-lg font-semibold text-zinc-900">Your cart</h2>
-            <p className="text-xs font-medium" style={{ color: "#D4450A" }} suppressHydrationWarning>
-              {mounted ? itemCount : 0} {mounted && itemCount === 1 ? "item" : "items"}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={closeDrawer}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
-            aria-label="Close"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M18 6 6 18" />
-              <path d="m6 6 12 12" />
-            </svg>
-          </button>
-        </header>
-
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          {items.length === 0 ? (
-            <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 text-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="48"
-                height="48"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-zinc-300"
-              >
-                <circle cx="9" cy="21" r="1" />
-                <circle cx="20" cy="21" r="1" />
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-              </svg>
-              <p className="mt-4 text-sm text-zinc-500">Your cart is empty</p>
-              <p className="mt-1 text-xs text-zinc-400">Browse stores to find products</p>
-              <Link
-                href="/shop"
-                className="mt-4 text-sm font-medium"
-                style={{ color: "#D4450A" }}
-                onClick={closeDrawer}
-              >
-                Start shopping →
-              </Link>
-            </div>
-          ) : (
-            <ul className="divide-y divide-zinc-100 px-4 py-2">
-              {items.map((item) => {
-                const busy = busyItemId === item.id;
-                const img = item.variant?.images?.[0] ?? item.product.images[0];
-                const stock = item.variant?.stock === undefined ? item.product.stock : item.variant.stock;
-
-                return (
-                  <li key={item.id} className={`flex gap-3 py-4 ${busy ? "opacity-60" : ""}`}>
-                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-zinc-100">
-                      {img ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={img}
-                          alt=""
-                          className="h-full w-full object-cover"
-                        />
-                      ) : null}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-zinc-900">{item.product.name}</p>
-                      <Link href={`/store/${item.product.store.slug}`} className="text-xs text-zinc-400 hover:underline" onClick={closeDrawer}>
-                        {item.product.store.name}
-                      </Link>
-                      {item.variant ? (
-                        <p className="text-xs text-zinc-500">
-                          {item.variant.attributes.map((a) => a.value).join(" / ")}
-                        </p>
-                      ) : null}
-                      <p className="mt-1 text-sm font-semibold text-zinc-900">
-                        {formatTTDPrice(item.variant?.price ?? item.product.price)}
-                      </p>
-                      <div className="mt-1 flex items-center gap-2">
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => void onQty(item.id, item.quantity - 1)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
-                        >
-                          −
-                        </button>
-                        <span className="min-w-[1.5rem] text-center text-sm">{item.quantity}</span>
-                        <button
-                          type="button"
-                          disabled={
-                            busy ||
-                            (stock !== null && item.quantity >= stock)
-                          }
-                          onClick={() => void onQty(item.id, item.quantity + 1)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          +
-                        </button>
-                      </div>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => void onRemove(item.id, item.product.name)}
-                        className="mt-1 text-xs text-zinc-400 hover:text-red-500 disabled:opacity-50"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-
-        <footer className="shrink-0 border-t border-zinc-200 bg-white p-4">
-          <div className="flex justify-between text-sm font-medium text-zinc-900">
-            <span>Subtotal</span>
-            <span>TTD {subtotalVal.toFixed(2)}</span>
-          </div>
-          <p className="mt-1 text-xs text-zinc-400">
-            {allDigital ? "Instant digital delivery — no shipping" : "Shipping calculated at checkout"}
-          </p>
-
-          <Link
-            href="/cart"
-            onClick={closeDrawer}
-            className="mt-3 flex w-full items-center justify-center rounded-xl border-2 border-[#D4450A] py-3 text-sm font-medium text-[#D4450A] transition-colors hover:bg-[#fff5f0]"
-          >
-            View cart
-          </Link>
-
-          <Link
-            href="/checkout"
-            onClick={closeDrawer}
-            className="mt-2 flex w-full items-center justify-center rounded-xl py-3 text-sm font-medium text-white"
-            style={{ backgroundColor: "#D4450A" }}
-          >
-            Checkout
-          </Link>
-        </footer>
-      </aside>
-    </>
-  );
+export default function CartDrawer(){
+ const items=useCartStore(s=>s.items),isOpen=useCartStore(s=>s.isOpen),close=useCartStore(s=>s.closeDrawer),setItems=useCartStore(s=>s.setItems);
+ const dialog=useRef<HTMLDialogElement>(null),[busy,setBusy]=useState<string|null>(null),[loading,setLoading]=useState(false),[error,setError]=useState("");
+ const refresh=useCallback(async()=>{setItems(mapRows(await getCart()));},[setItems]);
+ useEffect(()=>{if(!isOpen){dialog.current?.close();return;}dialog.current?.showModal();const previous=document.body.style.overflow;document.body.style.overflow="hidden";let active=true;setLoading(true);setError("");void refresh().catch(()=>{if(active)setError("Couldn’t refresh your cart. Please reopen it to try again.");}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;document.body.style.overflow=previous;};},[isOpen,refresh]);
+ const count=items.reduce((n,i)=>n+i.quantity,0),subtotal=items.reduce((n,i)=>n+(i.variant?.price??i.product.price)*i.quantity,0),allDigital=items.length>0&&items.every(i=>i.product.isDigital);
+ const groups=useMemo(()=>{const groups=new Map<string,CartItem[]>();for(const item of items)groups.set(item.product.store.slug,[...(groups.get(item.product.store.slug)??[]),item]);return [...groups.values()];},[items]);
+ async function change(item:CartItem,qty:number|null){if(busy)return;setBusy(item.id);setError("");try{if(qty===null){await removeFromCart(item.id);toast.success("Removed from your cart");}else{const result=await updateCartQuantity(item.id,qty);if(!result.ok){setError(result.error);return;}}await refresh();}catch{setError("Couldn’t update your cart. Please try again.");}finally{setBusy(null);}}
+ return <dialog ref={dialog} className={s.dialog} aria-labelledby="cart-drawer-title" onClose={close} onClick={e=>{if(e.target===e.currentTarget){const r=e.currentTarget.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)close();}}}><div className={s.panel}><header><div><span>GOOD FINDS. GREAT CHOICES.</span><h2 id="cart-drawer-title">Your <em>shopping bag.</em></h2><p>{count} {count===1?"item":"items"} · {groups.length} local {groups.length===1?"store":"stores"}</p></div><button aria-label="Close cart" onClick={close}><X size={21}/></button></header><div className={s.body} aria-busy={loading||!!busy}>{error&&<p role="alert" className={s.error}>{error}</p>}{!items.length?<div className={s.empty}><ShoppingBag size={44}/><h3>Make room for a little local.</h3><p>Your next favourite is waiting to be discovered.</p><Link href="/shop" onClick={close}>Explore the marketplace <ArrowRight size={17}/></Link></div>:groups.map(group=><section key={group[0].product.store.slug} className={s.group}><Link className={s.store} href={`/store/${group[0].product.store.slug}`} onClick={close}><Store size={15}/>{group[0].product.store.name}<ArrowRight size={13}/></Link>{group.map(item=>{const price=item.variant?.price??item.product.price,stock=item.variant?.stock===undefined?item.product.stock:item.variant.stock,img=item.variant?.images?.[0]??item.product.images[0];return <article key={item.id} className={s.item} data-busy={busy===item.id}><Link className={s.image} href={`/products/${item.product.slug}`} onClick={close}>{img?<img src={img} alt={item.product.name}/>:<ShoppingBag size={27}/>}</Link><div className={s.details}><Link href={`/products/${item.product.slug}`} onClick={close}>{item.product.name}</Link>{item.variant&&<p>{item.variant.attributes.map(a=>a.value).join(" / ")}</p>}<small>{formatTTDPrice(price)} each{item.product.isDigital?" · Digital download":""}</small><div className={s.itemBottom}><div className={s.quantity}><button aria-label={`Decrease ${item.product.name} quantity`} disabled={!!busy||loading||item.quantity<=1} onClick={()=>void change(item,item.quantity-1)}><Minus size={13}/></button><span aria-live="polite">{item.quantity}</span><button aria-label={`Increase ${item.product.name} quantity`} disabled={!!busy||loading||(stock!==null&&item.quantity>=stock)} onClick={()=>void change(item,item.quantity+1)}><Plus size={13}/></button></div><strong>{formatTTDPrice(price*item.quantity)}</strong><button className={s.remove} aria-label={`Remove ${item.product.name}`} disabled={!!busy||loading} onClick={()=>void change(item,null)}><Trash2 size={15}/></button></div>{stock!==null&&item.quantity>=stock&&<small className={s.stock}>All available stock is in your bag</small>}</div></article>;})}</section>)}</div>{!!items.length&&<footer><div className={s.total}><span>Subtotal</span><strong>{formatTTDPrice(subtotal)}</strong></div><p>{allDigital?<Download size={15}/>:<Truck size={15}/>} {allDigital?"Digital delivery · no shipping fee":"Delivery options and fees shown at checkout"}</p><Link className={s.checkout} href="/checkout" onClick={close}>Continue to checkout <ArrowRight size={18}/></Link><Link className={s.view} href="/cart" onClick={close}>Review your cart</Link><small><ShieldCheck size={13}/> Your items and availability are checked at checkout</small></footer>}</div></dialog>;
 }

@@ -21,9 +21,9 @@ export type MessageContext = {
   services: { id: string; title: string; status: string; href: string }[];
 };
 export type InboxFilter = "all" | "unread" | "reply";
-export function filterInbox(rows: VendorInboxRow[], query: string, filter: InboxFilter, sort: string) {
+export function filterInbox(rows: VendorInboxRow[], query: string, filter: InboxFilter, sort: string, side: "vendor" | "customer" = "vendor") {
   const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  return rows.filter(row => (filter !== "unread" || row.unread > 0) && (filter !== "reply" || row.lastSenderRole === "CUSTOMER"))
+  return rows.filter(row => (filter !== "unread" || row.unread > 0) && (filter !== "reply" || row.lastSenderRole === (side === "vendor" ? "CUSTOMER" : "VENDOR")))
     .filter(row => words.every(word => `${row.customerName} ${row.lastMessageText ?? ""}`.toLowerCase().includes(word)))
     .sort((a,b) => sort === "name" ? a.customerName.localeCompare(b.customerName) : (sort === "oldest" ? -1 : 1) * (Date.parse(b.lastMessageAt)-Date.parse(a.lastMessageAt)));
 }

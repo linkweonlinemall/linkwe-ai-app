@@ -19,6 +19,8 @@ export const featureGroups = [
     { title: "Staff & availability", text: "Manage team profiles, service assignments, working hours and time off. Assign appointments to eligible staff.", href: "/dashboard/vendor/staff" },
     { title: "Events & ticket management", text: "Set up event details and ticket types, manage attendees and scan eligible tickets for entry.", href: "/dashboard/vendor/events" },
     { title: "Finance that makes sense", text: "Move between earnings, transactions, payouts, bank details and Plan & Rex. Direct service payments are shown separately.", href: "/dashboard/vendor/finance" },
+    { title: "Business reports", text: "Choose a reporting period, explore sales and service activity, distinguish released earnings and export product-sales CSV files.", href: "/dashboard/vendor/reports" },
+    { title: "Services plan", text: "TT$100 per month: Starter benefits, up to 20 services, no service-price cap and pay on arrival for eligible services.", href: "/pricing" },
     { title: "Reviews & replies", text: "See your rating breakdown, filter feedback and respond to customers from the review workspace.", href: "/dashboard/vendor/reviews" },
     { title: "Guided tutorials", text: "Search lessons, track progress, and pause or resume walkthroughs while you learn the workspace.", href: "/dashboard/vendor" },
   ]},
@@ -35,6 +37,8 @@ export const featureGroups = [
   { id: "support", label: "Payments & support", intro: "Clearer steps from first visit to fulfilment.", features: [
     { title: "WiPay card checkout", text: "Review your order on LinkWe, then enter payment details with WiPay. Confirmation returns to your LinkWe account.", href: "/faq" },
     { title: "Delivery, pickup & downloads", text: "See eligible fulfilment choices and a delivery quote before paying. Digital-only orders have no shipping fee.", href: "/shipping-info" },
+    { title: "Vendor support tickets", text: "Open a private ticket, choose a category and priority, follow progress, reply and reopen an unresolved issue with the LinkWe team.", href: "/dashboard/vendor/support" },
+    { title: "Branded order invoices", text: "Download customer invoices and vendor earnings documents with itemised amounts and a QR link back to the order.", href: "/orders" },
     { title: "Returns & help", text: "Know how to report an issue, request assistance and follow an approved refund through the payment process.", href: "/returns" },
     { title: "Install LinkWe", text: "Add LinkWe to a supported phone, tablet or desktop for quicker access. Availability depends on your browser.", href: "/get-app" },
     { title: "Privacy & account controls", text: "Read how information is used, control browser permissions and contact the team about your personal data.", href: "/privacy" },

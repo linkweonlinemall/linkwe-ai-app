@@ -1,9 +1,10 @@
+import {categoryFacets} from "@/lib/catalog/categories";
 import "server-only";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { sellableStoreWhere } from "@/lib/store/sellable-store";
 import { PRODUCT_CATEGORIES } from "@/lib/categories";
-import { COLOUR_OPTIONS } from "@/lib/variant-options";
+import { COLOUR_OPTIONS, swatchPaint } from "@/lib/variant-options";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { categoryLabel, SHOP_PAGE_SIZE, shopOrderBy, shopStockWhere, type ShopQuery } from "./query";
 import type { ShopProduct, ShopFilterOptions } from "./types";
@@ -29,6 +30,7 @@ export async function getShopCatalog(query: ShopQuery) {
       { store: { name: { contains: query.q, mode: "insensitive" } } },
     ] } : {}),
     ...(query.minPrice !== undefined || query.maxPrice !== undefined ? { price: { gte: query.minPrice, lte: query.maxPrice } } : {}),
+    ...(query.fulfilment === "digital" ? {isDigital:true} : query.fulfilment === "delivery" ? {isDigital:false,allowDelivery:true} : query.fulfilment === "pickup" ? {isDigital:false,allowPickup:true} : {}),
     ...(query.condition ? { condition: query.condition } : {}),
     ...(query.brand ? { brand: { equals: query.brand, mode: "insensitive" } } : {}),
     ...(query.inStock ? { AND: [shopStockWhere()] } : {}),
@@ -65,10 +67,10 @@ export async function getShopCatalog(query: ShopQuery) {
     }
   }
   const options: ShopFilterOptions = {
-    categories: [...counts].map(([value, count]) => ({ value, count, label: PRODUCT_CATEGORIES.find(c => c.value === value)?.label ?? categoryLabel(value) })).sort((a,b) => b.count - a.count),
+    categories: categoryFacets("products",counts),
     regions: [...regions].map(value => ({ value, label: getRegionLabel(value) })).sort((a,b) => a.label.localeCompare(b.label)),
     brands: [...new Set(inventory.map(p => p.brand).filter((v): v is string => !!v?.trim()))].sort(),
-    colours: [...colours].sort().map(value => ({ value, hex: COLOUR_OPTIONS.find(c => c.value === value)?.hex ?? "#a1a1aa" })),
+    colours: [...colours].sort().map(value => ({ value, hex: swatchPaint(value) })),
     sizes: [...sizes].sort((a,b) => a.localeCompare(b, undefined, { numeric: true })),
   };
   const seen = new Set<string>();

@@ -35,7 +35,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: string
   },
   ACCEPTED: {
     label: "Accepted",
-    color: "bg-emerald-100 text-emerald-700",
+    color: "bg-sky-100 text-sky-700",
     icon: "✅",
     desc: "Provider accepted — confirm to proceed",
   },
@@ -249,7 +249,7 @@ export default function CustomerRequestsClient({
                   <div
                     className={`rounded-xl border px-4 py-3 ${
                       request.status === "ACCEPTED"
-                        ? "border-emerald-200 bg-emerald-50"
+                        ? "border-sky-200 bg-sky-50"
                         : request.status === "DECLINED"
                           ? "border-red-100 bg-red-50"
                           : request.status === "CONFIRMED"
@@ -271,13 +271,13 @@ export default function CustomerRequestsClient({
                     <div
                       className={`rounded-xl border px-4 py-3 ${
                         cancelFeedback[request.id]!.type === "success"
-                          ? "border-emerald-200 bg-emerald-50"
+                          ? "border-sky-200 bg-sky-50"
                           : "border-red-100 bg-red-50"
                       }`}
                     >
                       <p
                         className={`text-sm font-semibold ${
-                          cancelFeedback[request.id]!.type === "success" ? "text-emerald-800" : "text-red-700"
+                          cancelFeedback[request.id]!.type === "success" ? "text-sky-800" : "text-red-700"
                         }`}
                       >
                         {cancelFeedback[request.id]!.text}
@@ -293,22 +293,22 @@ export default function CustomerRequestsClient({
 
                   {/* Vendor response for ACCEPTED */}
                   {request.status === "ACCEPTED" && (
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                      <p className="mb-3 text-xs font-bold uppercase tracking-wide text-emerald-700">
+                    <div className="rounded-xl border border-sky-200 bg-sky-50 p-4">
+                      <p className="mb-3 text-xs font-bold uppercase tracking-wide text-sky-700">
                         Provider response
                       </p>
                       {request.quotedPrice && request.quotedPrice > 0 ? (
                         <div className="mb-2 flex justify-between">
-                          <span className="text-sm text-emerald-800">Quoted price</span>
-                          <span className="text-sm font-black text-emerald-900">
+                          <span className="text-sm text-sky-800">Quoted price</span>
+                          <span className="text-sm font-black text-sky-900">
                             TTD {request.quotedPrice.toFixed(2)}
                           </span>
                         </div>
                       ) : null}
                       {request.estimatedArrival ? (
                         <div className="flex justify-between">
-                          <span className="text-sm text-emerald-800">Estimated arrival</span>
-                          <span className="text-sm font-semibold text-emerald-900">
+                          <span className="text-sm text-sky-800">Estimated arrival</span>
+                          <span className="text-sm font-semibold text-sky-900">
                             {request.estimatedArrival}
                           </span>
                         </div>
@@ -327,7 +327,7 @@ export default function CustomerRequestsClient({
                   {request.status === "ACCEPTED" ? (
                     <div className="flex flex-col gap-3">
                       <CouponInput kind="request" id={request.id} disabled={actingId===request.id} onChange={coupon=>setCoupons(previous=>({...previous,[request.id]:coupon}))}/>
-                      {coupons[request.id]&&<p className="font-bold text-emerald-800">Discounted total: TTD {(coupons[request.id]!.totalMinor/100).toFixed(2)}</p>}
+                      {coupons[request.id]&&<p className="font-bold text-sky-800">Discounted total: TTD {(coupons[request.id]!.totalMinor/100).toFixed(2)}</p>}
                       {confirmErrors[request.id]&&<p role="alert" className="text-sm text-red-700">{confirmErrors[request.id]}</p>}
                       {isQuote ? null : (
                         <>
@@ -406,7 +406,7 @@ export default function CustomerRequestsClient({
                           type="button"
                           onClick={() => handleComplete(request.id)}
                           disabled={actingId === request.id}
-                          className="w-full rounded-xl bg-emerald-600 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+                          className="w-full rounded-xl bg-sky-600 py-3 text-sm font-bold text-white transition-colors hover:bg-sky-700 disabled:opacity-50"
                         >
                           {actingId === request.id ? "Confirming..." : "Confirm service completed ✓"}
                         </button>

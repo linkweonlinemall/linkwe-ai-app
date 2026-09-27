@@ -1,7 +1,7 @@
 .admin-workspace {
   --admin-ink: #182b32;
   --admin-muted: #62717b;
-  --admin-line: #e4e9e9;
+  --admin-line: #e1e8ec;
   --admin-orange: #cf4008;
   --admin-soft: #fff1e9;
   color: var(--admin-ink);
@@ -100,7 +100,7 @@
   flex-shrink: 0;
   border-radius: 12px;
   color: #5d727a;
-  background: #f1f5f5;
+  background: #f0f4f6;
 }
 .admin-avatar {
   border-radius: 50%;
@@ -109,8 +109,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #dceae7;
-  color: #254d45;
+  background: #dce5ea;
+  color: #174766;
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -129,7 +129,7 @@
   right: 0;
   top: 50px;
   width: 250px;
-  border: 1px solid #e1e8e8;
+  border: 1px solid #dfe6ea;
   border-radius: 16px;
   background: white;
   box-shadow: 0 20px 60px #152d3320;
@@ -146,7 +146,7 @@
 }
 .admin-account-panel a:hover,
 .admin-account-panel button:hover {
-  background: #f2f6f6;
+  background: #f2f5f6;
 }
 .admin-sidebar {
   position: fixed;
@@ -334,7 +334,7 @@
 }
 .admin-button:hover {
   box-shadow: 0 5px 15px #23434a10;
-  background: #f9fbfb;
+  background: #f9fafb;
 }
 .admin-button-primary {
   background: #cf4008;
@@ -416,7 +416,7 @@
 .admin-form-section {
   padding: 26px;
   margin-bottom: 18px;
-  border: 1px solid #e1e8e8;
+  border: 1px solid #dfe6ea;
   border-radius: 18px;
   background: #fff;
   scroll-margin-top: 90px;
@@ -432,8 +432,8 @@
 .admin-form-section-heading > span {
   border-radius: 11px;
   padding: 10px;
-  background: #edf5f3;
-  color: #3c6a60;
+  background: #edf2f5;
+  color: #3c596a;
 }
 .admin-form-section-heading h2 {
   font-size: 17px;
@@ -451,7 +451,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 15px;
-  background: #f7f9f9;
+  background: #f6f8fa;
   padding: 14px 15px;
   border-radius: 12px;
   min-height: 66px;
@@ -493,7 +493,7 @@
 .admin-editor-nav {
   position: sticky;
   top: 24px;
-  border: 1px solid #e0e7e7;
+  border: 1px solid #dde5ea;
   border-radius: 16px;
   background: #fff;
   padding: 10px;
@@ -537,7 +537,7 @@
   margin-top: 12px;
   background: #fffefcf5;
   backdrop-filter: blur(16px);
-  border: 1px solid #e1e7e7;
+  border: 1px solid #dee6ea;
   border-radius: 16px;
   box-shadow: 0 -8px 36px #233e4c0c;
   padding: 14px 18px;
@@ -580,12 +580,12 @@
   gap: 12px;
   flex-wrap: wrap;
   padding: 15px 20px;
-  border: 1px solid #d8e5e1;
+  border: 1px solid #d7e1e6;
   border-radius: 14px;
-  background: #edf5f2;
+  background: #edf2f5;
   margin-bottom: 22px;
   font-size: 12px;
-  color: #45675e;
+  color: #435b69;
 }
 .admin-context a {
   font-weight: 650;
@@ -597,8 +597,8 @@
   align-items: center;
   gap: 5px;
   border-radius: 6px;
-  background: #edf5f2;
-  color: #396857;
+  background: #edf2f5;
+  color: #395768;
   padding: 5px 8px;
   font-size: 10px;
   font-weight: 650;
@@ -671,7 +671,7 @@
   min-height: 54px;
 }
 .admin-command-result:hover {
-  background: #f1f5f4;
+  background: #f0f4f6;
 }
 .admin-command-result > svg {
   color: #cf4008;
@@ -701,7 +701,7 @@
 }
 .admin-create-card {
   padding: 26px;
-  border: 1px solid #dfe7e7;
+  border: 1px solid #dde5e9;
   background: #fff;
   border-radius: 20px;
   position: relative;
@@ -745,7 +745,7 @@
   display: flex;
   gap: 5px;
   overflow-x: auto;
-  background: #e9eeee;
+  background: #e7edf0;
   padding: 5px;
   border-radius: 13px;
   width: fit-content;
@@ -778,9 +778,9 @@
 }
 .admin-media-item {
   border-radius: 12px;
-  background: #f2f5f5;
+  background: #f1f4f6;
   padding: 6px;
-  border: 1px solid #e0e7e7;
+  border: 1px solid #dde5ea;
   overflow: hidden;
 }
 .admin-media-item img {
@@ -811,10 +811,10 @@
   align-items: center;
   justify-content: center;
   min-height: 80px;
-  border: 1px dashed #c2d4d3;
+  border: 1px dashed #c0ced6;
   border-radius: 12px;
-  background: #f7faf9;
-  color: #4d7069;
+  background: #f7f9fa;
+  color: #4a6473;
   font-size: 12px;
   text-align: center;
   padding: 15px;
@@ -822,10 +822,10 @@
 }
 .admin-row-editor {
   padding: 15px;
-  border: 1px solid #e0e7e7;
+  border: 1px solid #dde5ea;
   border-radius: 12px;
   margin-bottom: 12px;
-  background: #fafcfc;
+  background: #fafbfc;
 }
 .admin-row-head {
   display: flex;
@@ -865,9 +865,9 @@
 .admin-empty {
   padding: 42px 20px;
   text-align: center;
-  border: 1px dashed #d4e1df;
+  border: 1px dashed #d2dde3;
   border-radius: 15px;
-  background: #f9fbfa;
+  background: #f9fafb;
   color: #6e858a;
   font-size: 13px;
   line-height: 1.8;
@@ -879,7 +879,7 @@
   flex-wrap: wrap;
   padding: 16px;
   background: #fff;
-  border: 1px solid #e0e7e7;
+  border: 1px solid #dde5ea;
   border-radius: 16px;
   margin-bottom: 22px;
 }
@@ -896,12 +896,12 @@
 .admin-service-card {
   overflow: hidden;
   background: #fff;
-  border: 1px solid #e0e7e7;
+  border: 1px solid #dde5ea;
   border-radius: 18px;
 }
 .admin-service-image {
   height: 180px;
-  background: #dde9e6;
+  background: #dde5e9;
   position: relative;
 }
 .admin-service-image img {
@@ -942,7 +942,7 @@
 }
 .admin-stat {
   border-radius: 17px;
-  border: 1px solid #e1e8e7;
+  border: 1px solid #dfe6ea;
   background: #fff;
   padding: 22px;
 }
@@ -963,7 +963,7 @@
 .admin-hero {
   position: relative;
   border-radius: 22px;
-  background: linear-gradient(115deg, #173b41, #24544f);
+  background: linear-gradient(115deg, #173b41, #174766);
   padding: 32px;
   color: white;
   overflow: hidden;
@@ -986,7 +986,7 @@
   line-height: 1.2;
 }
 .admin-hero p {
-  color: #c2d5d4;
+  color: #c0cfd7;
   font-size: 13px;
   line-height: 1.9;
   max-width: 500px;
@@ -1006,7 +1006,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  border: 1px solid #e0e8e7;
+  border: 1px solid #dee6ea;
   background: #fff;
   border-radius: 13px;
   padding: 16px 12px;
@@ -1313,14 +1313,14 @@
   border-spacing: 0;
 }
 .admin-legacy :where(thead) {
-  background: #eff4f3;
+  background: #eff2f4;
 }
 .admin-legacy :where(th) {
   color: #617c83;
   font-weight: 650;
 }
 .admin-legacy :where(tbody tr):hover {
-  background: #fafcfb;
+  background: #fafbfc;
 }
 .admin-legacy :where(.rounded-2xl.bg-white) {
   box-shadow: 0 5px 20px #223b4705;
@@ -1329,7 +1329,7 @@
   accent-color: #cf4008;
 }
 .admin-legacy :where(.rounded-xl.border) {
-  border-color: #e1e7e7;
+  border-color: #dee6ea;
 }
 .admin-legacy :where(.overflow-x-auto) {
   scrollbar-width: thin;
@@ -1386,7 +1386,7 @@
   }
   .admin-responsive-table > tbody > tr {
     padding: 14px 0;
-    border-bottom: 1px solid #dfe6e5;
+    border-bottom: 1px solid #dce4e9;
   }
   .admin-responsive-table > tbody > tr > td {
     padding: 7px 18px;

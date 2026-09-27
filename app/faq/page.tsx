@@ -13,12 +13,12 @@ export const metadata: Metadata = {
 
 function FaqItem({ question, children }: { question: string; children: ReactNode }) {
   return (
-    <details className="group rounded-2xl border border-[#dce3d5] bg-gradient-to-r from-white to-[#f0f4e9]/45 px-4 shadow-sm open:shadow-[0_12px_32px_rgba(26,127,181,.09)] sm:px-5">
+    <details className="group rounded-2xl border border-[#d4dee4] bg-gradient-to-r from-white to-[#e9f0f4]/45 px-4 shadow-sm open:shadow-[0_12px_32px_rgba(26,127,181,.09)] sm:px-5">
       <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 py-4 text-sm font-black text-zinc-900 marker:content-none">
         {question}
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-white text-[#436b51] shadow-sm transition group-open:rotate-180"><ChevronDown className="size-4" /></span>
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-white text-[#435d6b] shadow-sm transition group-open:rotate-180"><ChevronDown className="size-4" /></span>
       </summary>
-      <div className="border-t border-[#dce3d5] pb-5 pt-4 text-sm leading-7 text-zinc-600">{children}</div>
+      <div className="border-t border-[#d4dee4] pb-5 pt-4 text-sm leading-7 text-zinc-600">{children}</div>
     </details>
   );
 }
@@ -26,7 +26,7 @@ function FaqItem({ question, children }: { question: string; children: ReactNode
 function FaqGroup({ title, kicker, children }: { title: string; kicker: string; children: ReactNode }) {
   return (
     <section>
-      <p className="text-[10px] font-black uppercase tracking-[.18em] text-[#436b51]">{kicker}</p>
+      <p className="text-[10px] font-black uppercase tracking-[.18em] text-[#435d6b]">{kicker}</p>
       <h2 className="mt-2 text-2xl font-black tracking-tight text-zinc-900">{title}</h2>
       <div className="mt-5 grid gap-3">{children}</div>
     </section>
@@ -90,7 +90,7 @@ export default function FaqPage() {
 
       <FaqGroup kicker="Build on LinkWe" title="Vendors, plans and Rex">
         <FaqItem question="How do I start selling?">Create a business account, choose a plan and build your draft store. You can skip ID upload during setup and return to it later. Complete verification, configure fulfilment and publish accurate listings before launch. The store becomes sellable after the required approval and account conditions are met.</FaqItem>
-        <FaqItem question="What are the current vendor plans?"><Link href="/pricing" className="font-bold text-[#D4450A] hover:underline">Starter</Link> is currently free with transaction commission and listing limits. Growth is currently TTD 300 monthly with lower product commission, no service commission, Timeline access, and 300 Rex uses monthly. Pro is currently TTD 500 monthly with no product or service commission, Timeline access, and 1,000 Rex uses monthly. Event tickets currently carry 6% commission on every plan.</FaqItem>
+        <FaqItem question="What are the current vendor plans?"><Link href="/pricing" className="font-bold text-[#D4450A] hover:underline">Starter</Link> is currently free with transaction commission and listing limits. Services is TTD 100 monthly with Starter benefits, 20 services and no service-price cap. Growth is currently TTD 300 monthly with lower product commission, no service commission, Timeline access, and expanded Rex capacity monthly. Pro is currently TTD 500 monthly with no product or service commission, Timeline access, and maximum Rex capacity monthly. Event tickets currently carry 6% commission on every plan.</FaqItem>
         <FaqItem question="What does a collaboration do?">A business can request permission to feature another business’s published listing. The owner approves or declines it, and either party can end a placement. Checkout remains with the original seller; a placement does not create a revenue split.</FaqItem>
         <FaqItem question="What is Rex?">Rex is LinkWe&apos;s AI business assistant. It can help draft products, services, events, and Timeline posts, work with permitted images and existing marketplace content, answer operational questions, and use supported tools for coupons, reviews and private appointment notes. Its included allowance is shown as a percentage, with top-ups separate. Always review generated facts, prices, policies, images, and actions before publishing or relying on them.</FaqItem>
         <FaqItem question="How do vendors get paid?">Eligible earnings build in the LinkWe balance after the relevant order, booking, subscription, or ticket fulfilment rules are met. Vendors request payout to verified bank details, subject to available balance, the displayed minimum, refunds, disputes, fraud review, and lawful holds.</FaqItem>

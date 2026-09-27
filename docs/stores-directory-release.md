@@ -13,3 +13,8 @@ Validation before publication:
 - Local desktop and mobile layouts, search/filter recovery, map links and no horizontal overflow at 1280, 768, 390 and 320px were verified during design review.
 
 Publication and live verification are recorded in the working project copy after deployment completes.
+
+Published commit: `6c064fa45b965aef234a149eed16cad31a71cd65` pushed to `origin/main`.
+Deployment: https://vercel.com/link-we-online-mall-s-projects/linkwe-ai-app/FHXgGXrEbF1wdPcFXW3PdUvihsVY
+
+Live verification completed: Vercel Ready with production domain assigned, build duration 1m 4s. The live `/stores` page displays the new hero and 17 eligible businesses with no preview banner. UDN search returned the correct single store and its three services; its loaded map pin linked to `/store/udn-media`. Mobile Tunapuna filter applied, dismissed the dialog and returned two stores with no horizontal overflow at 390px. Pagination displayed stores 13–17 on page two. No broken loaded images or browser console errors were observed. Temporary viewport was reset, filters were cleared and the main directory was restored for the user.

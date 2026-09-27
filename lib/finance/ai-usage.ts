@@ -16,7 +16,7 @@ function usagePolicy(store: AIUsageStoreInput) {
     subscriptionPlan: store.subscriptionPlan,
     subscriptionStatus: store.subscriptionStatus,
   });
-  if (plan === "STARTER") {
+  if (plan === "STARTER" || plan === "SERVICES") {
     return { allowance: limits.aiLifetimeGiftAllowance, periodKey: "starter-lifetime" };
   }
   return {
@@ -124,7 +124,7 @@ export async function consumeAIUse(
 
   return {
     ok: false,
-    reason: "You're out of AI uses. Buy more AI uses or upgrade your plan.",
+    reason: "Your Rex capacity is empty. Refill Rex or upgrade your plan.",
     allowance,
     used: row?.count ?? 0,
   };

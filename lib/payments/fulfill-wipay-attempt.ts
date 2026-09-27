@@ -17,6 +17,16 @@ function addInterval(from: Date, interval: string): Date {
   return next;
 }
 
+function nextVendorRenewal(from: Date): Date {
+  const next = new Date(from);
+  const day = next.getUTCDate();
+  next.setUTCDate(1);
+  next.setUTCMonth(next.getUTCMonth() + 1);
+  const lastDay = new Date(Date.UTC(next.getUTCFullYear(), next.getUTCMonth() + 1, 0)).getUTCDate();
+  next.setUTCDate(Math.min(day, lastDay));
+  return next;
+}
+
 /** Idempotently applies the business result of a successful WiPay transaction. */
 export async function fulfillWiPayAttempt(attempt: PaymentAttempt): Promise<void> {
   if (attempt.purpose === "PRODUCT_ORDER") {
@@ -80,7 +90,8 @@ export async function fulfillWiPayAttempt(attempt: PaymentAttempt): Promise<void
 
   if (attempt.purpose === "VENDOR_SUBSCRIPTION") {
     const data = attempt.providerData as { targetPlan?: string } | null;
-    const targetPlan = data?.targetPlan === "PRO" ? "PRO" : "GROWTH";
+    const targetPlan = data?.targetPlan;
+    if (targetPlan !== "SERVICES" && targetPlan !== "GROWTH" && targetPlan !== "PRO") throw new Error("Invalid subscription plan");
     if (attempt.amountMinor !== PLAN_PRICE_MINOR[targetPlan]) {
       throw new Error("Vendor subscription payment amount is invalid");
     }
@@ -101,12 +112,12 @@ export async function fulfillWiPayAttempt(attempt: PaymentAttempt): Promise<void
       if (!store || store.ownerId !== attempt.userId) {
         throw new Error("Vendor subscription store is unavailable");
       }
-      if (store.subscriptionPlan === "PRO" && targetPlan === "GROWTH") {
+      if (PLAN_PRICE_MINOR[targetPlan] < PLAN_PRICE_MINOR[store.subscriptionPlan]) {
         throw new Error("Paid vendor plan downgrades are not supported");
       }
 
       const now = new Date();
-      const renewalBase = store.planRenewsAt && store.planRenewsAt > now
+      const renewalBase = store.subscriptionPlan === targetPlan && store.planRenewsAt && store.planRenewsAt > now
         ? store.planRenewsAt
         : now;
       await tx.store.update({
@@ -114,7 +125,7 @@ export async function fulfillWiPayAttempt(attempt: PaymentAttempt): Promise<void
         data: {
           subscriptionPlan: targetPlan,
           subscriptionStatus: "ACTIVE",
-          planRenewsAt: addInterval(renewalBase, "monthly"),
+          planRenewsAt: nextVendorRenewal(renewalBase),
           pastDueSince: null,
           autoRenew: false,
           wipayTrustedCardId: attempt.trustedCardId,

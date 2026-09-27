@@ -15,7 +15,7 @@ export const colors = {
   blue: "#1A7FB5",
   dark: "#1C1C1A",
   background: "#F5F5F5",
-  success: "#10B981",
+  success: "#1073b9",
   danger: "#EF4444",
   warning: "#F59E0B",
 } as const;
@@ -97,11 +97,11 @@ export const tw = {
   bgBlue: "bg-[#1A7FB5]",
   textBlueOnBadge: "text-white",
 
-  textSuccessToken: "text-[#10B981]",
-  bgSuccessSolid: "bg-[#10B981]",
-  borderSuccessToken: "border-[#10B981]",
-  bgSuccessSoft: "bg-emerald-50",
-  textSuccessSoft: "text-emerald-700",
+  textSuccessToken: "text-[#1073b9]",
+  bgSuccessSolid: "bg-[#1073b9]",
+  borderSuccessToken: "border-[#1073b9]",
+  bgSuccessSoft: "bg-sky-50",
+  textSuccessSoft: "text-sky-700",
 
   textDangerToken: "text-[#EF4444]",
   hoverTextDanger: "hover:text-[#EF4444]",

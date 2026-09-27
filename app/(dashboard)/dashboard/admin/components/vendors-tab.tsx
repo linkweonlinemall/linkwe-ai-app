@@ -290,7 +290,7 @@ export default function VendorsTab({
                       )
                     }
                     className="rounded-lg px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
-                    style={{ backgroundColor: "#1B8C5A" }}
+                    style={{ backgroundColor: "#1d638a" }}
                   >
                     {`Review Selected (${selectedPayouts.size})`}
                   </button>
@@ -359,7 +359,7 @@ export default function VendorsTab({
                     key={req.id}
                     className="rounded-2xl border border-zinc-200 bg-white shadow-sm"
                     style={{
-                      borderLeft: `4px solid ${canApprove ? "#1B8C5A" : "#D4450A"}`,
+                      borderLeft: `4px solid ${canApprove ? "#1d638a" : "#D4450A"}`,
                     }}
                   >
                     {/* ── Card body ────────────────────────────────────── */}
@@ -419,8 +419,8 @@ export default function VendorsTab({
                           <span
                             className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
                             style={{
-                              backgroundColor: "#F0FDF4",
-                              color: "#1B8C5A",
+                              backgroundColor: "#f1f8fc",
+                              color: "#1d638a",
                             }}
                           >
                             ✓ Covered by balance · {formatTTD(req.amountMinor)}{" "}
@@ -443,8 +443,8 @@ export default function VendorsTab({
                           <span
                             className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
                             style={{
-                              backgroundColor: "#F0FDF4",
-                              color: "#1B8C5A",
+                              backgroundColor: "#f1f8fc",
+                              color: "#1d638a",
                             }}
                           >
                             ✓ Bank details valid
@@ -606,7 +606,7 @@ export default function VendorsTab({
                                 <span className="text-zinc-500">
                                   Total earned
                                 </span>
-                                <span className="font-medium text-emerald-600">
+                                <span className="font-medium text-sky-600">
                                   +{formatTTD(bal.credits)}
                                 </span>
                               </div>
@@ -690,7 +690,7 @@ export default function VendorsTab({
                                         <td
                                           className={`px-3 py-2 text-right font-mono font-medium ${
                                             isCredit
-                                              ? "text-emerald-600"
+                                              ? "text-sky-600"
                                               : "text-red-500"
                                           }`}
                                         >
@@ -722,7 +722,7 @@ export default function VendorsTab({
                               className="flex items-center gap-1.5"
                             >
                               <span
-                                className={`text-sm ${check.ok ? "text-emerald-500" : "text-red-500"}`}
+                                className={`text-sm ${check.ok ? "text-sky-500" : "text-red-500"}`}
                               >
                                 {check.ok ? "✓" : "✗"}
                               </span>
@@ -832,7 +832,7 @@ export default function VendorsTab({
                       key={p.id}
                       className={`border-b border-zinc-50 ${i % 2 === 0 ? "bg-white" : "bg-zinc-50/30"}`}
                       style={{
-                        borderLeft: `3px solid ${p.status === "APPROVED" ? "#1B8C5A" : "#DC2626"}`,
+                        borderLeft: `3px solid ${p.status === "APPROVED" ? "#1d638a" : "#DC2626"}`,
                       }}
                     >
                       <td className="px-4 py-3 font-medium text-zinc-900">
@@ -864,7 +864,7 @@ export default function VendorsTab({
                         <span
                           className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${
                             p.status === "APPROVED"
-                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              ? "border-sky-200 bg-sky-50 text-sky-700"
                               : "border-[#FECFBE] bg-[#FFF1ED] text-[#D4450A]"
                           }`}
                         >
@@ -912,7 +912,7 @@ export default function VendorsTab({
                 </div>
                 <p className="text-sm font-semibold">{v.owner.fullName}</p>
                 <p className="admin-muted break-all">{v.owner.email}</p>
-                <div className="my-5 grid grid-cols-2 gap-3 rounded-xl bg-[#f1f6f4] p-4">
+                <div className="my-5 grid grid-cols-2 gap-3 rounded-xl bg-[#f1f4f6] p-4">
                   <div>
                     <span className="admin-muted">Available balance</span>
                     <strong className="mt-1 block text-lg">
@@ -1081,7 +1081,7 @@ export default function VendorsTab({
                             <span
                               className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                                 v.status === "ACTIVE"
-                                  ? "bg-emerald-50 text-emerald-800"
+                                  ? "bg-sky-50 text-sky-800"
                                   : v.status === "PENDING_APPROVAL"
                                     ? "bg-amber-50 text-amber-800"
                                     : "bg-zinc-100 text-zinc-600"
@@ -1170,7 +1170,7 @@ export default function VendorsTab({
                                               <td
                                                 className={`px-2 py-1.5 text-right font-mono ${
                                                   isCredit
-                                                    ? "text-emerald-600"
+                                                    ? "text-sky-600"
                                                     : "text-red-600"
                                                 }`}
                                               >

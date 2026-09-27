@@ -1,3 +1,4 @@
+import SavedControls from "@/components/customer/SavedControls";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
@@ -18,27 +19,31 @@ export const metadata: Metadata = {
   description: "Products you have saved to buy later.",
 };
 
-export default async function WishlistPage() {
+export default async function WishlistPage({ searchParams }: { searchParams: Promise<{q?:string|string[];sort?:string|string[]}> }) {
   const session = await getSession();
   if (!session) redirect("/login");
 
   const user = await prisma.user.findUnique({ where: { id: session.userId } });
   const continueHref = user ? getRoleDashboardPath(user.role) : null;
   const unreadCount = await getNavUnreadCount();
-  const items = await getWishlistItems();
+
+  const params=await searchParams;const query=typeof params.q === "string" ? params.q.trim().slice(0,120) : "";const sort=typeof params.sort === "string" ? params.sort : "recent";
+  const all=await getWishlistItems();
+  const items=all.filter(item=>`${item.product.name} ${item.product.store.name}`.toLowerCase().includes(query.toLowerCase())).sort((a,b)=>sort==="name"?a.product.name.localeCompare(b.product.name):sort==="low"?a.product.price-b.product.price:sort==="high"?b.product.price-a.product.price:sort==="sale"?Number((b.product.compareAtPrice??0)>b.product.price)-Number((a.product.compareAtPrice??0)>a.product.price):0);
+
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
+    <div className="min-h-screen bg-[#f0f6fa] pb-mobile-public lg:pb-0">
       <PublicNav
         user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null}
         dashboardHref={continueHref ?? undefined}
         unreadCount={unreadCount}
       />
       <div className="mx-auto max-w-screen-xl px-4 py-10 sm:px-6">
-        <div className="mb-8 flex items-center justify-between gap-4 overflow-hidden rounded-[26px] bg-gradient-to-br from-[#1C1C1A] via-[#352823] to-[#9f390e] p-6 text-white shadow-xl sm:p-8">
+        <div className="mb-8 flex items-center justify-between gap-4 overflow-hidden rounded-[26px] bg-gradient-to-br from-[#174766] via-[#175878] to-[#146581] p-6 text-white shadow-xl sm:p-8">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-orange-300">Saved for later</p><h1 className="font-display mt-2 text-3xl font-bold text-white">
-              My <span className="italic text-orange-300">wishlist</span>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-sky-200">Saved for later</p><h1 className="font-display mt-2 text-3xl font-bold text-white">
+              My <span className="italic text-sky-200">wishlist</span>
             </h1>
             <p className="mt-1 text-sm text-white/60">
               {items.length} item{items.length !== 1 ? "s" : ""} saved
@@ -52,11 +57,12 @@ export default async function WishlistPage() {
           </Link>
         </div>
 
+        <SavedControls kind="wishlist" query={query} sort={sort} total={all.length} shown={items.length}/>
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-white py-24 text-center">
             <Heart className={`${icn.empty} mb-4`} aria-hidden strokeWidth={1.25} />
-            <h2 className="mb-2 text-lg font-bold text-zinc-900">Your wishlist is empty</h2>
-            <p className="mb-6 text-sm text-zinc-500">Save products you love to buy later</p>
+            <h2 className="mb-2 text-lg font-bold text-zinc-900">{all.length ? "No saved items match" : "Your wishlist starts here"}</h2>
+            <p className="mb-6 text-sm text-zinc-500">{all.length ? "Try a different search, or clear the filters above." : "Save products and services you love to find them again."}</p>
             <Link href="/shop" className="rounded-xl bg-[#D4450A] px-6 py-3 text-sm font-bold text-white hover:opacity-90">
               Start browsing
             </Link>
@@ -66,7 +72,7 @@ export default async function WishlistPage() {
             {items.map((item) => (
               <Link
                 key={item.id}
-                href={`/products/${item.product.slug}`}
+                href={item.product.isService ? `/service/${item.product.slug}` : `/products/${item.product.slug}`}
                 className="group relative overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-zinc-200/60 transition-all hover:-translate-y-0.5 hover:shadow-lg"
               >
                 <div className="relative aspect-square overflow-hidden bg-zinc-100">
@@ -81,7 +87,7 @@ export default async function WishlistPage() {
                       <Package className={`${icn.ui} text-zinc-300`} aria-hidden strokeWidth={2} />
                     </div>
                   )}
-                  {!item.product.isPublished ? (
+                  {!item.product.isPublished || item.product.isArchived || !item.product.isAvailable ? (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                       <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-zinc-700">
                         Unavailable

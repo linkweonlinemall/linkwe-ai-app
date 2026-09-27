@@ -4,6 +4,6 @@ export function canVendorUsePayOnArrival(
 ): boolean {
   return (
     subscriptionStatus === "ACTIVE" &&
-    (subscriptionPlan === "GROWTH" || subscriptionPlan === "PRO")
+    (subscriptionPlan === "SERVICES" || subscriptionPlan === "GROWTH" || subscriptionPlan === "PRO")
   );
 }

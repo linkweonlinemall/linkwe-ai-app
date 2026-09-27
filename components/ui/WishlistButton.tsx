@@ -37,6 +37,7 @@ export default function WishlistButton({
       }
     } else {
       setWishlisted(result.wishlisted);
+      router.refresh();
     }
     setLoading(false);
   }

@@ -34,9 +34,9 @@ export default function AITopupCheckout({ topupRemaining }: Props) {
 
   return (
     <div className="mt-3">
-      <p className="text-[11px] font-medium text-zinc-600">Buy AI uses</p>
+      <p className="text-[11px] font-medium text-zinc-600">Refill Rex capacity</p>
       <p className="mt-0.5 text-[11px] text-zinc-500">
-        {topupRemaining > 0 ? `${topupRemaining} top-up uses remaining. ` : ""}
+        {topupRemaining > 0 ? "Your top-up reserve is available. " : ""}
         One-time credits never expire.
       </p>
       {error ? (
@@ -56,7 +56,7 @@ export default function AITopupCheckout({ topupRemaining }: Props) {
               className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-left text-[11px] transition-colors hover:border-zinc-300 hover:bg-zinc-50 disabled:opacity-50"
             >
               <span className="block font-semibold text-zinc-900">
-                {loadingKey === key ? "Redirecting…" : `${bundle.uses} uses`}
+                {loadingKey === key ? "Redirecting…" : {SMALL:"Rex Boost",MEDIUM:"Rex Plus · 3× Boost capacity",LARGE:"Rex Max · 8× Boost capacity"}[key]}
               </span>
               <span className="mt-0.5 block text-zinc-500">
                 {formatBundlePriceTTD(bundle.priceMinor)}

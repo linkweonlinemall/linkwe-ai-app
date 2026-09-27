@@ -10,7 +10,7 @@ import { getSavedStoreIds, getWishlistProductIds } from "@/app/actions/wishlist"
 
 export const metadata: Metadata = {
   title: "Search",
-  description: "Search products, services, and stores on LinkWe.",
+  description: "Search products, services, stores, events and tickets on LinkWe.",
 };
 
 type Props = {

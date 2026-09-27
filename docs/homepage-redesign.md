@@ -49,3 +49,12 @@ The isolated release based on production commit `7a5da41` passed a full optimize
 - The third pass also passed TypeScript and targeted ESLint checks. Rex loaded with transparency, the hero shortcut reached his section, and the enlarged typography was reviewed on desktop, tablet and small phones.
 
 Existing PublicNav effect-state/nested-component lint findings and the production-only OneSignal configuration error on localhost predate this design. This was a visual/navigation check, not a checkout test. Unrelated existing changes, including the order-confirmation page, were left untouched.
+
+
+## Live release status
+
+- The homepage redesign is live at https://www.linkweonlinemall.com/ from commit `7af295abbf2ade6384d852ab5788372bad280b70`. Vercel production deployment `FLn85iFkhxqMGeK5s2tq2kTSHcpE` reached Ready.
+- Verified on the live site: the new headline, 3D Rex artwork, real database listings, product filtering, category search and navigation. No browser console errors or broken loaded images were observed.
+- Follow-up commit `1cbebd28359e46cbebc6332ab7e55fe9492f14d1` on main makes the floating product caption adapt when the item is not self-care. It passed targeted ESLint but is not live yet.
+- Its Vercel deployment `EtpVZRt7RN9nrcjwjXw4JRaUXQ7F` and retry `AWFoegCeq29c6LPikymdFKwCiBfr` both failed before compilation with Prisma P1002 while acquiring migration advisory lock 72707369. No schema or migration files changed in this release. The successful homepage deployment remains current.
+- The isolated release checkout is `/private/tmp/linkwe-homepage-release`, branch `codex/homepage-rex-launch`. The original working branch and its unrelated payment/subscription and order-confirmation changes were preserved.

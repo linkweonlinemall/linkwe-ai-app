@@ -2,6 +2,12 @@
 
 Implementation and release preparation, 25 September 2026.
 
+## Deployment record
+
+Published to production on 25 September 2026 in commit `905132dd4c839e990b355a87eec98ae086c48849`, from isolated release branch `codex/vendor-creation-release`. Vercel deployment `8TjC99eQFP2chPVw15moZcYxPsKE` is Ready and Current on `www.linkweonlinemall.com`. All four migrations below applied successfully. Production `CRON_SECRET` is configured; its value was not opened.
+
+The exact release passed its production build, pure workflow tests, transaction-backed coupon/order/message checks, subscription balance regression and callback lint check. The built vendor Orders, Messages and Coupons pages were checked against local preview data. Live admin, service and ticket pages loaded successfully after deployment; the production browser is signed in as Admin and correctly redirects vendor routes to the admin dashboard. No production test purchases, coupons or customer messages were created.
+
 ## Workspace
 
 The vendor navigation now opens `/dashboard/vendor/creation`. Products, services, events and ticket tiers share one searchable library with type/status filters, sorting, grid/list layouts, pagination, and supported bulk actions. The original full product, service, event and ticket fields remain available within a shared editor and section navigator. Old management URLs redirect to the new routes. Event attendees, check-in, service availability and subscriber operations remain accessible.

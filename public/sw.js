@@ -1,12 +1,14 @@
-importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
-
-const CACHE_NAME = "linkwe-v8";
+const CACHE_NAME = "linkwe-v9";
 const OFFLINE_URL = "/offline";
 // Development chunks reuse URLs: caching them mixes old styles with new markup.
 const IS_LOCAL_PREVIEW = ["localhost", "127.0.0.1", "[::1]"].includes(self.location.hostname);
+// The app remains installable if the optional push provider is unreachable.
+if (!IS_LOCAL_PREVIEW) {
+  try { importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js"); }
+  catch (error) { console.warn("Push worker unavailable", error); }
+}
 
 const STATIC_ASSETS = [
-  "/",
   "/offline",
   "/manifest.json",
   "/linkwe-logo-mark-on-dark.png",
@@ -37,7 +39,7 @@ self.addEventListener("activate", (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((key) => key !== CACHE_NAME)
+          .filter((key) => key.startsWith("linkwe-") && key !== CACHE_NAME)
           .map((key) => caches.delete(key))
       )
     )

@@ -1,63 +1,31 @@
-# LinkWe Services — package and booking structure
+# LinkWe Services — confirmed package and workflow
 
-Status: discussion proposal, 25 September 2026. Not enabled in checkout or billing.
+Updated 26 September 2026. This replaces the earlier discussion proposal. Implemented locally; this upgrade has not been deployed to production.
 
-## Confirmed by the owner
+## Confirmed package
 
-- The service-business package costs **TT$100 per month**.
-- Customers can book and pay the provider on arrival.
-- This package focuses on services and limits unrelated selling tools.
+Services costs TT$100 per month and keeps Starter benefits, with two changes: up to 20 non-archived service listings, including drafts, and no plan price cap for services. Starter product limits and online selling commissions remain: 30 products, 15% product commission, 8% service commission and the same one-time Rex welcome capacity. Event commission remains 6%. Timeline posting and continuing Photo Studio access still require Growth or Pro.
 
-## What the subscription should buy
+Active Services, Growth and Pro providers may offer pay on arrival on eligible services. Virtual sessions and customer service memberships continue through online payment. A customer's membership purchase is separate from the vendor's LinkWe subscription.
 
-Sell a useful daily business workspace: a public service menu, an organised appointment book, customer conversations and a clear record of work. The value should continue even when no payment goes through LinkWe.
+Billing supports WiPay checkout, manual monthly card renewal and payment from the available LinkWe balance. Upgrades start a new paid month at the full plan price. Same-plan renewals extend the current paid period. Downgrades go through support. Existing customer work and account records remain accessible.
 
-Recommended initial package:
+## How services are organised
 
-- Up to **15 active service listings**. Keep additional drafts without publishing them.
-- Unlimited bookings, quote requests and on-demand requests, with ordinary abuse controls rather than a per-booking charge.
-- Service Desk: appointments, request responses, private notes, completion history and customer records.
-- Storefront, photos uploaded by the business, opening hours, service descriptions, policies and location.
-- Customer messaging, reviews, QR sharing and service collaborations.
-- Owner plus **two staff profiles**, working hours, time off and manual appointment assignment. This is a recommendation; the staffing allowance is still awaiting the owner's preference. Staff profiles are not dashboard logins.
-- A modest monthly Rex allowance displayed as a percentage. Proposed internal budget: 25 standard prompts per month, subject to cost validation before launch. Purchased top-ups remain separate.
-- A simple services report: booked work, completed work, cancellations, outstanding direct payments and recorded collections. Keep cash collections separate from LinkWe payout money.
+Choose the way work is sold, independently of industry:
 
-Keep product selling, shipping, event ticketing, Timeline promotion, Photo Studio processing, bulk uploads and advanced mixed-business reports on Growth/Pro. Offer contextual upgrade links, and remove irrelevant tools from the main Services navigation.
+1. Appointments: customers book a time for a defined session.
+2. Custom quotes: customers describe the job; the vendor agrees scope and price.
+3. Call-out requests: customers request help; the vendor accepts before confirmation.
+4. Online sessions: scheduled remote work, with clear platform and access instructions.
+5. Recurring memberships: defined billing cadence, included sessions, pause and cancellation terms.
 
-Do not hide messages, support, existing customer commitments, billing records or the ability to cancel/manage an existing subscription after a downgrade.
+Every offer can describe its inclusions, customer preparation and expected result. The Services hub explains the workflows and shows listing readiness. Service Desk manages existing bookings, requests, quotes and subscribers. Staff and availability, Finance and support are linked from the hub.
 
-## Structure services around how the work happens
+Direct customer collections are not LinkWe payout funds. Reports distinguish activity counts, product gross sales and released online earnings.
 
-Keep industry/category separate from the booking workflow. A hairdresser and a consultant can both sell appointments; a photographer and an electrician can both offer custom quotes.
+## Boundaries
 
-1. **Appointment:** customer chooses a time, duration and location. Fixed price or clearly disclosed “from” price. Default to pay on arrival where eligible. Existing Bookable service flow is the starting point.
-2. **Request a quote:** customer describes the job and can attach references. Provider sets scope, price and an agreed time before confirmation. A quote is not a paid booking.
-3. **On-demand:** customer sends an immediate request. Availability, service area and estimated arrival should be clear. The provider accepts before the customer commits.
-4. **Recurring service:** repeated sessions or access with explicit cadence, inclusions, remaining sessions, pauses and cancellation terms. This is the provider's customer membership, distinct from the provider paying LinkWe TT$100 monthly.
-5. **Online service:** a location/delivery option for an appointment or quoted job, rather than a separate business category. Describe where the session happens and when access details are shared.
+The workflows cover a broad range of service businesses. Dedicated multi-day rentals, room/resource inventory, automatic staff-capacity allocation and simultaneous group-capacity booking require their own capacity rules; they are not newly implemented or promised by this release. Quote-based offers can describe bespoke work, but do not reserve resources automatically.
 
-Group classes, multi-day rentals, resource/room bookings and multi-person simultaneous capacity need dedicated capacity rules. Do not advertise universal support until those rules are enforced at booking time. The current assignment enhancement checks staff conflicts after booking; customer self-selection of staff and automatic team-capacity booking are a separate implementation step.
-
-## The pay-on-arrival journey
-
-Customer chooses service → sees total/price basis, location and cancellation policy → books or submits a request → provider confirms → customer receives the appointment in their dashboard → service takes place → provider records the direct collection → customer can confirm completion and review.
-
-- Present “Pay provider on arrival” before confirmation, and show the amount still due in both dashboards.
-- Online-paid money and money collected directly by the provider need distinct records. Do not reuse `amountPaid` (currently online payment) or create a LinkWe payout credit for cash.
-- Record collection amount, collection time and actor, with a correction history. A completion status alone does not prove payment.
-- No-show, rescheduling and cancellation actions must keep staff schedules and customer appointments consistent. Automated reminders should only be promised when their delivery is verified.
-- For quotes and on-demand work, the accepted scope/price must be preserved when the customer agrees.
-
-## What must be built before the TT$100 package launches
-
-1. Add the Services plan as a real entitlement, with 10,000 cents (TT$100) monthly pricing, renewal handling and clear upgrade/downgrade rules. Use the existing payment provider; do not create a UI-only plan.
-2. Enforce the same permissions in server actions, AI tools, public checkout and navigation. Hiding menu links alone is insufficient.
-3. Extend pay-on-arrival eligibility to an active Services subscription, including each supported request/booking flow. Choose a policy for service-provider customer memberships paid offline; do not silently enable automatic online recurring charges.
-4. Add direct-collection records and customer-visible payment states, separate from the vendor ledger.
-5. Preserve existing stores and paid commitments during migration. Exceeding a plan limit should pause new publishing, not delete listings or cancel bookings.
-6. Test plan purchase/renewal/failure, cancellation, upgrade and downgrade, staff limits, publication limits, payment mode enforcement, customer dashboards and permissions using sandbox payments.
-
-## Decision to close before implementation
-
-Confirm the staff allowance: owner only, owner plus two staff (recommended), or unlimited profiles. The 15-listing cap and Rex allowance above are proposals, not existing entitlements or a claim that the package is ready to sell.
+PhotoRoom payment and promotional video remain deferred by the owner.

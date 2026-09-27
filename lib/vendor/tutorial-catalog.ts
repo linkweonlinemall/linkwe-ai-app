@@ -60,6 +60,9 @@ const productFulfilment: TutorialStep[] = [
 const serviceBasics: TutorialStep[] = [
   field(SERVICE_ROUTE, "name", "Service name", "Use a clear service customers recognise, such as “30-minute consultation” or “Bridal makeup package”."),
   field(SERVICE_ROUTE, "description", "Service description", "Explain deliverables, process, customer requirements, what is excluded, timing and the result the customer should expect."),
+  field(SERVICE_ROUTE, "serviceInclusions", "What is included?", "List exactly what the customer gets for this price. Mention important exclusions so there are no surprises."),
+  field(SERVICE_ROUTE, "serviceRequirements", "What should the customer prepare?", "Explain information, access, materials or preparation you need before starting. Leave this blank when no preparation is needed."),
+  field(SERVICE_ROUTE, "serviceDeliverables", "What happens next?", "Describe the result, handover and realistic timing. For custom work, explain that you confirm scope and price in the quote."),
   field(SERVICE_ROUTE, "category", "Service category", "Choose the closest category so the service appears in the right filters and searches."),
   field(SERVICE_ROUTE, "tags", "Service tags", "Add relevant comma-separated skills, styles, audience, location or occasion terms. Keep them specific and truthful."),
 ];
@@ -170,6 +173,9 @@ export const tutorialCatalog = {
   services: {
     label: "Manage services", description: "Understand service types, status, availability and service actions.", category: "Create & sell", duration: "4 min",
     steps: [
+      routeStep("/dashboard/vendor/services", "Your service business", "Start in Services. Set up clear offers here; run appointments, requests and recurring work in Service Desk."),
+      { route: "/dashboard/vendor/services", selector: '[data-tour="service-workflows"]', title: "Choose how customers hire you", body: "Appointments reserve a time. Quotes define a custom job. Call-out requests need your acceptance. Online sessions happen remotely. Memberships provide recurring access. You can use more than one workflow." },
+      { route: "/dashboard/vendor/services", selector: '[data-tour="service-readiness"]', title: "Finish your offer", body: "Each service shows useful next steps: describe the offer, add photos, explain inclusions, set expectations and review before publishing. Set working hours for appointments." },
       routeStep("/dashboard/vendor/creation?type=service", "Service catalogue", "All bookable, quoted, subscription, on-demand and virtual services are managed here."),
       { route: "/dashboard/vendor/creation?type=service", selector: '[href="/dashboard/vendor/creation/new?type=service"]', title: "Create a service", body: "Start here and choose the buying workflow that matches how the work is actually sold." },
       { route: "/dashboard/vendor/creation?type=service", selector: '[data-tour="creation-library"]', title: "Service cards", body: "Each card shows the service type, price/status and actions. Edit details, manage availability when relevant, or open the public page." },
@@ -179,7 +185,7 @@ export const tutorialCatalog = {
   serviceBooking: {
     label: "Create a booking service", description: "Appointments, payments, deposits and availability.", category: "Create & sell", duration: "9 min",
     steps: [
-      { route: SERVICE_ROUTE, activateSelector: '[data-service-type="BOOKABLE"]', selector: '[data-service-type="BOOKABLE"]', title: "Choose Booking", body: "Use Booking when customers reserve a date and time, such as appointments, lessons, rentals or consultations." },
+      { route: SERVICE_ROUTE, activateSelector: '[data-service-type="BOOKABLE"]', selector: '[data-service-type="BOOKABLE"]', title: "Choose Booking", body: "Use Booking when customers reserve a date and time, such as appointments, lessons or consultations." },
       ...serviceBasics,
       field(SERVICE_ROUTE, "price", "Booking price", "Enter the full service price in TTD."),
       { route: SERVICE_ROUTE, selector: '[data-tour="booking-payment"]', title: "Payment method", body: "Choose full online payment, deposit or eligible pay on arrival. Starter vendors must use online service payment. Online payment creates a confirmed LinkWe transaction." },
@@ -249,7 +255,7 @@ export const tutorialCatalog = {
       { route: "/dashboard/vendor/orders", selector: 'nav[aria-label="Order type"]', title: "Product vs service orders", body: "Use the two tabs to separate shipped/pickup/digital product work from bookings, quotes, requests and subscriptions." },
       { route: "/dashboard/vendor/orders", selector: '[data-tour="orders-action"]', title: "Action required", body: "Start here. Confirm payment and fulfilment method, then open the order. Never fulfil a pending-payment order as if it were paid." },
       { route: "/dashboard/vendor/orders", selector: '[data-tour="orders-list"]', title: "Order cards", body: "Read order number, date, customer, delivery method, total and current status. Use Order details or Review order for the full record." },
-      { route: "/dashboard/vendor/orders", selector: 'a[href^="/dashboard/vendor/orders/"]', navigateSelector: 'a[href^="/dashboard/vendor/orders/"]', title: "Open an order", body: "We’ll open the first available order so you can learn the full fulfilment workspace. This only views the order; it does not change its status." },
+      { route: "/dashboard/vendor/orders", selector: 'a[href^="/dashboard/vendor/orders/"]', navigateSelector: 'a[href^="/dashboard/vendor/orders/"]', title: "Open an order", body: "Choose Open this control to view the first available order so you can learn the full fulfilment workspace. This only views the order; it does not change its status." },
       { selector: '[data-tour="order-progress"]', title: "Follow the correct progress", body: "Follow digital delivery or the LinkWe warehouse journey. Choose vendor handover only when the parcel is ready; LinkWe handles warehouse receipt, dispatch and pickup readiness." },
       { selector: '[data-tour="order-items"]', title: "Verify items and variations", body: "Confirm every item, variation, quantity and image before packing. Similar-looking variants must remain separate." },
       { selector: '[data-tour="order-fulfilment-action"]', title: "Take the next fulfilment action", body: "The action shown is based on payment, current status and delivery method. Never use it early just to clear the order." },
@@ -416,7 +422,7 @@ export const tutorialCatalog = {
     label: "Business reports", description: "Read sales trends, customer reach, completion and product performance.", category: "Business operations", duration: "5 min",
     steps: [routeStep("/dashboard/vendor/reports", "Reports dashboard", "Reports turns paid LinkWe order activity into a practical view of how the store is performing."),
       { route: "/dashboard/vendor/reports", selector: '[data-tour="reports-kpis"]', title: "Headline performance", body: "Gross sales is before commission. Orders shows workload, Customers counts unique buyers and Completion shows delivered or completed orders." },
-      { route: "/dashboard/vendor/reports", selector: '[data-tour="reports-trend"]', title: "Six-month sales trend", body: "Compare monthly direction and order volume. Open Finance when you need net earnings, commission or available payout balance." },
+      { route: "/dashboard/vendor/reports", selector: '[data-tour="reports-trend"]', title: "Sales trend for your selected period", body: "Compare monthly direction and order volume. Open Finance when you need net earnings, commission or available payout balance." },
       { route: "/dashboard/vendor/reports", selector: '[data-tour="reports-products"]', title: "Top products", body: "Use quantity and gross revenue together to understand which products attract demand and contribute most sales." }],
   },
   messages: {
@@ -425,7 +431,7 @@ export const tutorialCatalog = {
       { route: "/dashboard/vendor/messages", selector: '[data-tour="message-search"]', title: "Search", body: "Search by customer name or recent message text. Inside a conversation, use its search button to find older messages." },
       { route: "/dashboard/vendor/messages", selector: '[data-tour="message-filters"]', title: "Conversation filters", body: "Choose All, Unread or Needs reply. Needs reply shows conversations whose latest message came from the customer. Sort by newest, oldest or name." },
       { route: "/dashboard/vendor/messages", selector: '[data-tour="message-list"]', title: "Conversation list", body: "Read the customer, context, last message, time and unread status before opening." },
-      { route: "/dashboard/vendor/messages", selector: 'a[href^="/dashboard/vendor/messages/"]', navigateSelector: 'a[href^="/dashboard/vendor/messages/"]', title: "Open a conversation", body: "We’ll open the first available conversation to demonstrate the complete messaging workspace without sending anything." },
+      { route: "/dashboard/vendor/messages", selector: 'a[href^="/dashboard/vendor/messages/"]', navigateSelector: 'a[href^="/dashboard/vendor/messages/"]', title: "Open a conversation", body: "Choose Open this control to view the first available conversation to demonstrate the complete messaging workspace without sending anything." },
       { selector: '[data-tour="message-thread"]', title: "Conversation thread", body: "Customer replies refresh automatically. Open the information button for this customer’s recent orders, bookings and service requests." },
       { selector: '[data-tour="message-composer"]', title: "Practise a reply", body: "Quick replies insert editable text. Drafts stay saved in this browser tab. Send with the orange button or Enter on desktop; Shift + Enter adds a new line. On mobile, use the send button." },
       { title: "Resolve the next action", body: "End with who will do what and when. Return to unread conversations and follow through on promises." }],
@@ -437,6 +443,15 @@ export const tutorialCatalog = {
       { route: "/dashboard/vendor/reviews", selector: '[data-tour="review-list"]', title: "Review details", body: "Read the order/service context and identify specific praise or failure patterns." },
       { route: "/dashboard/vendor/reviews", selector: '[data-tour="review-response"]', title: "Respond professionally", body: "Acknowledge the experience, stay factual, protect privacy and explain a remedy without arguing." },
       { title: "Improve the operation", body: "When feedback repeats, update the listing, policy, packaging, schedule or fulfilment process." }],
+  },
+  support: {
+    label: "Get help with your business", description: "Create a private ticket, follow updates and keep the solution together.", category: "Business operations", duration: "3 min",
+    steps: [
+      routeStep("/dashboard/vendor/support", "Your support centre", "Use Support for help from the LinkWe team. Customer conversations stay in Messages. Your tickets are private to your business and LinkWe administrators."),
+      { route: "/dashboard/vendor/support", selector: '[data-tour="support-new"]', title: "Describe one issue", body: "Choose New ticket. Pick a topic and priority, add an order or listing reference if relevant, and describe what happened and what you expected. Never include passwords or payment-card details." },
+      { route: "/dashboard/vendor/support", selector: '[data-tour="support-status"]', title: "Follow progress", body: "Open means the team has received the ticket. In progress means work has started. Reply needed means the team needs information from you. Resolved tickets remain in your history." },
+      { route: "/dashboard/vendor/support", title: "Keep the conversation together", body: "Open the ticket to read replies and add an update. Reply in the same thread instead of opening duplicate tickets. You can reopen a resolved issue when you still need help. This is a queue, not instant live chat." },
+    ],
   },
   settings: {
     label: "Account settings", description: "Keep account, security and notification details current.", category: "Business operations", duration: "4 min",
@@ -451,7 +466,7 @@ export const tutorialCatalog = {
   rex: {
     label: "Rex business assistant", description: "Use AI safely for analysis, listings and store work.", category: "Business operations", duration: "5 min",
     steps: [routeStep("/dashboard/vendor/ai-assistant", "Meet Rex", "Rex can help eligible vendors analyse the business and create or improve store content. Review every proposed change before accepting it."),
-      { route: "/dashboard/vendor/ai-assistant", selector: '[data-tour="rex-usage"]', title: "AI allowance", body: "The percentage bar shows how much of your plan allowance remains. Starter has a one-time gift; paid allowances renew with the plan. A purchased top-up reserve is shown separately." },
+      { route: "/dashboard/vendor/ai-assistant", selector: '[data-tour="rex-usage"]', title: "AI allowance", body: "The percentage bar shows how much of your plan allowance remains. Starter and Services share a one-time welcome gift; Growth and Pro include recurring monthly capacity. A purchased top-up reserve is shown separately." },
       { route: "/dashboard/vendor/ai-assistant", selector: '[data-tour="rex-history"]', title: "Chat history", body: "Open prior conversations when continuing the same task. Start a new chat for unrelated work." },
       { route: "/dashboard/vendor/ai-assistant", selector: '[data-tour="rex-images"]', title: "Product images", body: "Upload clear images when asking Rex to build a listing. Remove private or unrelated images first." },
       { route: "/dashboard/vendor/ai-assistant", selector: '[data-tour="rex-prompts"]', title: "Ask a precise question", body: "State the goal, product/service, audience, constraints and what Rex may change. Specific instructions produce safer results." },

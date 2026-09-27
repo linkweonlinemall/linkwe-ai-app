@@ -91,6 +91,7 @@ export default function VendorDashboardTopbar({
     pathname.startsWith("/dashboard/vendor/reports") ? "reports" :
     pathname.startsWith("/dashboard/vendor/messages") ? "messages" :
     pathname.startsWith("/dashboard/vendor/reviews") ? "reviews" :
+    pathname.startsWith("/dashboard/vendor/support") ? "support" :
     pathname.startsWith("/dashboard/vendor/settings") ? "settings" : null;
 
   return (

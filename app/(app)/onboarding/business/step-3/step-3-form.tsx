@@ -6,6 +6,7 @@ import RegionSelect from "@/components/ui/RegionSelect";
 import FormNotice from "@/components/auth/FormNotice";
 import FormActions from "@/components/onboarding/FormActions";
 import { suggestStoreSlug } from "@/components/vendor/StoreIdentityFields";
+import {canonicalStoreCategory} from "@/lib/catalog/categories";
 import { STORE_CATEGORY_GROUPS } from "@/lib/onboarding/store-categories";
 import { validateOnboardingFile } from "@/lib/onboarding/upload-validation";
 import type { IntendedPlan } from "@/lib/onboarding/intended-plan";
@@ -15,7 +16,7 @@ import { saveBusinessOnboardingStep3, type BusinessOnboardingState } from "../ac
 type Props = { userId: string; defaultName: string; defaultSlug: string; defaultCategoryId: string; defaultRegion: string; defaultTagline: string; plan: IntendedPlan; planLabel: string };
 export function BusinessStep3Form(props: Props) {
   const [state, action, pending] = useActionState(saveBusinessOnboardingStep3, {} as BusinessOnboardingState);
-  const [draft, setDraft] = useState({name:props.defaultName,slug:props.defaultSlug,categoryId:props.defaultCategoryId,region:props.defaultRegion,tagline:props.defaultTagline});
+  const [draft, setDraft] = useState({name:props.defaultName,slug:props.defaultSlug,categoryId:canonicalStoreCategory(props.defaultCategoryId),region:props.defaultRegion,tagline:props.defaultTagline});
   const [slugEdited, setSlugEdited] = useState(Boolean(props.defaultSlug));
   const [ready, setReady] = useState(false);
   const [fileError, setFileError] = useState<string>();
@@ -29,7 +30,7 @@ export function BusinessStep3Form(props: Props) {
         const fields = ["name", "slug", "categoryId", "region", "tagline"] as const;
         if (fields.every(key => typeof saved[key] === "string" && saved[key].length <= 200)) {
           // eslint-disable-next-line react-hooks/set-state-in-effect -- restore the browser draft after server hydration
-          setDraft({name:saved.name,slug:saved.slug,categoryId:saved.categoryId,region:saved.region,tagline:saved.tagline});
+          setDraft({name:saved.name,slug:saved.slug,categoryId:canonicalStoreCategory(saved.categoryId),region:saved.region,tagline:saved.tagline});
           setSlugEdited(Boolean(saved.slug));
         }
       }

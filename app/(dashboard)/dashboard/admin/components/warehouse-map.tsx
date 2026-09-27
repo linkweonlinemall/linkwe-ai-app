@@ -21,7 +21,7 @@ export default function WarehouseMap({ data }: { data: OperationsWorkspace }) {
         const text = document.createElement("span"); text.textContent = label;
         L.circleMarker(point, { radius: 8, color: "white", weight: 2, fillColor: color, fillOpacity: 0.95 }).addTo(map!).bindPopup(text);
       };
-      data.warehouses.forEach((w) => pin(w.address?.latitude, w.address?.longitude, w.name, "#059669"));
+      data.warehouses.forEach((w) => pin(w.address?.latitude, w.address?.longitude, w.name, "#1b5c80"));
       data.orders.forEach((o) => {
         pin(o.shippingAddress?.latitude, o.shippingAddress?.longitude, `${o.referenceNumber ?? o.id} · Customer · ${o.status.replaceAll("_", " ")}`, "#2563eb");
         o.splitOrders.filter((s) => !s.warehouseReceivedAt).forEach((s) => pin(s.store.latitude, s.store.longitude, `${s.store.name} · ${s.status.replaceAll("_", " ")}`, "#d4450a"));
@@ -30,5 +30,5 @@ export default function WarehouseMap({ data }: { data: OperationsWorkspace }) {
     });
     return () => { disposed = true; map?.remove(); };
   }, [data]);
-  return <div><div ref={ref} className="relative z-0 h-[360px] w-full rounded-2xl sm:h-[480px]" aria-label="Warehouse, vendor and customer address map"/><p className="mt-3 text-xs text-zinc-500">Orange: vendors · Green: warehouse · Blue: customers. Saved address pins and staff-recorded statuses; CSF vehicle GPS is not connected. Locations without coordinates are omitted.</p></div>;
+  return <div><div ref={ref} className="relative z-0 h-[360px] w-full rounded-2xl sm:h-[480px]" aria-label="Warehouse, vendor and customer address map"/><p className="mt-3 text-xs text-zinc-500">Orange: vendors · Rex Blue: warehouse · Blue: customers. Saved address pins and staff-recorded statuses; CSF vehicle GPS is not connected. Locations without coordinates are omitted.</p></div>;
 }

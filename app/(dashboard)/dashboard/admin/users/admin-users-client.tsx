@@ -19,14 +19,14 @@ type AdminUserRow = Awaited<ReturnType<typeof getAdminUsers>>["users"][number];
 const ROLE_BADGE: Record<UserRole, string> = {
   CUSTOMER: "bg-blue-50 text-blue-700",
   VENDOR:   "bg-amber-50 text-amber-700",
-  COURIER:  "bg-emerald-50 text-emerald-700",
+  COURIER:  "bg-sky-50 text-sky-700",
   ADMIN:    "bg-[#D4450A]/10 text-[#D4450A]",
 };
 
 const ROLE_AVATAR: Record<UserRole, string> = {
   CUSTOMER: "bg-blue-100 text-blue-700",
   VENDOR:   "bg-amber-100 text-amber-700",
-  COURIER:  "bg-emerald-100 text-emerald-700",
+  COURIER:  "bg-sky-100 text-sky-700",
   ADMIN:    "bg-[#D4450A]/10 text-[#D4450A]",
 };
 
@@ -351,7 +351,7 @@ export default function AdminUsersClient({
                         Suspended
                       </span>
                     ) : (
-                      <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700">
+                      <span className="rounded-full bg-sky-50 px-1.5 py-0.5 text-[9px] font-semibold text-sky-700">
                         Active
                       </span>
                     )}
@@ -372,7 +372,7 @@ export default function AdminUsersClient({
                     onClick={() => handleSuspend(u.id, u.suspended)}
                     className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors ${
                       u.suspended
-                        ? "border border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                        ? "border border-sky-200 text-sky-700 hover:bg-sky-50"
                         : "border border-zinc-200 text-zinc-600 hover:bg-zinc-50"
                     }`}
                   >
@@ -500,7 +500,7 @@ export default function AdminUsersClient({
                       Suspended
                     </span>
                   ) : (
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                    <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-700">
                       Active
                     </span>
                   )}
@@ -516,7 +516,7 @@ export default function AdminUsersClient({
                         onClick={() => handleSuspend(u.id, u.suspended)}
                         className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors ${
                           u.suspended
-                            ? "border border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                            ? "border border-sky-200 text-sky-700 hover:bg-sky-50"
                             : "border border-zinc-200 text-zinc-600 hover:bg-zinc-50"
                         }`}
                       >

@@ -4,7 +4,7 @@ import type { CommissionPlan } from "@/lib/finance/commission";
 export function resolveVendorPlan(
   plan: string | null | undefined,
 ): CommissionPlan {
-  if (plan === "GROWTH" || plan === "PRO" || plan === "STARTER") {
+  if (plan === "SERVICES" || plan === "GROWTH" || plan === "PRO" || plan === "STARTER") {
     return plan;
   }
   return "STARTER";

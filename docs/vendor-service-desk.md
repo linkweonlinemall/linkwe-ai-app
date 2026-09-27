@@ -28,3 +28,5 @@ Queries and private-note/cancellation actions require vendor authentication and 
 - Browser checks covered desktop and 390px/320px phone layouts, search, attention filters, weekly calendar navigation, booking details, quote/session review screens and the legacy booking redirect. No customer-facing mutation was submitted during browser testing.
 
 No schema migration is required by Service Desk itself. Other pending workspace changes have separate migration/release requirements.
+
+Published 25 September 2026 in commit `9e7f9d771953018eccff115283de01ff49e32bb6`. See `customer-service-desk-release.md`.

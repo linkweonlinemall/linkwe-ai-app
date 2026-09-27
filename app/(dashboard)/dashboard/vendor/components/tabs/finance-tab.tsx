@@ -226,7 +226,7 @@ export default function FinanceTab({
     } catch { setRequestError("Could not submit the request. Check payout history before trying again."); } finally { setRequesting(false); }
   }
 
-  async function handlePaySubscription(targetPlan?: "GROWTH" | "PRO") {
+  async function handlePaySubscription(targetPlan?: "SERVICES" | "GROWTH" | "PRO") {
     setSubPayMessage(null);
     setSubPayError(null);
     setPayingSubscription(true);
@@ -287,7 +287,7 @@ export default function FinanceTab({
   }
 
   const filteredActivity = ledgerActivity.filter(entry => (transactionKind === "all" || (transactionKind === "debits") === isVendorLedgerDebit(entry.entryType)) && `${entry.description ?? ""} ${entry.entryType}`.toLowerCase().includes(transactionSearch.toLowerCase().trim()));
-  const CARD = "rounded-[20px] border border-[#dce5d8] bg-white";
+  const CARD = "rounded-[20px] border border-[#d7e1e6] bg-white";
 
   const downgradeDate = pastDueSince
     ? new Date(new Date(pastDueSince).getTime() + 7 * 24 * 60 * 60 * 1000)
@@ -349,7 +349,7 @@ export default function FinanceTab({
               <button onClick={()=>chooseSection("bank")} className="underline">Add your bank details</button> before requesting a payout.
             </p>
           ) : requestSuccess ? (
-            <div className="flex items-center gap-2 text-sm text-emerald-700">
+            <div className="flex items-center gap-2 text-sm text-sky-700">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
@@ -407,17 +407,18 @@ export default function FinanceTab({
         </div>
         <div className="mt-3 rounded-lg border border-zinc-100 bg-zinc-50 p-2.5">
           {subCheckoutStatus === "success" && subscriptionStatus === "ACTIVE" ? (
-            <p className="mb-2 text-xs text-emerald-700">
+            <p className="mb-2 text-xs text-sky-700">
               Subscription started — your plan is now active
             </p>
           ) : null}
           <p className="text-sm text-zinc-600 mb-3">Product commission: {productCommissionPct}%</p>
-          <div className="rounded-xl bg-[#183f3a] p-4 mb-3"><RexUsageMeter allowance={aiAllowance} remaining={aiRemaining} topupRemaining={topupRemaining} lifetime={plan === "STARTER"}/></div>
+          <div className="rounded-xl bg-[#174766] p-4 mb-3"><RexUsageMeter allowance={aiAllowance} remaining={aiRemaining} topupRemaining={topupRemaining} lifetime={plan === "STARTER" || plan === "SERVICES"}/></div>
           <AITopupCheckout topupRemaining={topupRemaining} />
+          {plan === "STARTER" && <div className="my-4 rounded-2xl border border-sky-200 bg-sky-50 p-4"><h3 className="font-bold text-sky-950">Services · TT$100/month</h3><p className="mt-1 text-sm text-sky-900">Everything in Starter, with 20 services, no service-price cap and pay on arrival for eligible services. Starter commissions apply to online sales.</p><div className="mt-3 flex flex-wrap gap-3"><button disabled={subscribing} onClick={() => void handleSubscribeByCard("SERVICES")} className="rounded-xl bg-[#174766] px-4 py-3 text-sm font-bold text-white">Choose Services</button><button disabled={payingSubscription || subscribing} onClick={() => void handlePaySubscription("SERVICES")} className="text-sm font-bold text-sky-900 underline">Pay from balance</button></div></div>}
           {plan === "STARTER" ? (
             <>
               <p className="mt-2 text-xs text-zinc-500">
-                Upgrade to Growth for TTD 300/month: 5% product commission, no service commission, and 300 Rex uses per month.
+                Upgrade to Growth for TTD 300/month: 5% product commission, no service commission, and expanded monthly Rex capacity.
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 <button
@@ -464,7 +465,7 @@ export default function FinanceTab({
               </p>
               {subscriptionMode ? (
                 <p
-                  className="mt-1 text-xs font-semibold text-emerald-700"
+                  className="mt-1 text-xs font-semibold text-sky-700"
                 >
                   WiPay card connected
                 </p>
@@ -536,7 +537,7 @@ export default function FinanceTab({
                       : `Pay TTD ${(priceMinor / 100).toLocaleString("en-TT", { maximumFractionDigits: 0 })} from balance`}
                   </button>
                   {subPayMessage ? (
-                    <p className="mt-2 text-xs text-emerald-700">{subPayMessage}</p>
+                    <p className="mt-2 text-xs text-sky-700">{subPayMessage}</p>
                   ) : null}
                   {subPayError ? (
                     <p className="mt-2 text-xs text-red-600">{subPayError}</p>
@@ -557,7 +558,7 @@ export default function FinanceTab({
                     <p className="mt-2 text-xs text-zinc-500">
                       To change or downgrade your plan,{" "}
                       <Link
-                        href="/contact"
+                        href="/dashboard/vendor/support"
                         className="font-medium text-zinc-700 underline-offset-2 hover:underline"
                       >
                         contact support
@@ -565,30 +566,20 @@ export default function FinanceTab({
                       .
                     </p>
                   ) : null}
-                  {plan === "GROWTH" ? (
-                    <div className="mt-3 flex flex-wrap gap-3 border-t border-zinc-100 pt-3 text-xs">
-                      <button
-                        type="button"
-                        disabled={subscribing || payingSubscription}
-                        onClick={() => void handleSubscribeByCard("PRO")}
-                        className="font-semibold text-[#D4450A] disabled:opacity-50"
-                      >
-                        Upgrade to Pro with WiPay
-                      </button>
-                      <button
-                        type="button"
-                        disabled={subscribing || payingSubscription}
-                        onClick={() => void handlePaySubscription("PRO")}
-                        className="font-semibold text-zinc-600 disabled:opacity-50"
-                      >
-                        Upgrade to Pro from balance
-                      </button>
-                    </div>
-                  ) : null}
+
                 </>
               ) : null}
+              {(plan === "SERVICES" || plan === "GROWTH") && <div className="mt-4 grid gap-3 border-t border-zinc-200 pt-4 sm:grid-cols-2">
+                {(plan === "SERVICES" ? ["GROWTH", "PRO"] as const : ["PRO"] as const).map(target => <div key={target} className="rounded-xl border border-sky-100 bg-white p-3">
+                  <h3 className="text-sm font-bold text-sky-950">{target === "GROWTH" ? "Growth · TT$300/month" : "Pro · TT$500/month"}</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-zinc-600">{target === "GROWTH" ? "More listings, expanded Rex capacity and no service commission." : "Unlimited listings, maximum Rex capacity and no product or service commission."}</p>
+                  <p className="mt-2 text-xs text-zinc-500">Starts a new paid month at the full plan price.</p>
+                  <div className="mt-3 flex flex-wrap gap-3 text-xs"><button type="button" disabled={subscribing || payingSubscription} onClick={() => void handleSubscribeByCard(target)} className="rounded-lg bg-[#0e4362] px-3 py-2 font-semibold text-white disabled:opacity-50">Upgrade with WiPay</button><button type="button" disabled={subscribing || payingSubscription} onClick={() => void handlePaySubscription(target)} className="font-semibold text-sky-900 underline disabled:opacity-50">Pay from balance</button></div>
+                </div>)}
+              </div>}
             </>
           )}
+          {subPayError && <p role="alert" className="mt-3 text-sm text-red-700">{subPayError}</p>}
         </div>
       </div>}
 
@@ -621,7 +612,7 @@ export default function FinanceTab({
                         className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
                           isDebit
                             ? "bg-red-50 text-red-700"
-                            : "bg-emerald-50 text-emerald-700"
+                            : "bg-sky-50 text-sky-700"
                         }`}
                       >
                         {isDebit ? debit.label : ledgerTypeLabel(entry.ledgerEntryType)}
@@ -644,7 +635,7 @@ export default function FinanceTab({
                       </div>
                     ) : isShipping ? (
                       <div className="mt-2">
-                        <p className="font-semibold tabular-nums text-emerald-600">+{formatTTD(net)}</p>
+                        <p className="font-semibold tabular-nums text-sky-600">+{formatTTD(net)}</p>
                         <p className="mt-0.5 text-xs text-zinc-400">Your delivery fee · no commission</p>
                       </div>
                     ) : (
@@ -659,7 +650,7 @@ export default function FinanceTab({
                         </div>
                         <div>
                           <p className="text-zinc-400">Net</p>
-                          <p className="font-semibold tabular-nums text-emerald-600">+{formatTTD(net)}</p>
+                          <p className="font-semibold tabular-nums text-sky-600">+{formatTTD(net)}</p>
                         </div>
                       </div>
                     )}
@@ -839,7 +830,7 @@ export default function FinanceTab({
                           req.status === "PENDING"
                             ? "border border-amber-200 bg-amber-50 text-amber-700"
                             : req.status === "APPROVED"
-                              ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                              ? "border border-sky-200 bg-sky-50 text-sky-700"
                               : "border border-red-200 bg-red-50 text-red-600"
                         }`}
                       >

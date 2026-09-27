@@ -169,7 +169,7 @@ export default function FrequentlyBoughtTogether({
   if (items.length === 0) return null;
 
   return (
-    <div className="rounded-[1.5rem] border border-[#e0e5d7] bg-[#fffffc] p-5 font-sans shadow-[0_14px_40px_rgba(38,73,96,.09)]">
+    <div className="rounded-[1.5rem] border border-[#d7e0e5] bg-[#fffffc] p-5 font-sans shadow-[0_14px_40px_rgba(38,73,96,.09)]">
       <h2 className="text-sm font-black uppercase tracking-wide text-zinc-900">Pair it with</h2>
 
       <div className="mt-5 flex flex-col items-stretch gap-3 md:flex-row md:flex-wrap md:items-center md:justify-start md:gap-2">

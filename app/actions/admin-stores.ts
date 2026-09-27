@@ -88,9 +88,9 @@ export async function setVendorPlan(storeId: string, plan: string) {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/login");
 
-  if (!["STARTER","GROWTH","PRO"].includes(plan)) return {ok:false,error:"Choose an available plan."};
+  if (!["STARTER","SERVICES","GROWTH","PRO"].includes(plan)) return {ok:false,error:"Choose an available plan."};
   const normalizedPlan: VendorSubscriptionPlan =
-    plan === "GROWTH" || plan === "PRO" ? plan : "STARTER";
+    plan === "SERVICES" || plan === "GROWTH" || plan === "PRO" ? plan : "STARTER";
   const status: StoreSubscriptionStatus =
     normalizedPlan === "STARTER" ? "NONE" : "ACTIVE";
 

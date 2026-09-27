@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowLeft, ArrowUpRight, Check, ChevronDown, ChevronUp, Clock3, Info, MailOpen, MessageCircle, MessagesSquare, Package, RefreshCw, Search, Send, Sparkles, X, Zap } from "lucide-react";
-import { getConversationMessages, getMyConversations, markVendorConversationRead, sendMessage, touchMessagePresence } from "@/app/actions/messages";
+import { getConversationMessages, getMyConversations, markVendorConversationRead, markCustomerConversationRead, sendMessage, touchMessagePresence } from "@/app/actions/messages";
 import { formatConversationListTime } from "@/lib/messages/format-time";
 import { MESSAGE_MAX_LENGTH, clearSeenUnread, draftKey, filterInbox, initials, mergeChatMessages, messageClock, messageDay, messageParts, quickReplies, recentlyActive, type InboxFilter, type MessageContext, type VendorChatMessage, type VendorInboxRow } from "@/lib/messages/vendor-inbox";
 import s from "./messages.module.css";
 
 type Props = {
+  side?: "vendor" | "customer";
   currentUserId: string; selectedId: string | null; initialRows: VendorInboxRow[];
   initialMessages: VendorChatMessage[]; initialSnapshotAt: string | null;
   context: MessageContext | null; renderedAt: string;
@@ -23,7 +24,10 @@ function Highlight({ text, query }: { text: string; query: string }) {
   return <>{parts.map((part, index) => part.toLowerCase() === query.trim().toLowerCase() ? <mark key={index}>{part}</mark> : part)}</>;
 }
 
-export default function VendorMessagesWorkspace({ currentUserId, selectedId, initialRows, initialMessages, initialSnapshotAt, context, renderedAt }: Props) {
+export default function VendorMessagesWorkspace({ currentUserId, selectedId, initialRows, initialMessages, initialSnapshotAt, context, renderedAt, side = "vendor" }: Props) {
+  const basePath = side === "vendor" ? "/dashboard/vendor/messages" : "/messages";
+  const orderPath = side === "vendor" ? "/dashboard/vendor/orders" : "/orders";
+  const ownRole = side === "vendor" ? "VENDOR" : "CUSTOMER";
   const [rows, setRows] = useState(initialRows);
   const [messages, setMessages] = useState(initialMessages);
   const [now, setNow] = useState(Date.parse(renderedAt));
@@ -59,28 +63,28 @@ export default function VendorMessagesWorkspace({ currentUserId, selectedId, ini
   const messageRefs = useRef(new Map<string, HTMLDivElement>());
   const selected = rows.find(row => row.id === selectedId);
   const unreadCount = rows.filter(row => row.unread > 0).length;
-  const replyCount = rows.filter(row => row.lastSenderRole === "CUSTOMER").length;
-  const visibleRows = useMemo(() => filterInbox(rows, query, filter, sort), [rows, query, filter, sort]);
+  const replyCount = rows.filter(row => row.lastSenderRole === (side === "vendor" ? "CUSTOMER" : "VENDOR")).length;
+  const visibleRows = useMemo(() => filterInbox(rows, query, filter, sort, side), [rows, query, filter, sort, side]);
   const matches = useMemo(() => threadQuery.trim() ? messages.filter(message => message.content.toLowerCase().includes(threadQuery.trim().toLowerCase())).map(message => message.id) : [], [messages, threadQuery]);
 
   const readVisible = useCallback(async (snapshot: string) => {
     if (!selectedId || document.visibilityState !== "visible" || !document.hasFocus()) return;
-    const result = await markVendorConversationRead(selectedId, snapshot);
+    const result = await (side === "vendor" ? markVendorConversationRead : markCustomerConversationRead)(selectedId, snapshot);
     if (live.current && result.ok && result.cleared) setRows(current => clearSeenUnread(current, selectedId, snapshot));
-  }, [selectedId]);
+  }, [selectedId, side]);
   const refreshInbox = useCallback(async () => {
     if (inboxBusy.current || document.visibilityState !== "visible") return;
     inboxBusy.current = true; setRefreshing(true);
     try {
       const result = await getMyConversations();
       if (!live.current) return;
-      if (!result.ok || result.side !== "vendor") throw new Error("Inbox unavailable");
-      setRows(result.conversations.map(row => ({ ...row, lastMessageAt: row.lastMessageAt.toISOString(), lastSeenAt: row.lastSeenAt?.toISOString() ?? null })));
+      if (!result.ok || result.side !== side) throw new Error("Inbox unavailable");
+      setRows(result.conversations.map(row => ({ ...row, customerName: "customerName" in row ? row.customerName : row.storeName, lastMessageAt: row.lastMessageAt.toISOString(), lastSeenAt: row.lastSeenAt?.toISOString() ?? null })));
       setNow(Date.now()); setInboxError("");
       if (latestRead.current) await readVisible(latestRead.current);
     } catch { if (live.current) setInboxError("Inbox paused. Your conversations are still here."); }
     finally { inboxBusy.current = false; if (live.current) setRefreshing(false); }
-  }, [readVisible]);
+  }, [readVisible, side]);
   const refreshThread = useCallback(async () => {
     if (!selectedId || threadBusy.current || document.visibilityState !== "visible") return;
     threadBusy.current = true;
@@ -182,7 +186,7 @@ export default function VendorMessagesWorkspace({ currentUserId, selectedId, ini
       forceBottom.current = true; nearBottom.current = true;
       setMessages(current => mergeChatMessages(current, [sent]));
       setDraft(current => current === originalDraft ? "" : current);
-      setRows(current => current.map(row => row.id === selectedId ? { ...row, lastMessageText: text, lastMessageAt: sent.createdAt, lastSenderRole: "VENDOR" } : row));
+      setRows(current => current.map(row => row.id === selectedId ? { ...row, lastMessageText: text, lastMessageAt: sent.createdAt, lastSenderRole: ownRole } : row));
       retry.current = null;
       inputRef.current?.focus();
     } catch { if (live.current) setSendError("Message wasn’t confirmed. Your draft is saved here; try sending again."); }
@@ -193,7 +197,7 @@ export default function VendorMessagesWorkspace({ currentUserId, selectedId, ini
 
   return <div className={`${s.workspace} ${selectedId ? s.hasThread : ""}`}>
     <header className={s.hero}>
-      <div><p className={s.eyebrow}><span /> YOUR CUSTOMER CONNECTION</p><h1>A little hello.<br /><em>A lasting connection.</em></h1><p>Thoughtful replies. Happy customers. All in one place.</p></div>
+      <div><p className={s.eyebrow}><span /> {side === "vendor" ? "YOUR CUSTOMER CONNECTION" : "YOUR LOCAL CONNECTION"}</p><h1>A little hello.<br /><em>A lasting connection.</em></h1><p>{side === "vendor" ? "Thoughtful replies. Happy customers. All in one place." : "Ask a question. Check an order. Stay close to your favourite stores."}</p></div>
       <ChatSculpture compact />
       <div className={s.metrics} aria-label="Inbox overview">
         <button onClick={() => setFilter("all")} aria-pressed={filter === "all"}><MessagesSquare size={18} /><strong>{rows.length}</strong><span>Conversations</span></button>
@@ -202,20 +206,20 @@ export default function VendorMessagesWorkspace({ currentUserId, selectedId, ini
       </div>
     </header>
     <div className={s.workbench}>
-      <aside className={s.inbox} aria-label="Customer conversations">
+      <aside className={s.inbox} aria-label="Conversations">
         <div className={s.inboxHeading}><div><p className={s.eyebrow}>LET’S TALK BUSINESS</p><h2>Messages <span>{rows.length}</span></h2></div><button className={s.iconButton} aria-label="Refresh inbox" onClick={() => void refreshInbox()} disabled={refreshing}><RefreshCw size={17} className={refreshing ? s.spinning : ""} /></button></div>
-        <label className={s.search} data-tour="message-search"><Search size={17} /><input aria-label="Search conversations" placeholder="Find a customer or message" value={query} onChange={event => setQuery(event.target.value)} />{query && <button aria-label="Clear inbox search" onClick={() => setQuery("")}><X size={15} /></button>}</label>
+        <label className={s.search} data-tour="message-search"><Search size={17} /><input aria-label="Search conversations" placeholder={side === "vendor" ? "Find a customer or message" : "Find a store or message"} value={query} onChange={event => setQuery(event.target.value)} />{query && <button aria-label="Clear inbox search" onClick={() => setQuery("")}><X size={15} /></button>}</label>
         <div className={s.filters} data-tour="message-filters" aria-label="Filter conversations">{([["all","All"],["unread","Unread"],["reply","Needs reply"]] as const).map(([value,label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}{value === "unread" && unreadCount > 0 && <b>{unreadCount}</b>}</button>)}</div>
         <div className={s.listMeta}><span>{visibleRows.length} {visibleRows.length === 1 ? "conversation" : "conversations"}</span><select aria-label="Sort conversations" value={sort} onChange={event => setSort(event.target.value)}><option value="recent">Newest first</option><option value="oldest">Oldest first</option><option value="name">Name A–Z</option></select></div>
         {inboxError && <div className={s.inlineError} role="status">{inboxError}<button onClick={() => void refreshInbox()}>Retry</button></div>}
-        <div className={s.conversationList} data-tour="message-list">{visibleRows.length ? visibleRows.map((row, index) => <Link key={row.id} href={`/dashboard/vendor/messages/${row.id}`} prefetch={false} className={`${s.conversation} ${row.unread > 0 ? s.unread : ""}`} aria-current={row.id === selectedId ? "page" : undefined}>
+        <div className={s.conversationList} data-tour="message-list">{visibleRows.length ? visibleRows.map((row, index) => <Link key={row.id} href={`${basePath}/${row.id}`} prefetch={false} className={`${s.conversation} ${row.unread > 0 ? s.unread : ""}`} aria-current={row.id === selectedId ? "page" : undefined}>
           <span className={s.avatar} data-tone={index % 4}>{initials(row.customerName)}{recentlyActive(row.lastSeenAt, now) && <i title="Active recently" />}</span>
-          <span className={s.conversationCopy}><span><strong>{row.customerName}</strong><time dateTime={row.lastMessageAt}>{formatConversationListTime(new Date(row.lastMessageAt), new Date(now))}</time></span><span><p>{row.lastSenderRole === "VENDOR" && <Check size={13} />}{row.lastMessageText || "Start the conversation"}</p>{row.unread > 0 && <b aria-label={`${row.unread} unread messages`}>{row.unread > 99 ? "99+" : row.unread}</b>}</span></span>
-        </Link>) : <div className={s.emptyInbox}><Search size={28} /><h3>{rows.length ? "No conversations found" : "Your next hello starts here"}</h3><p>{rows.length ? "Try another name or choose a different filter." : "Customer messages will appear here. You can also start a conversation from an order."}</p>{rows.length ? <button onClick={() => { setQuery(""); setFilter("all"); }}>Show all conversations</button> : <Link href="/dashboard/vendor/orders">Go to orders <ArrowUpRight size={14} /></Link>}</div>}</div>
+          <span className={s.conversationCopy}><span><strong>{row.customerName}</strong><time dateTime={row.lastMessageAt}>{formatConversationListTime(new Date(row.lastMessageAt), new Date(now))}</time></span><span><p>{row.lastSenderRole === ownRole && <Check size={13} />}{row.lastMessageText || "Start the conversation"}</p>{row.unread > 0 && <b aria-label={`${row.unread} unread messages`}>{row.unread > 99 ? "99+" : row.unread}</b>}</span></span>
+        </Link>) : <div className={s.emptyInbox}><Search size={28} /><h3>{rows.length ? "No conversations found" : "Your next hello starts here"}</h3><p>{rows.length ? "Try another name or choose a different filter." : side === "vendor" ? "Customer messages will appear here. You can also start a conversation from an order." : "Visit a store and choose Message to start a conversation."}</p>{rows.length ? <button onClick={() => { setQuery(""); setFilter("all"); }}>Show all conversations</button> : <Link href={orderPath}>Go to orders <ArrowUpRight size={14} /></Link>}</div>}</div>
         <div className={s.inboxFoot}><span /> {inboxError ? "Reconnecting to your inbox" : "Your inbox refreshes automatically"}</div>
       </aside>
-      {!selectedId || !selected ? <section className={s.welcome} aria-label="Welcome to your inbox"><div className={s.welcomeInner}><ChatSculpture /><p className={s.eyebrow}>GREAT SERVICE STARTS WITH A CONVERSATION</p><h2>Make every customer<br /><em>feel like a regular.</em></h2><p>Choose a conversation to pick up where you left off. Your messages, quick replies and customer orders are right here.</p><div className={s.welcomeFeatures}><span><Zap size={17} /> Reply a little faster</span><span><Package size={17} /> Keep orders close</span></div><Link href="/dashboard/vendor/orders" className={s.secondaryLink}>Start from an order <ArrowUpRight size={16} /></Link></div><div className={s.welcomeNote}><MessageCircle size={18} /><span>A personal touch goes a long way.<br /><strong>We people. We business. We local.</strong></span></div></section> : <section className={s.chat} aria-label={`Conversation with ${selected.customerName}`}>
-        <header className={s.chatHeader}><Link href="/dashboard/vendor/messages" className={`${s.iconButton} ${s.chatBack}`} aria-label="Back to inbox"><ArrowLeft size={19} /></Link><span className={s.avatar}>{initials(selected.customerName)}</span><div className={s.chatIdentity}><h2>{selected.customerName}</h2><p><span data-active={recentlyActive(selected.lastSeenAt, now)} />{recentlyActive(selected.lastSeenAt, now) ? "Active recently" : "Customer conversation"}</p></div><button className={s.iconButton} aria-label={showSearch ? "Close conversation search" : "Search this conversation"} aria-expanded={showSearch} onClick={() => { setShowSearch(!showSearch); setThreadQuery(""); }}><Search size={19} /></button><button className={`${s.iconButton} ${showContext ? s.activeIcon : ""}`} aria-label="Customer details and orders" aria-expanded={showContext} aria-controls="message-customer-context" onClick={() => setShowContext(!showContext)}><Info size={19} /></button></header>
+      {!selectedId || !selected ? <section className={s.welcome} aria-label="Welcome to your inbox"><div className={s.welcomeInner}><ChatSculpture /><p className={s.eyebrow}>GREAT SERVICE STARTS WITH A CONVERSATION</p><h2>{side === "vendor" ? <>Make every customer<br /><em>feel like a regular.</em></> : <>Your favourite stores.<br /><em>One friendly inbox.</em></>}</h2><p>Choose a conversation to pick up where you left off. Your messages and saved drafts are right here.</p><div className={s.welcomeFeatures}><span><Zap size={17} /> Reply a little faster</span><span><Package size={17} /> Keep orders close</span></div><Link href={orderPath} className={s.secondaryLink}>Start from an order <ArrowUpRight size={16} /></Link></div><div className={s.welcomeNote}><MessageCircle size={18} /><span>A personal touch goes a long way.<br /><strong>We people. We business. We local.</strong></span></div></section> : <section className={s.chat} aria-label={`Conversation with ${selected.customerName}`}>
+        <header className={s.chatHeader}><Link href={basePath} className={`${s.iconButton} ${s.chatBack}`} aria-label="Back to inbox"><ArrowLeft size={19} /></Link><span className={s.avatar}>{initials(selected.customerName)}</span><div className={s.chatIdentity}><h2>{selected.customerName}</h2><p><span data-active={recentlyActive(selected.lastSeenAt, now)} />{recentlyActive(selected.lastSeenAt, now) ? "Active recently" : "Store conversation"}</p></div><button className={s.iconButton} aria-label={showSearch ? "Close conversation search" : "Search this conversation"} aria-expanded={showSearch} onClick={() => { setShowSearch(!showSearch); setThreadQuery(""); }}><Search size={19} /></button>{side === "vendor" && <button className={`${s.iconButton} ${showContext ? s.activeIcon : ""}`} aria-label="Customer details and orders" aria-expanded={showContext} aria-controls="message-customer-context" onClick={() => setShowContext(!showContext)}><Info size={19} /></button>}</header>
         {showSearch && <div className={s.threadSearch}><Search size={16} /><input ref={searchRef} aria-label="Search messages in this conversation" placeholder="Find something in this chat" value={threadQuery} onChange={event => { setThreadQuery(event.target.value); setMatchIndex(0); }} /><small>{threadQuery.trim() ? matches.length ? `${matchIndex % matches.length + 1} / ${matches.length}` : "No matches" : ""}</small><button aria-label="Previous search result" disabled={!matches.length} onClick={() => setMatchIndex((matchIndex + matches.length - 1) % matches.length)}><ChevronUp size={17} /></button><button aria-label="Next search result" disabled={!matches.length} onClick={() => setMatchIndex((matchIndex + 1) % matches.length)}><ChevronDown size={17} /></button></div>}
         {showContext && <div id="message-customer-context" className={s.context}><div className={s.contextHeading}><div><strong>Customer at a glance</strong><p>{context ? `In touch since ${messageDay(context.since)}` : "Your shared order history"}</p></div><button className={s.iconButton} aria-label="Close customer details" onClick={() => setShowContext(false)}><X size={17} /></button></div><div className={s.contextOrders}>{context && (context.orders.length || context.services.length) ? <>{context.orders.map(order => <Link href={order.href} key={order.id}><span className={s.contextIcon}><Package size={18} /></span><span><b>{order.reference}</b><strong>{order.title}</strong><small>{order.status} · {order.amount}</small></span><ArrowUpRight size={16} /></Link>)}{context.services.map(service => <Link href={service.href} key={service.id}><span className={s.contextIcon}><Sparkles size={18} /></span><span><strong>{service.title}</strong><small>{service.status}</small></span><ArrowUpRight size={16} /></Link>)}</> : <p>No orders with your store yet. You can still help them find their next favourite.</p>}</div></div>}
         {threadError && <div className={s.inlineError} role="status">{threadError}<button onClick={() => void refreshThread()}>Retry</button></div>}
@@ -235,7 +239,7 @@ export default function VendorMessagesWorkspace({ currentUserId, selectedId, ini
         </div>
         {newBelow && <button className={s.jumpLatest} onClick={jumpLatest}><ArrowDown size={14} /> Latest messages</button>}
         <div className={s.composerArea}>
-          {showReplies && <div className={s.quickReplies} id="quick-replies"><div><strong>A head start. Make it yours.</strong><button aria-label="Close quick replies" onClick={() => setShowReplies(false)}><X size={16} /></button></div>{quickReplies(selected.customerName).map(reply => <button key={reply.label} onClick={() => insertReply(reply.text)}><Zap size={14} /><span>{reply.label}</span><span>+</span></button>)}</div>}
+          {showReplies && <div className={s.quickReplies} id="quick-replies"><div><strong>A head start. Make it yours.</strong><button aria-label="Close quick replies" onClick={() => setShowReplies(false)}><X size={16} /></button></div>{(side === "vendor" ? quickReplies(selected.customerName) : [{label:"Check availability",text:"Hi! Is this still available?"},{label:"Order update",text:"Hi, could you help me with an update on my order? My reference is "},{label:"Service question",text:"Hi! I’d like to learn more about your service and available times."},{label:"Say thanks",text:"Thank you for your help!"}]).map(reply => <button key={reply.label} onClick={() => insertReply(reply.text)}><Zap size={14} /><span>{reply.label}</span><span>+</span></button>)}</div>}
           <div className={s.composerToolbar}><button onClick={() => setShowReplies(!showReplies)} aria-expanded={showReplies} aria-controls="quick-replies"><Zap size={15} /> Quick replies <ChevronUp size={13} className={showReplies ? s.flip : ""} /></button><span>{draftSaved ? "Draft saved in this tab" : "A little care in every reply"}</span></div>
           {sendError && <p className={s.sendError} role="alert">{sendError}</p>}
           <form className={s.composer} data-tour="message-composer" onSubmit={event => { event.preventDefault(); void submitMessage(); }}><label className={s.srOnly} htmlFor="vendor-message">Message to {selected.customerName}</label><textarea id="vendor-message" ref={inputRef} rows={1} placeholder={`Message ${selected.customerName.split(" ")[0]}…`} value={draft} maxLength={MESSAGE_MAX_LENGTH} disabled={!draftLoaded} onChange={event => setDraft(event.target.value)} onKeyDown={event => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && !window.matchMedia("(pointer: coarse)").matches) { event.preventDefault(); void submitMessage(); } }} /><button type="submit" aria-label={sending ? "Sending message" : "Send message"} disabled={sending || !draft.trim() || draft.length > MESSAGE_MAX_LENGTH}><Send size={18} /><span>{sending ? "Sending…" : "Send"}</span></button></form>

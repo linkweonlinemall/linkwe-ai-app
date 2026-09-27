@@ -12,3 +12,11 @@ Release based on live commit `6c064fa45b965aef234a149eed16cad31a71cd65`, isolate
 - Credential is server-only, stored as a Vercel production secret. Local development continues using the watermarked sandbox. No key is included in git or browser assets.
 
 Validation: TypeScript, focused lint, eight mocked API checks, pixel/crop/rotation checks, real loopback-database quota/race/refund/recovery tests, desktop and 390px browser crop/zoom/reset checks. Full optimized production build passed with production Prisma types and all 108 static pages. Local email configuration used a dummy placeholder; no emails were sent. Deployment results will be appended after completion.
+
+## Published and verified
+
+Commit `e3168ba` was pushed to `origin/main`. Vercel deployment `dpl_57beKVvnrHY3Hk33v3ppaKiMZn8t` reached Ready and is assigned to `www.linkweonlinemall.com`. Deployment URL: https://linkwe-ai-pi3tays8p-link-we-online-mall-s-projects.vercel.app
+
+The live API returns HTTP 401 with private/no-store caching to unsigned requests. The signed-in production Admin session redirects out of the vendor workspace, as expected. A production vendor upload was not performed because no vendor session was available; no real vendor records or trial credits were changed by verification. Real provider processing had previously passed sandbox checks. Deployment verification consumed no live image credits.
+
+Production server configuration includes the live Photoroom key and explicit 10-image lifetime/monthly caps; local configuration remains sandbox. No subscription was purchased. Temporary release dependencies/build output were removed after the successful build to recover disk space. The release source and commit are retained.

@@ -15,6 +15,7 @@ export type PlanLimits = {
 
 export const PLAN_LIMITS: Record<CommissionPlan, PlanLimits> = {
   STARTER: { productCap: 30, serviceCap: 3, serviceMaxPriceMinor: 10000, aiMonthlyAllowance: 0, aiLifetimeGiftAllowance: 5 },
+  SERVICES: { productCap: 30, serviceCap: 20, serviceMaxPriceMinor: null, aiMonthlyAllowance: 0, aiLifetimeGiftAllowance: 5 },
   GROWTH: { productCap: 300, serviceCap: null, serviceMaxPriceMinor: null, aiMonthlyAllowance: 300, aiLifetimeGiftAllowance: 0 },
   PRO: { productCap: null, serviceCap: null, serviceMaxPriceMinor: null, aiMonthlyAllowance: 1000, aiLifetimeGiftAllowance: 0 },
 };
@@ -22,6 +23,7 @@ export const PLAN_LIMITS: Record<CommissionPlan, PlanLimits> = {
 /** Monthly plan prices in minor units (TTD cents). STARTER is free. */
 export const PLAN_PRICE_MINOR: Record<CommissionPlan, number> = {
   STARTER: 0,
+  SERVICES: 10000,
   GROWTH: 30000,
   PRO: 50000,
 };

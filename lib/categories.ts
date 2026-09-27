@@ -102,6 +102,12 @@ export const PRODUCT_CATEGORIES = [
 
 // Store/business categories — used in store discovery and vendor onboarding
 export const STORE_CATEGORIES = [
+  { value: "professional_services", label: "Professional & Business Services" },
+  { value: "shoes_accessories", label: "Footwear & Accessories" },
+  { value: "home_services", label: "Home Services" },
+  { value: "fast_food_takeaway", label: "Fast Food & Takeaway" },
+  { value: "arts_culture", label: "Arts & Culture" },
+  { value: "other", label: "Other Businesses" },
   { value: "ac_appliance_repair", label: "AC & Appliance Repair" },
   { value: "accounting_tax", label: "Accounting & Tax" },
   { value: "agriculture_farming", label: "Agriculture & Farming" },
@@ -213,6 +219,13 @@ export function getStoreCategoryLabel(value: string): string {
 }
 
 export const SERVICE_CATEGORIES = [
+  { value: "business_consulting", label: "Business & Career Consulting" },
+  { value: "care_accessibility", label: "Care & Accessibility Support" },
+  { value: "rental_hire", label: "Rentals & Equipment Hire" },
+  { value: "moving_storage", label: "Moving & Storage" },
+  { value: "laundry_dry_cleaning", label: "Laundry & Dry Cleaning" },
+  { value: "translation_writing", label: "Translation & Writing" },
+  { value: "other_services", label: "Other Services" },
   { value: "beauty_hair", label: "Beauty & Hair" },
   { value: "health_wellness", label: "Health & Wellness" },
   { value: "fitness_training", label: "Fitness & Training" },

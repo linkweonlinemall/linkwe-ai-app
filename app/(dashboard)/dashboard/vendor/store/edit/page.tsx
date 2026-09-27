@@ -100,12 +100,12 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
   return (
     <StoreEditUploadProvider>
     <WorkspacePage eyebrow="Your business, beautifully presented" title="Make your store feel like you." description="Shape your first impression, tell your story and make the practical details easy to find." action={<Link className={styles.secondary} href={publicStorePath} target="_blank" rel="noopener noreferrer">Preview storefront ↗</Link>}>
-      <nav aria-label="Store profile sections" className="sticky top-0 z-10 mb-6 flex gap-2 overflow-x-auto rounded-2xl border border-[#dce5d8] bg-white/95 p-2 backdrop-blur">
-        {[["identity","Identity"],["details","About"],["cover","Branding"],["hours","Hours"],["location","Location"],["policies","Customer care"],["gallery","Gallery"]].map(([id,label])=><a key={id} href={`#store-${id}`} className="shrink-0 rounded-xl px-4 py-3 text-xs font-bold text-[#345440] hover:bg-[#eef3e7]">{label}</a>)}
+      <nav aria-label="Store profile sections" className="sticky top-0 z-10 mb-6 flex gap-2 overflow-x-auto rounded-2xl border border-[#d7e1e6] bg-white/95 p-2 backdrop-blur">
+        {[["identity","Identity"],["details","About"],["cover","Branding"],["hours","Hours"],["location","Location"],["policies","Customer care"],["gallery","Gallery"]].map(([id,label])=><a key={id} href={`#store-${id}`} className="shrink-0 rounded-xl px-4 py-3 text-xs font-bold text-[#174766] hover:bg-[#e7eff3]">{label}</a>)}
       </nav>
       {showStoreSuccess ? (
         <p
-          className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
+          className="mb-4 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900"
           role="status"
         >
           Store saved successfully.
@@ -114,7 +114,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
 
       {showGallerySuccess ? (
         <p
-          className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
+          className="mb-4 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900"
           role="status"
         >
           Store gallery updated.
@@ -131,7 +131,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
         <input name="storeId" type="hidden" value={store.id} />
         <input name="hasHours" type="hidden" value="1" />
 
-        <section id="store-identity" data-tour="store-identity" className="mb-5 scroll-mt-24 rounded-[20px] border border-[#dce5d8] bg-white p-5 sm:p-7">
+        <section id="store-identity" data-tour="store-identity" className="mb-5 scroll-mt-24 rounded-[20px] border border-[#d7e1e6] bg-white p-5 sm:p-7">
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Store Identity
           </h2>
@@ -159,7 +159,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
           </div>
         </section>
 
-        <section id="store-details" data-tour="store-details" className="mb-5 scroll-mt-24 rounded-[20px] border border-[#dce5d8] bg-white p-5 sm:p-7">
+        <section id="store-details" data-tour="store-details" className="mb-5 scroll-mt-24 rounded-[20px] border border-[#d7e1e6] bg-white p-5 sm:p-7">
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Details
           </h2>
@@ -189,7 +189,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
           </div>
         </section>
 
-        <section id="store-cover" data-tour="store-cover" className="mb-5 scroll-mt-24 rounded-[20px] border border-[#dce5d8] bg-white p-5 sm:p-7">
+        <section id="store-cover" data-tour="store-cover" className="mb-5 scroll-mt-24 rounded-[20px] border border-[#d7e1e6] bg-white p-5 sm:p-7">
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Cover Photo
           </h2>
@@ -215,7 +215,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
           </div>
         </section>
 
-        <section id="store-hours" data-tour="store-hours" className="mb-5 scroll-mt-24 rounded-[20px] border border-[#dce5d8] bg-white p-5 sm:p-7">
+        <section id="store-hours" data-tour="store-hours" className="mb-5 scroll-mt-24 rounded-[20px] border border-[#d7e1e6] bg-white p-5 sm:p-7">
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Opening Hours
           </h2>
@@ -225,7 +225,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
           <OpeningHoursEditor initialHours={hours} />
         </section>
 
-        <section id="store-location" data-tour="store-location" className="mb-5 scroll-mt-24 rounded-[20px] border border-[#dce5d8] bg-white p-5 sm:p-7">
+        <section id="store-location" data-tour="store-location" className="mb-5 scroll-mt-24 rounded-[20px] border border-[#d7e1e6] bg-white p-5 sm:p-7">
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Location
           </h2>
@@ -239,7 +239,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
           />
         </section>
 
-        <section id="store-policies" data-tour="store-policies" className="mb-5 scroll-mt-24 rounded-[20px] border border-[#dce5d8] bg-white p-5 sm:p-7">
+        <section id="store-policies" data-tour="store-policies" className="mb-5 scroll-mt-24 rounded-[20px] border border-[#d7e1e6] bg-white p-5 sm:p-7">
           <h2 className="mb-4 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Tags &amp; Policies
           </h2>
@@ -410,7 +410,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
 
       </StoreEditForm>
 
-      <section data-tour="store-gallery" id="store-gallery" className="scroll-mt-24 rounded-[20px] border border-[#dce5d8] bg-white p-5 sm:p-7"><p className={styles.muted}>Gallery changes are saved separately as you add or remove photos.</p><GalleryUploadWrapper images={store.images} slotsAvailable={10 - store.images.length} /></section>
+      <section data-tour="store-gallery" id="store-gallery" className="scroll-mt-24 rounded-[20px] border border-[#d7e1e6] bg-white p-5 sm:p-7"><p className={styles.muted}>Gallery changes are saved separately as you add or remove photos.</p><GalleryUploadWrapper images={store.images} slotsAvailable={10 - store.images.length} /></section>
     </WorkspacePage>
     </StoreEditUploadProvider>
   );

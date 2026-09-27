@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { FilterSelect, FilterChoices, ColourSwatches } from "@/components/filters/FilterControls";
 import { useId, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowDownWideNarrow, Check, ChevronDown, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
@@ -26,8 +27,9 @@ export function EventsSearch({ defaultValue }: { defaultValue: string }) {
 
 export default function EventsBrowser({ query, options, total, children }: { query: EventQuery; options: EventDirectoryOptions; total: number; children: ReactNode }) {
   const router = useRouter(), params = useSearchParams(), id = useId(), dialog = useRef<HTMLDialogElement>(null);
-  const initialDraft = { category: query.category, region: query.region, date: query.date, format: query.format, pricing: query.pricing };
+  const initialDraft = { category: query.category, region: query.region, date: query.date, format: query.format, pricing: query.pricing, availability: query.availability, minPrice: query.minPrice?.toString() ?? "", maxPrice: query.maxPrice?.toString() ?? "" };
   const [draft, setDraft] = useState(initialDraft);
+  const [error,setError] = useState("");
   const [pending, startTransition] = useTransition();
   const count = Object.values(initialDraft).filter(Boolean).length;
 
@@ -38,24 +40,19 @@ export default function EventsBrowser({ query, options, total, children }: { que
     startTransition(() => router.push("/events" + (next.size ? "?" + next : "") + "#event-results", { scroll: false }));
   }
   function fields(prefix: string) {
-    const select = (key: keyof typeof draft, label: string, values: { value: string; label: string }[], placeholder: string) =>
-      <label className={base.field} htmlFor={prefix + "-" + key}><span>{label}</span><div className={base.selectWrap}>
-        <select id={prefix + "-" + key} value={draft[key]} onChange={event => setDraft({ ...draft, [key]: event.target.value })}>
-          <option value="">{placeholder}</option>
-          {draft[key] && !values.some(value => value.value === draft[key]) && <option value={draft[key]}>{eventRegionLabel(draft[key])}</option>}
-          {values.map(value => <option key={value.value} value={value.value}>{value.label}</option>)}
-        </select><ChevronDown size={14} aria-hidden/>
-      </div></label>;
-    return <form className={base.filterForm} onSubmit={event => { event.preventDefault(); navigate(draft); }}>
+    const select = (key: keyof typeof draft, label: string, values: { value: string; label: string }[], placeholder: string) => <FilterSelect id={`${prefix}-${key}`} label={label} value={String(draft[key])} options={values} placeholder={placeholder} onChange={value=>setDraft({...draft,[key]:value})}/>;
+    return <form className={base.filterForm} onSubmit={event => { event.preventDefault(); if (draft.minPrice && draft.maxPrice && Number(draft.minPrice) > Number(draft.maxPrice)) { setError("Maximum price must be at least the minimum."); return; } setError(""); navigate(draft); }}>
       {select("date", "When are we going?", EVENT_DATES.filter(date => !!date.value), "Any date")}
       {select("category", "What’s your scene?", options.categories.map(category => ({ value: category.value, label: category.label + " (" + category.count + ")" })), "All event categories")}
       {select("region", "Where in T&T?", options.regions, "Anywhere in T&T")}
       {select("format", "The experience", [{ value: "in_person", label: "In person" }, { value: "online", label: "Online" }], "In person & online")}
       {select("pricing", "Tickets", [{ value: "free", label: "Free tickets available" }, { value: "paid", label: "Paid tickets available" }], "All ticket options")}
+      {select("availability", "Ticket availability", [{value:"on_sale",label:"Book tickets now"},{value:"not_started",label:"On sale soon"},{value:"sold_out",label:"Sold out"}], "Any availability")}
+      <fieldset className={base.priceField}><legend>Starting ticket price <span>TTD</span></legend><div><input aria-label="Minimum ticket price" type="number" min="0" step="0.01" placeholder="Min" value={draft.minPrice} onChange={e=>setDraft({...draft,minPrice:e.target.value})}/><span>—</span><input aria-label="Maximum ticket price" type="number" min="0" step="0.01" placeholder="Max" value={draft.maxPrice} onChange={e=>setDraft({...draft,maxPrice:e.target.value})}/></div>{error&&<p role="alert" className={base.filterError}>{error}</p>}</fieldset>
       <p className={styles.tip}>Dates and times are in Trinidad &amp; Tobago time. Ticket availability is confirmed on the event page.</p>
       <div className={base.filterActions}>
         <button type="submit" disabled={pending}>{pending ? "Updating…" : "Apply filters"}<Check size={16} aria-hidden/></button>
-        <button type="button" onClick={() => navigate({ category: "", region: "", date: "", format: "", pricing: "" })} disabled={pending}><RotateCcw size={13} aria-hidden/>Reset filters</button>
+        <button type="button" onClick={() => navigate({ category: "", region: "", date: "", format: "", pricing: "", availability: "", minPrice: "", maxPrice: "" })} disabled={pending}><RotateCcw size={13} aria-hidden/>Reset filters</button>
       </div>
     </form>;
   }

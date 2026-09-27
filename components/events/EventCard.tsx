@@ -177,7 +177,7 @@ export function EventCard({ event, featured = false }: EventCardProps) {
           ) : (
             <span
               className={`text-[15px] font-bold ${
-                kind === "free" ? "text-emerald-600" : "text-[#1C1C1A]"
+                kind === "free" ? "text-sky-600" : "text-[#1C1C1A]"
               }`}
             >
               {priceLabel}

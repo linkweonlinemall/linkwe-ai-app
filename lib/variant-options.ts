@@ -276,3 +276,11 @@ export type VariantInput = {
 
 export type ColourOption = (typeof COLOUR_OPTIONS)[number];
 export type SizeType = keyof typeof SIZE_OPTIONS;
+
+/** Only paint known colours or a supplied hex; never treat catalogue text as CSS. */
+export function swatchPaint(value: string, hex?: string) {
+  if (hex && /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(hex)) return hex;
+  const shades: Record<string,string> = {sand:"#dbc6a1",ivory:"#fff9e7",cream:"#fff0d0",taupe:"#b5a18e",nude:"#e1b89b",champagne:"#eddbb4",charcoal:"#39434a",navy:"#18334f",denim:"#427da3",olive:"#757c46",sage:"#a0b096",mint:"#b9e0cc",lavender:"#b7a0d5",lilac:"#c8abd9",coral:"#ee8777",burgundy:"#782b41",rose:"#d789a0",teal:"#267a83",aqua:"#62c5cb",mustard:"#c59b2c",rust:"#b7653e",chocolate:"#694635"};
+  const name=value.trim().toLowerCase();
+  return COLOUR_OPTIONS.find(option => option.value === name)?.hex ?? shades[name] ?? "#b5c3cc";
+}

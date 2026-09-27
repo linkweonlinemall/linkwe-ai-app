@@ -146,7 +146,7 @@ export function MessageThread({
           <IconArrowLeft className="size-5" stroke={1.75} aria-hidden />
         </Link>
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-amber-50 text-xs font-black text-[#D4450A] ring-1 ring-orange-200">{headerTitle.charAt(0).toUpperCase()}</div>
-        <div className="min-w-0"><h1 className="truncate text-[15px] font-bold text-[#1C1C1A]">{headerTitle}</h1><p className="text-[10px] font-medium text-emerald-600">Conversation active</p></div>
+        <div className="min-w-0"><h1 className="truncate text-[15px] font-bold text-[#1C1C1A]">{headerTitle}</h1><p className="text-[10px] font-medium text-sky-600">Conversation active</p></div>
       </header>
 
       <div

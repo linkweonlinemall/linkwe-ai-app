@@ -56,6 +56,8 @@ export default function OneSignalProvider() {
   }, []);
 
   const initialize = useCallback(() => {
+    // Production push credentials are restricted to the production origin.
+    if (["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname)) return;
     if (initialized.current) return;
     initialized.current = true;
 

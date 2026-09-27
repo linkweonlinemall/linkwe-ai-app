@@ -25,6 +25,7 @@ export type CustomerConversationListItem = {
   id: string;
   storeName: string;
   storeLogoUrl: string | null;
+  lastSenderRole: string | null;
   lastMessageText: string | null;
   lastMessageAt: Date;
   unread: number;
@@ -420,6 +421,7 @@ export async function getMyConversations(): Promise<MyConversationsResult> {
       lastMessageText: true,
       lastMessageAt: true,
       customerUnread: true,
+      messages: { take: 1, orderBy: [{ createdAt: "desc" }, { id: "desc" }], select: { senderRole: true } },
       store: { select: { name: true, logoUrl: true, owner: { select: { lastSeenAt: true } } } },
     },
   });
@@ -431,6 +433,7 @@ export async function getMyConversations(): Promise<MyConversationsResult> {
       id: row.id,
       storeName: row.store.name,
       storeLogoUrl: row.store.logoUrl,
+      lastSenderRole: row.messages[0]?.senderRole ?? null,
       lastMessageText: row.lastMessageText,
       lastMessageAt: row.lastMessageAt,
       unread: row.customerUnread,
@@ -666,4 +669,14 @@ export async function adminStartConversation(input:{customerId:string;storeId:st
   const conversation=await prisma.conversation.upsert({where:{customerId_storeId:{customerId:person.id,storeId:store.id}},update:{},create:{customerId:person.id,storeId:store.id},select:{id:true}});
   const sent=await adminSendMessage(conversation.id,content);
   return sent.ok ? {ok:true as const,conversationId:conversation.id} : sent;
+}
+
+/** Only clear the customer's own inbox through the snapshot actually displayed. */
+export async function markCustomerConversationRead(conversationId: string, snapshotAt: string) {
+  const session = await getSession();
+  if (!session) return { ok: false as const };
+  const seenAt = new Date(snapshotAt);
+  if (!Number.isFinite(seenAt.getTime()) || seenAt.getTime() > Date.now() + 5000) return { ok: false as const };
+  const result = await prisma.conversation.updateMany({ where: { id: conversationId, customerId: session.userId, lastMessageAt: { lte: seenAt } }, data: { customerUnread: 0 } });
+  return { ok: true as const, cleared: result.count > 0 };
 }

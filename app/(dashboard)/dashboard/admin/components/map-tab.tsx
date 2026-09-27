@@ -246,11 +246,11 @@ export default function MapTab() {
             <span className="relative flex h-2.5 w-2.5">
               <span
                 className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
-                style={{ backgroundColor: "#22C55E" }}
+                style={{ backgroundColor: "#2889bf" }}
               />
               <span
                 className="relative inline-flex h-2.5 w-2.5 rounded-full"
-                style={{ backgroundColor: "#22C55E" }}
+                style={{ backgroundColor: "#2889bf" }}
               />
             </span>
             <span className="text-xs font-semibold text-zinc-700">Live</span>
@@ -293,13 +293,13 @@ export default function MapTab() {
           {
             label: "Stale Positions",
             value: mapData?.staleIds.length ?? 0,
-            color: mapData?.staleIds.length ? "#E8820C" : "#1B8C5A",
+            color: mapData?.staleIds.length ? "#E8820C" : "#1d638a",
             icon: "⚠",
           },
           {
             label: "Unclaimed Pickups",
             value: mapData?.pendingPickups.length ?? 0,
-            color: mapData?.pendingPickups.length ? "#E8820C" : "#1B8C5A",
+            color: mapData?.pendingPickups.length ? "#E8820C" : "#1d638a",
             icon: "📦",
           },
           {
@@ -377,7 +377,7 @@ export default function MapTab() {
                         </div>
                         <div
                           className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white"
-                          style={{ backgroundColor: isStale ? "#A1A1AA" : "#22C55E" }}
+                          style={{ backgroundColor: isStale ? "#A1A1AA" : "#2889bf" }}
                         />
                       </div>
                       <div className="min-w-0 flex-1">

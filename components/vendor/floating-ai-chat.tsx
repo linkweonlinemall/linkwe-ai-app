@@ -1,4 +1,5 @@
 "use client"
+import RexPortrait from "./RexPortrait";
 
 import Link from "next/link"
 import { readSSEData } from "@/lib/chat/read-sse-data"
@@ -109,6 +110,7 @@ const LISTING_TYPE_OPTIONS = [
 export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  useEffect(() => { const closeForGuide = () => setOpen(false); window.addEventListener("vendor-guide:started", closeForGuide); return () => window.removeEventListener("vendor-guide:started", closeForGuide); }, [])
   const [messages, setMessages] = useState<ChatMsg[]>([])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
@@ -460,7 +462,7 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
             aria-hidden
           />
           <div
-            className="rex-float fixed inset-0 z-[150] flex h-[100dvh] w-full flex-col overflow-hidden sm:inset-auto sm:bottom-6 sm:right-6 sm:h-[660px] sm:w-[420px] sm:rounded-[26px]"
+            className="rex-float fixed inset-0 z-[150] flex h-[100dvh] w-full flex-col overflow-hidden sm:inset-auto sm:bottom-6 sm:right-6 sm:h-[min(720px,calc(100dvh-40px))] sm:w-[440px] sm:rounded-[26px]"
             style={{
               background: "radial-gradient(circle at 80% 0%, rgba(38,173,255,.18), transparent 34%), #081523",
               border: "1px solid rgba(255,255,255,0.12)",
@@ -476,12 +478,12 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
           >
             <div className="flex flex-col gap-0.5">
               <div className="flex items-center gap-2">
-                <span className="text-base font-black tracking-tight text-white">Rex</span>
+                <RexPortrait compact/><div><span className="text-base font-black tracking-tight text-white">Rex</span><span className="block text-[9px] text-sky-200">A little business backup</span></div>
                 <span
                   className="h-2 w-2 shrink-0 rounded-full"
                   style={{
-                    backgroundColor: "#22c55e",
-                    boxShadow: "0 0 6px #22c55e",
+                    backgroundColor: "#2889bf",
+                    boxShadow: "0 0 6px #2889bf",
                   }}
                   aria-hidden
                 />
@@ -576,12 +578,12 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
             style={{ backgroundColor: "transparent" }}
           >
             {messages.length === 0 ? (
-              <div className="flex flex-col gap-3 px-1 py-2">
+              <div className="flex flex-col gap-3 px-1 py-2"><div className="mx-auto"><RexPortrait/></div>
                 <p className="text-[15px] font-bold text-white">
-                  Hey, I&apos;m Rex 👋
+                  Let’s make your next move.
                 </p>
                 <p className="text-[13px] text-zinc-400">
-                  What would you like to create today?
+                  Plan your day, build something new or make sense of your business.
                 </p>
                 <div className="flex flex-col gap-2">
                   {[
@@ -1005,7 +1007,9 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="fixed right-4 bottom-[calc(6.75rem+env(safe-area-inset-bottom,0px))] z-[115] flex h-14 w-14 items-center justify-center rounded-full bg-[#D4450A] shadow-lg transition-all hover:opacity-90 lg:right-6 lg:bottom-6"
+        aria-label={open ? "Close Rex assistant" : "Open Rex assistant"}
+        aria-expanded={open}
+        className="fixed right-4 bottom-[calc(6.75rem+env(safe-area-inset-bottom,0px))] z-[115] flex h-14 items-center justify-center gap-2 rounded-full border border-sky-200/30 bg-[#0e4362] py-1.5 pl-1.5 pr-4 text-white shadow-xl transition-all hover:opacity-90 lg:right-6 lg:bottom-6"
       >
         {open ? (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
@@ -1018,9 +1022,7 @@ export default function FloatingAIChat({ aiEnabled }: { aiEnabled: boolean }) {
             />
           </svg>
         ) : (
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
+          <><RexPortrait compact/><span className="text-left"><strong className="block text-sm">Ask Rex</strong><span className="block text-[9px] text-sky-200">Your business assistant</span></span></>
         )}
       </button>
     </>

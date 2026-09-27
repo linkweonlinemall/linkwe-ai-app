@@ -101,7 +101,7 @@ export default function PublicStoreCard({ store, initialSaved = false }: { store
 
         <div className="mt-4 grid grid-cols-2 gap-2 text-[11px] text-zinc-600">
           <span className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-50 px-2.5 py-2"><PackageCheck className="size-3.5 text-[#D4450A]" />{store.productCount} live item{store.productCount === 1 ? "" : "s"}</span>
-          <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 px-2.5 py-2 text-emerald-800"><ShieldCheck className="size-3.5" />Active store</span>
+          <span className="inline-flex items-center gap-1.5 rounded-xl bg-sky-50 px-2.5 py-2 text-sky-800"><ShieldCheck className="size-3.5" />Active store</span>
           {store.distanceKm != null ? <span className="col-span-2 inline-flex items-center gap-1.5 rounded-xl bg-blue-50 px-2.5 py-2 text-blue-800"><MapPin className="size-3.5" />About {store.distanceKm < 10 ? store.distanceKm.toFixed(1) : Math.round(store.distanceKm)} km away</span> : null}
         </div>
 

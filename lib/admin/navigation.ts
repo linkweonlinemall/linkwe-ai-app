@@ -124,6 +124,11 @@ export const ADMIN_NAV = [
         icon: HeartHandshake,
       },
       {
+        label: "Vendor support",
+        href: "/dashboard/admin/support",
+        icon: MessageSquare,
+      },
+      {
         label: "Messages",
         href: "/dashboard/admin/messages",
         icon: MessageSquare,

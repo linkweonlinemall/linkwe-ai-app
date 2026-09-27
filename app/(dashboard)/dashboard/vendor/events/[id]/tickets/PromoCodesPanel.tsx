@@ -236,7 +236,7 @@ export function PromoCodesPanel({ eventId, initialCodes }: Props) {
           </p>
         ) : null}
         {formSuccess ? (
-          <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800" role="status">
+          <p className="rounded-xl bg-sky-50 px-4 py-3 text-sm font-medium text-sky-800" role="status">
             {formSuccess}
           </p>
         ) : null}

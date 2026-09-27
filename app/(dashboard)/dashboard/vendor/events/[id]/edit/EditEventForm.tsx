@@ -743,7 +743,7 @@ export function EditEventForm({
         <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
       )}
       {success && (
-        <div className="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="rounded-xl bg-sky-50 px-4 py-3 text-sm text-sky-700">
           Changes saved successfully.
         </div>
       )}

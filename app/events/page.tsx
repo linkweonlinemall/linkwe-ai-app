@@ -25,6 +25,9 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
   const user = session ? await prisma.user.findUnique({ where: { id: session.userId }, select: { fullName: true, role: true } }) : null;
   const dashboard = user ? getRoleDashboardPath(user.role) : undefined;
   const chips = [
+    ...(query.availability ? [{key:"availability",label:query.availability === "on_sale" ? "Book tickets now" : query.availability === "not_started" ? "On sale soon" : "Sold out"}] : []),
+    ...(query.minPrice !== undefined ? [{key:"minPrice",label:`Tickets from TTD ${query.minPrice}`}] : []),
+    ...(query.maxPrice !== undefined ? [{key:"maxPrice",label:`Tickets up to TTD ${query.maxPrice}`}] : []),
     ...(query.q ? [{ key: "q", label: "Search: " + query.q }] : []),
     ...(query.category ? [{ key: "category", label: eventCategoryLabel(query.category) }] : []),
     ...(query.date ? [{ key: "date", label: EVENT_DATES.find(date => date.value === query.date)!.label }] : []),

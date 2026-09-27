@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 
 const SCARLET = "#D4450A";
-const EMERALD = "#059669";
+const EMERALD = "#1b5c80";
 
 type Props = {
   steps: readonly string[];

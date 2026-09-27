@@ -2,6 +2,7 @@
 
 import { useId, useRef, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
+import { FilterSelect, FilterChoices, ColourSwatches } from "@/components/filters/FilterControls";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowDownWideNarrow, Check, ChevronDown, RotateCcw, SlidersHorizontal, X } from "lucide-react";
 import type { ShopFilterOptions } from "@/lib/shop/types";
@@ -14,10 +15,10 @@ export default function ShopBrowser({ query, options, total, children }: Props) 
   const params = useSearchParams();
   const id = useId();
   const dialog = useRef<HTMLDialogElement>(null);
-  const [draft, setDraft] = useState({ category: query.category, region: query.region, minPrice: query.minPrice?.toString() ?? "", maxPrice: query.maxPrice?.toString() ?? "", brand: query.brand, colour: query.colour, size: query.size, condition: query.condition, inStock: query.inStock });
+  const [draft, setDraft] = useState({ fulfilment: query.fulfilment, category: query.category, region: query.region, minPrice: query.minPrice?.toString() ?? "", maxPrice: query.maxPrice?.toString() ?? "", brand: query.brand, colour: query.colour, size: query.size, condition: query.condition, inStock: query.inStock });
   const [pending, startTransition] = useTransition();
   const [priceError, setPriceError] = useState("");
-  const activeCount = [query.category, query.region, query.minPrice !== undefined || query.maxPrice !== undefined, query.inStock, query.condition, query.brand, query.colour, query.size].filter(Boolean).length;
+  const activeCount = [query.fulfilment,query.category, query.region, query.minPrice !== undefined || query.maxPrice !== undefined, query.inStock, query.condition, query.brand, query.colour, query.size].filter(Boolean).length;
   function navigate(changes: Record<string, string>) {
     const next = new URLSearchParams(params.toString());
     next.delete("page");
@@ -31,18 +32,19 @@ export default function ShopBrowser({ query, options, total, children }: Props) 
     setPriceError("");
     navigate({ ...draft, inStock: draft.inStock ? "true" : "" });
   }
-  function reset() { navigate({ category: "", region: "", minPrice: "", maxPrice: "", brand: "", colour: "", size: "", condition: "", inStock: "" }); }
+  function reset() { navigate({ fulfilment:"", category: "", region: "", minPrice: "", maxPrice: "", brand: "", colour: "", size: "", condition: "", inStock: "" }); }
   function fields(prefix: string) {
-    const select = (key: "category" | "region" | "brand" | "size" | "condition", label: string, values: {value:string;label:string}[], placeholder: string) => <label className={styles.field} htmlFor={`${prefix}-${key}`}><span>{label}</span><div className={styles.selectWrap}><select id={`${prefix}-${key}`} value={draft[key]} onChange={event => setDraft({ ...draft, [key]: event.target.value })}><option value="">{placeholder}</option>{draft[key] && !values.some(v => v.value === draft[key]) && <option value={draft[key]}>{draft[key].replaceAll("_", " ")}</option>}{values.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}</select><ChevronDown size={14} aria-hidden /></div></label>;
+    const select = (key: "category" | "region" | "brand" | "size" | "condition" | "fulfilment", label: string, values: {value:string;label:string}[], placeholder: string) => <FilterSelect id={`${prefix}-${key}`} label={label} value={String(draft[key])} options={values} placeholder={placeholder} onChange={value=>setDraft({...draft,[key]:value})}/>;
     return <form onSubmit={apply} className={styles.filterForm}>
       {select("category", "Category", options.categories.map(c => ({ value:c.value, label:`${c.label} (${c.count})` })), "Every kind of find")}
       <fieldset className={styles.priceField}><legend>Price range <span>TTD</span></legend><div><label htmlFor={`${prefix}-min`}><span className="sr-only">Minimum price</span><input id={`${prefix}-min`} type="number" min="0" step="0.01" inputMode="decimal" placeholder="Min" value={draft.minPrice} onChange={e => setDraft({ ...draft, minPrice:e.target.value })} /></label><span>—</span><label htmlFor={`${prefix}-max`}><span className="sr-only">Maximum price</span><input id={`${prefix}-max`} type="number" min="0" step="0.01" inputMode="decimal" placeholder="Max" value={draft.maxPrice} onChange={e => setDraft({ ...draft, maxPrice:e.target.value })} /></label></div>{priceError && <p role="alert" className={styles.filterError}>{priceError}</p>}</fieldset>
       <label className={styles.stockToggle}><input type="checkbox" checked={draft.inStock} onChange={e => setDraft({ ...draft, inStock:e.target.checked })} /><span>In stock only</span></label>
       {select("region", "Store location", options.regions, "Anywhere in T&T")}
+      {select("fulfilment", "How to receive it", [{value:"delivery",label:"Delivery available"},{value:"pickup",label:"Store pickup available"},{value:"digital",label:"Digital downloads"}], "Any option")}
       {select("condition", "Condition", [{value:"NEW",label:"New"},{value:"USED",label:"Used"},{value:"REFURBISHED",label:"Refurbished"}], "Any condition")}
       {options.brands.length > 0 && select("brand", "Brand", options.brands.map(b => ({value:b,label:b})), "All brands")}
       {options.sizes.length > 0 && select("size", "Size", options.sizes.map(s => ({value:s,label:s})), "All sizes")}
-      {options.colours.length > 0 && <fieldset className={styles.colourField}><legend>Colour{draft.colour && <span> · {draft.colour}</span>}</legend><div>{options.colours.map(c => <button type="button" key={c.value} aria-label={`Filter by ${c.value}`} aria-pressed={draft.colour === c.value} onClick={() => setDraft({...draft, colour:draft.colour === c.value ? "" : c.value})} style={{background:c.hex}}>{draft.colour === c.value && <Check size={17} aria-hidden />}</button>)}</div></fieldset>}
+      {options.colours.length > 0 && <ColourSwatches value={draft.colour} options={options.colours} onChange={colour=>setDraft({...draft,colour})}/>}
       <div className={styles.filterActions}><button type="submit" disabled={pending}>{pending ? "Updating…" : "Apply filters"}<Check size={16} aria-hidden /></button><button type="button" onClick={reset} disabled={pending}><RotateCcw size={13} aria-hidden />Reset filters</button></div>
     </form>;
   }

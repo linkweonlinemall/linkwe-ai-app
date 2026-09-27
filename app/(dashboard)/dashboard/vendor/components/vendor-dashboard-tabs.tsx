@@ -86,7 +86,7 @@ export default function VendorDashboardTabs({
     <main className={s.overviewPage}>
       {dashboardSuccessMessage ? (
         <p
-          className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
+          className="mb-4 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900"
           role="status"
         >
           {dashboardSuccessMessage}

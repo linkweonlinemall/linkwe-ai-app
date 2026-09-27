@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import {matchesProductOptions} from "@/lib/catalog/variant-filters";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { IconAdjustments } from "@tabler/icons-react";
@@ -14,7 +15,7 @@ import ReviewsList from "@/components/ui/ReviewsList";
 import { type StorefrontProductRow } from "@/components/storefront/StorefrontMapAndProducts";
 import type { PartnerContentItem } from "@/lib/cross-store/types";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
-import { COLOUR_OPTIONS } from "@/lib/variant-options";
+import { COLOUR_OPTIONS, swatchPaint } from "@/lib/variant-options";
 import RelatedContentCards from "@/components/storefront/RelatedContentCards";
 import { CalendarDays, Compass, Heart, Images, MessageCircle, Newspaper, Search, ShoppingBag, Sparkles, Star, Store, UsersRound, Wrench, type LucideIcon } from "lucide-react";
 
@@ -29,7 +30,7 @@ type StoreTabProduct = StorefrontProductRow & {
   compareAtPrice?: number | null;
   hasVariants: boolean;
   isFeatured?: boolean;
-  variants: { attributes: unknown }[];
+  variants: { attributes: unknown; stock?: number | null }[];
 };
 
 type StoreTabServiceRow = {
@@ -238,14 +239,7 @@ export default function StorefrontTabs({
       const catOk = category === "All" || (p.category?.trim() ?? "") === category;
       const minOk = !priceMin || p.price >= parseFloat(priceMin);
       const maxOk = !priceMax || p.price <= parseFloat(priceMax);
-      const stockOk = !inStockOnly || p.stock === null || p.stock > 0;
-      const attributes = p.variants.flatMap((variant) => Array.isArray(variant.attributes) ? variant.attributes : []);
-      const hasAttribute = (name: string, value: string) => !value || attributes.some((raw) => {
-        if (!raw || typeof raw !== "object" || Array.isArray(raw)) return false;
-        const attr = raw as { name?: unknown; value?: unknown };
-        return typeof attr.name === "string" && typeof attr.value === "string" && attr.name.toLowerCase() === name && attr.value.toLowerCase() === value.toLowerCase();
-      });
-      return nameOk && catOk && minOk && maxOk && stockOk && hasAttribute("colour", productColour) && hasAttribute("size", productSize);
+      return nameOk && catOk && minOk && maxOk && matchesProductOptions(p, productColour, productSize, inStockOnly);
     });
     if (sortBy === "price_asc") result = [...result].sort((a, b) => a.price - b.price);
     if (sortBy === "price_desc") result = [...result].sort((a, b) => b.price - a.price);
@@ -269,17 +263,18 @@ export default function StorefrontTabs({
       }
     }
     const hex = new Map(COLOUR_OPTIONS.map((option) => [option.value, option.hex]));
-    return { colours: Array.from(colours).sort().map((value) => ({ value, hex: hex.get(value) ?? "#a1a1aa" })), sizes: Array.from(sizes).sort() };
+    return { colours: Array.from(colours).sort().map((value) => ({ value, hex: swatchPaint(value) })), sizes: Array.from(sizes).sort() };
   }, [products]);
 
   const filteredServices = (services ?? [])
     .filter((s) => {
       if (serviceSearch && !s.name.toLowerCase().includes(serviceSearch.toLowerCase())) return false;
       if (serviceType !== "All" && s.serviceType !== serviceType) return false;
-      if (serviceLocation !== "All" && s.serviceLocation !== serviceLocation) return false;
+      if (serviceLocation !== "All" && (s.serviceType === "VIRTUAL" ? "VIRTUAL" : s.serviceLocation) !== serviceLocation) return false;
       if (serviceCategory !== "All" && s.category !== serviceCategory) return false;
       const min = servicePriceMin ? parseFloat(servicePriceMin) : null;
       const max = servicePriceMax ? parseFloat(servicePriceMax) : null;
+      if ((min !== null || max !== null) && s.serviceType === "QUOTE" && (s.quotePriceType === "FREE_QUOTE" || (!s.quotePriceType && s.price === 0))) return false;
       if (min !== null && !Number.isNaN(min) && s.price < min) return false;
       if (max !== null && !Number.isNaN(max) && s.price > max) return false;
       return true;

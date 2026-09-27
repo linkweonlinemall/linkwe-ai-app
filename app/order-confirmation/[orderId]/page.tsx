@@ -72,7 +72,7 @@ export default async function OrderConfirmationPage({ params }: Props) {
             className="mb-5 flex h-16 w-16 items-center justify-center rounded-full"
             style={{ backgroundColor: "var(--success-bg)" }}
           >
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#15803D" strokeWidth="2.5">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1a587b" strokeWidth="2.5">
               <polyline points="20 6 9 17 4 12" />
             </svg>
           </div>

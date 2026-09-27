@@ -1,107 +1,18 @@
 "use client";
-
 import { useEffect, useState } from "react";
-
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Download, X } from "lucide-react";
 import { usePWAInstall } from "@/lib/hooks/use-pwa-install";
-
+import { detectInstallPlatform } from "@/lib/pwa/install";
 export default function InstallPrompt() {
-  const [showBanner, setShowBanner] = useState(false);
-  const [storedDismissed, setStoredDismissed] = useState<boolean | null>(null);
-  const [isIOS, setIsIOS] = useState(false);
-
-  const { isInstallable, isInstalled, install } = usePWAInstall();
-
-  useEffect(() => {
-    try {
-      setStoredDismissed(!!localStorage.getItem("pwa-install-dismissed"));
-    } catch {
-      setStoredDismissed(false);
-    }
-    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    setIsIOS(ios);
-  }, []);
-
-  useEffect(() => {
-    if (storedDismissed == null || isInstalled || storedDismissed) return;
-    if (!(isIOS || isInstallable)) return;
-
-    const t = window.setTimeout(() => setShowBanner(true), 3000);
-    return () => window.clearTimeout(t);
-  }, [storedDismissed, isInstalled, isIOS, isInstallable]);
-
-  async function handleInstall() {
-    const ok = await install();
-    if (ok) {
-      setShowBanner(false);
-    }
-  }
-
-  function handleDismiss() {
-    setShowBanner(false);
-    try {
-      localStorage.setItem("pwa-install-dismissed", "true");
-    } catch {
-      /* ignore */
-    }
-    setStoredDismissed(true);
-  }
-
-  if (!showBanner || isInstalled || storedDismissed) return null;
-
-  return (
-    <div className="fixed bottom-20 left-4 right-4 z-50 sm:bottom-6 sm:left-auto sm:right-6 sm:w-80">
-      <div
-        className="overflow-hidden rounded-2xl shadow-2xl"
-        style={{ background: "#1C1C1A", border: "1px solid rgba(255,255,255,0.1)" }}
-      >
-        <div className="flex items-start gap-3 p-4">
-          <img src="/linkwe-pwa-96-v3.png" alt="LinkWe" className="h-12 w-12 shrink-0 rounded-xl" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-white">Install LinkWe Online Mall</p>
-            <p className="mt-0.5 text-xs text-zinc-400">
-              {isIOS
-                ? 'Tap the share button then "Add to Home Screen"'
-                : "Add to your home screen for the best experience"}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleDismiss}
-            className="shrink-0 text-zinc-500 transition-colors hover:text-zinc-300"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        {!isIOS ? (
-          <div className="flex gap-2 border-t border-white/10 px-4 py-3">
-            <button
-              type="button"
-              onClick={handleDismiss}
-              className="flex-1 rounded-xl border border-white/10 py-2 text-xs font-semibold text-zinc-400 transition-colors hover:text-zinc-200"
-            >
-              Not now
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleInstall()}
-              className="flex-1 rounded-xl py-2 text-xs font-bold text-white disabled:opacity-40"
-              style={{ background: "linear-gradient(135deg, #D4450A, #E8820C)" }}
-              disabled={!isInstallable}
-            >
-              Install app
-            </button>
-          </div>
-        ) : (
-          <div className="border-t border-white/10 px-4 py-3 text-center">
-            <p className="text-xs text-zinc-400">
-              Tap <span className="font-bold text-white">Share</span> →{" "}
-              <span className="font-bold text-white">Add to Home Screen</span>
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  const path = usePathname();
+  const [show, setShow] = useState(false), [dismissed, setDismissed] = useState(true), [ios, setIos] = useState(false);
+  const { isInstallable, isInstalled, isInstalling, error, install } = usePWAInstall();
+  const quiet = /^\/(get-app|checkout|cart|dashboard|onboarding|login|register|reset-password|scan|tickets\/checkout)/.test(path);
+  useEffect(() => { try { const previous = localStorage.getItem("pwa-install-dismissed"); const until = Number(localStorage.getItem("linkwe-install-dismissed-until")); setDismissed(previous === "true" || until > Date.now()); } catch { setDismissed(false); } setIos(detectInstallPlatform(navigator.userAgent, navigator.maxTouchPoints) === "ios"); }, []);
+  useEffect(() => { setShow(false); if (quiet || dismissed || isInstalled || !(ios || isInstallable)) return; const timer = window.setTimeout(() => setShow(true), 16000); return () => window.clearTimeout(timer); }, [quiet, path, dismissed, isInstalled, ios, isInstallable]);
+  function dismiss() { setDismissed(true); setShow(false); try { localStorage.setItem("linkwe-install-dismissed-until", String(Date.now() + 7 * 86400000)); } catch { /* Optional preference. */ } }
+  if (!show || quiet || dismissed || isInstalled) return null;
+  return <aside aria-label="Install LinkWe" className="fixed bottom-24 left-4 right-4 z-40 rounded-2xl border border-white/20 bg-[#123c56] p-5 text-white shadow-2xl sm:bottom-6 sm:left-auto sm:right-6 sm:w-[340px]"><div className="flex items-start gap-3"><img src="/linkwe-pwa-96-v3.png" alt="" className="size-12 rounded-xl"/><div className="flex-1"><p className="text-sm font-bold">Your local world. One tap away.</p><p className="mt-1 text-xs leading-5 text-sky-100/80">Keep LinkWe close on your Home Screen.</p></div><button onClick={dismiss} aria-label="Dismiss app installation reminder" className="p-1"><X size={17}/></button></div><div className="mt-4 flex items-center gap-3"><button onClick={dismiss} className="flex-1 rounded-xl border border-white/20 py-2.5 text-xs font-semibold">Later</button>{isInstallable ? <button disabled={isInstalling} onClick={async () => { if (await install()) dismiss(); }} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#d85016] py-2.5 text-xs font-bold disabled:opacity-50"><Download size={15}/>{isInstalling ? "Opening…" : "Install app"}</button> : <Link onClick={dismiss} href="/get-app" className="flex-1 rounded-xl bg-[#d85016] py-2.5 text-center text-xs font-bold">Show me how</Link>}</div>{error && <p className="mt-2 text-xs" role="status"><Link href="/get-app">Open the installation guide</Link></p>}</aside>;
 }

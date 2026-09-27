@@ -1,3 +1,4 @@
+import SavedControls from "@/components/customer/SavedControls";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
@@ -18,27 +19,31 @@ export const metadata: Metadata = {
   description: "Stores you follow on LinkWe.",
 };
 
-export default async function SavedStoresPage() {
+export default async function SavedStoresPage({ searchParams }: { searchParams: Promise<{q?:string|string[];sort?:string|string[]}> }) {
   const session = await getSession();
   if (!session) redirect("/login");
 
   const user = await prisma.user.findUnique({ where: { id: session.userId } });
   const continueHref = user ? getRoleDashboardPath(user.role) : null;
   const unreadCount = await getNavUnreadCount();
-  const saved = await getSavedStores();
+
+  const params=await searchParams;const query=typeof params.q === "string" ? params.q.trim().slice(0,120) : "";const sort=typeof params.sort === "string" ? params.sort : "recent";
+  const all=await getSavedStores();
+  const saved=all.filter(item=>`${item.store.name} ${getRegionLabel(item.store.region)}`.toLowerCase().includes(query.toLowerCase())).sort((a,b)=>sort==="name"?a.store.name.localeCompare(b.store.name):0);
+
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-mobile-public lg:pb-0">
+    <div className="min-h-screen bg-[#f0f6fa] pb-mobile-public lg:pb-0">
       <PublicNav
         user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null}
         dashboardHref={continueHref ?? undefined}
         unreadCount={unreadCount}
       />
       <div className="mx-auto max-w-screen-xl px-4 py-10 sm:px-6">
-        <div className="mb-8 flex items-center justify-between gap-4 overflow-hidden rounded-[26px] bg-gradient-to-br from-[#1C1C1A] via-[#352823] to-[#9f390e] p-6 text-white shadow-xl sm:p-8">
+        <div className="mb-8 flex items-center justify-between gap-4 overflow-hidden rounded-[26px] bg-gradient-to-br from-[#174766] via-[#175878] to-[#146581] p-6 text-white shadow-xl sm:p-8">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-orange-300">Your local favourites</p><h1 className="font-display mt-2 text-3xl font-bold text-white">
-              Saved <span className="italic text-orange-300">stores</span>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-sky-200">Your local favourites</p><h1 className="font-display mt-2 text-3xl font-bold text-white">
+              Saved <span className="italic text-sky-200">stores</span>
             </h1>
             <p className="mt-1 text-sm text-white/60">
               {saved.length} store{saved.length !== 1 ? "s" : ""} saved
@@ -52,11 +57,12 @@ export default async function SavedStoresPage() {
           </Link>
         </div>
 
+        <SavedControls kind="stores" query={query} sort={sort} total={all.length} shown={saved.length}/>
         {saved.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-white py-24 text-center">
             <Bookmark className={`${icn.empty} mb-4`} aria-hidden strokeWidth={1.25} />
-            <h2 className="mb-2 text-lg font-bold text-zinc-900">No saved stores yet</h2>
-            <p className="mb-6 text-sm text-zinc-500">Save stores you love to find them easily later</p>
+            <h2 className="mb-2 text-lg font-bold text-zinc-900">{all.length ? "No saved stores match" : "Your local favourites start here"}</h2>
+            <p className="mb-6 text-sm text-zinc-500">{all.length ? "Try a different search, or clear the filters above." : "Follow stores to find them here and see their updates in Timeline."}</p>
             <Link href="/stores" className="rounded-xl bg-[#D4450A] px-6 py-3 text-sm font-bold text-white hover:opacity-90">
               Browse stores
             </Link>

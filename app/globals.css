@@ -112,6 +112,10 @@ html {
 }
 
 :root {
+  --rex-blue: #0e4362;
+  --rex-blue-light: #0d5170;
+  --rex-gradient: linear-gradient(115deg, #0e4362, #0d5170);
+  --rex-surface: #edf6fb;
   /* Mobile bottom tab bar + iOS safe area — used by fixed footers/checkout */
   --mobile-tab-offset: calc(3.5rem + env(safe-area-inset-bottom, 0px));
 
@@ -137,8 +141,8 @@ html {
   --text-muted: #7c7b77;
   --text-faint: #a09f9b;
   --text-disabled: #c4c3c0;
-  --success-bg: #dcfce7;
-  --success-text: #15803d;
+  --success-bg: #e0eff8;
+  --success-text: #1a587b;
   --color-border-tertiary: rgba(28, 28, 26, 0.12);
   --color-background-secondary: #f7f7f2;
   --color-text-secondary: #45443f;
@@ -464,3 +468,16 @@ body {
 .lw-icon-scarlet-hint:hover {
   color: var(--scarlet);
 }
+
+/* Rex workspace: a single blue visual language for chat, navigation and creation. */
+.rex-studio{background:radial-gradient(ellipse at 65% 0%,#276d8e55,transparent 60%),#102f48!important}
+.rex-studio>header{background:linear-gradient(115deg,#0e4362,#0d5170)!important;box-shadow:none!important}
+.rex-studio .rex-assistant-bubble,.rex-float .rex-assistant-bubble{background:linear-gradient(135deg,#1b4964,#153a52)!important;border:1px solid #a9dcf126!important;box-shadow:0 7px 22px #05182a18!important}
+.rex-user-bubble{background:linear-gradient(125deg,#227fae,#1f688f)!important;box-shadow:0 6px 20px #05182a20!important}
+.rex-composer{border-color:#8bc9e83b!important;background:#173b55!important;border-radius:22px!important;box-shadow:0 10px 35px #031c3333!important}
+.rex-float{background:radial-gradient(at 80% 0%,#3389aa33,transparent 55%),#102f48!important}
+.rex-float>div:first-child{background:linear-gradient(115deg,#0e4362,#0d5170)!important}
+@media print{.vendor-premium-sidebar,.vendor-premium-topbar,.vendor-premium-bottom-nav{display:none!important}main{overflow:visible!important;height:auto!important}}
+
+/* Keep guided targets clear of the sticky workspace header. */
+[data-tour], [data-service-type] { scroll-margin-top: 104px; }

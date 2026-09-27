@@ -38,7 +38,7 @@ type Props = {
 
 const STATUS_COLORS: Record<string, string> = {
   DRAFT: "bg-zinc-100 text-zinc-600",
-  PUBLISHED: "bg-emerald-50 text-emerald-700",
+  PUBLISHED: "bg-sky-50 text-sky-700",
   ARCHIVED: "bg-red-50 text-red-600",
   SUSPENDED: "bg-amber-50 text-amber-700",
 };
@@ -219,7 +219,7 @@ export default function AdminListingsClient({
           <button
             type="button"
             onClick={() => handleBulkAction("PUBLISHED")}
-            className="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs text-white hover:opacity-90"
+            className="rounded-lg bg-sky-500 px-3 py-1.5 text-xs text-white hover:opacity-90"
           >
             Publish
           </button>

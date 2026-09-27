@@ -18,6 +18,7 @@ import { logPrismaError } from "@/lib/log-prisma-error";
 import { isValidRegion, normalizeRegion } from "@/lib/regions/tt-regions";
 import { startSubscriptionCheckout } from "@/app/actions/vendor";
 import { validateOnboardingFile } from "@/lib/onboarding/upload-validation";
+import {canonicalStoreCategory} from "@/lib/catalog/categories";
 import { STORE_CATEGORY_GROUPS } from "@/lib/onboarding/store-categories";
 
 export type BusinessOnboardingState = { error?: string };
@@ -30,7 +31,7 @@ function requireVendor(user: NonNullable<Awaited<ReturnType<typeof getCurrentUse
 
 function parsePlanChoice(raw: FormDataEntryValue | null): IntendedPlan | null {
   const v = String(raw ?? "").trim();
-  if (v === "STARTER" || v === "GROWTH" || v === "PRO") return v;
+  if (v === "SERVICES" || v === "STARTER" || v === "GROWTH" || v === "PRO") return v;
   return null;
 }
 
@@ -191,7 +192,7 @@ export async function saveBusinessOnboardingStep3(
 
   const name = String(formData.get("name") ?? "");
   const slugRaw = String(formData.get("slug") ?? "");
-  const categoryId = String(formData.get("categoryId") ?? "").trim();
+  const categoryId = canonicalStoreCategory(String(formData.get("categoryId") ?? "").trim());
   const region = String(formData.get("region") ?? "").trim();
   const tagline = String(formData.get("tagline") ?? "");
 
@@ -271,7 +272,7 @@ export async function saveBusinessOnboardingStep3(
   const intendedPlan = await getIntendedPlanCookie();
   await clearIntendedPlanCookie();
 
-  if (intendedPlan === "GROWTH" || intendedPlan === "PRO") {
+  if (intendedPlan === "SERVICES" || intendedPlan === "GROWTH" || intendedPlan === "PRO") {
     const checkout = await startSubscriptionCheckout(intendedPlan);
     if (checkout.ok) {
       redirect(checkout.checkoutUrl);

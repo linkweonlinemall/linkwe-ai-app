@@ -27,7 +27,7 @@ export default function StatCard({ label, value, sublabel, trend, icon, classNam
           {trend ? (
             <div className="mt-1.5 flex items-center gap-1">
               <span
-                className={`text-xs font-medium ${trend.positive ? "text-green-600" : "text-red-500"}`}
+                className={`text-xs font-medium ${trend.positive ? "text-sky-600" : "text-red-500"}`}
               >
                 {trend.positive ? "↑" : "↓"} {trend.value}
               </span>

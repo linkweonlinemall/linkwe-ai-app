@@ -142,7 +142,7 @@ export async function payMySubscriptionFromBalance(targetPlanRaw?: string): Prom
   if (!store) return { ok: false, error: "No store found" };
 
   const targetPlan =
-    targetPlanRaw === "GROWTH" || targetPlanRaw === "PRO"
+    targetPlanRaw === "SERVICES" || targetPlanRaw === "GROWTH" || targetPlanRaw === "PRO"
       ? targetPlanRaw
       : undefined;
   if (targetPlanRaw && !targetPlan) return { ok: false, error: "Invalid plan" };
@@ -169,7 +169,7 @@ export async function startSubscriptionCheckout(
   const session = await getSession();
   if (!session || session.role !== "VENDOR") return { ok: false, error: "Not authorized" };
 
-  const plan = targetPlan === "PRO" ? "PRO" : targetPlan === "GROWTH" ? "GROWTH" : null;
+  const plan = targetPlan === "SERVICES" ? "SERVICES" : targetPlan === "PRO" ? "PRO" : targetPlan === "GROWTH" ? "GROWTH" : null;
   if (!plan) return { ok: false, error: "Invalid plan" };
 
   const priceMinor = PLAN_PRICE_MINOR[plan];
@@ -179,7 +179,7 @@ export async function startSubscriptionCheckout(
     select: { id: true, subscriptionPlan: true, planRenewsAt: true },
   });
   if (!store) return { ok: false, error: "No store found" };
-  if (store.subscriptionPlan === "PRO" && plan === "GROWTH") {
+  if (PLAN_PRICE_MINOR[plan] < PLAN_PRICE_MINOR[store.subscriptionPlan]) {
     return { ok: false, error: "Please contact support to downgrade your plan." };
   }
   if (

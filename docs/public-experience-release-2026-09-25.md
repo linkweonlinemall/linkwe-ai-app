@@ -26,4 +26,8 @@ Policy references reviewed: [Consumer Affairs redress](https://consumeraffairs.g
 
 ## Publication
 
-Deployment status and production commit will be recorded after publishing and verification.
+Published commit `292704c3966ce5535d4d126a912dbdbcc95b0bed` to `origin/main`. Vercel deployment `dpl_GV4TnGUF8mBFiH3b9nJSxZb8Zyru` reached Ready in 1m 9s and is assigned to `www.linkweonlinemall.com`. The production feature directory and search, pricing, account drawer, Privacy, Cookies, Shipping, Terms and Returns pages were verified. GitHub reports the Vercel check successful. Production testing was read-only; the existing Admin session was preserved. The compiled test server was stopped and temporary QA/deployment tabs were closed. The live Features tab remains available.
+
+Deployment: https://vercel.com/link-we-online-mall-s-projects/linkwe-ai-app/GV4TnGUF8mBFiH3b9nJSxZb8Zyru
+
+Live feature directory: https://www.linkweonlinemall.com/features

@@ -27,7 +27,7 @@ export default function ReturnsPage() {
     >
       <section>
         <div className="flex items-start gap-4">
-          <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-100 to-white text-emerald-700 shadow-sm"><ShieldCheck className="size-6" /></span>
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-100 to-white text-sky-700 shadow-sm"><ShieldCheck className="size-6" /></span>
           <div>
             <h2 className="text-xl font-black text-zinc-900">Your statutory rights come first</h2>
             <p className="mt-2 text-sm leading-7 text-zinc-600">
@@ -44,8 +44,8 @@ export default function ReturnsPage() {
         </p>
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           {ISSUE_STEPS.map((step) => (
-            <div key={step.title} className="rounded-2xl border border-[#dce3d5] bg-gradient-to-br from-[#f0f4e9] to-white p-4">
-              <step.Icon className="size-5 text-[#436b51]" />
+            <div key={step.title} className="rounded-2xl border border-[#d4dee4] bg-gradient-to-br from-[#e9f0f4] to-white p-4">
+              <step.Icon className="size-5 text-[#435d6b]" />
               <h3 className="mt-3 text-sm font-black text-zinc-900">{step.title}</h3>
               <p className="mt-1 text-xs leading-5 text-zinc-600">{step.text}</p>
             </div>
@@ -101,7 +101,7 @@ export default function ReturnsPage() {
         </p>
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
           <Link href="/contact" className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-gradient-to-r from-[#D4450A] to-[#F06A2A] px-5 text-sm font-black text-white shadow-[0_12px_28px_rgba(212,69,10,.24)]">Contact LinkWe Support</Link>
-          <a href="https://consumeraffairs.gov.tt/services/redress/" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-[#dce3d5] bg-white px-5 text-sm font-black text-[#436b51] shadow-sm">Consumer Affairs guidance</a>
+          <a href="https://consumeraffairs.gov.tt/services/redress/" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-[#d4dee4] bg-white px-5 text-sm font-black text-[#435d6b] shadow-sm">Consumer Affairs guidance</a>
         </div>
       </section>
     </PublicStaticPageShell>

@@ -42,7 +42,7 @@ export function EventShareButton({ title, url, glass = false }: Props) {
       className={glass ? glassClass : defaultClass}
     >
       {copied ? (
-        <Check className="size-4 text-emerald-400" strokeWidth={2.5} />
+        <Check className="size-4 text-sky-400" strokeWidth={2.5} />
       ) : (
         <Share2 className="size-4" strokeWidth={2} />
       )}

@@ -31,33 +31,15 @@ export async function reviewStatsForStores(
   const map = new Map<string, { sum: number; count: number }>();
   if (storeIds.length === 0) return new Map();
 
-  const [listingRows, directRows] = await Promise.all([
-    prisma.review.findMany({
-      where: { listing: { storeId: { in: storeIds } } },
-      select: { rating: true, listing: { select: { storeId: true } } },
-    }),
-    prisma.review.findMany({
-      where: { storeId: { in: storeIds }, productId: null },
-      select: { rating: true, storeId: true },
-    }),
-  ]);
-
-  for (const r of listingRows) {
-    const sid = r.listing?.storeId;
-    if (!sid) continue;
-    const cur = map.get(sid) ?? { sum: 0, count: 0 };
-    cur.sum += r.rating;
-    cur.count += 1;
-    map.set(sid, cur);
-  }
-
-  for (const r of directRows) {
-    const sid = r.storeId;
-    if (!sid) continue;
-    const cur = map.get(sid) ?? { sum: 0, count: 0 };
-    cur.sum += r.rating;
-    cur.count += 1;
-    map.set(sid, cur);
+  const rows = await prisma.review.findMany({
+    where: { OR: [{listing:{storeId:{in:storeIds}}},{storeId:{in:storeIds},productId:null}] },
+    select: {rating:true,storeId:true,listing:{select:{storeId:true}}},
+  });
+  for (const row of rows) {
+    const id=row.listing?.storeId??row.storeId;
+    if (!id) continue;
+    const current=map.get(id)??{sum:0,count:0};
+    map.set(id,{sum:current.sum+row.rating,count:current.count+1});
   }
 
   return new Map(

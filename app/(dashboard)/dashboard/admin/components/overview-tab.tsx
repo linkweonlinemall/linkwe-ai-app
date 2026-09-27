@@ -58,7 +58,7 @@ export default function OverviewTab() {
           </div>
         ) : (
           <>
-            <div className="h-52 animate-pulse rounded-3xl bg-[#dce7e4]" />
+            <div className="h-52 animate-pulse rounded-3xl bg-[#dbe3e8]" />
             <div className="h-28 animate-pulse rounded-3xl bg-white" />
             <div className="h-72 animate-pulse rounded-3xl bg-white" />
           </>
@@ -176,7 +176,7 @@ export default function OverviewTab() {
           <div className="admin-stat" key={stat.label}>
             <div className="flex items-center justify-between">
               <small>{stat.label}</small>
-              <stat.icon size={17} className="text-[#7c9897]" />
+              <stat.icon size={17} className="text-[#7091a4]" />
             </div>
             <strong>{stat.value}</strong>
             <p>{stat.note}</p>
@@ -230,7 +230,7 @@ export default function OverviewTab() {
                 className="flex items-center gap-3 rounded-xl border border-[#edf0f0] px-4 py-4 transition hover:bg-[#fff8f3]"
               >
                 <span
-                  className={`rounded-xl p-2.5 ${task.count ? "bg-orange-50 text-orange-700" : "bg-[#eff5f2] text-[#668578]"}`}
+                  className={`rounded-xl p-2.5 ${task.count ? "bg-orange-50 text-orange-700" : "bg-[#eff3f5] text-[#5c7d8f]"}`}
                 >
                   <task.icon size={18} />
                 </span>
@@ -265,9 +265,9 @@ export default function OverviewTab() {
             <Link
               key={stage.name}
               href="/dashboard/admin?tab=linkwe-delivery"
-              className="flex items-center gap-3 border-b border-[#edf1f1] py-4"
+              className="flex items-center gap-3 border-b border-[#ebf0f3] py-4"
             >
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#edf4f2] text-[10px] text-[#5d8075]">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#edf1f4] text-[10px] text-[#567587]">
                 0{index + 1}
               </span>
               <span className="flex-1 text-xs font-medium">{stage.name}</span>
@@ -296,7 +296,7 @@ export default function OverviewTab() {
         </div>
         {!metrics.recentOrders.length ? (
           <div className="admin-empty">
-            <CheckCircle2 size={25} className="mx-auto mb-3 text-[#6f9684]" />
+            <CheckCircle2 size={25} className="mx-auto mb-3 text-[#678a9e]" />
             New paid orders will appear here.
           </div>
         ) : (

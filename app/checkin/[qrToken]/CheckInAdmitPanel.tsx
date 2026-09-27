@@ -58,11 +58,11 @@ export function CheckInAdmitPanel({ qrToken, expectedEventId }: Props) {
   if (justCheckedIn) {
     return (
       <div
-        className="rounded-2xl border-2 border-emerald-600 bg-emerald-50 px-6 py-8 text-center"
+        className="rounded-2xl border-2 border-sky-600 bg-sky-50 px-6 py-8 text-center"
         role="status"
       >
-        <p className="text-3xl font-bold text-emerald-800 sm:text-4xl">✅ Checked in!</p>
-        <p className="mt-2 text-base text-emerald-900/80">Guest admitted successfully.</p>
+        <p className="text-3xl font-bold text-sky-800 sm:text-4xl">✅ Checked in!</p>
+        <p className="mt-2 text-base text-sky-900/80">Guest admitted successfully.</p>
       </div>
     );
   }

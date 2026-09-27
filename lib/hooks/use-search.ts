@@ -17,8 +17,8 @@ const CACHE_TTL_MS = 60_000;
 const MAX_CACHE_ENTRIES = 10;
 const cache = new Map<string, CacheEntry>();
 
-function cacheKey(q: string, preview: boolean) {
-  return `${preview ? "p" : "f"}:${q.toLowerCase()}`;
+function cacheKey(q: string, preview: boolean, type: string) {
+  return `${preview ? "p" : "f"}:${type}:${q.toLowerCase()}`;
 }
 
 function readCache(key: string): UniversalSearchResponse | null {
@@ -39,9 +39,10 @@ function writeCache(key: string, data: UniversalSearchResponse) {
   cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
-export function useSearch(query: string, options?: { preview?: boolean; enabled?: boolean }) {
+export function useSearch(query: string, options?: { preview?: boolean; enabled?: boolean; type?: string }) {
   const preview = options?.preview ?? true;
   const enabled = options?.enabled ?? true;
+  const type = options?.type ?? "all";
   const [results, setResults] = useState<UniversalSearchResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +59,7 @@ export function useSearch(query: string, options?: { preview?: boolean; enabled?
         return;
       }
 
-      const key = cacheKey(trimmed, preview);
+      const key = cacheKey(trimmed, preview, type);
       const cached = readCache(key);
       if (cached) {
         setResults(cached);
@@ -77,6 +78,7 @@ export function useSearch(query: string, options?: { preview?: boolean; enabled?
       try {
         const params = new URLSearchParams({
           q: trimmed,
+          type,
           preview: preview ? "true" : "false",
         });
         const res = await fetch(`/api/search?${params}`, { signal: controller.signal });
@@ -104,14 +106,16 @@ export function useSearch(query: string, options?: { preview?: boolean; enabled?
         }
       }
     },
-    [preview],
+    [preview, type],
   );
 
   useEffect(() => {
-    if (!enabled) return;
+    abortRef.current?.abort();
+    if (!enabled) { setIsLoading(false); return; }
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
+    setResults(null);
     const trimmed = query.trim();
     if (trimmed.length < 2) {
       setResults(null);
@@ -127,6 +131,7 @@ export function useSearch(query: string, options?: { preview?: boolean; enabled?
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
+      abortRef.current?.abort();
     };
   }, [query, enabled, fetchSearch]);
 
@@ -134,6 +139,7 @@ export function useSearch(query: string, options?: { preview?: boolean; enabled?
     return () => {
       abortRef.current?.abort();
       if (debounceRef.current) clearTimeout(debounceRef.current);
+      abortRef.current?.abort();
     };
   }, []);
 

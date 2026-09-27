@@ -107,7 +107,7 @@ function PayoutCard({
             <p className="text-sm font-semibold text-zinc-900">{row.store.name}</p>
             <span
               className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold"
-              style={{ backgroundColor: "#F0FDF4", color: "#1B8C5A" }}
+              style={{ backgroundColor: "#f1f8fc", color: "#1d638a" }}
             >
               Delivered
             </span>

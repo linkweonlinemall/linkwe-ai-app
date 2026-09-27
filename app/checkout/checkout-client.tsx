@@ -324,7 +324,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
       return (
         <div className="flex justify-between py-2 text-sm">
           <span>Delivery</span>
-          <span className="font-semibold text-emerald-600">No shipping fee</span>
+          <span className="font-semibold text-sky-600">No shipping fee</span>
         </div>
       );
     }
@@ -409,7 +409,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
         <span>Subtotal</span>
         <span>TTD {subtotal.toFixed(2)}</span>
       </div>
-      <CouponInput kind="cart" disabled={loading} value={coupon} onChange={setCoupon}/>{coupon&&<div className="flex justify-between py-2 text-sm text-emerald-700"><span>Coupon · {coupon.code}</span><span>− TTD {(coupon.discountMinor/100).toFixed(2)}</span></div>}
+      <CouponInput kind="cart" disabled={loading} value={coupon} onChange={setCoupon}/>{coupon&&<div className="flex justify-between py-2 text-sm text-sky-700"><span>Coupon · {coupon.code}</span><span>− TTD {(coupon.discountMinor/100).toFixed(2)}</span></div>}
       {renderShippingLines()}
       <div className="my-3 border-t" style={{ borderColor: "var(--card-border-subtle)" }} />
       <div className="flex justify-between">
@@ -516,10 +516,10 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
                           </Button>
 
                           <div
-                            className={`flex items-center gap-2 ${radius.card} border border-emerald-200 bg-emerald-50 px-3 py-3`}
+                            className={`flex items-center gap-2 ${radius.card} border border-sky-200 bg-sky-50 px-3 py-3`}
                           >
-                            <Check className="size-5 shrink-0 text-emerald-600" aria-hidden strokeWidth={2.5} />
-                            <span className="text-base font-medium capitalize text-emerald-700">
+                            <Check className="size-5 shrink-0 text-sky-600" aria-hidden strokeWidth={2.5} />
+                            <span className="text-base font-medium capitalize text-sky-700">
                               {deliveryRegion.replace(/_/g, " ")}
                             </span>
                           </div>
@@ -533,7 +533,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
                           />
 
                           {suggestedRegion && suggestedRegion === deliveryRegion ? (
-                            <p className="text-sm text-emerald-700">
+                            <p className="text-sm text-sky-700">
                               ✓ Pin matches your selected region: {getRegionOptionLabel(suggestedRegion)}
                             </p>
                           ) : null}
@@ -614,7 +614,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
               )}
             </div>
 
-            {storeQuestions.length > 0 ? <div className="mt-6 space-y-4 border-t border-zinc-100 pt-5"><div><h2 className="text-base font-semibold text-zinc-900">Details for your vendors</h2><p className="mt-1 text-xs text-zinc-500">These answers help each vendor prepare your order correctly.</p></div>{storeQuestions.map((group) => <section key={group.key} className="rounded-2xl border border-orange-100 bg-orange-50/40 p-4"><h3 className="text-sm font-bold text-zinc-900">{group.storeName}</h3><div className="mt-3 space-y-4">{group.fields.map((field) => { const value = checkoutResponses[group.storeId]?.[field.id]; const inputClass = "min-h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm outline-none focus:border-[#D4450A] focus:ring-4 focus:ring-orange-500/10"; return <label key={field.id} className="block text-xs font-semibold text-zinc-700"><span>{field.label}{field.required ? <span className="text-[#D4450A]"> *</span> : null}</span>{field.type === "text" ? <input value={typeof value === "string" ? value : ""} onChange={(e) => setCheckoutResponse(group.storeId, field.id, e.target.value)} className={`${inputClass} mt-1.5`} /> : null}{field.type === "select" ? <select value={typeof value === "string" ? value : ""} onChange={(e) => setCheckoutResponse(group.storeId, field.id, e.target.value)} className={`${inputClass} mt-1.5`}><option value="">Choose one…</option>{field.options.map((option) => <option key={option}>{option}</option>)}</select> : null}{field.type === "multiselect" || field.type === "checklist" ? <span className="mt-2 grid gap-2 sm:grid-cols-2">{field.options.map((option) => { const values = Array.isArray(value) ? value : []; return <span key={option} className="flex min-h-11 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 font-medium"><input type="checkbox" checked={values.includes(option)} onChange={(e) => setCheckoutResponse(group.storeId, field.id, e.target.checked ? [...values, option] : values.filter((item) => item !== option))} className="size-4 accent-[#D4450A]" />{option}</span>; })}</span> : null}{field.type === "upload" ? <span className="mt-1.5 block"><input type="file" disabled={uploadingFields.includes(`${group.storeId}:${field.id}`)} onChange={(e) => void uploadResponse(group.storeId, field.id, e.target.files?.[0])} className={`${inputClass} file:mr-3 file:border-0 file:bg-transparent file:text-xs file:font-bold`} />{uploadingFields.includes(`${group.storeId}:${field.id}`) ? <span className="mt-1 block text-[11px] text-zinc-500">Uploading…</span> : typeof value === "string" && value ? <span className="mt-1 block text-[11px] text-emerald-700">Uploaded successfully</span> : null}</span> : null}</label>; })}</div></section>)}</div> : null}
+            {storeQuestions.length > 0 ? <div className="mt-6 space-y-4 border-t border-zinc-100 pt-5"><div><h2 className="text-base font-semibold text-zinc-900">Details for your vendors</h2><p className="mt-1 text-xs text-zinc-500">These answers help each vendor prepare your order correctly.</p></div>{storeQuestions.map((group) => <section key={group.key} className="rounded-2xl border border-orange-100 bg-orange-50/40 p-4"><h3 className="text-sm font-bold text-zinc-900">{group.storeName}</h3><div className="mt-3 space-y-4">{group.fields.map((field) => { const value = checkoutResponses[group.storeId]?.[field.id]; const inputClass = "min-h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm outline-none focus:border-[#D4450A] focus:ring-4 focus:ring-orange-500/10"; return <label key={field.id} className="block text-xs font-semibold text-zinc-700"><span>{field.label}{field.required ? <span className="text-[#D4450A]"> *</span> : null}</span>{field.type === "text" ? <input value={typeof value === "string" ? value : ""} onChange={(e) => setCheckoutResponse(group.storeId, field.id, e.target.value)} className={`${inputClass} mt-1.5`} /> : null}{field.type === "select" ? <select value={typeof value === "string" ? value : ""} onChange={(e) => setCheckoutResponse(group.storeId, field.id, e.target.value)} className={`${inputClass} mt-1.5`}><option value="">Choose one…</option>{field.options.map((option) => <option key={option}>{option}</option>)}</select> : null}{field.type === "multiselect" || field.type === "checklist" ? <span className="mt-2 grid gap-2 sm:grid-cols-2">{field.options.map((option) => { const values = Array.isArray(value) ? value : []; return <span key={option} className="flex min-h-11 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 font-medium"><input type="checkbox" checked={values.includes(option)} onChange={(e) => setCheckoutResponse(group.storeId, field.id, e.target.checked ? [...values, option] : values.filter((item) => item !== option))} className="size-4 accent-[#D4450A]" />{option}</span>; })}</span> : null}{field.type === "upload" ? <span className="mt-1.5 block"><input type="file" disabled={uploadingFields.includes(`${group.storeId}:${field.id}`)} onChange={(e) => void uploadResponse(group.storeId, field.id, e.target.files?.[0])} className={`${inputClass} file:mr-3 file:border-0 file:bg-transparent file:text-xs file:font-bold`} />{uploadingFields.includes(`${group.storeId}:${field.id}`) ? <span className="mt-1 block text-[11px] text-zinc-500">Uploading…</span> : typeof value === "string" && value ? <span className="mt-1 block text-[11px] text-sky-700">Uploaded successfully</span> : null}</span> : null}</label>; })}</div></section>)}</div> : null}
 
             {needsShippingQuote && !shippingLoading && quoteFor === quoteKey && shippingBreakdown?.ok === false && <div className={s.quoteError} role="alert"><p>We couldn’t get your delivery quote. Check your region and try again.</p><button type="button" onClick={() => setQuoteAttempt(value => value + 1)}>Retry delivery quote</button></div>}
             {coverageWarning ? <div className="mt-4">{coverageWarning}</div> : null}

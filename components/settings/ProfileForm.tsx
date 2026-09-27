@@ -93,8 +93,8 @@ export default function ProfileForm({ user }: Props) {
           </div>
         ) : null}
         {success ? (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-            <p className="text-xs font-semibold text-emerald-700">
+          <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
+            <p className="text-xs font-semibold text-sky-700">
               Profile updated successfully ✓
             </p>
           </div>

@@ -76,8 +76,8 @@ export async function consumeGoogleOAuthFlow(): Promise<GoogleOAuthFlow | null> 
       mode: payload.mode,
       signupKind: payload.signupKind,
       intendedPlan:
-        payload.intendedPlan === "STARTER" || payload.intendedPlan === "GROWTH" || payload.intendedPlan === "PRO"
-          ? payload.intendedPlan
+        ["STARTER", "SERVICES", "GROWTH", "PRO"].includes(String(payload.intendedPlan))
+          ? payload.intendedPlan as IntendedPlan
           : null,
       callbackUrl: safeInternalPath(typeof payload.callbackUrl === "string" ? payload.callbackUrl : undefined, ""),
     };

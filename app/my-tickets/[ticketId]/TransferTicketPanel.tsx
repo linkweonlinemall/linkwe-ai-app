@@ -73,7 +73,7 @@ export function TransferTicketPanel({ ticketId, status }: Props) {
     <div>
       {success ? (
         <p
-          className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800"
+          className="mb-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-medium text-sky-800"
           role="status"
         >
           {success}

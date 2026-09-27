@@ -16,7 +16,7 @@ type User = {
 const ROLE_COLOR: Record<string, string> = {
   ADMIN: "bg-[#D4450A] text-white",
   VENDOR: "bg-blue-100 text-blue-700",
-  CUSTOMER: "bg-emerald-100 text-emerald-700",
+  CUSTOMER: "bg-sky-100 text-sky-700",
   COURIER: "bg-amber-100 text-amber-700",
 };
 
@@ -178,8 +178,8 @@ export default function AdminPasswordManager({ users }: { users: User[] }) {
           ) : null}
 
           {success ? (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-              <p className="text-xs font-semibold text-emerald-700">
+            <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
+              <p className="text-xs font-semibold text-sky-700">
                 Password changed successfully ✓
               </p>
             </div>

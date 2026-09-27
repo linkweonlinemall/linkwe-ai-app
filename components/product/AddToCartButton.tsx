@@ -123,7 +123,7 @@ export default function AddToCartButton({
         onClick={() => void handleClick()}
         disabled={loading || Boolean(disabled)}
         className={`${baseBtn} text-white shadow-[0_13px_30px_rgba(212,69,10,.24)] ${
-          added ? "bg-emerald-600" : "bg-gradient-to-r from-[#D4450A] to-[#F06A2A] hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(212,69,10,.32)]"
+          added ? "bg-sky-600" : "bg-gradient-to-r from-[#D4450A] to-[#F06A2A] hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(212,69,10,.32)]"
         } ${loading && !added ? "opacity-90" : ""}`}
       >
         {loading ? (

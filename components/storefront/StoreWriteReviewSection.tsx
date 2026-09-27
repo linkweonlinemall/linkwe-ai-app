@@ -213,9 +213,9 @@ export default function StoreWriteReviewSection({
 
   if (success) {
     return (
-      <div className="flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-center">
-        <IconCircleCheck className="size-5 shrink-0 text-emerald-600" stroke={1.75} aria-hidden />
-        <p className="text-[13px] font-medium text-emerald-900">
+      <div className="flex items-center justify-center gap-2 rounded-xl border border-sky-200 bg-sky-50 p-4 text-center">
+        <IconCircleCheck className="size-5 shrink-0 text-sky-600" stroke={1.75} aria-hidden />
+        <p className="text-[13px] font-medium text-sky-900">
           Review submitted! Thank you.
         </p>
       </div>

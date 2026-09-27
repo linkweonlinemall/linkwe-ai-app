@@ -29,7 +29,7 @@ export function parseDirectoryQuery(params:DirectoryParams) {
   const price=(key:string)=>{const raw=text(key),value=Number(raw);return raw&&Number.isFinite(value)&&value>=0?value:undefined;};
   let minPrice=price("minPrice"),maxPrice=price("maxPrice");
   if(minPrice!==undefined&&maxPrice!==undefined&&minPrice>maxPrice)[minPrice,maxPrice]=[maxPrice,minPrice];
-  return {q:text("q"),category:text("category")==="all"?"":text("category"),region:text("region")==="all"?"":text("region"),serviceType:selection("serviceType",DIRECTORY_TYPES.map(t=>t.value)),location:selection("location",DIRECTORY_LOCATIONS.map(l=>l.value)),sort:selection("sort",DIRECTORY_SORTS.map(s=>s.value))||"featured",minPrice,maxPrice,minimumRating:[3,4,4.5].includes(Number(text("minimumRating")))?Number(text("minimumRating")):0,pricing:selection("pricing",["quoted","listed"]),page:Math.min(100000,Math.max(1,Math.floor(Number(text("page")))||1))};
+  return {availableOnly:text("availableOnly")==="true",maxDuration:[30,60,120,240].includes(Number(text("maxDuration")))?Number(text("maxDuration")):0,q:text("q"),category:text("category")==="all"?"":text("category"),region:text("region")==="all"?"":text("region"),serviceType:selection("serviceType",DIRECTORY_TYPES.map(t=>t.value)),location:selection("location",DIRECTORY_LOCATIONS.map(l=>l.value)),sort:selection("sort",DIRECTORY_SORTS.map(s=>s.value))||"featured",minPrice,maxPrice,minimumRating:[3,4,4.5].includes(Number(text("minimumRating")))?Number(text("minimumRating")):0,pricing:selection("pricing",["quoted","listed"]),page:Math.min(100000,Math.max(1,Math.floor(Number(text("page")))||1))};
 }
 export type DirectoryQuery=ReturnType<typeof parseDirectoryQuery>;
 export function directoryHref(params:DirectoryParams,overrides:Record<string,string|undefined>={}){
@@ -50,6 +50,8 @@ export function selectDirectory(services:DirectoryService[],query:DirectoryQuery
     if(query.region&&service.store.region!==query.region)return false;
     if(query.location&&directoryLocation(service)!==query.location)return false;
     if(query.minimumRating&&(service.reviewCount===0||service.reviewAvg<query.minimumRating))return false;
+    if(query.availableOnly&&!service.isAvailable)return false;
+    if(query.maxDuration){const duration=directoryDuration(service);if(!duration||duration>query.maxDuration)return false;}
     const listed=hasListedFee(service);
     if(query.pricing==="quoted"&&listed || query.pricing==="listed"&&!listed)return false;
     if(query.minPrice!==undefined||query.maxPrice!==undefined){if(!listed)return false;if(query.minPrice!==undefined&&service.price<query.minPrice)return false;if(query.maxPrice!==undefined&&service.price>query.maxPrice)return false;}

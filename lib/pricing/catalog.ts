@@ -1,12 +1,12 @@
 import { getCommissionRate, TICKET_COMMISSION_RATE, type CommissionPlan } from "@/lib/finance/commission";
 import { PLAN_LIMITS, PLAN_PRICE_MINOR } from "@/lib/finance/plan-limits";
 
-export const PUBLIC_PLANS = (["STARTER", "GROWTH", "PRO"] as const).map(id => {
+export const PUBLIC_PLANS = (["STARTER", "SERVICES", "GROWTH", "PRO"] as const).map(id => {
   const limits = PLAN_LIMITS[id];
   return {
     id,
-    name: { STARTER: "Starter", GROWTH: "Growth", PRO: "Pro" }[id],
-    description: { STARTER: "Make your first move. Build your store and start selling.", GROWTH: "More listings, more creative tools and lower selling fees.", PRO: "Room for your full catalogue, with no product or service commission." }[id],
+    name: { STARTER: "Starter", SERVICES: "Services", GROWTH: "Growth", PRO: "Pro" }[id],
+    description: { SERVICES: "Starter essentials, room for 20 services and the freedom to set your prices.", STARTER: "Make your first move. Build your store and start selling.", GROWTH: "More listings, more creative tools and lower selling fees.", PRO: "Room for your full catalogue, with no product or service commission." }[id],
     price: PLAN_PRICE_MINOR[id] / 100,
     products: limits.productCap === null ? "Unlimited products" : `Up to ${limits.productCap.toLocaleString("en-TT")} products`,
     services: limits.serviceCap === null ? "Unlimited services" : `Up to ${limits.serviceCap} services`,
@@ -14,8 +14,8 @@ export const PUBLIC_PLANS = (["STARTER", "GROWTH", "PRO"] as const).map(id => {
     productCommission: `${getCommissionRate("product", id) * 100}%`,
     serviceCommission: `${getCommissionRate("service", id) * 100}%`,
     ticketCommission: `${TICKET_COMMISSION_RATE * 100}%`,
-    rex: limits.aiMonthlyAllowance ? `${limits.aiMonthlyAllowance.toLocaleString("en-TT")} included uses / month` : `${limits.aiLifetimeGiftAllowance} complimentary uses, once`,
-    timeline: id !== "STARTER",
+    rex: id === "PRO" ? "Rex maximum monthly capacity" : id === "GROWTH" ? "Rex expanded monthly capacity" : "Rex welcome access · one-time gift",
+    timeline: id === "GROWTH" || id === "PRO",
   };
 });
 export function planDestination(target: CommissionPlan, current: CommissionPlan | null) {

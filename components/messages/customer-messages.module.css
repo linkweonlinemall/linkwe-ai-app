@@ -1,0 +1,1 @@
+.page{height:100dvh;display:flex;flex-direction:column;overflow:hidden;background:#f1f6fa}.page>header,.page>nav{flex-shrink:0}.main{flex:1;min-height:0;overflow:auto}@media(max-width:767px){.page{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}}

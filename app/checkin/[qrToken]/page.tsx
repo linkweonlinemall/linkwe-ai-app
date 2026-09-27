@@ -35,8 +35,8 @@ function StatusBanner({
 }) {
   if (status === "VALID") {
     return (
-      <div className="rounded-2xl border-2 border-emerald-600 bg-emerald-50 px-5 py-6 text-center">
-        <p className="text-3xl font-bold text-emerald-800 sm:text-4xl">✅ Valid ticket</p>
+      <div className="rounded-2xl border-2 border-sky-600 bg-sky-50 px-5 py-6 text-center">
+        <p className="text-3xl font-bold text-sky-800 sm:text-4xl">✅ Valid ticket</p>
       </div>
     );
   }

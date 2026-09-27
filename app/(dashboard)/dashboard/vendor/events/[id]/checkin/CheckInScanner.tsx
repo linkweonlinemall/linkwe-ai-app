@@ -494,7 +494,7 @@ export function CheckInScanner({
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <span
-                  className={`h-2 w-2 shrink-0 rounded-full ${isOnline ? "bg-emerald-500" : "bg-zinc-400"}`}
+                  className={`h-2 w-2 shrink-0 rounded-full ${isOnline ? "bg-sky-500" : "bg-zinc-400"}`}
                   aria-hidden
                 />
                 <span className="font-medium">{isOnline ? "Online" : "Offline"}</span>
@@ -788,8 +788,8 @@ function StatusBlock({
   subtitle: string;
 }) {
   const styles = {
-    valid: "border-emerald-600 bg-emerald-50 text-emerald-900",
-    success: "border-emerald-600 bg-emerald-50 text-emerald-900",
+    valid: "border-sky-600 bg-sky-50 text-sky-900",
+    success: "border-sky-600 bg-sky-50 text-sky-900",
     warning: "border-amber-600 bg-amber-50 text-amber-900",
     invalid: "border-red-600 bg-red-50 text-red-900",
   }[variant];

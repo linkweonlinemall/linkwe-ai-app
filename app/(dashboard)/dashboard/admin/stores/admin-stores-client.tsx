@@ -229,10 +229,10 @@ export default function AdminStoresClient({
       <div className="grid gap-5 xl:grid-cols-2">
         {stores.map((store) => (
           <article
-            className="overflow-hidden rounded-[20px] border border-[#dfe7e7] bg-white shadow-sm"
+            className="overflow-hidden rounded-[20px] border border-[#dde5e9] bg-white shadow-sm"
             key={store.id}
           >
-            <div className="relative h-32 bg-[#dfece7]">
+            <div className="relative h-32 bg-[#dfe7ec]">
               {store.coverPhotoUrl ? (
                 <img
                   src={store.coverPhotoUrl}
@@ -241,8 +241,8 @@ export default function AdminStoresClient({
                   loading="lazy"
                 />
               ) : (
-                <div className="flex h-full items-center justify-center bg-gradient-to-br from-[#caddd5] to-[#eaf1df]">
-                  <Store size={38} className="text-[#6a9685]" />
+                <div className="flex h-full items-center justify-center bg-gradient-to-br from-[#cad6dd] to-[#dfebf1]">
+                  <Store size={38} className="text-[#64889c]" />
                 </div>
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/15 to-transparent" />
@@ -276,7 +276,7 @@ export default function AdminStoresClient({
                       className="h-full w-full object-contain"
                     />
                   ) : (
-                    <Store size={28} className="text-[#749789]" />
+                    <Store size={28} className="text-[#6b8da0]" />
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -298,7 +298,7 @@ export default function AdminStoresClient({
                 >
                   <UserRound
                     size={16}
-                    className="mt-0.5 shrink-0 text-[#86a29d]"
+                    className="mt-0.5 shrink-0 text-[#7c9bac]"
                   />
                   <span className="min-w-0">
                     <strong className="block font-medium">
@@ -342,7 +342,7 @@ export default function AdminStoresClient({
                   <Settings2 size={14} />
                   Publication, plan & advanced actions
                 </summary>
-                <div className="mt-2 space-y-4 rounded-xl bg-[#f5f8f7] p-4">
+                <div className="mt-2 space-y-4 rounded-xl bg-[#f5f7f8] p-4">
                   <div className="admin-form-grid">
                     <label className="admin-field">
                       <span className="admin-field-label">Store status</span>
@@ -375,7 +375,7 @@ export default function AdminStoresClient({
                           void run([store.id], "plan", e.target.value)
                         }
                       >
-                        {["STARTER", "GROWTH", "PRO"].map((plan) => (
+                        {["STARTER", "SERVICES", "GROWTH", "PRO"].map((plan) => (
                           <option key={plan} value={plan}>
                             {optionLabel(plan)}
                           </option>

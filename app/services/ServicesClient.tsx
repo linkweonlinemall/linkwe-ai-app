@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { FilterSelect, FilterChoices, ColourSwatches } from "@/components/filters/FilterControls";
 import { useId, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowDownWideNarrow, Check, ChevronDown, ConciergeBell, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
@@ -21,13 +22,13 @@ export function ServicesEmpty({inventoryCount}:{inventoryCount:number}){
 }
 export default function ServicesClient({query,options,total,children}:{query:DirectoryQuery;options:DirectoryOptions;total:number;children:ReactNode}){
   const router=useRouter(),params=useSearchParams(),id=useId(),dialog=useRef<HTMLDialogElement>(null);
-  const [draft,setDraft]=useState({category:query.category,serviceType:query.serviceType,region:query.region,location:query.location,pricing:query.pricing,minimumRating:String(query.minimumRating||""),minPrice:query.minPrice?.toString()??"",maxPrice:query.maxPrice?.toString()??""});
+  const [draft,setDraft]=useState({availableOnly:query.availableOnly?"true":"",maxDuration:String(query.maxDuration||""),category:query.category,serviceType:query.serviceType,region:query.region,location:query.location,pricing:query.pricing,minimumRating:String(query.minimumRating||""),minPrice:query.minPrice?.toString()??"",maxPrice:query.maxPrice?.toString()??""});
   const [pending,startTransition]=useTransition(),[error,setError]=useState("");
-  const count=[query.category,query.serviceType,query.region,query.location,query.pricing,query.minimumRating,query.minPrice!==undefined||query.maxPrice!==undefined].filter(Boolean).length;
+  const count=[query.availableOnly,query.maxDuration,query.category,query.serviceType,query.region,query.location,query.pricing,query.minimumRating,query.minPrice!==undefined||query.maxPrice!==undefined].filter(Boolean).length;
   function navigate(values:Record<string,string>){const next=new URLSearchParams(params.toString());next.delete("page");for(const [key,value] of Object.entries(values)){if(value)next.set(key,value);else next.delete(key);}dialog.current?.close();startTransition(()=>router.push(`/services${next.size?`?${next}`:""}#service-results`,{scroll:false}));}
-  function reset(){navigate({category:"",serviceType:"",region:"",location:"",pricing:"",minimumRating:"",minPrice:"",maxPrice:""});}
+  function reset(){navigate({availableOnly:"",maxDuration:"",category:"",serviceType:"",region:"",location:"",pricing:"",minimumRating:"",minPrice:"",maxPrice:""});}
   function fields(prefix:string){
-    const select=(key:keyof typeof draft,label:string,values:{value:string;label:string}[],placeholder:string)=><label className={base.field} htmlFor={`${prefix}-${key}`}><span>{label}</span><div className={base.selectWrap}><select id={`${prefix}-${key}`} value={draft[key]} onChange={event=>setDraft({...draft,[key]:event.target.value})}><option value="">{placeholder}</option>{draft[key]&&!values.some(v=>v.value===draft[key])&&<option value={draft[key]}>{draft[key].replaceAll("_"," ")}</option>}{values.map(v=><option key={v.value} value={v.value}>{v.label}</option>)}</select><ChevronDown size={14} aria-hidden/></div></label>;
+    const select=(key:keyof typeof draft,label:string,values:{value:string;label:string}[],placeholder:string)=> <FilterSelect id={`${prefix}-${key}`} label={label} value={String(draft[key])} options={values} placeholder={placeholder} onChange={value=>setDraft({...draft,[key]:value})}/>;
     return <form className={base.filterForm} onSubmit={event=>{event.preventDefault();if(draft.minPrice&&draft.maxPrice&&Number(draft.minPrice)>Number(draft.maxPrice)){setError("The maximum should be higher than the minimum.");return;}setError("");navigate(draft);}}>
       {select("category","Category",options.categories.map(c=>({value:c.value,label:`${c.label} (${c.count})` })),"Every kind of expertise")}
       {select("serviceType","How would you like to book?",DIRECTORY_TYPES,"Any service type")}
@@ -36,6 +37,8 @@ export default function ServicesClient({query,options,total,children}:{query:Dir
       {select("pricing","Pricing",[{value:"listed",label:"Has a listed fee"},{value:"quoted",label:"Price on request"}],"All pricing options")}
       <fieldset className={base.priceField}><legend>Listed fee <span>TTD</span></legend><div><label htmlFor={`${prefix}-min`}><span className="sr-only">Minimum price</span><input id={`${prefix}-min`} type="number" min="0" step="0.01" inputMode="decimal" placeholder="Min" value={draft.minPrice} onChange={event=>setDraft({...draft,minPrice:event.target.value})}/></label><span>—</span><label htmlFor={`${prefix}-max`}><span className="sr-only">Maximum price</span><input id={`${prefix}-max`} type="number" min="0" step="0.01" inputMode="decimal" placeholder="Max" value={draft.maxPrice} onChange={event=>setDraft({...draft,maxPrice:event.target.value})}/></label></div><p className={styles.feeHint}>Price filters apply to listed fees. Custom quotes are agreed with your provider.</p>{error&&<p role="alert" className={base.filterError}>{error}</p>}</fieldset>
       {select("minimumRating","Customer rating",[{value:"3",label:"3 stars & up"},{value:"4",label:"4 stars & up"},{value:"4.5",label:"4.5 stars & up"}],"Any rating")}
+      {select("maxDuration","Time for your service",[{value:"30",label:"30 minutes or less"},{value:"60",label:"1 hour or less"},{value:"120",label:"2 hours or less"},{value:"240",label:"4 hours or less"}],"Any duration")}
+      <label className={base.stockToggle}><input type="checkbox" checked={draft.availableOnly==="true"} onChange={e=>setDraft({...draft,availableOnly:e.target.checked?"true":""})}/> Accepting bookings or requests</label><p className={styles.feeHint}>Available providers may still require a date or time confirmation.</p>
       <div className={base.filterActions}><button type="submit" disabled={pending}>{pending?"Updating…":"Apply filters"}<Check size={16} aria-hidden/></button><button type="button" onClick={reset} disabled={pending}><RotateCcw size={13} aria-hidden/>Reset filters</button></div>
     </form>;
   }

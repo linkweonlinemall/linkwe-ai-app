@@ -1,5 +1,7 @@
 # Website upgrades — 25 September 2026
 
+Release update: Included in production commit `292704c` on 25 September 2026. See `public-experience-release-2026-09-25.md`; the local-only status below records the original implementation handoff.
+
 Continuation of the live release at `9e7f9d7`. Existing uncommitted work must be preserved.
 
 ## User decisions

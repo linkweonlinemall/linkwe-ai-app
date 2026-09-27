@@ -842,7 +842,7 @@ export default function RecordEditor({
           <div>
             <p className="flex items-center gap-2">
               {saved || (!dirty && !isNew) ? (
-                <Check size={16} className="text-emerald-600" />
+                <Check size={16} className="text-sky-600" />
               ) : null}
               {uploads
                 ? "Uploading images…"

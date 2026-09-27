@@ -28,8 +28,8 @@ const choices = [
     label: "Storefront",
     detail: "Brand, gallery, opening hours, location and customer experience.",
     icon: Store,
-    tint: "#e8f3ed",
-    colour: "#3d7762",
+    tint: "#e8eff3",
+    colour: "#3d6277",
   },
   {
     kind: "product",
@@ -157,7 +157,7 @@ export default function CreationLauncher({
                 <UserRoundPlus size={25} />
               </span>
               <h2>A whole new business</h2>
-              <p style={{ color: "#b5cdcb" }}>
+              <p style={{ color: "#b3c5cf" }}>
                 Create the owner&apos;s account, their store and an optional
                 first offering in one guided setup.
               </p>

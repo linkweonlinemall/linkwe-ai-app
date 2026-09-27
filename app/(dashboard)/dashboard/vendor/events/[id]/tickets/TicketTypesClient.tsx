@@ -34,7 +34,7 @@ const COLOR_PRESETS = [
   { label: "Scarlet", value: "#D4450A" },
   { label: "Amber", value: "#E8820C" },
   { label: "Blue", value: "#1A7FB5" },
-  { label: "Green", value: "#15803D" },
+  { label: "Rex Blue", value: "#1a587b" },
   { label: "Purple", value: "#7C3AED" },
   { label: "Grey", value: "#6B7280" },
 ];
@@ -503,7 +503,7 @@ export function TicketTypesClient({
         </div>
       )}
       {publishSuccess && (
-        <div className="mb-3 rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="mb-3 rounded-xl bg-sky-50 px-4 py-3 text-sm text-sky-700">
           Event published! It is now visible to customers.
         </div>
       )}
@@ -521,9 +521,9 @@ export function TicketTypesClient({
       )}
 
       {status === "PUBLISHED" && (
-        <div className="rounded-2xl border border-green-200 bg-green-50 px-5 py-4 text-center">
-          <p className="text-sm font-semibold text-green-800">✓ This event is live</p>
-          <p className="mt-1 text-xs text-green-700">Customers can now find and buy tickets.</p>
+        <div className="rounded-2xl border border-sky-200 bg-sky-50 px-5 py-4 text-center">
+          <p className="text-sm font-semibold text-sky-800">✓ This event is live</p>
+          <p className="mt-1 text-xs text-sky-700">Customers can now find and buy tickets.</p>
         </div>
       )}
     </>

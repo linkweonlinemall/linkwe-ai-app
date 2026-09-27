@@ -110,7 +110,7 @@ function nextPreviewDate(availableDays: string[], useStoreHours: boolean): strin
   return `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
 }
 
-const CARD = "rounded-[20px] border border-[#dce5d8] bg-white";
+const CARD = "rounded-[20px] border border-[#d7e1e6] bg-white";
 
 export default function AvailabilityClient({ openingHours: rawHours, services: initialServices }: Props) {
   const openingHours = useMemo(() => parseStoreOpeningHours(rawHours), [rawHours]);
@@ -305,18 +305,18 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
                 <div
                   key={key}
                   className={`flex flex-col items-center rounded-lg px-1 py-2 text-center ${
-                    open ? "bg-[#EAF3DE]" : "bg-[var(--color-background-secondary,#F7F5F2)]"
+                    open ? "bg-[#deebf3]" : "bg-[var(--color-background-secondary,#F7F5F2)]"
                   }`}
                 >
                   <span
                     className={`text-[9px] font-semibold uppercase tracking-wide ${
-                      open ? "text-[#3B6D11]" : "text-[#7c7b77]"
+                      open ? "text-[#174766]" : "text-[#7c7b77]"
                     }`}
                   >
                     {WEEKDAY_SHORT[i]}
                   </span>
                   <span
-                    className={`mt-0.5 text-[8px] leading-tight ${open ? "text-[#639922]" : "text-[#a8a7a3]"}`}
+                    className={`mt-0.5 text-[8px] leading-tight ${open ? "text-[#226e99]" : "text-[#a8a7a3]"}`}
                   >
                     {open ? label : "Closed"}
                   </span>
@@ -351,7 +351,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
           </div>
         </div>
 
-        <div className="px-5 py-4"><input aria-label="Search service availability" placeholder="Find a service…" value={search} onChange={e=>setSearch(e.target.value)} className="w-full rounded-xl border border-[#dce5d8] px-4 py-3 text-sm"/></div>
+        <div className="px-5 py-4"><input aria-label="Search service availability" placeholder="Find a service…" value={search} onChange={e=>setSearch(e.target.value)} className="w-full rounded-xl border border-[#d7e1e6] px-4 py-3 text-sm"/></div>
         {services.filter(service=>service.name.toLowerCase().includes(search.toLowerCase())).length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-[#7c7b77] md:px-5">
             {services.length ? "No services match your search." : "Add a bookable service to manage availability."}
@@ -382,7 +382,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-[#1C1C1A]">{service.name}</p>
                       <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        <span className="inline-flex items-center gap-1 rounded-md bg-[#EAF3DE] px-2 py-0.5 text-[10px] font-medium text-[#3B6D11]">
+                        <span className="inline-flex items-center gap-1 rounded-md bg-[#deebf3] px-2 py-0.5 text-[10px] font-medium text-[#174766]">
                           <IconClock className="size-3" stroke={1.75} aria-hidden />
                           {durationLabel(service.durationMinutes)}
                         </span>
@@ -407,7 +407,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
                           {scheduleLabel}
                         </span>
                         {service.maxPerDay != null ? (
-                          <span className="inline-flex items-center gap-1 rounded-md bg-[#EAF3DE] px-2 py-0.5 text-[10px] font-medium text-[#3B6D11]">
+                          <span className="inline-flex items-center gap-1 rounded-md bg-[#deebf3] px-2 py-0.5 text-[10px] font-medium text-[#174766]">
                             Max {service.maxPerDay}/day
                           </span>
                         ) : null}
@@ -630,7 +630,7 @@ export default function AvailabilityClient({ openingHours: rawHours, services: i
                         key={slot.time}
                         className={`rounded-md px-2 py-0.5 text-[10px] font-medium ${
                           slot.available
-                            ? "bg-white text-[#3B6D11] border border-[#EAF3DE]"
+                            ? "bg-white text-[#174766] border border-[#deebf3]"
                             : "bg-[#eceae6] text-[#a8a7a3] line-through"
                         }`}
                       >

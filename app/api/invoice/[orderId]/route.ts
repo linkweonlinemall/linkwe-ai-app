@@ -38,6 +38,8 @@ export async function GET(
     },
     select: {
       id: true,
+      status: true,
+      referenceNumber: true,
       createdAt: true,
       region: true,
       totalMinor: true,
@@ -69,7 +71,7 @@ export async function GET(
   }
 
   const qrCodeDataUrl = await generateOrderQRCodeDataURL(orderId);
-  const logoDataUrl = readPublicImageDataUrl("linkwe-logo-on-dark.png");
+  const logoDataUrl = readPublicImageDataUrl("linkwe-logo-mark-on-light.png");
   const waveDataUrl = readPublicImageDataUrl("wave.png");
 
   const buffer = await renderToBuffer(
@@ -85,6 +87,7 @@ export async function GET(
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
+      "Cache-Control": "private, no-store",
       "Content-Disposition": `attachment; filename="linkwe-invoice-${orderId.slice(-8)}.pdf"`,
     },
   });

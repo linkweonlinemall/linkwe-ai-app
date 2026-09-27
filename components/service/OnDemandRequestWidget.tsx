@@ -106,10 +106,10 @@ export default function OnDemandRequestWidget({
 
   if (step === "submitted") {
     return (
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
+      <div className="rounded-2xl border border-sky-200 bg-sky-50 p-6 text-center">
         <span className="mb-3 block text-4xl">✅</span>
-        <p className="text-sm font-bold text-emerald-900">Request sent!</p>
-        <p className="mt-1 text-xs leading-relaxed text-emerald-700">
+        <p className="text-sm font-bold text-sky-900">Request sent!</p>
+        <p className="mt-1 text-xs leading-relaxed text-sky-700">
           {estimatedResponseMins
             ? `The provider typically responds within ${estimatedResponseMins >= 60 ? `${Math.floor(estimatedResponseMins / 60)} hour${Math.floor(estimatedResponseMins / 60) > 1 ? "s" : ""}` : `${estimatedResponseMins} minutes`}.`
             : "The provider will review your request and respond shortly."}
@@ -123,7 +123,7 @@ export default function OnDemandRequestWidget({
             setPhotos([]);
             setError(null);
           }}
-          className="mt-4 text-xs font-semibold text-emerald-700 hover:underline"
+          className="mt-4 text-xs font-semibold text-sky-700 hover:underline"
         >
           Send another request
         </button>
@@ -256,15 +256,15 @@ export default function OnDemandRequestWidget({
     <div className="flex flex-col gap-3">
       <div
         className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${
-          isAvailableNow ? "border-emerald-200 bg-emerald-50" : "border-zinc-200 bg-zinc-50"
+          isAvailableNow ? "border-sky-200 bg-sky-50" : "border-zinc-200 bg-zinc-50"
         }`}
       >
-        <div className={`h-2.5 w-2.5 shrink-0 rounded-full ${isAvailableNow ? "animate-pulse bg-emerald-500" : "bg-zinc-300"}`} />
+        <div className={`h-2.5 w-2.5 shrink-0 rounded-full ${isAvailableNow ? "animate-pulse bg-sky-500" : "bg-zinc-300"}`} />
         <div>
-          <p className={`text-xs font-bold ${isAvailableNow ? "text-emerald-800" : "text-zinc-600"}`}>
+          <p className={`text-xs font-bold ${isAvailableNow ? "text-sky-800" : "text-zinc-600"}`}>
             {isAvailableNow ? "Available now" : "Currently unavailable"}
           </p>
-          <p className={`text-[11px] ${isAvailableNow ? "text-emerald-600" : "text-zinc-400"}`}>
+          <p className={`text-[11px] ${isAvailableNow ? "text-sky-600" : "text-zinc-400"}`}>
             {isAvailableNow
               ? "Provider is accepting on-demand requests"
               : "Provider is not taking requests right now"}

@@ -204,7 +204,7 @@ export default function WarehouseTab() {
           className="rounded-xl bg-white p-4 text-center"
           style={{ border: "1px solid var(--card-border)" }}
         >
-          <p className="text-lg font-bold text-emerald-600">{totalReceivedTodayCount}</p>
+          <p className="text-lg font-bold text-sky-600">{totalReceivedTodayCount}</p>
           <p className="text-xs text-zinc-400">Received</p>
         </div>
         <div
@@ -905,7 +905,7 @@ export default function WarehouseTab() {
           {recentlyReceived.map((r) => (
             <span
               key={`${r.id}-${r.time.getTime()}`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs text-emerald-700"
+              className="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs text-sky-700"
             >
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                 <polyline points="20 6 9 17 4 12" />

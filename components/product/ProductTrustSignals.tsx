@@ -30,7 +30,7 @@ export default function ProductTrustSignals({
         </span>
       </li>
       <li className="flex items-start gap-3">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"><Lock className="size-4" strokeWidth={2} aria-hidden /></span>
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600"><Lock className="size-4" strokeWidth={2} aria-hidden /></span>
         <span>Secure checkout via WiPay</span>
       </li>
     </ul>

@@ -166,7 +166,7 @@ export default function VendorVerificationChecklist({
           </p>
           <span
             className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-              readiness.ready ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
+              readiness.ready ? "bg-sky-50 text-sky-700" : "bg-amber-50 text-amber-700"
             }`}
           >
             {readiness.pass} of {readiness.total} complete
@@ -184,11 +184,11 @@ export default function VendorVerificationChecklist({
               <li
                 key={check.id}
                 className={`flex items-start gap-2 rounded-lg px-2.5 py-2 ${
-                  check.ok ? "bg-emerald-50" : "bg-amber-50/80"
+                  check.ok ? "bg-sky-50" : "bg-amber-50/80"
                 }`}
               >
                 <span
-                  className={`mt-px shrink-0 text-[11px] ${check.ok ? "text-emerald-500" : "text-amber-500"}`}
+                  className={`mt-px shrink-0 text-[11px] ${check.ok ? "text-sky-500" : "text-amber-500"}`}
                   aria-hidden
                 >
                   {check.ok ? (
@@ -202,7 +202,7 @@ export default function VendorVerificationChecklist({
                 <div className="min-w-0 flex-1">
                   <p
                     className={`text-xs leading-snug ${
-                      check.ok ? "font-medium text-emerald-800" : "font-medium text-amber-800"
+                      check.ok ? "font-medium text-sky-800" : "font-medium text-amber-800"
                     }`}
                   >
                     {check.label}
@@ -232,7 +232,7 @@ export default function VendorVerificationChecklist({
         <div className="flex items-start gap-3">
           <div
             className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
-              idConfirmed ? "bg-emerald-500" : idPending ? "bg-amber-400" : idRejected ? "bg-red-400" : "bg-zinc-200"
+              idConfirmed ? "bg-sky-500" : idPending ? "bg-amber-400" : idRejected ? "bg-red-400" : "bg-zinc-200"
             }`}
           >
             {idConfirmed ? (
@@ -259,7 +259,7 @@ export default function VendorVerificationChecklist({
               <span
                 className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                   idConfirmed
-                    ? "bg-emerald-50 text-emerald-700"
+                    ? "bg-sky-50 text-sky-700"
                     : idPending
                       ? "bg-amber-50 text-amber-700"
                       : idRejected
@@ -335,7 +335,7 @@ export default function VendorVerificationChecklist({
         <div className="flex items-start gap-3">
           <div
             className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
-              hasPayout ? "bg-emerald-500" : "bg-zinc-200"
+              hasPayout ? "bg-sky-500" : "bg-zinc-200"
             }`}
           >
             {hasPayout ? (
@@ -351,7 +351,7 @@ export default function VendorVerificationChecklist({
               <p className="text-sm font-semibold text-zinc-900">Payout Details</p>
               <span
                 className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                  hasPayout ? "bg-emerald-50 text-emerald-700" : "bg-zinc-100 text-zinc-500"
+                  hasPayout ? "bg-sky-50 text-sky-700" : "bg-zinc-100 text-zinc-500"
                 }`}
               >
                 {hasPayout ? "Added" : "Required"}
@@ -360,7 +360,7 @@ export default function VendorVerificationChecklist({
             <p className="mt-0.5 text-xs text-zinc-500">Add your bank details to receive payouts from sales</p>
 
             {payoutSuccess ? (
-              <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+              <p className="mt-2 rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-700">
                 Payout details saved successfully.
               </p>
             ) : null}

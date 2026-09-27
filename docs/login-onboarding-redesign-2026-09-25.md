@@ -1,5 +1,7 @@
 # Login and onboarding refresh
 
+Release update: Included in production commit `292704c` on 25 September 2026. See `public-experience-release-2026-09-25.md`; the local-only status below records the original implementation handoff.
+
 Implemented locally on 25 September 2026. Not deployed.
 
 ## What changed

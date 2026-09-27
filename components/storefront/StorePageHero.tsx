@@ -3,7 +3,7 @@ import { Manrope } from "next/font/google";
 import { ArrowLeft, ArrowUpRight, MapPin, ShieldCheck, Star } from "lucide-react";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
 import { getStoreLocation } from "@/lib/store/location";
-import { getStoreCategoryLabel } from "@/lib/categories";
+import { catalogueCategoryLabel } from "@/lib/catalog/categories";
 import StoreHeroActions from "./StoreHeroActions";
 import StoreHeroShell from "./StoreHeroShell";
 import StorefrontImage from "./StorefrontImage";
@@ -21,7 +21,7 @@ type Props = {
 export default function StorePageHero({ store, initials, canEditStore, isLoggedIn, initialFollowing, averageRating, reviewCount, isVerified, serviceFirst = false, spotlight, preview = false, basePath }: Props) {
   const path = basePath ?? `/store/${store.slug}`;
   const location = getStoreLocation(store);
-  const category = getStoreCategoryLabel(store.categoryId);
+  const category = catalogueCategoryLabel("stores",store.categoryId);
   return <StoreHeroShell coverPhotoUrl={store.coverPhotoUrl} logoUrl={store.logoUrl} className={storeDisplay.variable}>
     <div className={styles.container}>
       <div className={styles.breadcrumb}><Link href="/stores"><ArrowLeft size={15} aria-hidden /> All local stores</Link><span>THE PEOPLE BEHIND YOUR NEXT FAVOURITE.</span><Link href="/">Discover LinkWe <ArrowUpRight size={14} aria-hidden /></Link></div>

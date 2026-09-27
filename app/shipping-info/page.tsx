@@ -39,9 +39,9 @@ export default function ShippingInfoPage() {
       <section>
         <div className="grid gap-4 sm:grid-cols-3">
           {STEPS.map((step, index) => (
-            <div key={step.title} className="rounded-2xl border border-[#dce3d5] bg-gradient-to-br from-[#f0f4e9] to-white p-4 shadow-sm">
+            <div key={step.title} className="rounded-2xl border border-[#d4dee4] bg-gradient-to-br from-[#e9f0f4] to-white p-4 shadow-sm">
               <div className="flex items-center justify-between">
-                <span className="flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#193c3b] to-[#365e4d] text-white shadow-md"><step.Icon className="size-5" /></span>
+                <span className="flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#174766] to-[#36505e] text-white shadow-md"><step.Icon className="size-5" /></span>
                 <span className="text-[10px] font-black tracking-widest text-sky-700/45">0{index + 1}</span>
               </div>
               <h2 className="mt-4 text-base font-black text-zinc-900">{step.title}</h2>
@@ -54,8 +54,8 @@ export default function ShippingInfoPage() {
       <section>
         <h2 className="text-xl font-black text-zinc-900">Your fulfilment choices</h2>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-[#dce3d5] bg-gradient-to-br from-[#f0f4e9] to-white p-5">
-            <Truck className="size-6 text-[#436b51]" />
+          <div className="rounded-2xl border border-[#d4dee4] bg-gradient-to-br from-[#e9f0f4] to-white p-5">
+            <Truck className="size-6 text-[#435d6b]" />
             <h3 className="mt-3 font-black text-zinc-900">Combined delivery</h3>
             <p className="mt-2 text-sm leading-7 text-zinc-600">
               LinkWe coordinates delivery of eligible physical products to the address and map pin you confirm at checkout. When you buy from more than one store, the checkout displays one combined delivery charge instead of charging a separate customer-delivery fee for every vendor.
@@ -76,8 +76,8 @@ export default function ShippingInfoPage() {
         <p className="mt-3 text-sm leading-7 text-zinc-600">
           The delivery quote is calculated at checkout using the confirmed destination, total billable parcel weight, distance band, and any inter-island requirement. Your map pin helps improve the quote; if it conflicts with the region you selected, checkout asks you to confirm the correct region before payment.
         </p>
-        <div className="mt-4 flex items-start gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 text-sm leading-6 text-emerald-900">
-          <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600" />
+        <div className="mt-4 flex items-start gap-3 rounded-2xl border border-sky-100 bg-sky-50/70 p-4 text-sm leading-6 text-sky-900">
+          <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-sky-600" />
           <p>Review your fulfilment method, address, contact number, eligible coupon savings and total before continuing to WiPay. Wait for the delivery quote to finish; if it fails, retry before paying. Digital-only orders have no physical delivery charge.</p>
         </div>
       </section>
@@ -110,8 +110,8 @@ export default function ShippingInfoPage() {
           <p>For delivery, provide a reachable Trinidad and Tobago telephone number and accurate address/map pin. For collection or delivery confirmation, you may be asked to sign in and confirm receipt, including through the order&apos;s secure QR flow.</p>
         </div>
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-          <Link href="/orders" className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-gradient-to-r from-[#193c3b] to-[#365e4d] px-5 text-sm font-black text-white shadow-[0_12px_28px_rgba(26,127,181,.24)]">Track my orders</Link>
-          <Link href="/contact" className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-[#dce3d5] bg-white px-5 text-sm font-black text-zinc-800 shadow-sm">Get delivery help</Link>
+          <Link href="/orders" className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-gradient-to-r from-[#174766] to-[#36505e] px-5 text-sm font-black text-white shadow-[0_12px_28px_rgba(26,127,181,.24)]">Track my orders</Link>
+          <Link href="/contact" className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-[#d4dee4] bg-white px-5 text-sm font-black text-zinc-800 shadow-sm">Get delivery help</Link>
         </div>
       </section>
     </PublicStaticPageShell>

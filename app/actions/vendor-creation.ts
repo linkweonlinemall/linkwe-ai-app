@@ -49,17 +49,25 @@ export async function updateCreations(input:{items:{id:string;kind:CreationKind}
         if(row.isArchived&&operation!=="restore")throw new Error("Restore this listing before changing it.");
         if(operation==="publish"&&row.isDigital&&!row.digitalFileUrl)throw new Error("Add a downloadable file before publishing.");
         if(operation==="publish"&&item.kind==="service"&&limits.serviceMaxPriceMinor!==null&&Math.round(row.price*100)>limits.serviceMaxPriceMinor)throw new Error("This service price is above your current plan limit.");
-        if(operation==="restore") {
-          if(!row.isArchived)throw new Error("This listing is already active.");
-          const cap=item.kind==="service"?limits.serviceCap:limits.productCap;
-          if(cap!==null&&await prisma.product.count({where:{storeId:store.id,isService:item.kind==="service",isArchived:false}})>=cap)throw new Error("Your plan’s listing limit has been reached.");
-        }
         if(["stock","category","feature","unfeature"].includes(operation)&&item.kind!=="product")throw new Error("This action is for products only.");
         const quantity=Number(input.value);
         if(operation==="stock"&&(!Number.isSafeInteger(quantity)||quantity<1||quantity>100000))throw new Error("Enter a whole stock quantity between 1 and 100,000.");
         if(operation==="stock"&&(row.isDigital||row.hasVariants||row.stock===null))throw new Error("Use the editor for digital, unlimited-stock or variant products.");
         if(operation==="category"&&!PRODUCT_CATEGORIES.some(category=>category.value===input.value))throw new Error("Choose a valid product category.");
-        await prisma.product.update({where:{id:row.id},data:operation==="publish"?{isPublished:true}:operation==="hide"?{isPublished:false}:operation==="archive"?{isPublished:false,isArchived:true}:operation==="restore"?{isArchived:false,isPublished:false}:operation==="feature"?{isFeatured:true}:operation==="unfeature"?{isFeatured:false}:operation==="stock"?{stock:{increment:quantity}}:{category:input.value}});
+        if (operation === "restore") {
+          await prisma.$transaction(async tx => {
+            await tx.$queryRaw`SELECT id FROM stores WHERE id = ${store.id} FOR UPDATE`;
+            const currentStore = await tx.store.findUniqueOrThrow({ where: { id: store.id } });
+            const currentLimits = getStorePlan(currentStore).limits;
+            const listing = await tx.product.findUniqueOrThrow({ where: { id: row.id }, select: { isArchived: true } });
+            if (!listing.isArchived) throw new Error("This listing is already active.");
+            const cap = item.kind === "service" ? currentLimits.serviceCap : currentLimits.productCap;
+            if (cap !== null && await tx.product.count({ where: { storeId: store.id, isService: item.kind === "service", isArchived: false } }) >= cap) throw new Error("Your plan’s listing limit has been reached.");
+            await tx.product.update({ where: { id: row.id }, data: { isArchived: false, isPublished: false } });
+          });
+        } else {
+        await prisma.product.update({where:{id:row.id},data:operation==="publish"?{isPublished:true}:operation==="hide"?{isPublished:false}:operation==="archive"?{isPublished:false,isArchived:true}:operation==="feature"?{isFeatured:true}:operation==="unfeature"?{isFeatured:false}:operation==="stock"?{stock:{increment:quantity}}:{category:input.value}});
+        }
         revalidatePath(`/${item.kind==="service"?"service":"products"}/${row.slug}`);
       }
       results.push({key,ok:true});

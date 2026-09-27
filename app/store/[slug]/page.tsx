@@ -176,7 +176,7 @@ export default async function PublicStorePage({ params }: Props) {
       category: true,
       stock: true,
       hasVariants: true,
-      variants: { select: { attributes: true } },
+      variants: { select: { attributes: true, stock: true } },
       isFeatured: true,
     },
   });

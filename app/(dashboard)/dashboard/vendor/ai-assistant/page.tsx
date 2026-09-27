@@ -1,4 +1,5 @@
 "use client"
+import RexPortrait from "@/components/vendor/RexPortrait";
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link"
@@ -672,12 +673,12 @@ export default function VendorAIAssistantPage() {
   return (
     <div
       className={`rex-studio flex h-full min-h-0 flex-col overflow-hidden ${REX_FONT.className}`}
-      style={{ background: "radial-gradient(ellipse at 80% 0%, #45684f45, transparent 60%), #102b2c" }}
+      style={{ background: "radial-gradient(ellipse at 80% 0%, #455a6845, transparent 60%), #174766" }}
     >
       <header
         className="shrink-0 border-b px-3 py-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.18)] sm:px-4 md:py-4"
         style={{
-          backgroundColor: "rgba(14, 39, 39, .94)",
+          backgroundColor: "rgba(14,29,39, .94)",
           borderColor: CARD_BORDER_STYLE.borderColor,
         }}
       >
@@ -692,21 +693,21 @@ export default function VendorAIAssistantPage() {
           </button>
           <div data-tour="rex-usage" className="flex min-w-0 flex-1 flex-col items-start md:items-start">
             <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#D4450A] to-[#F59E0B] text-xs shadow-lg shadow-orange-950/30 sm:h-8 sm:w-8 sm:rounded-xl sm:text-sm" aria-hidden>⚡</div>
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#D4450A] to-[#F59E0B] text-xs shadow-lg shadow-orange-950/30 sm:h-8 sm:w-8 sm:rounded-xl sm:text-sm" aria-hidden><RexPortrait compact/></div>
               <h1 className="text-lg font-black leading-none tracking-tight text-white sm:text-xl">
                 Rex
               </h1>
               <span
                 className="h-2 w-2 shrink-0 rounded-full"
                 style={{
-                  backgroundColor: "#22c55e",
-                  boxShadow: "0 0 6px #22c55e",
+                  backgroundColor: "#2889bf",
+                  boxShadow: "0 0 6px #2889bf",
                 }}
                 aria-hidden
               />
             </div>
             <p className="mt-0.5 hidden text-[10px] leading-tight text-zinc-400 min-[390px]:block sm:text-[11px]">
-              YOUR LINKWE BUSINESS PARTNER
+              YOUR BUSINESS, WITH BACKUP
             </p>
             <div className="mt-2"><RexUsageMeter allowance={aiAllowance} remaining={aiRemaining} topupRemaining={aiTopupRemaining} lifetime={aiLifetime}/></div>
           </div>
@@ -762,7 +763,7 @@ export default function VendorAIAssistantPage() {
           <div
             className="flex shrink-0 border-b"
             style={{
-              backgroundColor: "rgba(14, 39, 39, .76)",
+              backgroundColor: "rgba(14,29,39, .76)",
               borderColor: CARD_BORDER_STYLE.borderColor,
             }}
           >
@@ -798,18 +799,9 @@ export default function VendorAIAssistantPage() {
             >
           {messages.length === 0 ? (
             <div className="flex flex-col items-center px-1 py-4 text-center sm:px-4 sm:py-8">
-              <div
-                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl leading-none sm:h-20 sm:w-20 sm:rounded-full sm:text-[36px]"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(135deg, #D4450A, #E8820C)",
-                }}
-                aria-hidden
-              >
-                ⚡
-              </div>
+              <RexPortrait/>
               <h2 className="mt-3 text-xl font-bold text-white sm:mt-6 md:text-[28px]">
-                What shall we work on?
+                Your ideas. A little Rex magic.
               </h2>
               <p className="mt-2 max-w-[420px] text-xs leading-relaxed text-zinc-400 sm:mt-3 md:text-sm">
                 Your business, with a little backup. Plan your day, prepare a listing,
@@ -933,8 +925,8 @@ export default function VendorAIAssistantPage() {
               <div
                 className={`text-[14px] ${
                   m.role === "user"
-                    ? "rex-user-bubble max-w-[90%] md:max-w-[80%] lg:max-w-[72%] bg-gradient-to-br from-[#375b4d] to-[#466954] px-4 py-3 text-white [border-radius:22px_22px_6px_22px]"
-                    : `rex-assistant-bubble max-w-[92%] md:max-w-[82%] border bg-[#1d3b3b] px-[18px] py-[14px] text-[#EAF4FF] [border-radius:6px_22px_22px_22px]`
+                    ? "rex-user-bubble max-w-[90%] md:max-w-[80%] lg:max-w-[72%] bg-gradient-to-br from-[#374e5b] to-[#445d6b] px-4 py-3 text-white [border-radius:22px_22px_6px_22px]"
+                    : `rex-assistant-bubble max-w-[92%] md:max-w-[82%] border bg-[#174766] px-[18px] py-[14px] text-[#EAF4FF] [border-radius:6px_22px_22px_22px]`
                 } ${m.role === "user" ? "whitespace-pre-wrap" : ""}`}
                 style={
                   m.role === "assistant"
@@ -1300,7 +1292,7 @@ export default function VendorAIAssistantPage() {
             </div>
           )}
 
-          <div data-tour="rex-prompts" className="rex-composer flex items-center gap-1.5 rounded-xl border border-cyan-200/15 bg-[#163434]/90 p-1.5 shadow-[0_18px_46px_rgba(0,0,0,0.38)] backdrop-blur-xl focus-within:border-cyan-300/50 focus-within:ring-2 focus-within:ring-cyan-300/10 sm:gap-2 sm:rounded-2xl sm:p-2">
+          <div data-tour="rex-prompts" className="rex-composer flex items-center gap-1.5 rounded-xl border border-cyan-200/15 bg-[#174766]/90 p-1.5 shadow-[0_18px_46px_rgba(0,0,0,0.38)] backdrop-blur-xl focus-within:border-cyan-300/50 focus-within:ring-2 focus-within:ring-cyan-300/10 sm:gap-2 sm:rounded-2xl sm:p-2">
             {/* Paperclip / attach button */}
             <button
               type="button"

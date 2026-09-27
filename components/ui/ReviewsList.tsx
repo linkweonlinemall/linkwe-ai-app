@@ -118,7 +118,7 @@ export default function ReviewsList({
               <div className="flex flex-wrap items-center gap-2">
                 <StarRating value={review.rating} readonly size="sm" />
                 {review.isVerifiedPurchase ? (
-                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                  <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700">
                     ✓ Verified
                   </span>
                 ) : null}
@@ -146,7 +146,7 @@ export default function ReviewsList({
               onClick={() => handleHelpful(review.id)}
               disabled={helpfulClicked.has(review.id)}
               className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
-                helpfulClicked.has(review.id) ? "text-emerald-600" : "text-zinc-400 hover:text-zinc-600"
+                helpfulClicked.has(review.id) ? "text-sky-600" : "text-zinc-400 hover:text-zinc-600"
               }`}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

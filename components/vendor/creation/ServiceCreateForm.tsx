@@ -1,7 +1,9 @@
 "use client";
+import ServiceJourney from "@/components/vendor/services/ServiceJourney";
+import ServiceDetailsFields from "@/components/vendor/services/ServiceDetailsFields";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { uploadVendorChatImages } from "@/app/actions/ai-vendor-image";
@@ -15,11 +17,11 @@ import { SERVICE_CATEGORIES } from "@/lib/categories";
 import { mapSubscriptionInterval } from "@/lib/finance/subscription-interval";
 
 const SERVICE_TYPES = [
-  { value: "BOOKABLE", label: "Bookable", description: "Customer picks a date and time", icon: "📅" },
-  { value: "QUOTE", label: "Quote-based", description: "Customer requests a quote first", icon: "💬" },
-  { value: "SUBSCRIPTION", label: "Subscription", description: "Recurring weekly or monthly", icon: "🔄" },
-  { value: "ON_DEMAND", label: "On Demand", description: "Customer requests immediately", icon: "⚡" },
-  { value: "VIRTUAL", label: "Virtual", description: "Online via video call or link", icon: "💻" },
+  { value: "BOOKABLE", label: "Appointments & sessions", description: "Customer picks a date and time", icon: "📅" },
+  { value: "QUOTE", label: "Projects & custom work", description: "Customer requests a quote first", icon: "💬" },
+  { value: "SUBSCRIPTION", label: "Memberships & ongoing care", description: "Recurring weekly or monthly", icon: "🔄" },
+  { value: "ON_DEMAND", label: "Callouts & visits", description: "Customer requests immediately", icon: "⚡" },
+  { value: "VIRTUAL", label: "Online appointments", description: "Online via video call or link", icon: "💻" },
 ];
 
 const SERVICE_LOCATIONS = [
@@ -31,9 +33,10 @@ const SERVICE_LOCATIONS = [
 
 export default function ServiceCreateForm() {
   const router = useRouter();
+  const initialWorkflow=useSearchParams().get("workflow");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [serviceType, setServiceType] = useState("");
+  const [serviceType, setServiceType] = useState(SERVICE_TYPES.some(t=>t.value===initialWorkflow)?initialWorkflow!:"");
   const [serviceLocation, setServiceLocation] = useState("");
   const [requiresDeposit, setRequiresDeposit] = useState(false);
   const [paymentMode, setPaymentMode] = useState("CUSTOMER_CHOOSES");
@@ -110,7 +113,7 @@ export default function ServiceCreateForm() {
           ← Back to services
         </Link>
         <h1 className="text-2xl font-bold text-zinc-900">New Service</h1>
-        <p className="mt-1 text-sm text-zinc-500">Create a service listing for your store</p>
+        <p className="mt-1 text-sm text-zinc-500">Build a clear offer, choose how customers hire you, then set payment and availability.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -157,6 +160,8 @@ export default function ServiceCreateForm() {
           </div>
         </div>
 
+        <ServiceJourney type={serviceType}/>
+        <ServiceDetailsFields />
         {/* Basic Info */}
         <div data-creation-section="Basic information" className="rounded-2xl border border-zinc-200 bg-white p-5">
           <p className="mb-4 text-sm font-bold text-zinc-900">Basic information</p>

@@ -14,27 +14,27 @@ type DetailData = Awaited<ReturnType<typeof getAdminUserDetail>>;
 const ROLE_BADGE: Record<UserRole, string> = {
   CUSTOMER: "bg-blue-50 text-blue-700",
   VENDOR:   "bg-amber-50 text-amber-700",
-  COURIER:  "bg-emerald-50 text-emerald-700",
+  COURIER:  "bg-sky-50 text-sky-700",
   ADMIN:    "bg-[#D4450A]/10 text-[#D4450A]",
 };
 
 const ROLE_AVATAR: Record<UserRole, string> = {
   CUSTOMER: "bg-blue-100 text-blue-700",
   VENDOR:   "bg-amber-100 text-amber-700",
-  COURIER:  "bg-emerald-100 text-emerald-700",
+  COURIER:  "bg-sky-100 text-sky-700",
   ADMIN:    "bg-[#D4450A]/10 text-[#D4450A]",
 };
 
 const ID_STATUS_BADGE: Record<string, string> = {
   UNSUBMITTED: "bg-zinc-100 text-zinc-500",
   PENDING:     "bg-amber-50 text-amber-700",
-  APPROVED:    "bg-emerald-50 text-emerald-700",
+  APPROVED:    "bg-sky-50 text-sky-700",
   REJECTED:    "bg-[#FFF1ED] text-[#D4450A]",
 };
 
 const STORE_STATUS_BADGE: Record<string, string> = {
   DRAFT:            "bg-zinc-100 text-zinc-500",
-  ACTIVE:           "bg-emerald-50 text-emerald-700",
+  ACTIVE:           "bg-sky-50 text-sky-700",
   PENDING_APPROVAL: "bg-amber-50 text-amber-700",
 };
 
@@ -238,7 +238,7 @@ export default function UserDetailPanel({ userId, onClose, onAction }: Props) {
                         Suspended
                       </span>
                     ) : (
-                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                      <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700">
                         Active
                       </span>
                     )
@@ -372,7 +372,7 @@ export default function UserDetailPanel({ userId, onClose, onAction }: Props) {
                   onClick={handleSuspend}
                   className={`w-full rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50 ${
                     user.suspended
-                      ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                      ? "border-sky-200 text-sky-700 hover:bg-sky-50"
                       : "border-zinc-200 text-zinc-700 hover:bg-zinc-50"
                   }`}
                 >

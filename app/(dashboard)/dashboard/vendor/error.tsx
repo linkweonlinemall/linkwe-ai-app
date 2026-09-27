@@ -24,8 +24,8 @@ export default function VendorPageError({
       <span className="mb-5 flex size-14 items-center justify-center rounded-2xl bg-orange-100 text-[#D4450A]">
         <TriangleAlert size={26} aria-hidden />
       </span>
-      <h1 className="text-2xl font-bold tracking-tight text-[#163d3a]">This section couldn’t load</h1>
-      <p className="mt-3 max-w-sm text-sm leading-6 text-[#657a75]">
+      <h1 className="text-2xl font-bold tracking-tight text-[#174766]">This section couldn’t load</h1>
+      <p className="mt-3 max-w-sm text-sm leading-6 text-[#65717a]">
         Try loading it again, or use the menu to open another part of your dashboard.
       </p>
       <div className="mt-7 flex flex-wrap justify-center gap-3">
@@ -38,12 +38,12 @@ export default function VendorPageError({
           <RefreshCw size={17} className={pending ? "animate-spin" : ""} aria-hidden />
           {pending ? "Loading…" : "Try again"}
         </button>
-        <Link href="/dashboard/vendor" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#dce4d4] bg-white px-5 py-3 text-sm font-semibold text-[#163d3a]">
+        <Link href="/dashboard/vendor" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#d4dee4] bg-white px-5 py-3 text-sm font-semibold text-[#174766]">
           <ArrowLeft size={17} aria-hidden />
           Back to overview
         </Link>
       </div>
-      {error.digest && <p className="mt-5 text-xs text-[#657a75]">Support reference: {error.digest}</p>}
+      {error.digest && <p className="mt-5 text-xs text-[#65717a]">Support reference: {error.digest}</p>}
     </main>
   );
 }

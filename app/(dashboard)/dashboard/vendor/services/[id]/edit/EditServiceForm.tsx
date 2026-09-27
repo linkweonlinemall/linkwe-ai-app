@@ -1,4 +1,6 @@
 "use client";
+import ServiceJourney from "@/components/vendor/services/ServiceJourney";
+import ServiceDetailsFields from "@/components/vendor/services/ServiceDetailsFields";
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -13,11 +15,11 @@ import { SERVICE_CATEGORIES } from "@/lib/categories";
 import { mapSubscriptionInterval } from "@/lib/finance/subscription-interval";
 
 const SERVICE_TYPES = [
-  { value: "BOOKABLE", label: "Bookable", description: "Customer picks a date and time", icon: "📅" },
-  { value: "QUOTE", label: "Quote-based", description: "Customer requests a quote first", icon: "💬" },
-  { value: "SUBSCRIPTION", label: "Subscription", description: "Recurring weekly or monthly", icon: "🔄" },
-  { value: "ON_DEMAND", label: "On Demand", description: "Customer requests immediately", icon: "⚡" },
-  { value: "VIRTUAL", label: "Virtual", description: "Online via video call or link", icon: "💻" },
+  { value: "BOOKABLE", label: "Appointments & sessions", description: "Customer picks a date and time", icon: "📅" },
+  { value: "QUOTE", label: "Projects & custom work", description: "Customer requests a quote first", icon: "💬" },
+  { value: "SUBSCRIPTION", label: "Memberships & ongoing care", description: "Recurring weekly or monthly", icon: "🔄" },
+  { value: "ON_DEMAND", label: "Callouts & visits", description: "Customer requests immediately", icon: "⚡" },
+  { value: "VIRTUAL", label: "Online appointments", description: "Online via video call or link", icon: "💻" },
 ];
 
 const SERVICE_LOCATIONS = [
@@ -52,6 +54,9 @@ type ServiceData = {
   id: string;
   name: string;
   description: string | null;
+  serviceInclusions?: string | null;
+  serviceRequirements?: string | null;
+  serviceDeliverables?: string | null;
   category: string | null;
   serviceType: string | null;
   serviceLocation: string | null;
@@ -163,6 +168,7 @@ export default function EditServiceForm({
 
   return (
     <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-6">
+      <ServiceJourney type={serviceType}/><ServiceDetailsFields defaults={service}/>
       <input type="hidden" name="images" value={uploadedImages.join(",")} />
       <input
         type="hidden"
@@ -351,7 +357,8 @@ export default function EditServiceForm({
                   </p>
                 </div>
               ) : quotePriceType === "FREE_QUOTE" ? (
-                <input type="hidden" name="price" value="0" />
+
+        <input type="hidden" name="price" value="0" />
               ) : (
                 <input type="hidden" name="price" value={String(service.price)} />
               )}

@@ -38,10 +38,7 @@ function formatProductCap(plan: CommissionPlan): string {
 }
 
 function formatAiAllowance(plan: CommissionPlan): string {
-  const allowance = PLAN_LIMITS[plan].aiMonthlyAllowance;
-  if (plan === "STARTER") return "5 complimentary Rex prompts — lifetime";
-  if (allowance <= 0) return "No monthly Rex allowance";
-  return `AI assistant — ${allowance} uses/mo`;
+  return plan === "PRO" ? "Rex maximum monthly capacity" : plan === "GROWTH" ? "Rex expanded monthly capacity" : "Rex welcome access · one-time gift";
 }
 
 export const PLAN_PICKER_OPTIONS: PlanPickerOption[] = (
@@ -51,6 +48,7 @@ export const PLAN_PICKER_OPTIONS: PlanPickerOption[] = (
       name: "Starter",
       tagline: "Everything you need to start selling.",
     },
+    { planId: "SERVICES", name: "Services", tagline: "20 services. No service-price cap. Starter essentials." },
     {
       planId: "GROWTH",
       name: "Growth",

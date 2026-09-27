@@ -211,7 +211,7 @@ export function StringListEditor({
         {rows.map((row, index) => (
           <span
             key={`${row}-${index}`}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#edf4f2] px-3 py-1.5 text-xs text-[#3d6157]"
+            className="inline-flex items-center gap-2 rounded-lg bg-[#edf1f4] px-3 py-1.5 text-xs text-[#3d5461]"
           >
             {row}
             <button

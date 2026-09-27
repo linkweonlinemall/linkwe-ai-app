@@ -36,6 +36,7 @@ export default function SaveStoreButton({ storeId, initialSaved, variant = "defa
       }
     } else {
       setSaved(result.saved);
+      router.refresh();
       if (result.saved) {
         toastStoreSaved();
       }

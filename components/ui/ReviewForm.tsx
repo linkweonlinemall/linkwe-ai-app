@@ -56,10 +56,10 @@ export default function ReviewForm({ type, targetId, targetName, orderId, bookin
 
   if (success) {
     return (
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
+      <div className="rounded-2xl border border-sky-200 bg-sky-50 p-6 text-center">
         <span className="mb-2 block text-3xl">⭐</span>
-        <p className="text-sm font-bold text-emerald-900">Thank you for your review!</p>
-        <p className="mt-1 text-xs text-emerald-700">Your review has been published.</p>
+        <p className="text-sm font-bold text-sky-900">Thank you for your review!</p>
+        <p className="mt-1 text-xs text-sky-700">Your review has been published.</p>
       </div>
     );
   }
