@@ -1,6 +1,6 @@
-import Link from "next/link";
+import EventOperationsHeader from "@/components/events/operations/EventOperationsHeader";
+import s from "@/components/events/operations/operations.module.css";
 
-import { formatEventDateLong } from "@/lib/events/format-datetime";
 import { redirect } from "next/navigation";
 
 import { getEventTicketCounts, searchEventTickets } from "@/app/actions/event-attendees";
@@ -43,43 +43,8 @@ export default async function EventAttendeesPage({ params }: Props) {
     redirect("/dashboard/vendor/events");
   }
 
-  return (
-    <div className="mx-auto max-w-3xl px-4 py-8 text-[#1C1C1A]">
-      <Link
-        href={`/dashboard/vendor/events/${id}/tickets`}
-        className="mb-4 inline-block text-sm font-medium text-zinc-500 hover:text-[#D4450A]"
-      >
-        ← Back to tickets
-      </Link>
-      <h1 className="text-2xl font-bold sm:text-3xl">Attendees — {event.title}</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        {formatEventDateLong(event.startDate)}
-        {event.venueName ? ` · ${event.venueName}` : ""}
-      </p>
-
-      <div className="mt-6 flex flex-wrap gap-2">
-        <Link
-          href={`/dashboard/vendor/events/${id}/checkin`}
-          className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-[#D4450A] px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-        >
-          Open scanner
-        </Link>
-      </div>
-
-      {reportResult.ok ? (
-        <div className="mt-6">
-          <DuplicateScansReport report={reportResult} />
-        </div>
-      ) : null}
-
-      <div className="mt-6">
-        <AttendeesDashboard
-          eventId={event.id}
-          eventTitle={event.title}
-          initialCounts={countsResult.counts}
-          initialTickets={ticketsResult}
-        />
-      </div>
-    </div>
-  );
+  return <div className={s.page}><EventOperationsHeader event={event} tab="attendees"/>
+    <AttendeesDashboard eventId={event.id} eventTitle={event.title} initialCounts={countsResult.counts} initialTickets={ticketsResult}/>
+    {reportResult.ok && <details className={`${s.panel} mt-5`}><summary className="font-bold">Entry audit · {reportResult.summary.totalDuplicates} duplicate attempts</summary><div className="mt-4"><DuplicateScansReport report={reportResult}/></div></details>}
+  </div>;
 }

@@ -76,7 +76,7 @@ export default function VendorMessagesWorkspace({ currentUserId, selectedId, ini
     if (inboxBusy.current || document.visibilityState !== "visible") return;
     inboxBusy.current = true; setRefreshing(true);
     try {
-      const result = await getMyConversations();
+      const result = await getMyConversations(side);
       if (!live.current) return;
       if (!result.ok || result.side !== side) throw new Error("Inbox unavailable");
       setRows(result.conversations.map(row => ({ ...row, customerName: "customerName" in row ? row.customerName : row.storeName, lastMessageAt: row.lastMessageAt.toISOString(), lastSeenAt: row.lastSeenAt?.toISOString() ?? null })));

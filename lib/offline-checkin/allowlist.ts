@@ -15,26 +15,18 @@ export async function saveAllowlist(
   eventId: string,
   tickets: Omit<AllowlistTicket, "eventId">[],
 ): Promise<void> {
-  if (typeof window === "undefined" || typeof indexedDB === "undefined") {
-    return;
+  const db = await getCheckinDb();
+  const tx = db.transaction(["allowlist", "syncQueue"], "readwrite");
+  const store = tx.objectStore("allowlist");
+  const pending = new Set((await tx.objectStore("syncQueue").getAll()).filter(scan => scan.eventId === eventId).map(scan => scan.qrToken));
+  const existing = await store.index("by_event").getAll(eventId);
+  const local = new Map(existing.map(row => [row.qrToken, row]));
+  await Promise.all(existing.map(row => store.delete(row.qrToken)));
+  for (const ticket of tickets) {
+    const previous = local.get(ticket.qrToken);
+    await store.put({ ...ticket, eventId, ...(pending.has(ticket.qrToken) && previous?.usedLocally ? { usedLocally: true, usedAt: previous.usedAt, status: "USED" } : {}) });
   }
-
-  try {
-    const db = await getCheckinDb();
-    const tx = db.transaction("allowlist", "readwrite");
-    const store = tx.objectStore("allowlist");
-    const existingKeys = await store.index("by_event").getAllKeys(eventId);
-
-    await Promise.all(existingKeys.map((key) => store.delete(key)));
-
-    for (const ticket of tickets) {
-      await store.put({ ...ticket, eventId });
-    }
-
-    await tx.done;
-  } catch {
-    // Allowlist write failure must not block the gate.
-  }
+  await tx.done;
 }
 
 export async function countAllowlist(eventId: string): Promise<number> {

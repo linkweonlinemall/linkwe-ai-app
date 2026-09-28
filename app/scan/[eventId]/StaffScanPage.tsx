@@ -37,6 +37,7 @@ export function StaffScanPage() {
 
     setGateError(null);
     startTransition(async () => {
+      try {
       const online = typeof navigator !== "undefined" && navigator.onLine;
 
       if (online) {
@@ -70,7 +71,7 @@ export function StaffScanPage() {
             await saveAllowlist(eventId, allowlist.tickets);
           }
         } catch {
-          // Allowlist download failure must not block the gate.
+          setGateError("You can scan online. Offline preparation failed; use Prepare offline scanning to retry.");
         } finally {
           setIsDownloadingAllowlist(false);
         }
@@ -101,6 +102,7 @@ export function StaffScanPage() {
           "You need to connect to the internet once to set up this event for offline scanning.",
         );
       }
+      } catch { setGateError("Could not verify access. Check your connection and try again."); }
     });
   }
 
@@ -108,11 +110,11 @@ export function StaffScanPage() {
     const startDate = new Date(verified.eventStartDate);
     return (
       <div className="space-y-6">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+        <div className="rounded-[26px] bg-gradient-to-br from-[#153b57] to-[#216d88] p-7 text-white [&_h1]:text-white [&_p]:text-sky-100">
           <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
             Staff check-in
           </p>
-          <h1 className="mt-1 text-xl font-bold text-[#1C1C1A] sm:text-2xl">
+          <h1 className="mt-1 text-xl font-bold text-[#174766] sm:text-2xl">
             {verified.eventTitle}
           </h1>
           <p className="mt-1 text-sm text-zinc-600">
@@ -121,6 +123,7 @@ export function StaffScanPage() {
           </p>
         </div>
 
+        {gateError && <p className="rounded-xl bg-orange-50 p-4 text-sm text-orange-900" role="status">{gateError}</p>}
         <CheckInScanner
           eventId={eventId}
           eventTitle={verified.eventTitle}
@@ -132,8 +135,8 @@ export function StaffScanPage() {
   }
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
-      <h1 className="text-2xl font-bold text-[#1C1C1A]">Staff check-in</h1>
+    <div className="mx-auto max-w-lg rounded-[28px] border border-sky-100 bg-white p-7 shadow-xl shadow-sky-950/5 sm:p-9">
+      <h1 className="text-2xl font-bold text-[#174766]">Staff check-in</h1>
       <p className="mt-2 text-sm leading-relaxed text-zinc-600">
         Enter the scan code your organizer shared with you, then scan guest tickets.
       </p>
@@ -155,7 +158,7 @@ export function StaffScanPage() {
             autoCapitalize="characters"
             spellCheck={false}
             placeholder="e.g. ABCD234567"
-            className="mt-2 min-h-[52px] w-full rounded-xl border border-zinc-200 bg-white px-4 font-mono text-lg tracking-wider text-[#1C1C1A] placeholder:font-sans placeholder:tracking-normal placeholder:text-zinc-400 focus:border-[#D4450A] focus:outline-none focus:ring-2 focus:ring-[#D4450A]/20"
+            className="mt-2 min-h-[52px] w-full rounded-xl border border-zinc-200 bg-white px-4 font-mono text-lg tracking-wider text-[#174766] placeholder:font-sans placeholder:tracking-normal placeholder:text-zinc-400 focus:border-[#D4450A] focus:outline-none focus:ring-2 focus:ring-[#D4450A]/20"
           />
         </div>
 

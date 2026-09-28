@@ -30,7 +30,7 @@ export async function getCachedEvent(eventId: string): Promise<CachedEvent | nul
   try {
     const db = await getCheckinDb();
     const row = await db.get("events", eventId);
-    return row ?? null;
+    return row && Date.now() - row.cachedAt < 24 * 60 * 60 * 1000 ? row : null;
   } catch {
     return null;
   }

@@ -321,7 +321,7 @@ export const tutorialCatalog = {
       field(EVENT_ROUTE, "title", "Event title", "Use the official public name. Include the edition or year only when it helps distinguish the event."),
       field(EVENT_ROUTE, "category", "Event category", "Choose the closest category to place the event in the correct marketplace filters."),
       field(EVENT_ROUTE, "description", "Event description", "Explain the experience, schedule highlights, inclusions, audience, entry requirements and important rules."),
-      field(EVENT_ROUTE, "organiserName", "Organiser name", "Add the recognised organiser or promoter name when it differs from the store."),
+      field(EVENT_ROUTE, "organiserName", "Internal organiser name", "Keep a contact name for your records. Customers see your store name as the host."),
       { route: EVENT_ROUTE, selector: '[data-tour="event-type"]', title: "Single or multi-day", body: "Single-day uses one date. Multi-day reveals an end date/time and should cover the full event period." },
       field(EVENT_ROUTE, "startDate", "Start date", "Choose the actual local event date."),
       field(EVENT_ROUTE, "startTime", "Start time", "Enter the advertised start time and clarify doors/opening time in the description if different."),

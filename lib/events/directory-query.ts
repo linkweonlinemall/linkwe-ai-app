@@ -121,7 +121,7 @@ export function eventDateRange(value: string, now = new Date()): { start?: Date;
 export function selectEvents(events: DirectoryEvent[], query: EventQuery, now = new Date()) {
   const range = eventDateRange(query.date, now);
   const filtered = events.filter(event => {
-    const searchable = [event.title, event.store.name, event.organiserName, eventCategoryLabel(event.category), event.venueName, event.address, eventRegionLabel(event.region ?? ""), event.description, ...event.tags].filter(Boolean).join(" ");
+    const searchable = [event.title, event.store.name, eventCategoryLabel(event.category), event.venueName, event.address, eventRegionLabel(event.region ?? ""), event.description, ...event.tags].filter(Boolean).join(" ");
     if (query.q && !searchable.toLowerCase().includes(query.q.toLowerCase())) return false;
     if (query.category && event.category !== query.category) return false;
     if (query.region && normalizedRegion(event.region ?? "") !== normalizedRegion(query.region)) return false;

@@ -5,6 +5,7 @@ import type { TicketStatus } from "@prisma/client";
 
 import { getSession } from "@/lib/auth/session";
 import { eventScanCodesMatch } from "@/lib/tickets/event-scan-code";
+import { admitTicket } from "@/lib/tickets/admit";
 import { prisma } from "@/lib/prisma";
 
 const ticketSelect = {
@@ -33,7 +34,7 @@ const ticketSelect = {
 } as const;
 
 export type TicketCheckInLookup =
-  | { found: false }
+  | { found: false; reason?: "wrong_event" | "not_paid" | "unauthorized" }
   | {
       found: true;
       authorized: boolean;
@@ -116,7 +117,7 @@ export async function getEventAllowlist(
   };
 }
 
-export type OfflineCheckInSyncOutcome = "ADMITTED" | "DUPLICATE" | "invalid";
+export type OfflineCheckInSyncOutcome = "ADMITTED" | "DUPLICATE" | "invalid" | "retry";
 
 export type SyncOfflineCheckInsResult =
   | { ok: false }
@@ -139,93 +140,21 @@ export async function syncOfflineCheckIns(
     return { ok: false };
   }
 
+  if (!Array.isArray(scans) || scans.length > 100) return { ok: false };
   const results: { qrToken: string; outcome: OfflineCheckInSyncOutcome }[] = [];
-  const sorted = [...scans].sort((a, b) => a.scannedAt - b.scannedAt);
-
-  for (const scan of sorted) {
+  // Preserve request order so each acknowledged row maps to the exact queued scan.
+  for (const scan of scans) {
+    if (!scan || typeof scan.qrToken !== "string" || scan.qrToken.length > 200 || !Number.isFinite(scan.scannedAt) || scan.scannedAt < Date.now() - 7 * 86400000 || scan.scannedAt > Date.now() + 300000 || typeof scan.deviceId !== "string" || !scan.deviceId || scan.deviceId.length > 100 || (scan.deviceLabel !== undefined && typeof scan.deviceLabel !== "string")) {
+      results.push({ qrToken: scan?.qrToken ?? "", outcome: "invalid" }); continue;
+    }
     try {
-      const trimmedToken = scan.qrToken?.trim();
-      if (!trimmedToken) {
-        results.push({ qrToken: scan.qrToken, outcome: "invalid" });
-        continue;
-      }
-
-      const ticket = await prisma.ticket.findUnique({
-        where: { qrToken: trimmedToken },
-        select: {
-          id: true,
-          eventId: true,
-          status: true,
-          checkedInAt: true,
-        },
-      });
-
-      if (!ticket || ticket.eventId !== trimmedId) {
-        results.push({ qrToken: scan.qrToken, outcome: "invalid" });
-        continue;
-      }
-
-      const scannedAtDate = new Date(scan.scannedAt);
-
-      const earlierAdmitted = await prisma.ticketCheckIn.findFirst({
-        where: {
-          ticketId: ticket.id,
-          outcome: "ADMITTED",
-          scannedAt: { lt: scannedAtDate },
-        },
-        select: { id: true },
-      });
-
-      const usedFromEarlierCheckIn =
-        ticket.status === "USED" &&
-        ticket.checkedInAt != null &&
-        ticket.checkedInAt.getTime() < scan.scannedAt;
-
-      let outcome: "ADMITTED" | "DUPLICATE";
-
-      if (earlierAdmitted || usedFromEarlierCheckIn || ticket.status !== "VALID") {
-        outcome = "DUPLICATE";
-      } else {
-        outcome = "ADMITTED";
-      }
-
-      try {
-        await prisma.ticketCheckIn.create({
-          data: {
-            ticketId: ticket.id,
-            eventId: trimmedId,
-            scannedAt: scannedAtDate,
-            source: "OFFLINE",
-            deviceId: scan.deviceId || null,
-            deviceLabel: scan.deviceLabel?.trim() || null,
-            outcome,
-          },
-        });
-      } catch {
-        // Non-blocking per-row audit insert.
-      }
-
-      if (outcome === "ADMITTED") {
-        try {
-          await prisma.ticket.updateMany({
-            where: { id: ticket.id, status: "VALID" },
-            data: {
-              status: "USED",
-              checkedInAt: scannedAtDate,
-              checkedInBy: `scancode:${trimmedId}`,
-            },
-          });
-        } catch {
-          // Non-blocking; audit row still records the admission attempt.
-        }
-      }
-
-      results.push({ qrToken: scan.qrToken, outcome });
+      const result = await admitTicket(prisma, { qrToken: scan.qrToken.trim(), eventId: trimmedId, source: "OFFLINE", scannedAt: new Date(scan.scannedAt), checkedInBy: `scancode:${trimmedId}`, deviceId: scan.deviceId, deviceLabel: scan.deviceLabel });
+      results.push({ qrToken: scan.qrToken, outcome: result.outcome });
     } catch {
-      results.push({ qrToken: scan.qrToken, outcome: "invalid" });
+      results.push({ qrToken: scan.qrToken, outcome: "retry" });
     }
   }
-
+  revalidatePath(`/dashboard/vendor/events/${trimmedId}/attendees`);
   return { ok: true, results };
 }
 
@@ -309,20 +238,26 @@ function venueLabel(event: { isOnline: boolean; venueName: string | null }): str
   return event.venueName ?? "Venue TBA";
 }
 
-export async function getTicketForCheckIn(qrToken: string): Promise<TicketCheckInLookup> {
+export async function getTicketForCheckIn(qrToken: string, expectedEventId?: string, scanCode?: string): Promise<TicketCheckInLookup> {
   const trimmed = qrToken?.trim();
   if (!trimmed) return { found: false };
 
   const session = await getSession();
 
-  const ticket = await prisma.ticket.findUnique({
-    where: { qrToken: trimmed },
-    select: ticketSelect,
-  });
-
-  if (!ticket || ticket.ticketOrder?.status !== "PAID") return { found: false };
-
-  const authorized = await isAuthorizedForTicket(session, ticket.event.storeId);
+  if (trimmed.length > 200) return { found: false };
+  let eventAuthorized = false;
+  if (expectedEventId) {
+    const event = await prisma.event.findUnique({ where: { id: expectedEventId }, select: { storeId: true } });
+    eventAuthorized = !!event && (await isAuthorizedForTicket(session, event.storeId) || await isScanCodeAuthorized(expectedEventId, scanCode));
+    if (!eventAuthorized) return { found: false, reason: "unauthorized" };
+  }
+  const ticket = expectedEventId
+    ? await prisma.ticket.findFirst({ where: { OR: [{ qrToken: trimmed }, { ticketNumber: { equals: trimmed, mode: "insensitive" } }] }, select: ticketSelect })
+    : await prisma.ticket.findUnique({ where: { qrToken: trimmed }, select: ticketSelect });
+  if (!ticket) return { found: false };
+  if (expectedEventId && ticket.event.id !== expectedEventId) return { found: false, reason: "wrong_event" };
+  if (ticket.ticketOrder?.status !== "PAID" && ticket.status !== "REFUNDED" && ticket.status !== "CANCELLED") return { found: false, reason: "not_paid" };
+  const authorized = eventAuthorized || await isAuthorizedForTicket(session, ticket.event.storeId);
 
   return {
     found: true,
@@ -347,6 +282,7 @@ export async function checkInTicket(
   qrToken: string,
   expectedEventId: string,
   scanCode?: string,
+  device?: { id?: string; label?: string },
 ): Promise<CheckInTicketResult> {
   const session = await getSession();
 
@@ -381,63 +317,14 @@ export async function checkInTicket(
     return { ok: false, reason: "unauthorized" };
   }
 
-  if (ticket.ticketOrder?.status !== "PAID") {
-    return { ok: false, reason: "not_paid" };
-  }
-
-  const checkedInBy = ownerAuthorized
-    ? session!.userId
-    : `scancode:${trimmedEventId}`;
-
-  const result = await prisma.ticket.updateMany({
-    where: { qrToken: trimmed, status: "VALID" },
-    data: {
-      status: "USED",
-      checkedInAt: new Date(),
-      checkedInBy,
-    },
-  });
-
-  if (result.count === 1) {
-    try {
-      await prisma.ticketCheckIn.create({
-        data: {
-          ticketId: ticket.id,
-          eventId: ticket.eventId,
-          scannedAt: new Date(),
-          source: "ONLINE",
-          deviceId: null,
-          outcome: "ADMITTED",
-        },
-      });
-    } catch (err) {
-      console.error("[checkInTicket] TicketCheckIn audit insert failed:", err);
-    }
-
+  const result = await admitTicket(prisma, { qrToken: trimmed, eventId: trimmedEventId, source: "ONLINE", scannedAt: new Date(), checkedInBy: ownerAuthorized ? session!.userId : `scancode:${trimmedEventId}`, deviceId: typeof device?.id === "string" ? device.id.slice(0,100) : undefined, deviceLabel: typeof device?.label === "string" ? device.label.slice(0,60) : undefined });
+  if (result.outcome === "ADMITTED") {
     revalidatePath(`/checkin/${trimmed}`);
+    revalidatePath(`/dashboard/vendor/events/${trimmedEventId}/attendees`);
     return { ok: true, justCheckedIn: true };
   }
-
-  const current = await prisma.ticket.findUnique({
-    where: { qrToken: trimmed },
-    select: { status: true, checkedInAt: true },
-  });
-
-  if (!current) return { ok: false, reason: "not_valid" };
-
-  if (current.status === "USED") {
-    return { ok: false, reason: "already_used", checkedInAt: current.checkedInAt };
-  }
-
-  if (current.status === "CANCELLED") {
-    return { ok: false, reason: "cancelled" };
-  }
-
-  if (current.status === "REFUNDED") {
-    return { ok: false, reason: "refunded" };
-  }
-
-  return { ok: false, reason: "not_valid" };
+  if (result.outcome === "DUPLICATE") return { ok: false, reason: "already_used", checkedInAt: result.checkedInAt };
+  return { ok: false, reason: result.reason ?? "not_valid" };
 }
 
 export type DuplicateCheckInEntry = {
@@ -483,10 +370,11 @@ export async function getEventCheckInReport(
     return { ok: false };
   }
 
-  const [duplicateRows, totalOfflineSynced] = await Promise.all([
+  const [duplicateRows, totalOfflineSynced, totalDuplicates] = await Promise.all([
     prisma.ticketCheckIn.findMany({
       where: { eventId: trimmedId, outcome: "DUPLICATE" },
-      orderBy: { scannedAt: "asc" },
+      orderBy: { scannedAt: "desc" },
+      take: 200,
       select: {
         scannedAt: true,
         deviceId: true,
@@ -504,6 +392,7 @@ export async function getEventCheckInReport(
     prisma.ticketCheckIn.count({
       where: { eventId: trimmedId, source: "OFFLINE" },
     }),
+    prisma.ticketCheckIn.count({ where: { eventId: trimmedId, outcome: "DUPLICATE" } }),
   ]);
 
   const ticketIds = [...new Set(duplicateRows.map((row) => row.ticketId))];
@@ -569,7 +458,17 @@ export async function getEventCheckInReport(
     duplicates,
     summary: {
       totalOfflineSynced,
-      totalDuplicates: duplicateRows.length,
+      totalDuplicates,
     },
   };
+}
+
+export async function getEventGateSummary(eventId: string, scanCode?: string) {
+  const session = await getSession();
+  const event = await prisma.event.findUnique({ where: { id: eventId }, select: { storeId: true } });
+  if (!event || !(await isAuthorizedForTicket(session, event.storeId) || await isScanCodeAuthorized(eventId, scanCode))) return { error: "Access expired. Sign in or ask the host for a current staff code." };
+  const rows = await prisma.ticket.groupBy({ by: ["status"], where: { eventId, ticketOrder: { status: "PAID" }, status: { in: ["VALID", "USED"] } }, _count: { _all: true } });
+  const admitted = rows.find(row=>row.status==="USED")?._count._all ?? 0;
+  const remaining = rows.find(row=>row.status==="VALID")?._count._all ?? 0;
+  return { admitted, remaining, total: admitted+remaining };
 }

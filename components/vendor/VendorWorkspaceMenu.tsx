@@ -41,7 +41,7 @@ export default function VendorWorkspaceMenu() {
       <div className={s.menuResults}>
         {groups.length === 0 ? <p className={s.emptySearch}>No tools found. Try “photos”, “orders” or “bank”.</p> : groups.map(group => <section key={group.label}><h3>{group.label}</h3><div className={s.menuGrid}>{group.items.map(item => <Link key={item.path} href={workspaceHref(item.path)} onClick={close} aria-current={workspaceLinkActive(pathname, item.path) ? "page" : undefined} className={s.menuLink}><item.icon size={21}/><span><strong>{item.label}</strong><small>{item.description}</small></span><ArrowUpRight size={16}/></Link>)}</div></section>)}
       </div>
-      <footer className={s.menuFooter}><button onClick={() => { close(); window.dispatchEvent(new CustomEvent("vendor-tour:open-library")); }}><CircleHelp size={18}/>Help & tutorials</button><Link href="/" onClick={close}>Marketplace<ArrowUpRight size={15}/></Link><form action={logoutAction}><button type="submit"><LogOut size={17}/>Sign out</button></form></footer>
+      <footer className={s.menuFooter}><button onClick={() => { close(); window.dispatchEvent(new CustomEvent("vendor-tour:open-library")); }}><CircleHelp size={18}/>Help & tutorials</button><Link href="/dashboard/customer" onClick={close}>My Dashboard · shopping<ArrowUpRight size={15}/></Link><Link href="/" onClick={close}>Marketplace<ArrowUpRight size={15}/></Link><form action={logoutAction}><button type="submit"><LogOut size={17}/>Sign out</button></form></footer>
     </div>
   </dialog>;
 }

@@ -740,3 +740,13 @@ export async function uploadLineupImage(
     return { error: err instanceof Error ? err.message : "Upload failed." };
   }
 }
+
+export async function revokeEventScanCode(eventId: string): Promise<{ok:boolean;reason?:string}> {
+  const session = await getSession();
+  if (!session) return {ok:false,reason:"Sign in required."};
+  const event = session.role === "ADMIN" ? await prisma.event.findUnique({where:{id:eventId},select:{id:true}}) : await assertEventOwnership(eventId,session.userId);
+  if(!event)return {ok:false,reason:"Event not found."};
+  await prisma.event.update({where:{id:event.id},data:{scanCode:null,scanCodeSetAt:null}});
+  revalidatePath(`${EVENTS_PATH}/${event.id}/checkin`);
+  return {ok:true};
+}

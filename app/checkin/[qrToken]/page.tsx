@@ -76,7 +76,7 @@ export default async function CheckInPage({ params }: Props) {
   }
 
   return (
-    <main className="min-h-screen bg-zinc-50 px-4 py-8 text-[#1C1C1A]">
+    <main className="min-h-screen bg-[#edf5fa] px-4 py-8 text-[#174766]">
       <div className="mx-auto max-w-lg">
         <header className="mb-8 text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D4450A]">
@@ -94,7 +94,7 @@ export default async function CheckInPage({ params }: Props) {
             </p>
           </div>
         ) : (
-          <div className="space-y-6 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <div className="space-y-6 rounded-[28px] border border-sky-100 bg-white p-6 shadow-xl shadow-sky-950/5">
             <StatusBanner status={lookup.status} checkedInAt={lookup.checkedInAt} />
 
             {entryQrDataUrl ? (
@@ -114,7 +114,7 @@ export default async function CheckInPage({ params }: Props) {
             ) : null}
 
             <div className="space-y-1 border-b border-zinc-100 pb-5">
-              <h1 className="text-2xl font-bold leading-tight text-[#1C1C1A] sm:text-3xl">
+              <h1 className="text-2xl font-bold leading-tight text-[#174766] sm:text-3xl">
                 {lookup.event.title}
               </h1>
               <p className="text-base text-zinc-600">
@@ -128,7 +128,7 @@ export default async function CheckInPage({ params }: Props) {
                 <dt className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
                   Holder
                 </dt>
-                <dd className="text-lg font-semibold text-[#1C1C1A]">{lookup.holderName}</dd>
+                <dd className="text-lg font-semibold text-[#174766]">{lookup.holderName}</dd>
               </div>
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wide text-zinc-400">

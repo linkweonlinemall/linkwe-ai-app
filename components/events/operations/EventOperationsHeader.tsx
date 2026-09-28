@@ -1,0 +1,7 @@
+import Link from "next/link";
+import { ArrowLeft, ScanLine, Users, Ticket, MapPin, CalendarDays } from "lucide-react";
+import { formatEventDateLong } from "@/lib/events/format-datetime";
+import s from "./operations.module.css";
+export default function EventOperationsHeader({ event, tab }: { event: { id:string;title:string;startDate:Date;venueName:string|null }; tab:"checkin"|"attendees" }) {
+  return <><Link href="/dashboard/vendor/events" className={s.back}><ArrowLeft size={16}/> All events</Link><header className={s.hero}><div><p>LINKWE EVENT DESK</p><h1>{tab==="checkin"?"A warm welcome.":"Your guest list."}<span> {tab==="checkin"?"Every time.":"All together."}</span></h1><h2>{event.title}</h2><div className={s.meta}><span><CalendarDays size={15}/>{formatEventDateLong(event.startDate)}</span>{event.venueName&&<span><MapPin size={15}/>{event.venueName}</span>}</div></div><span className={s.heroIcon}>{tab==="checkin"?<ScanLine size={40}/>:<Users size={40}/>}</span></header><nav className={s.tabs} aria-label="Event operations"><Link href={`/dashboard/vendor/events/${event.id}/checkin`} aria-current={tab==="checkin"?"page":undefined}><ScanLine size={18}/> Check-in desk</Link><Link href={`/dashboard/vendor/events/${event.id}/attendees`} aria-current={tab==="attendees"?"page":undefined}><Users size={18}/> Attendees</Link><Link href={`/dashboard/vendor/events/${event.id}/tickets`}><Ticket size={18}/> Ticket settings</Link></nav></>;
+}

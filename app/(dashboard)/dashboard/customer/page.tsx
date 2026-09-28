@@ -33,7 +33,7 @@ export default async function CustomerDashboardPage(){
   prisma.savedStore.findMany({where:{userId:session.userId},take:4,orderBy:{createdAt:"desc"},select:{storeId:true,store:{select:{name:true,slug:true,logoUrl:true}}}}),
   prisma.savedStore.count({where:{userId:session.userId}}),
   prisma.mainOrder.findMany({where:{buyerId:session.userId,status:{in:paidOrderStatuses as MainOrderStatus[]},items:{some:{product:{isDigital:true}}}},select:{id:true,referenceNumber:true,items:{where:{product:{isDigital:true}},select:{titleSnapshot:true}}},orderBy:{createdAt:"desc"},take:3}),
-  getMyConversations(),getMessageUnreadCount(),getUpcomingTicketsPreview(session.userId,3),prisma.ticket.count({where:activeCustomerTicketsWhere(session.userId,now)}),getNotifications(),getNotificationUnreadCount(),
+  getMyConversations("customer"),getMessageUnreadCount("customer"),getUpcomingTicketsPreview(session.userId,3),prisma.ticket.count({where:activeCustomerTicketsWhere(session.userId,now)}),getNotifications(),getNotificationUnreadCount(),
   prisma.onDemandRequest.findMany({where:{customerId:session.userId,status:{in:["PENDING","ACCEPTED","CONFIRMED"]}},select:{id:true,status:true,requestType:true,quotedPrice:true,vendorCompletedAt:true,service:{select:{name:true}},store:{select:{name:true}}},orderBy:{updatedAt:"desc"},take:3}),
   prisma.onDemandRequest.count({where:{customerId:session.userId,status:{in:["PENDING","ACCEPTED","CONFIRMED"]}}}),
   prisma.customerServiceSubscription.findMany({where:{customerId:session.userId,status:{in:["ACTIVE","PAUSED","PAST_DUE"]}},select:{id:true,status:true,cancelAtPeriodEnd:true,sessionsRemaining:true,product:{select:{name:true}},store:{select:{name:true}}},orderBy:{updatedAt:"desc"},take:3}),

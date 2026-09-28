@@ -10,12 +10,13 @@ type Props = {
 };
 
 export default async function RegisterBusinessPage({ searchParams }: Props) {
+  const sp = await searchParams;
   const user = await getCurrentUser();
+  if (user?.role === "CUSTOMER") redirect(`/start-business${sp.plan ? `?plan=${encodeURIComponent(sp.plan)}` : ""}`);
   if (user) {
     redirect(await resolveAuthLandingPath(user));
   }
 
-  const sp = await searchParams;
   const intendedPlan = parseIntendedPlanParam(sp.plan);
 
   return <RegisterForm signupKind="BUSINESS" intendedPlan={intendedPlan} oauthError={sp.error} />;

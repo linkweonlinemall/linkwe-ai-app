@@ -33,7 +33,7 @@ type Props = {
   transparent?: boolean;
   /** Standard storefront mark; `/chat` uses AI logo glyph. */
   logoVariant?: "wordmark" | "ai";
-  user?: { name: string; href: string } | null;
+  user?: { name: string; href: string; hasBusiness?: boolean } | null;
   dashboardHref?: string;
   unreadCount?: number;
 };
@@ -238,7 +238,7 @@ export default function PublicNav({
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            <Link href={user ? dashTarget : "/register?role=vendor"} className="home-seller-link mr-3 hidden min-h-11 items-center text-xs font-semibold text-[#183e59] lg:inline-flex">{user ? "My workspace" : "Sell on LinkWe"}</Link>
+            <Link href={user ? dashTarget : "/shop"} className="home-seller-link mr-3 hidden min-h-11 items-center text-xs font-semibold text-[#183e59] lg:inline-flex">{user ? dashTarget.includes("/vendor") ? "Business workspace" : "My Dashboard" : "Explore LinkWe"}</Link>
             {!user && <>
               <Link href="/wishlist" aria-label="My wishlist" className={`flex size-10 items-center justify-center rounded-full ${isHomeAppearance ? "text-[#183e59] hover:bg-[#e5eff3]" : styles.utility}`}><IconHeart className="size-5" stroke={1.75} aria-hidden /></Link>
               <button type="button" aria-label="Open cart" onClick={toggleDrawerCart} className={`relative mr-2 flex size-10 items-center justify-center rounded-full ${isHomeAppearance ? "text-[#183e59] hover:bg-[#e5eff3]" : styles.utility}`}><IconShoppingCart key={cartBumpNonce} className="size-5" stroke={1.75} aria-hidden />{mounted && itemCount > 0 && <span className="absolute right-0 top-0 flex size-4 items-center justify-center rounded-full bg-[#D4450A] text-[9px] text-white">{itemCount > 9 ? "9+" : itemCount}</span>}</button>

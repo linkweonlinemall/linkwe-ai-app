@@ -50,8 +50,8 @@ export function DuplicateScansReport({ report }: Props) {
     <section className="rounded-2xl border border-[#D4450A]/30 bg-[#D4450A]/5 p-5 shadow-sm">
       <h2 className="text-lg font-bold text-[#D4450A]">⚠️ Duplicate scans detected</h2>
       <p className="mt-1 text-sm text-zinc-700">
-        {uniqueTicketCount} ticket{uniqueTicketCount === 1 ? "" : "s"} were scanned more than once.
-        First scan counted; later scans flagged.
+        Showing up to 200 recent attempts across {uniqueTicketCount} ticket{uniqueTicketCount === 1 ? "" : "s"} were scanned more than once.
+        The first admission saved to the server counts. Other attempts are flagged for review.
       </p>
       <p className="mt-1 text-xs text-zinc-500">
         {summary.totalDuplicates} duplicate attempt{summary.totalDuplicates === 1 ? "" : "s"}

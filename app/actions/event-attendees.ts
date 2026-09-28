@@ -1,5 +1,6 @@
 "use server";
 
+import { attendeeCsv } from "@/lib/tickets/attendee-export";
 import { revalidatePath } from "next/cache";
 import type { Prisma, TicketStatus } from "@prisma/client";
 
@@ -176,7 +177,7 @@ export async function getEventTicketCounts(
       where: {
         eventId: auth.eventId,
         status: { in: ["CANCELLED", "REFUNDED"] },
-        ticketOrder: { status: "PAID" },
+        ticketOrder: { status: { in: ["PAID", "REFUNDED", "CANCELLED"] } },
       },
       _count: { _all: true },
     }),
@@ -240,7 +241,7 @@ export async function setExternalSold(
   const trimmedTypeId = ticketTypeId?.trim();
   if (!trimmedTypeId) return { error: "Ticket type not found" };
 
-  if (!Number.isFinite(count) || !Number.isInteger(count) || count < 0) {
+  if (!Number.isSafeInteger(count) || count < 0 || count > 2147483647) {
     return { error: "Count must be a whole number of zero or more" };
   }
 
@@ -260,77 +261,35 @@ export async function setExternalSold(
   return { success: true };
 }
 
-export async function searchEventTickets(
-  eventId: string,
-  options: {
-    q?: string;
-    status?: AttendeeStatusFilter;
-    page?: number;
-  },
-): Promise<
-  | {
-      items: AttendeeTicketRow[];
-      total: number;
-      page: number;
-      totalPages: number;
-      pageSize: number;
-    }
-  | { error: string }
-> {
+export type AttendeeSearchOptions = { q?: string; status?: AttendeeStatusFilter; page?: number; ticketTypeId?: string; sort?: "name" | "newest" | "checkin" };
+function attendeeWhere(eventId: string, options: AttendeeSearchOptions): Prisma.TicketWhereInput {
+  const q = typeof options.q === "string" ? options.q.trim().slice(0,160) : "";
+  const clauses: Prisma.TicketWhereInput[] = [{ eventId, OR: [{ ticketOrder: { status: "PAID" } }, { status: { in: ["CANCELLED", "REFUNDED"] }, ticketOrder: { status: { in: ["PAID", "REFUNDED", "CANCELLED"] } } }] }];
+  const status = statusWhere(options.status ?? "all");
+  if (status) clauses.push(status);
+  if (options.ticketTypeId) clauses.push({ ticketTypeId: options.ticketTypeId });
+  if (q) clauses.push({ OR: [{ holderName: { contains:q,mode:"insensitive" } },{ holderEmail: { contains:q,mode:"insensitive" } },{ ticketNumber: { contains:q,mode:"insensitive" } }] });
+  return { AND: clauses };
+}
+const attendeeSelect = { id:true,ticketNumber:true,holderName:true,holderEmail:true,status:true,checkedInAt:true,qrToken:true,ticketType:{select:{name:true}} } as const;
+export async function searchEventTickets(eventId: string, options: AttendeeSearchOptions) {
   const auth = await assertVendorOwnsEvent(eventId);
   if ("error" in auth) return auth;
-
-  const q = options.q?.trim() ?? "";
-  const status = options.status ?? "all";
-  const page = Math.max(1, Math.floor(options.page ?? 1));
-  const skip = (page - 1) * PAGE_SIZE;
-
-  const andClauses: Prisma.TicketWhereInput[] = [
-    PAID_TICKET_WHERE(auth.eventId),
-  ];
-
-  const statusClause = statusWhere(status);
-  if (statusClause) andClauses.push(statusClause);
-
-  if (q) {
-    andClauses.push({
-      OR: [
-        { holderName: { contains: q, mode: "insensitive" } },
-        { holderEmail: { contains: q, mode: "insensitive" } },
-        { ticketNumber: { contains: q, mode: "insensitive" } },
-      ],
-    });
-  }
-
-  const where: Prisma.TicketWhereInput = { AND: andClauses };
-
-  const [total, rows] = await prisma.$transaction([
-    prisma.ticket.count({ where }),
-    prisma.ticket.findMany({
-      where,
-      select: {
-        id: true,
-        ticketNumber: true,
-        holderName: true,
-        holderEmail: true,
-        status: true,
-        checkedInAt: true,
-        qrToken: true,
-        ticketType: { select: { name: true } },
-      },
-      orderBy: [{ status: "asc" }, { holderName: "asc" }],
-      skip,
-      take: PAGE_SIZE,
-    }),
-  ]);
-
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-
-  return {
-    items: rows.map(mapTicketRow),
-    total,
-    page,
-    totalPages,
-    pageSize: PAGE_SIZE,
-  };
+  const where = attendeeWhere(auth.eventId, options);
+  const requested = Number.isFinite(options.page) ? Math.max(1,Math.floor(options.page!)) : 1;
+  const orderBy: Prisma.TicketOrderByWithRelationInput[] = options.sort === "newest" ? [{createdAt:"desc"},{id:"asc"}] : options.sort === "checkin" ? [{checkedInAt:{sort:"desc",nulls:"last"}},{id:"asc"}] : [{holderName:"asc"},{id:"asc"}];
+  return prisma.$transaction(async tx => {
+    const total=await tx.ticket.count({where});
+    const totalPages=Math.max(1,Math.ceil(total/PAGE_SIZE));
+    const page=Math.min(requested,totalPages);
+    const rows=await tx.ticket.findMany({where,select:attendeeSelect,orderBy,skip:(page-1)*PAGE_SIZE,take:PAGE_SIZE});
+    return {items:rows.map(mapTicketRow),total,page,totalPages,pageSize:PAGE_SIZE};
+  });
+}
+export async function exportEventAttendees(eventId: string, options: AttendeeSearchOptions) {
+  const auth=await assertVendorOwnsEvent(eventId);
+  if ("error" in auth) return auth;
+  const rows=await prisma.ticket.findMany({where:attendeeWhere(auth.eventId,options),select:{ticketNumber:true,holderName:true,holderEmail:true,status:true,checkedInAt:true,ticketType:{select:{name:true}}},orderBy:[{holderName:"asc"},{id:"asc"}],take:5001});
+  if(rows.length>5000)return {error:"This selection has more than 5,000 tickets. Filter by ticket type or status and export again."};
+  return {csv:attendeeCsv([["Ticket number","Guest","Email","Ticket type","Status","Checked in (UTC)"],...rows.map(t=>[t.ticketNumber,t.holderName,t.holderEmail,t.ticketType.name,t.status,t.checkedInAt?.toISOString()??""])])};
 }

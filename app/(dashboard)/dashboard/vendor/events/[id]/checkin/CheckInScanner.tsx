@@ -1,815 +1,134 @@
 "use client";
-
-import { useCallback, useEffect, useId, useRef, useState, useTransition } from "react";
-import type { TicketStatus } from "@prisma/client";
-import { TRINIDAD_TIMEZONE } from "@/lib/timezone/trinidad";
-
-import {
-  checkInTicket,
-  getTicketForCheckIn,
-  type TicketCheckInLookup,
-} from "@/app/actions/ticket-checkin";
-import {
-  countAllowlist,
-  lookupTicket,
-  markUsedLocally,
-  type AllowlistTicket,
-} from "@/lib/offline-checkin/allowlist";
-import {
-  getDeviceLabel,
-  getOrCreateDeviceId,
-  setDeviceLabel,
-} from "@/lib/offline-checkin/device-id";
-import { countQueuedScans, enqueueScan } from "@/lib/offline-checkin/queue";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { Camera, ScanLine, Check, ShieldCheck, AlertTriangle, X, Wifi, WifiOff, RefreshCw, Download, Flashlight, Pause, ArrowRight, Users } from "lucide-react";
+import type { Html5Qrcode } from "html5-qrcode";
+import { checkInTicket, getTicketForCheckIn, getEventGateSummary, getEventAllowlist, verifyEventScanCode, type TicketCheckInLookup } from "@/app/actions/ticket-checkin";
+import { parseTicketScan } from "@/lib/tickets/scan-input";
+import { countAllowlist, lookupTicket, saveAllowlist } from "@/lib/offline-checkin/allowlist";
+import { getCachedEvent, saveCachedEvent } from "@/lib/offline-checkin/event-cache";
+import { recordOfflineAdmission } from "@/lib/offline-checkin/admit";
+import { countQueuedScans } from "@/lib/offline-checkin/queue";
 import { syncQueuedScans } from "@/lib/offline-checkin/sync";
+import { getDeviceLabel, setDeviceLabel, getOrCreateDeviceId } from "@/lib/offline-checkin/device-id";
+import { getCheckinDb } from "@/lib/offline-checkin/db";
+import s from "@/components/events/operations/operations.module.css";
 
-const SCANNER_ELEMENT_ID = "vendor-checkin-qr-reader";
-
-type View = "scanning" | "result" | "camera_unavailable";
-
-type Props = {
-  eventId: string;
-  eventTitle: string;
-  /** Door-staff scan code; omitted when vendor is logged in on dashboard. */
-  scanCode?: string;
-  /** True while StaffScanPage is downloading the offline allowlist after gate pass. */
-  isDownloadingAllowlist?: boolean;
-};
-
-function parseCheckInToken(decoded: string): string | null {
-  const trimmed = decoded.trim();
-  if (!trimmed.includes("/checkin/")) return null;
-
-  try {
-    if (/^https?:\/\//i.test(trimmed)) {
-      const url = new URL(trimmed);
-      const marker = "/checkin/";
-      const idx = url.pathname.indexOf(marker);
-      if (idx === -1) return null;
-      const token = url.pathname.slice(idx + marker.length).split("/")[0]?.trim();
-      return token || null;
-    }
-  } catch {
-    /* fall through to regex */
-  }
-
-  const match = trimmed.match(/\/checkin\/([^/?#\s]+)/);
-  return match?.[1]?.trim() ?? null;
-}
-
-function formatCheckedInAt(date: Date | string | null | undefined): string {
-  if (!date) return "unknown time";
-  return new Date(date).toLocaleString("en-TT", {
-    timeZone: TRINIDAD_TIMEZONE,
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-}
-
-function isCameraPermissionOrMissingError(err: unknown): boolean {
-  if (err instanceof DOMException) {
-    return (
-      err.name === "NotAllowedError" ||
-      err.name === "NotFoundError" ||
-      err.name === "SecurityError"
-    );
-  }
-  if (typeof err === "string") {
-    const lower = err.toLowerCase();
-    return (
-      lower.includes("notallowed") ||
-      lower.includes("permission denied") ||
-      lower.includes("permission") ||
-      lower.includes("requested device not found")
-    );
-  }
-  if (err instanceof Error) {
-    if (err.name === "NotAllowedError" || err.name === "NotFoundError") {
-      return true;
-    }
-    const lower = err.message.toLowerCase();
-    return (
-      lower.includes("notallowed") ||
-      lower.includes("permission denied") ||
-      lower.includes("permission") ||
-      lower.includes("requested device not found")
-    );
-  }
-  return false;
-}
-
-function isOfflineStaffMode(scanCode: string | undefined): boolean {
-  return (
-    typeof navigator !== "undefined" && !navigator.onLine && Boolean(scanCode?.trim())
-  );
-}
-
-function buildOfflineLookup(
-  ticket: AllowlistTicket,
-  eventTitle: string,
-): Extract<TicketCheckInLookup, { found: true }> {
-  const status = (ticket.usedLocally ? "USED" : ticket.status) as TicketStatus;
-
-  return {
-    found: true,
-    authorized: false,
-    id: ticket.qrToken,
-    ticketNumber: ticket.ticketNumber,
-    qrToken: ticket.qrToken,
-    status,
-    checkedInAt: ticket.usedAt ? new Date(ticket.usedAt) : null,
-    holderName: ticket.holderName,
-    ticketTypeName: ticket.ticketTypeName,
-    eventId: ticket.eventId,
-    event: {
-      title: eventTitle,
-      startDate: new Date(),
-      venueLabel: "",
-    },
-  };
-}
-
-async function waitForScannerMount(elementId: string, maxFrames = 8): Promise<boolean> {
-  for (let i = 0; i < maxFrames; i++) {
-    if (document.getElementById(elementId)) return true;
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-  }
-  return !!document.getElementById(elementId);
-}
-
-export function CheckInScanner({
-  eventId,
-  eventTitle,
-  scanCode,
-  isDownloadingAllowlist = false,
-}: Props) {
-  const reactId = useId();
-  const elementId = `${SCANNER_ELEMENT_ID}-${reactId.replace(/:/g, "")}`;
-
-  const [view, setView] = useState<View>("scanning");
-  const [scanGeneration, setScanGeneration] = useState(0);
-  const [lookup, setLookup] = useState<TicketCheckInLookup | null>(null);
-  const [foreignQr, setForeignQr] = useState(false);
-  const [admitted, setAdmitted] = useState(false);
-  const [offlineAdmitted, setOfflineAdmitted] = useState(false);
-  const [offlineAlreadyUsed, setOfflineAlreadyUsed] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [manualToken, setManualToken] = useState("");
-  const [isPending, startTransition] = useTransition();
-
-  const isStaffMode = Boolean(scanCode?.trim());
-  const [isOnline, setIsOnline] = useState(
-    () => typeof navigator !== "undefined" && navigator.onLine,
-  );
-  const [cachedCount, setCachedCount] = useState(0);
-  const [pendingCount, setPendingCount] = useState(0);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [deviceLabelInput, setDeviceLabelInput] = useState("");
-
-  const refreshCounts = useCallback(async () => {
-    if (!scanCode?.trim()) return;
-    const [cached, pending] = await Promise.all([
-      countAllowlist(eventId),
-      countQueuedScans(eventId),
-    ]);
-    setCachedCount(cached);
-    setPendingCount(pending);
-  }, [eventId, scanCode]);
-
-  const scannerRef = useRef<import("html5-qrcode").Html5Qrcode | null>(null);
-  const processingRef = useRef(false);
-  const stopScannerRef = useRef<() => Promise<void>>(async () => {});
-  const prevDownloadingAllowlistRef = useRef(isDownloadingAllowlist);
-
-  const stopScanner = useCallback(async () => {
-    const instance = scannerRef.current;
-    scannerRef.current = null;
-    if (!instance) return;
-    try {
-      if (instance.isScanning) {
-        await instance.stop();
-      }
-    } catch {
-      /* start() may not have finished — safe to ignore */
-    }
-    try {
-      instance.clear();
-    } catch {
-      /* DOM may already be torn down */
-    }
-  }, []);
-
-  stopScannerRef.current = stopScanner;
-
-  useEffect(() => {
-    if (!scanCode?.trim()) return;
-
-    const runSync = () => {
-      void syncQueuedScans(eventId, scanCode).catch(() => {});
-    };
-
-    runSync();
-    window.addEventListener("online", runSync);
-    return () => window.removeEventListener("online", runSync);
-  }, [eventId, scanCode]);
-
-  useEffect(() => {
-    if (!isStaffMode) return;
-    setDeviceLabelInput(getDeviceLabel());
-  }, [isStaffMode]);
-
-  useEffect(() => {
-    if (!isStaffMode) return;
-
-    const handleOnline = () => {
-      setIsOnline(true);
-      void refreshCounts();
-    };
-    const handleOffline = () => setIsOnline(false);
-
-    setIsOnline(navigator.onLine);
-    void refreshCounts();
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, [isStaffMode, refreshCounts]);
-
-  useEffect(() => {
-    if (!isStaffMode || !offlineAdmitted) return;
-    void refreshCounts();
-  }, [isStaffMode, offlineAdmitted, refreshCounts]);
-
-  useEffect(() => {
-    if (!isStaffMode) return;
-    const wasDownloading = prevDownloadingAllowlistRef.current;
-    if (wasDownloading && !isDownloadingAllowlist) {
-      void refreshCounts();
-    }
-    prevDownloadingAllowlistRef.current = isDownloadingAllowlist;
-  }, [isDownloadingAllowlist, isStaffMode, refreshCounts]);
-
-  const processToken = useCallback(
-    async (token: string) => {
-      if (processingRef.current) return;
-      processingRef.current = true;
-      await stopScannerRef.current();
-
-      setForeignQr(false);
-      setAdmitted(false);
-      setOfflineAdmitted(false);
-      setOfflineAlreadyUsed(false);
-      setActionError(null);
-      setView("result");
-
-      if (isOfflineStaffMode(scanCode)) {
-        const row = await lookupTicket(token);
-        if (!row || row.eventId !== eventId) {
-          setLookup({ found: false });
-          return;
-        }
-
-        if (row.usedLocally) {
-          setOfflineAlreadyUsed(true);
-          setLookup(buildOfflineLookup(row, eventTitle));
-          return;
-        }
-
-        if (row.status === "CANCELLED" || row.status === "REFUNDED") {
-          setLookup({ found: false });
-          return;
-        }
-
-        if (row.status !== "VALID") {
-          setLookup(buildOfflineLookup(row, eventTitle));
-          return;
-        }
-
-        setLookup(buildOfflineLookup(row, eventTitle));
-        return;
-      }
-
-      const result = await getTicketForCheckIn(token);
-      setLookup(result);
-    },
-    [eventId, eventTitle, scanCode],
-  );
-
-  const handleDecodedRef = useRef<(decodedText: string) => void>(() => {});
-  handleDecodedRef.current = (decodedText: string) => {
-    void (async () => {
-      if (processingRef.current) return;
-
-      const token = parseCheckInToken(decodedText);
-      if (!token) {
-        processingRef.current = true;
-        await stopScannerRef.current();
-        setForeignQr(true);
-        setLookup(null);
-        setView("result");
-        return;
-      }
-
-      await processToken(token);
-    })();
-  };
-
-  useEffect(() => {
-    if (view !== "scanning") return;
-
-    let cancelled = false;
-
-    const startCamera = async (isRetry: boolean) => {
-      try {
-        const { Html5Qrcode } = await import("html5-qrcode");
-        if (cancelled) return;
-
-        const mounted = await waitForScannerMount(elementId);
-        if (cancelled) return;
-        if (!mounted) {
-          throw new Error(`Scanner mount node #${elementId} not found`);
-        }
-
-        const instance = new Html5Qrcode(elementId);
-        scannerRef.current = instance;
-
-        await instance.start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 260, height: 260 } },
-          (text) => {
-            handleDecodedRef.current(text);
-          },
-          () => {
-            /* per-frame decode miss — ignore */
-          },
-        );
-      } catch (err) {
-        console.error(`[checkin-scanner] camera start failed${isRetry ? " (retry)" : ""}:`, err);
-        if (cancelled) return;
-
-        await stopScannerRef.current();
-
-        if (isCameraPermissionOrMissingError(err)) {
-          setView("camera_unavailable");
-          return;
-        }
-
-        if (!isRetry) {
-          console.error("[checkin-scanner] retrying camera start after transient error");
-          await startCamera(true);
-          return;
-        }
-
-        setView("camera_unavailable");
-      }
-    };
-
-    void startCamera(false);
-
-    return () => {
-      cancelled = true;
-      void stopScannerRef.current();
-    };
-  }, [view, scanGeneration, elementId]);
-
-  function handleScanNext() {
-    processingRef.current = false;
-    setLookup(null);
-    setForeignQr(false);
-    setAdmitted(false);
-    setOfflineAdmitted(false);
-    setOfflineAlreadyUsed(false);
-    setActionError(null);
-    setManualToken("");
-    setView("scanning");
-    setScanGeneration((n) => n + 1);
-  }
-
-  function handleManualSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const raw = manualToken.trim();
-    if (!raw) return;
-    const token = parseCheckInToken(raw) ?? raw;
-    void processToken(token);
-  }
-
-  function handleAdmit(qrToken: string) {
-    if (isOfflineStaffMode(scanCode)) {
-      setActionError(null);
-      startTransition(async () => {
-        const scannedAt = Date.now();
-        await markUsedLocally(qrToken);
-        const label = getDeviceLabel();
-        await enqueueScan({
-          qrToken,
-          eventId,
-          scannedAt,
-          deviceId: getOrCreateDeviceId(),
-          deviceLabel: label || undefined,
-        });
-        setAdmitted(true);
-        setOfflineAdmitted(true);
-        const refreshed = await lookupTicket(qrToken);
-        if (refreshed) {
-          setLookup(buildOfflineLookup(refreshed, eventTitle));
-        }
-      });
-      return;
-    }
-
-    setActionError(null);
-    startTransition(async () => {
-      const result = await checkInTicket(qrToken, eventId, scanCode);
-      if (result.ok && result.justCheckedIn) {
-        setAdmitted(true);
-        const refreshed = await getTicketForCheckIn(qrToken);
-        setLookup(refreshed);
-        return;
-      }
-
-      if (!result.ok) {
-        if (result.reason === "wrong_event") {
-          setActionError("Wrong event — this ticket is for a different event.");
-        } else if (result.reason === "already_used") {
-          setActionError(`Already checked in at ${formatCheckedInAt(result.checkedInAt)}`);
-          const refreshed = await getTicketForCheckIn(qrToken);
-          setLookup(refreshed);
-        } else if (result.reason === "unauthorized") {
-          setActionError("You are not authorized to check in this ticket.");
-        } else if (result.reason === "cancelled") {
-          setActionError("This ticket was cancelled — do not admit.");
-        } else if (result.reason === "refunded") {
-          setActionError("This ticket was refunded — do not admit.");
-        } else if (result.reason === "not_paid") {
-          setActionError("This ticket's payment is not complete — cannot admit.");
-        } else if (result.reason === "unauthenticated") {
-          setActionError("Please sign in again.");
-        } else {
-          setActionError("This ticket cannot be checked in.");
-        }
-      }
+type Found = Extract<TicketCheckInLookup,{found:true}>;
+type ScanResult = { title:string;message:string;tone:"success"|"warning"|"error";ticket?:Found;admitted?:boolean };
+type Props = { eventId:string;eventTitle:string;scanCode?:string;isDownloadingAllowlist?:boolean };
+const reasons:Record<string,string> = { wrong_event:"This ticket belongs to a different event.",already_used:"This guest has already been checked in. Do not admit again.",cancelled:"This ticket has been cancelled. Do not admit.",refunded:"This ticket has been refunded. Do not admit.",not_paid:"Payment has not been confirmed. Do not admit.",unauthorized:"Your access has expired. Sign in or ask the host for a current staff code.",unauthenticated:"Please sign in again.",not_valid:"No valid ticket matches this code. Check the ticket number or ask the host for help." };
+const titles:Record<string,string> = { wrong_event:"Wrong event",already_used:"Already checked in",cancelled:"Ticket cancelled",refunded:"Ticket refunded",not_paid:"Payment not confirmed",unauthorized:"Access expired",not_valid:"Ticket not found" };
+function time(value:Date|string|number){return new Date(value).toLocaleTimeString("en-TT",{hour:"numeric",minute:"2-digit",second:"2-digit"});}
+export function CheckInScanner({eventId,eventTitle,scanCode,isDownloadingAllowlist=false}:Props){
+  const cameraId=`gate-camera-${useId().replace(/[^a-z0-9]/gi,"")}`;
+  const [online,setOnline]=useState(true),[cameraOn,setCameraOn]=useState(false),[cameraReady,setCameraReady]=useState(false),[cameraError,setCameraError]=useState("");
+  const [cameras,setCameras]=useState<{id:string;label:string}[]>([]),[selectedCamera,setSelectedCamera]=useState(""),[torchSupported,setTorchSupported]=useState(false),[torch,setTorch]=useState(false);
+  const [manual,setManual]=useState(""),[busy,setBusy]=useState(false),[result,setResult]=useState<ScanResult|null>(null),[error,setError]=useState("");
+  const [label,setLabel]=useState(""),[summary,setSummary]=useState<{admitted:number;remaining:number;total:number}|null>(null),[updated,setUpdated]=useState<number|null>(null);
+  const [queued,setQueued]=useState(0),[cached,setCached]=useState(0),[prepared,setPrepared]=useState(false),[preparing,setPreparing]=useState(false),[syncing,setSyncing]=useState(false),[syncMessage,setSyncMessage]=useState("");
+  const [recent,setRecent]=useState<{key:number;name:string;outcome:string;at:number}[]>([]);
+  const scanner=useRef<Html5Qrcode|null>(null),lock=useRef(false),lastCamera=useRef(false),active=useRef(true),resultRef=useRef<HTMLDivElement>(null);
+  const cameraLifecycle=useRef<Promise<void>>(Promise.resolve());
+  const processRef=useRef<(value:string)=>Promise<void>>(async()=>{});
+  const refresh=useCallback(async()=>{
+    try{
+      const [q,c,event]=await Promise.all([countQueuedScans(eventId),countAllowlist(eventId),getCachedEvent(eventId)]);
+      if(!active.current)return;setQueued(q);setCached(c);setPrepared(!!event);
+      if(navigator.onLine){const info=await getEventGateSummary(eventId,scanCode);if(active.current){if("error" in info){setError(info.error ?? "Access unavailable.");setSummary(null);}else{setSummary(info);setUpdated(Date.now());}}}
+    }catch{/* Existing data remains visible while a refresh is unavailable. */}
+  },[eventId,scanCode]);
+  const sync=useCallback(async()=>{
+    if(!scanCode||!navigator.onLine)return;
+    setSyncing(true);
+    try{const res=await syncQueuedScans(eventId,scanCode);if(active.current&&res.synced)setSyncMessage(res.conflicts?`${res.synced} scans synced. ${res.conflicts} need host review: duplicate or invalid tickets.`:`${res.synced} offline scans synced successfully.`);await refresh();}finally{if(active.current)setSyncing(false);}
+  },[eventId,scanCode,refresh]);
+  useEffect(()=>{
+    active.current=true;setOnline(navigator.onLine);setLabel(getDeviceLabel());void refresh();
+    const connectivity=()=>{setOnline(navigator.onLine);if(navigator.onLine)void sync();};
+    window.addEventListener("online",connectivity);window.addEventListener("offline",connectivity);
+    const timer=window.setInterval(()=>{if(document.visibilityState==="visible"){void refresh();if(navigator.onLine)void sync();}},30000);
+    return()=>{active.current=false;window.removeEventListener("online",connectivity);window.removeEventListener("offline",connectivity);window.clearInterval(timer);};
+  },[refresh,sync]);
+  useEffect(()=>{if(!isDownloadingAllowlist)void refresh();},[isDownloadingAllowlist,refresh]);
+  useEffect(()=>{
+    if(!cameraOn)return;
+    let cancelled=false;let local:Html5Qrcode|null=null;
+    setCameraReady(false);setCameraError("");setTorch(false);setTorchSupported(false);
+    const start=cameraLifecycle.current.then(async()=>{
+      try{
+        const {Html5Qrcode}=await import("html5-qrcode");if(cancelled)return;
+        local=new Html5Qrcode(cameraId);scanner.current=local;
+        await local.start(selectedCamera||{facingMode:"environment"},{fps:10,qrbox:(w,h)=>{const size=Math.min(260,Math.floor(Math.min(w,h)*.72));return {width:size,height:size};}},value=>{if(!lock.current&&!cancelled)void processRef.current(value);},()=>{});
+        if(cancelled){await local.stop().catch(()=>{});return;}
+        setCameraReady(true);
+        setTorchSupported(!!(local.getRunningTrackCapabilities() as MediaTrackCapabilities&{torch?:boolean}).torch);
+        const devices=await Html5Qrcode.getCameras();if(!cancelled)setCameras(devices);
+      }catch{if(!cancelled){setCameraError("Camera unavailable. Allow camera access in your browser, or enter the ticket number below.");setCameraReady(false);}}
     });
+    return()=>{cancelled=true;cameraLifecycle.current=start.then(async()=>{if(local?.isScanning)await local.stop().catch(()=>{});try{local?.clear();}catch{}if(scanner.current===local)scanner.current=null;});};
+  },[cameraOn,cameraId,selectedCamera]);
+  function remember(name:string,outcome:string){setRecent(rows=>[{key:Date.now()+Math.random(),name,outcome,at:Date.now()},...rows].slice(0,8));}
+  const failure=(reason:string):ScanResult=>({title:titles[reason]??"Unable to verify",message:reasons[reason]??reasons.not_valid,tone:reason==="already_used"?"warning":"error"});
+  async function process(value:string){
+    if(lock.current)return;lock.current=true;setBusy(true);setError("");setResult(null);lastCamera.current=cameraOn;setCameraOn(false);
+    const token=parseTicketScan(value);
+    try{
+      if(!token){setResult({title:"Use a LinkWe ticket",message:"Scan the QR code on the guest’s LinkWe ticket, or enter its printed ticket number.",tone:"error"});return;}
+      let lookup:TicketCheckInLookup;
+      if(!navigator.onLine){
+        if(!scanCode||!await getCachedEvent(eventId)){setResult({title:"Connect to verify",message:"Prepare offline scanning while online before admitting guests without a connection.",tone:"warning"});return;}
+        let ticket=await lookupTicket(token);
+        if(!ticket){const db=await getCheckinDb();const rows=await db.getAllFromIndex("allowlist","by_event",eventId);ticket=rows.find(row=>row.ticketNumber.toLowerCase()===token.toLowerCase())??null;}
+        if(!ticket||ticket.eventId!==eventId){setResult({title:"Not in offline guest list",message:"Reconnect to check this ticket. It may have been purchased after this device’s last download.",tone:"warning"});return;}
+        lookup={found:true,authorized:true,id:ticket.qrToken,qrToken:ticket.qrToken,ticketNumber:ticket.ticketNumber,holderName:ticket.holderName,ticketTypeName:ticket.ticketTypeName,status:ticket.usedLocally?"USED":ticket.status as Found["status"],checkedInAt:ticket.usedAt?new Date(ticket.usedAt):null,eventId,event:{title:eventTitle,startDate:new Date(),venueLabel:""}};
+      }else lookup=await getTicketForCheckIn(token,eventId,scanCode);
+      if(!lookup.found){setResult(failure(lookup.reason??"not_valid"));return;}
+      if(lookup.status!=="VALID"){
+        const reason=lookup.status==="USED"?"already_used":lookup.status.toLowerCase();
+        setResult({...failure(reason),ticket:lookup});remember(lookup.ticketNumber,titles[reason]??reason);
+        // Duplicate attempts are recorded consistently across scanner and attendee check-in.
+        if(navigator.onLine&&lookup.status==="USED")await checkInTicket(lookup.qrToken,eventId,scanCode,{id:getOrCreateDeviceId(),label});
+      }else setResult({title:"Ready to welcome",message:navigator.onLine?"Ticket verified. Confirm the guest’s name, then admit them.":"Found in this device’s offline list. Confirm the guest’s name before admitting.",tone:"success",ticket:lookup});
+    }catch{setResult({title:"Could not verify",message:"The connection or device storage is unavailable. Reconnect and try again before admitting this guest.",tone:"warning"});}
+    finally{lock.current=false;setBusy(false);setTimeout(()=>resultRef.current?.focus(),0);}
   }
-
-  const wrongEvent =
-    lookup?.found === true && lookup.eventId !== eventId;
-
-  const hasScanCodeAuth = Boolean(scanCode?.trim());
-
-  const canAdmit =
-    lookup?.found === true &&
-    !wrongEvent &&
-    (lookup.authorized || hasScanCodeAuth) &&
-    lookup.status === "VALID" &&
-    !admitted;
-
-  function handleManualSync() {
-    if (!scanCode?.trim() || !isOnline || pendingCount === 0 || isSyncing) return;
-
-    setIsSyncing(true);
-    void (async () => {
-      try {
-        await syncQueuedScans(eventId, scanCode);
-        await refreshCounts();
-      } catch {
-        // Manual sync failure leaves queue intact for retry.
-      } finally {
-        setIsSyncing(false);
+  processRef.current=process;
+  async function admit(){
+    const ticket=result?.ticket;if(!ticket||result.admitted||ticket.status!=="VALID"||lock.current)return;
+    lock.current=true;setBusy(true);setError("");
+    try{
+      if(!navigator.onLine){
+        const outcome=await recordOfflineAdmission({qrToken:ticket.qrToken,eventId,scannedAt:Date.now(),deviceId:getOrCreateDeviceId(),deviceLabel:label});
+        if(outcome!=="ADMITTED"){setResult({...failure(outcome==="DUPLICATE"?"already_used":"not_valid"),ticket});return;}
+      }else{
+        const response=await checkInTicket(ticket.qrToken,eventId,scanCode,{id:getOrCreateDeviceId(),label});
+        if(!response.ok){setResult({...failure(response.reason),ticket:{...ticket,...(response.reason==="already_used"?{status:"USED" as const,checkedInAt:response.checkedInAt??null}:{})}});remember(ticket.ticketNumber,titles[response.reason]??"Not admitted");await refresh();return;}
       }
-    })();
+      setResult({title:"You’re checked in!",message:navigator.onLine?"Admission confirmed. Welcome them in.":"Admission saved on this device. Keep this tab available until all scans have synced.",tone:"success",ticket:{...ticket,status:"USED",checkedInAt:new Date()},admitted:true});
+      remember(ticket.ticketNumber,navigator.onLine?"Admitted":"Admitted · pending sync");navigator.vibrate?.(90);await refresh();
+    }catch{setError("Admission was not confirmed. Check the ticket again before letting this guest in.");}
+    finally{setBusy(false);lock.current=false;}
   }
-
-  return (
-    <div className="space-y-6">
-      {isStaffMode ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-[#1C1C1A]">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span
-                  className={`h-2 w-2 shrink-0 rounded-full ${isOnline ? "bg-sky-500" : "bg-zinc-400"}`}
-                  aria-hidden
-                />
-                <span className="font-medium">{isOnline ? "Online" : "Offline"}</span>
-              </div>
-              {isDownloadingAllowlist ? (
-                <p className="flex items-center gap-2 text-zinc-600">
-                  <span
-                    className="h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600"
-                    aria-hidden
-                  />
-                  Downloading tickets…
-                </p>
-              ) : (
-                <p className="text-zinc-600">{cachedCount} tickets ready offline</p>
-              )}
-              {pendingCount > 0 ? (
-                <p className="text-zinc-600">{pendingCount} waiting to sync</p>
-              ) : null}
-              <label className="mt-2 block">
-                <span className="text-xs font-semibold text-zinc-500">This device</span>
-                <input
-                  type="text"
-                  value={deviceLabelInput}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setDeviceLabelInput(value);
-                    setDeviceLabel(value);
-                  }}
-                  onBlur={() => setDeviceLabel(deviceLabelInput)}
-                  placeholder="Name this device (e.g. Front Gate)"
-                  className="mt-1 min-h-[36px] w-full max-w-xs rounded-lg border border-zinc-200 px-3 text-sm text-[#1C1C1A] placeholder:text-zinc-400 focus:border-[#D4450A] focus:outline-none focus:ring-2 focus:ring-[#D4450A]/20"
-                />
-              </label>
-            </div>
-            {isOnline && pendingCount > 0 ? (
-              <button
-                type="button"
-                disabled={isSyncing}
-                onClick={handleManualSync}
-                className="shrink-0 rounded-xl bg-[#D4450A] px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-              >
-                {isSyncing ? "Syncing…" : "Sync now"}
-              </button>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-
-      {view === "scanning" ? (
-        <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-black">
-          <div id={elementId} className="min-h-[280px] w-full" />
-        </div>
-      ) : null}
-
-      {view === "camera_unavailable" ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-center">
-          <p className="text-base font-semibold text-amber-900">
-            Camera unavailable — check browser permissions
-          </p>
-          <p className="mt-1 text-sm text-amber-800">
-            Allow camera access for this site, or enter a token manually below.
-          </p>
-        </div>
-      ) : null}
-
-      {(view === "camera_unavailable" || view === "scanning") && (
-        <form onSubmit={handleManualSubmit} className="space-y-2">
-          <label htmlFor="manual-token" className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-            Manual token (from QR URL)
-          </label>
-          <div className="flex gap-2">
-            <input
-              id="manual-token"
-              type="text"
-              value={manualToken}
-              onChange={(e) => setManualToken(e.target.value)}
-              placeholder="Paste token or full /checkin/… URL"
-              className="min-h-[44px] flex-1 rounded-xl border border-zinc-200 px-3 text-base text-[#1C1C1A]"
-            />
-            <button
-              type="submit"
-              className="shrink-0 rounded-xl bg-[#D4450A] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
-            >
-              Look up
-            </button>
-          </div>
-        </form>
-      )}
-
-      {view === "result" ? (
-        <ResultCard
-          lookup={lookup}
-          foreignQr={foreignQr}
-          wrongEvent={wrongEvent}
-          admitted={admitted}
-          offlineAdmitted={offlineAdmitted}
-          offlineAlreadyUsed={offlineAlreadyUsed}
-          canAdmit={canAdmit}
-          hasScanCodeAuth={hasScanCodeAuth}
-          isPending={isPending}
-          actionError={actionError}
-          onAdmit={handleAdmit}
-          onScanNext={handleScanNext}
-        />
-      ) : null}
-    </div>
-  );
-}
-
-function ResultCard({
-  lookup,
-  foreignQr,
-  wrongEvent,
-  admitted,
-  offlineAdmitted,
-  offlineAlreadyUsed,
-  canAdmit,
-  hasScanCodeAuth,
-  isPending,
-  actionError,
-  onAdmit,
-  onScanNext,
-}: {
-  lookup: TicketCheckInLookup | null;
-  foreignQr: boolean;
-  wrongEvent: boolean;
-  admitted: boolean;
-  offlineAdmitted: boolean;
-  offlineAlreadyUsed: boolean;
-  canAdmit: boolean;
-  hasScanCodeAuth: boolean;
-  isPending: boolean;
-  actionError: string | null;
-  onAdmit: (qrToken: string) => void;
-  onScanNext: () => void;
-}) {
-  if (foreignQr) {
-    return (
-      <div className="space-y-4">
-        <StatusBlock variant="invalid" title="❌ Invalid ticket" subtitle="This QR is not a LinkWe check-in code." />
-        <ScanNextButton onClick={onScanNext} />
-      </div>
-    );
-  }
-
-  if (!lookup?.found) {
-    return (
-      <div className="space-y-4">
-        <StatusBlock
-          variant="invalid"
-          title="❌ Invalid ticket"
-          subtitle="This QR code is not recognized."
-        />
-        <ScanNextButton onClick={onScanNext} />
-      </div>
-    );
-  }
-
-  if (wrongEvent) {
-    return (
-      <div className="space-y-4">
-        <StatusBlock
-          variant="warning"
-          title="⚠️ Wrong event"
-          subtitle="This ticket is for a different event."
-        />
-        <TicketDetails lookup={lookup} />
-        <ScanNextButton onClick={onScanNext} />
-      </div>
-    );
-  }
-
-  if (offlineAlreadyUsed && lookup?.found) {
-    return (
-      <div className="space-y-4">
-        <StatusBlock
-          variant="warning"
-          title="⚠️ Already checked in (offline)"
-          subtitle={formatCheckedInAt(lookup.checkedInAt)}
-        />
-        <TicketDetails lookup={lookup} />
-        <ScanNextButton onClick={onScanNext} />
-      </div>
-    );
-  }
-
-  if (admitted) {
-    return (
-      <div className="space-y-4">
-        <StatusBlock
-          variant="success"
-          title={offlineAdmitted ? "✅ Checked in (offline)" : "✅ Checked in!"}
-          subtitle={
-            offlineAdmitted
-              ? "Recorded on this device. Sync when back online."
-              : "Guest admitted successfully."
-          }
-        />
-        <TicketDetails lookup={lookup} />
-        <ScanNextButton onClick={onScanNext} />
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <TicketStatusBanner status={lookup.status} checkedInAt={lookup.checkedInAt} />
-      <TicketDetails lookup={lookup} />
-      {canAdmit ? (
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={() => onAdmit(lookup.qrToken)}
-          className="w-full rounded-2xl bg-[#D4450A] px-6 py-5 text-xl font-bold text-white shadow-lg hover:opacity-90 disabled:opacity-60 sm:text-2xl"
-        >
-          {isPending ? "Checking in…" : "Admit / Mark as used"}
-        </button>
-      ) : null}
-      {lookup.found &&
-      !lookup.authorized &&
-      !hasScanCodeAuth &&
-      lookup.status === "VALID" ? (
-        <p className="rounded-xl bg-zinc-100 px-4 py-3 text-center text-sm text-zinc-600">
-          You are not authorized to admit tickets for this event.
-        </p>
-      ) : null}
-      {actionError ? (
-        <p className="rounded-xl bg-red-50 px-4 py-3 text-center text-sm font-medium text-red-800" role="alert">
-          {actionError}
-        </p>
-      ) : null}
-      <ScanNextButton onClick={onScanNext} />
-    </div>
-  );
-}
-
-function TicketStatusBanner({
-  status,
-  checkedInAt,
-}: {
-  status: "VALID" | "USED" | "CANCELLED" | "REFUNDED";
-  checkedInAt: Date | null;
-}) {
-  if (status === "VALID") {
-    return <StatusBlock variant="valid" title="✅ Valid" subtitle="Ready to admit" />;
-  }
-  if (status === "USED") {
-    return (
-      <StatusBlock
-        variant="warning"
-        title="⚠️ Already checked in"
-        subtitle={formatCheckedInAt(checkedInAt)}
-      />
-    );
-  }
-  const label = status === "CANCELLED" ? "Cancelled" : "Refunded";
-  return (
-    <StatusBlock variant="invalid" title={`❌ ${label}`} subtitle="Do not admit" />
-  );
-}
-
-function TicketDetails({ lookup }: { lookup: Extract<TicketCheckInLookup, { found: true }> }) {
-  return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4 text-[#1C1C1A]">
-      <p className="text-lg font-bold">{lookup.event.title}</p>
-      <dl className="mt-3 grid gap-2 text-sm">
-        <div>
-          <dt className="text-xs font-semibold uppercase text-zinc-400">Holder</dt>
-          <dd className="font-semibold">{lookup.holderName}</dd>
-        </div>
-        <div>
-          <dt className="text-xs font-semibold uppercase text-zinc-400">Ticket type</dt>
-          <dd>{lookup.ticketTypeName}</dd>
-        </div>
-        <div>
-          <dt className="text-xs font-semibold uppercase text-zinc-400">Ticket number</dt>
-          <dd className="font-mono text-base font-bold text-[#D4450A]">{lookup.ticketNumber}</dd>
-        </div>
-      </dl>
-    </div>
-  );
-}
-
-function StatusBlock({
-  variant,
-  title,
-  subtitle,
-}: {
-  variant: "valid" | "warning" | "invalid" | "success";
-  title: string;
-  subtitle: string;
-}) {
-  const styles = {
-    valid: "border-sky-600 bg-sky-50 text-sky-900",
-    success: "border-sky-600 bg-sky-50 text-sky-900",
-    warning: "border-amber-600 bg-amber-50 text-amber-900",
-    invalid: "border-red-600 bg-red-50 text-red-900",
-  }[variant];
-
-  return (
-    <div className={`rounded-2xl border-2 px-5 py-6 text-center ${styles}`}>
-      <p className="text-2xl font-bold sm:text-3xl">{title}</p>
-      <p className="mt-2 text-base font-medium opacity-90">{subtitle}</p>
-    </div>
-  );
-}
-
-function ScanNextButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="w-full rounded-xl border-2 border-[#D4450A] bg-white px-4 py-3 text-base font-semibold text-[#D4450A] hover:bg-orange-50"
-    >
-      Scan next
-    </button>
-  );
+  function next(){setResult(null);setManual("");setError("");if(lastCamera.current)setCameraOn(true);}
+  async function prepare(){if(!scanCode)return;setPreparing(true);setError("");try{
+    const verified=await verifyEventScanCode(eventId,scanCode);if(!verified.valid)throw new Error();
+    await sync();const list=await getEventAllowlist(eventId,scanCode);if(!list.ok)throw new Error();
+    await saveAllowlist(eventId,list.tickets);await saveCachedEvent({eventId,scanCode,eventTitle:verified.eventTitle,eventStartDate:verified.eventStartDate,venueName:verified.venueName,cachedAt:Date.now()});await refresh();
+  }catch{setError("Could not prepare offline access. Keep an internet connection and try again.");}finally{setPreparing(false);}}
+  async function toggleTorch(){try{await scanner.current?.applyVideoConstraints({advanced:[{torch:!torch} as MediaTrackConstraintSet]});setTorch(!torch);}catch{setCameraError("This camera couldn’t switch its light. Use better lighting or manual entry.");}}
+  const ticket=result?.ticket;
+  return <div>
+    <div className={s.stats}>{[[summary?.admitted,"Checked in"],[summary?.remaining,"Still to arrive"],[summary?.total,"Active LinkWe tickets"]].map(([value,text])=><div className={s.stat} key={text}><strong>{value??"—"}</strong><small>{text}</small></div>)}</div>
+    <div className={s.scanGrid}><section className={s.panel}><div className={s.panelHead}><h2>Scan & welcome</h2><span className={online?s.online:s.offline}>{online?<Wifi size={14}/>:<WifiOff size={14}/>} {online?"Online":"Offline"}</span></div>
+      <div className={s.camera}><div id={cameraId} style={{display:cameraOn?"block":"none"}}/>{!cameraOn&&<div className={s.cameraIdle}><ScanLine size={56} strokeWidth={1.2}/><h3>{result?"Ticket captured":"Ready when you are."}</h3><p>Place the guest’s ticket QR code inside the frame. We’ll verify it before you admit them.</p><button type="button" disabled={busy} className={s.button} onClick={()=>{setResult(null);setCameraOn(true);}}><Camera size={18}/> Start camera</button></div>}{cameraOn&&!cameraReady&&!cameraError&&<p className="p-5 text-center text-sm text-white">Starting camera…</p>}</div>
+      {cameraOn&&<div className={s.actions}><button type="button" className={s.secondary} onClick={()=>setCameraOn(false)}><Pause size={16}/> Stop camera</button>{cameraReady&&cameras.length>1&&<select aria-label="Camera" className={s.select} value={selectedCamera} onChange={e=>setSelectedCamera(e.target.value)}><option value="">Back camera · automatic</option>{cameras.map(c=><option key={c.id} value={c.id}>{c.label||"Camera"}</option>)}</select>}{torchSupported&&cameraReady&&<button type="button" aria-pressed={torch} className={s.secondary} onClick={toggleTorch}><Flashlight size={16}/> Light</button>}</div>}
+      {cameraError&&<p className={s.error} role="alert">{cameraError}</p>}
+      <form className={s.manual} onSubmit={e=>{e.preventDefault();void process(manual);}}><label htmlFor={`${cameraId}-manual`}>No QR code? Enter a ticket number.</label><div><input id={`${cameraId}-manual`} className={s.input} value={manual} onChange={e=>setManual(e.target.value)} placeholder="Ticket number, QR token or ticket link" maxLength={2000} autoComplete="off" spellCheck={false}/><button className={s.button} disabled={busy||!manual.trim()}>{busy?"Checking…":"Find ticket"}<ArrowRight size={16}/></button></div><small>A lookup never admits a guest automatically.</small></form>
+    </section><section className={s.panel}><div className={s.panelHead}><h2>Entry decision</h2>{busy&&<span>Verifying…</span>}</div><div ref={resultRef} tabIndex={-1} aria-live="polite" aria-atomic="true">
+      {result?<div className={s.result} data-tone={result.tone}><span className={s.resultIcon}>{result.admitted?<Check size={29}/>:result.tone==="success"?<ShieldCheck size={29}/>:result.tone==="warning"?<AlertTriangle size={27}/>:<X size={29}/>}</span><h3>{result.title}</h3><p>{result.message}</p>{ticket&&<dl><div><dt>Guest</dt><dd>{ticket.holderName}</dd></div><div><dt>Ticket type</dt><dd>{ticket.ticketTypeName}</dd></div><div><dt>Ticket number</dt><dd>{ticket.ticketNumber}</dd></div><div><dt>{ticket.checkedInAt?"Checked in at":"Event"}</dt><dd>{ticket.checkedInAt?time(ticket.checkedInAt):eventTitle}</dd></div></dl>}{ticket?.status==="VALID"&&result.tone==="success"&&!result.admitted&&<button type="button" className={s.button} disabled={busy} onClick={admit}><Check size={20}/>{busy?"Confirming…":"Confirm & admit guest"}</button>}<button type="button" disabled={busy} onClick={next} className={`${s.secondary} mt-4 w-full`}><ScanLine size={17}/> Next ticket</button></div>:<div className={s.ready}><Users size={45} strokeWidth={1.3}/><h3>Every guest, accounted for.</h3><p>Scan or find a ticket to see its holder, ticket type and entry status here.</p></div>}
+      {error&&<p className={s.error} role="alert">{error}</p>}</div>
+      {recent.length>0&&<div className={s.recent}><h3>Recent activity · this session</h3><ol>{recent.map(row=><li key={row.key}><div><strong>{row.name}</strong>{row.outcome}</div><time>{time(row.at)}</time></li>)}</ol></div>}
+    </section></div>
+    <section className={`${s.panel} mt-5`}><div className={s.panelHead}><h2>Gate & connection</h2><button type="button" className={s.secondary} onClick={()=>void refresh()}><RefreshCw size={14}/> Refresh totals</button></div><div className={s.split}><div className={s.field}><label htmlFor={`${cameraId}-gate`}>Name this gate or device</label><input id={`${cameraId}-gate`} className={s.input} placeholder="e.g. Main entrance · Phone 1" value={label} maxLength={60} onChange={e=>{setLabel(e.target.value);setDeviceLabel(e.target.value);}}/><p className="mt-2">Included in the entry record so the host can trace duplicate attempts.</p>{updated&&<p className="mt-2">Online totals last refreshed at {time(updated)}{!online?" · may be out of date":""}.</p>}</div><div><p><strong>{queued}</strong> scans waiting to sync · <strong>{prepared?cached:0}</strong> tickets available offline</p><div className={s.actions}>{scanCode&&<><button type="button" className={s.secondary} onClick={prepare} disabled={!online||preparing||isDownloadingAllowlist}><Download size={15}/>{preparing||isDownloadingAllowlist?"Preparing…":prepared?"Refresh offline list":"Prepare offline scanning"}</button><button type="button" className={s.button} onClick={()=>void sync()} disabled={!online||syncing||queued===0}><RefreshCw size={15}/>{syncing?"Syncing…":"Sync now"}</button></>}{!scanCode&&<p>Generate a staff code below, then reload this page to enable offline preparation.</p>}</div>{(prepared||!online)&&<p className={s.notice}>Offline access lasts 24 hours after preparation. Devices cannot see each other’s offline admissions. Use one offline gate per ticket list and reconnect regularly.</p>}{syncMessage&&<p className={s.notice} role="status">{syncMessage}</p>}</div></div></section>
+  </div>;
 }

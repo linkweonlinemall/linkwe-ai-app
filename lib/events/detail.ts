@@ -99,7 +99,7 @@ export function eventFacts(event: EventDetailData) {
   if (event.hasSeating) facts.push(["Seating", "Seating available · check your ticket inclusions"]);
   if (event.registrationRequired) facts.push(["Registration", "Registration required"]);
   if (event.registrationDeadline) facts.push(["Registration deadline", formatEventDateLong(event.registrationDeadline) + " · " + formatEventTime(event.registrationDeadline) + " AST"]);
-  if (event.organiserName) facts.push(["Organiser", event.organiserName]);
+  facts.push(["Hosted by", event.store.name]);
   return facts;
 }
 

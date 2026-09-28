@@ -142,8 +142,8 @@ export async function submitStoreReview(
 
   const session = await getSession();
   if (!session) return { error: "not_logged_in" };
-  if (session.role !== "CUSTOMER") {
-    return { error: "Only customer accounts can leave store reviews" };
+  if (session.role !== "CUSTOMER" && session.role !== "VENDOR") {
+    return { error: "Use a shopping account to leave store reviews" };
   }
 
   if (input.rating < 1 || input.rating > 5) {

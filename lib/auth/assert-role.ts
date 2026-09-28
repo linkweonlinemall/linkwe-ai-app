@@ -4,7 +4,7 @@ import { getRoleDashboardPath } from "./redirects";
 import type { Session } from "./session";
 
 export function assertDashboardRole(session: Session, required: UserRole): void {
-  if (session.role !== required) {
+  if (session.role !== required && !(required === "CUSTOMER" && session.role === "VENDOR")) {
     redirect(getRoleDashboardPath(session.role));
   }
 }

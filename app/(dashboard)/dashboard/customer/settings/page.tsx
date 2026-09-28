@@ -60,6 +60,7 @@ export default async function CustomerSettingsPage() {
             </div>
           </div>
 
+          <div className="rounded-2xl border border-sky-100 bg-white p-6"><h2 className="font-bold text-[#174766]">Your workspaces</h2><p className="mt-2 text-sm text-slate-500">Shop and run a business with the same LinkWe login. Your orders and favourites stay with you.</p><Link className="mt-4 inline-flex rounded-xl bg-[#174766] px-4 py-3 text-sm font-bold text-white" href={session.role === "VENDOR" ? "/dashboard/vendor" : "/start-business"}>{session.role === "VENDOR" ? "Open business workspace" : "Start a business"} →</Link></div>
           {/* Danger zone */}
           <div className="rounded-2xl border border-red-100 bg-gradient-to-br from-white to-red-50 p-6">
             <h2 className="mb-2 text-sm font-bold text-red-900">Sign out</h2>

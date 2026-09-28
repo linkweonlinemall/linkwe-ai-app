@@ -378,11 +378,11 @@ export async function sendMessage(
   return { ok: true, message: savedMessage };
 }
 
-export async function getMyConversations(): Promise<MyConversationsResult> {
+export async function getMyConversations(side: "auto" | "customer" | "vendor" = "auto"): Promise<MyConversationsResult> {
   const session = await getSession();
   if (!session) return { ok: false, error: "Sign in to view messages." };
 
-  const ownedStoreId = await getOwnedStoreId(session.userId);
+  const ownedStoreId = side === "customer" ? null : await getOwnedStoreId(session.userId);
 
   if (ownedStoreId) {
     const rows = await prisma.conversation.findMany({
@@ -510,13 +510,13 @@ export async function markVendorConversationRead(conversationId: string, snapsho
   return { ok: true as const, cleared: updated.count > 0 };
 }
 
-export async function getUnreadCount(): Promise<
+export async function getUnreadCount(side: "auto" | "customer" | "vendor" = "auto"): Promise<
   { count: number } | { ok: false; error: string }
 > {
   const session = await getSession();
   if (!session) return { ok: false, error: "Sign in to view messages." };
 
-  const ownedStoreId = await getOwnedStoreId(session.userId);
+  const ownedStoreId = side === "customer" ? null : await getOwnedStoreId(session.userId);
 
   if (ownedStoreId) {
     const agg = await prisma.conversation.aggregate({

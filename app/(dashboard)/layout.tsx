@@ -48,7 +48,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const [unreadCount, user] = await Promise.all([getNavUnreadCount(), getCurrentUser()]);
 
-  if(session.role === "CUSTOMER") return <div className="flex h-dvh min-h-0 flex-col overflow-hidden bg-[#faf9f5]"><PublicNav user={{name:session.fullName??"Account",href:"/dashboard/customer"}} dashboardHref="/dashboard/customer" unreadCount={unreadCount}/><EmailVerifyBanner emailVerified={!!user?.emailVerified}/><main className="min-h-0 flex-1 overflow-y-auto">{children}</main></div>;
+  if(session.role === "CUSTOMER" || (session.role === "VENDOR" && pathname.startsWith("/dashboard/customer"))) return <div className="flex h-dvh min-h-0 flex-col overflow-hidden bg-[#faf9f5]"><PublicNav user={{name:session.fullName??"Account",href:"/dashboard/customer",hasBusiness:session.role === "VENDOR"}} dashboardHref="/dashboard/customer" unreadCount={unreadCount}/><EmailVerifyBanner emailVerified={!!user?.emailVerified}/><main className="min-h-0 flex-1 overflow-y-auto">{children}</main></div>;
 
   return (
     <div className="flex h-dvh min-h-0 flex-col overflow-hidden bg-[#F5F5F5]">

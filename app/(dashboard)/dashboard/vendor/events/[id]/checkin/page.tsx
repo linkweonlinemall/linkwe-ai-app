@@ -1,6 +1,6 @@
-import Link from "next/link";
+import EventOperationsHeader from "@/components/events/operations/EventOperationsHeader";
+import s from "@/components/events/operations/operations.module.css";
 
-import { formatEventDateLong } from "@/lib/events/format-datetime";
 import { redirect } from "next/navigation";
 
 import { getSession } from "@/lib/auth/session";
@@ -37,35 +37,8 @@ export default async function EventCheckInPage({ params }: Props) {
   });
   if (!event) redirect("/dashboard/vendor/events");
 
-  return (
-    <div className="mx-auto max-w-lg px-4 py-8 text-[#1C1C1A]">
-      <Link
-        href={`/dashboard/vendor/events/${id}/tickets`}
-        className="mb-4 inline-block text-sm font-medium text-zinc-500 hover:text-[#D4450A]"
-      >
-        ← Back to tickets
-      </Link>
-      <h1 className="text-2xl font-bold sm:text-3xl">Check in — {event.title}</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        {formatEventDateLong(event.startDate)}
-        {event.venueName ? ` · ${event.venueName}` : ""}
-      </p>
-
-      <Link
-        href={`/dashboard/vendor/events/${id}/attendees`}
-        className="mt-4 inline-flex min-h-[44px] w-full items-center justify-center rounded-xl border-2 border-[#D4450A] bg-white px-4 py-3 text-sm font-semibold text-[#D4450A] transition-colors hover:bg-[#FEF0EB] sm:w-auto"
-      >
-        View attendees
-      </Link>
-
-      <div className="mt-6 space-y-6">
-        <StaffScanCodePanel
-          eventId={event.id}
-          initialScanCode={event.scanCode}
-          initialScanCodeSetAt={event.scanCodeSetAt?.toISOString() ?? null}
-        />
-        <CheckInScanner eventId={event.id} eventTitle={event.title} />
-      </div>
-    </div>
-  );
+  return <div className={s.page}><EventOperationsHeader event={event} tab="checkin"/>
+    <CheckInScanner eventId={event.id} eventTitle={event.title} scanCode={event.scanCode ?? undefined}/>
+    <div className={s.staff}><StaffScanCodePanel eventId={event.id} initialScanCode={event.scanCode} initialScanCodeSetAt={event.scanCodeSetAt?.toISOString() ?? null}/></div>
+  </div>;
 }

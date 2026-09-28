@@ -27,7 +27,7 @@ export default async function MyTicketDetailPage({ params }: Props) {
   const ticket = await getCustomerTicketById(ticketId); if (!ticket) notFound();
   // eslint-disable-next-line react-hooks/purity -- Ticket access is evaluated for this server request.
   const now = Date.now(); const state = ticketState(ticket, now); const dashboardHref = getRoleDashboardPath(session.role);
-  const host = ticket.event.organiserName || ticket.event.store.name; const price = ticketPaidMinor(ticket);
+  const host = ticket.event.store.name; const price = ticketPaidMinor(ticket);
   const stream = state.usable ? externalWebUrl(ticket.event.streamUrl) : null;
   const canTransfer = state.usable && ticket.event.startDate.getTime() > now;
   let qr: string | null = null;

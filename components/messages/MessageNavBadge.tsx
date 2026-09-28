@@ -35,7 +35,7 @@ export default function MessageNavBadge({
     let cancelled = false;
 
     async function refresh() {
-      const result = await getUnreadCount();
+      const result = await getUnreadCount(href.startsWith("/dashboard/vendor") ? "vendor" : "customer");
       if (cancelled) return;
       setCount("count" in result ? result.count : 0);
     }
@@ -46,7 +46,7 @@ export default function MessageNavBadge({
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [enabled]);
+  }, [enabled, href]);
 
   if (!enabled) return null;
 

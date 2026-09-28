@@ -11,7 +11,9 @@ export const metadata: Metadata = {
   description: "Join LinkWe as a customer or vendor.",
 };
 
-export default async function RegisterHubPage() {
+export default async function RegisterHubPage({ searchParams }: { searchParams: Promise<{ role?: string; plan?: string }> }) {
+  const sp = await searchParams;
+  if (sp.role === "vendor") redirect(`/register/business${sp.plan ? `?plan=${encodeURIComponent(sp.plan)}` : ""}`);
   const user = await getCurrentUser();
   if (user) {
     redirect(await resolveAuthLandingPath(user));

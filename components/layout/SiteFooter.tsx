@@ -4,7 +4,7 @@ import { ArrowUpRight, Download, Instagram, Facebook } from "lucide-react";
 import s from "./site-footer.module.css";
 const groups = [
   { title: "Discover", links: [["/shop", "Shop products"], ["/services", "Find a service"], ["/stores", "Local stores"], ["/events", "Events & tickets"], ["/timeline", "Timeline"]] },
-  { title: "Build with LinkWe", links: [["/features", "All features"], ["/pricing", "Plans & pricing"], ["/register/business", "Start your business"], ["/dashboard/vendor", "Vendor workspace"]] },
+  { title: "Build with LinkWe", links: [["/features", "All features"], ["/pricing", "Plans & pricing"], ["/start-business", "LinkWe for business"]] },
   { title: "We’re here to help", links: [["/faq", "Help centre"], ["/shipping-info", "Delivery & pickup"], ["/returns", "Returns & refunds"], ["/contact", "Contact our team"]] },
   { title: "Get to know us", links: [["/about", "Our story"], ["/privacy", "Privacy policy"], ["/terms", "Terms of service"], ["/cookies", "Cookies & storage"]] },
 ];

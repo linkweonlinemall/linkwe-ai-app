@@ -185,6 +185,7 @@ export async function saveBusinessPost(formData: FormData) {
   if (store.subscriptionStatus !== "ACTIVE" || (store.subscriptionPlan !== "GROWTH" && store.subscriptionPlan !== "PRO")) return { error: "Timeline posting is available on active Growth and Pro plans." };
   const caption = String(formData.get("caption") ?? "").trim().slice(0, 2200);
   const postId = String(formData.get("postId") ?? "");
+  const published = formData.has("published") ? formData.get("published") === "true" : undefined;
   const searchTags = normalizeSearchTags(formData.getAll("searchTags").map(String));
   const existingImages = formData.getAll("existingImages").map(String).filter(Boolean).slice(0, 4);
   const files = formData.getAll("images").filter((file): file is File => file instanceof File && file.size > 0);
@@ -197,8 +198,8 @@ export async function saveBusinessPost(formData: FormData) {
   }
   const optionMap = new Map((await getVendorAttachmentOptions(store.id)).map((item) => [item.key, item]));
   const attachments = formData.getAll("attachments").map(String).map((key) => optionMap.get(key)).filter((item): item is TimelineAttachment => Boolean(item)).slice(0, 4);
-  if (postId) await prisma.businessPost.update({ where: { id: postId, storeId: store.id }, data: { caption, images, attachments, searchTags } });
-  else await prisma.businessPost.create({ data: { storeId: store.id, caption, images, attachments, searchTags } });
+  if (postId) await prisma.businessPost.update({ where: { id: postId, storeId: store.id }, data: { caption, images, attachments, searchTags, ...(published === undefined ? {} : { published }) } });
+  else await prisma.businessPost.create({ data: { storeId: store.id, caption, images, attachments, searchTags, published: published ?? true } });
   paths(store.slug, postId || undefined);
   return { ok: true };
 }
