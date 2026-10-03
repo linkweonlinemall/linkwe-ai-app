@@ -9,7 +9,7 @@ type Props = { children: ReactNode; eyebrow: string; title: string; description:
 export default function AuthShell({ children, eyebrow, title, description, business = false }: Props) {
   return <div className={s.page}>
     <header className={s.nav}>
-      <Link href="/" className={s.logo} aria-label="LinkWe home"><Image src="/linkwe-logo-mark-on-light.png" alt="" width={48} height={48} priority/><span>LinkWe<span style={{color:"#a45b30"}}>.</span></span></Link>
+      <Link href="/" className={s.logo} aria-label="LinkWe home"><Image src="/branding/v2/mark-192.png" alt="" width={48} height={48} preload/></Link>
       <Link href="/" className={s.navLink}>Back to the marketplace <ArrowUpRight size={15}/></Link>
     </header>
     <div className={s.layout}>

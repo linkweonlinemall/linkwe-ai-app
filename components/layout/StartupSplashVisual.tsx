@@ -2,10 +2,10 @@ export default function StartupSplashVisual({ label = "Loading…" }: { label?: 
   return (
     <div className="absolute inset-0 overflow-hidden bg-[#020b22]">
       <picture>
-        <source media="(min-width: 640px)" srcSet="/linkwe-startup-splash-desktop.jpg" />
+        <source media="(min-width: 640px)" srcSet="/branding/v2/splash-landscape.jpg" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/linkwe-startup-splash.jpg"
+          src="/branding/v2/splash-portrait.jpg"
           alt=""
           loading="eager"
           fetchPriority="high"

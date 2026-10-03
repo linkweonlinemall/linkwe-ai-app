@@ -31,8 +31,6 @@ type TablerOutlineIcon = typeof IconHome;
 type Props = {
   appearance?: "default" | "home" | "storefront";
   transparent?: boolean;
-  /** Standard storefront mark; `/chat` uses AI logo glyph. */
-  logoVariant?: "wordmark" | "ai";
   user?: { name: string; href: string; hasBusiness?: boolean } | null;
   dashboardHref?: string;
   unreadCount?: number;
@@ -72,8 +70,8 @@ const subscribeToHydration = () => () => {};
 const clientReady = () => true;
 const serverReady = () => false;
 
-function LogoMark({ desktop, home }: { desktop: boolean; home: boolean }) {
-  return <Image src={home ? "/linkwe-logo-mark-on-light.png" : "/linkwe-logo-mark-on-dark.png"} alt="LinkWe" width={64} height={64} priority className={`block shrink-0 object-contain ${desktop ? "h-[64px] w-[64px]" : "h-[52px] w-[52px]"}`} />;
+function LogoMark({ desktop }: { desktop: boolean }) {
+  return <Image src="/branding/v2/mark-192.png" alt="LinkWe" width={64} height={64} preload className={`block shrink-0 object-contain ${desktop ? "h-[64px] w-[64px]" : "h-[52px] w-[52px]"}`} />;
 }
 
 export default function PublicNav({
@@ -162,7 +160,7 @@ export default function PublicNav({
         <nav aria-label="Primary mobile" className="flex px-3 py-3 md:hidden sm:px-4">
           <div className="flex w-full min-w-0 items-center justify-between gap-3">
             <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="LinkWe home">
-              <LogoMark desktop={false} home={isHomeAppearance} />
+              <LogoMark desktop={false} />
             </Link>
             <div className="flex shrink-0 items-center gap-2">
               <button
@@ -228,7 +226,7 @@ export default function PublicNav({
         {/* Desktop */}
         <nav aria-label="Primary desktop" className="hidden h-[68px] w-full min-w-0 items-center gap-4 overflow-visible px-6 md:flex xl:px-8">
           <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="LinkWe home">
-            <LogoMark desktop home={isHomeAppearance} />
+            <LogoMark desktop />
           </Link>
 
           <div className="flex min-h-0 min-w-0 flex-1 justify-center overflow-visible px-2 lg:px-6">

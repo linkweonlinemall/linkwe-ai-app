@@ -54,7 +54,7 @@ export default function HomeShowcase({ items, extras }: { items: HomeItem[]; ext
       <p>Your people. Your next favourite. Your whole local world.<br className={styles.desktopBreak} /> Shop, book and discover the businesses that make us, <strong>we.</strong></p>
       <div className={styles.heroActions}><Link href="/shop" className={styles.primaryButton}>Explore the marketplace <ArrowUpRight size={19} aria-hidden /></Link><Link href="/stores" className={styles.heroSecondary}>Meet our people <ArrowRight size={17} aria-hidden /></Link></div>
       <a href="#meet-rex" className={styles.heroRexLink}>
-        <span className={styles.heroRexAvatar}><Image src="/images/home/rex-3d-v1.webp" alt="" width={150} height={225} /></span>
+        <span className={styles.heroRexAvatar}><Image src="/images/home/rex-brand-v2.webp" alt="" width={150} height={225} /></span>
         <span><strong>Say hello to Rex.</strong><span>Your AI business sidekick.</span></span>
         <ArrowUpRight size={19} aria-hidden />
       </a>

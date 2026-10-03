@@ -22,7 +22,7 @@ export default function HomeRex({ href, isVendor }: { href: string; isVendor: bo
         <span className={styles.rexOrbit} aria-hidden />
         <span className={styles.rexOrbitTwo} aria-hidden />
         <span className={styles.rexPlatform} aria-hidden />
-        <Image className={styles.rexCharacter} src="/images/home/rex-3d-v1.webp" alt="Rex, LinkWe’s friendly 3D character, wearing his navy LinkWe polo and welcoming you with an open hand." width={1024} height={1536} sizes="(max-width: 700px) 320px, 480px" />
+        <Image className={styles.rexCharacter} src="/images/home/rex-brand-v2.webp" alt="Rex, LinkWe’s friendly 3D character, wearing his navy LinkWe polo and welcoming you with an open hand." width={1024} height={1536} sizes="(max-width: 700px) 320px, 480px" />
         <span className={styles.rexSpeech} aria-hidden><Sparkles size={17} /> Let’s build something.</span>
         <span className={styles.rexNameBadge} aria-hidden><span /> YOUR NEXT BIG ADVANTAGE</span>
       </div>

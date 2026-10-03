@@ -18,7 +18,6 @@ export default async function ChatPage() {
   return (
     <div className="flex flex-col pb-mobile-public lg:pb-0" style={{ height: "100dvh" }}>
       <PublicNav
-        logoVariant="ai"
         user={session ? { name: session.fullName ?? "Account", href: dashboardHref! } : null}
         dashboardHref={dashboardHref ?? undefined}
       />

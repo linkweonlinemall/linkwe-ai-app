@@ -12,6 +12,7 @@ import RouteScrollManager from "@/components/layout/RouteScrollManager";
 import AppStartupSplash from "@/components/layout/AppStartupSplash";
 import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
 import OneSignalProvider from "@/components/notifications/OneSignalProvider";
+import startupImages from "@/lib/branding-startup-images.json";
 
 import "./globals.css";
 
@@ -32,16 +33,17 @@ export const metadata: Metadata = {
   authors: [{ name: "LinkWe Online Directory" }],
   creator: "LinkWe Online Directory",
   metadataBase: new URL("https://www.linkweonlinemall.com"),
-  manifest: "/manifest.json",
+  manifest: "/manifest.json?v=branding-v2",
   icons: {
-    icon: [{ url: "/favicon-48x48.png", sizes: "48x48", type: "image/png" }],
-    shortcut: "/favicon-48x48.png",
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+    icon: [{ url: "/branding/v2/favicon-48.png", sizes: "48x48", type: "image/png" }],
+    shortcut: "/branding/v2/favicon-48.png",
+    apple: [{ url: "/branding/v2/apple-180.png", sizes: "180x180", type: "image/png" }],
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "LinkWe Online Mall",
+    startupImage: startupImages,
   },
   formatDetection: {
     telephone: false,
@@ -56,7 +58,7 @@ export const metadata: Metadata = {
       "We People. We Business. We Marketplace. Shop local vendors, services, stores and events across Trinidad & Tobago.",
     images: [
       {
-        url: "/linkwe-social-share.png",
+        url: "/branding/v2/social-1200x630.png",
         width: 1200,
         height: 630,
         alt: "LinkWe Online Mall",
@@ -67,7 +69,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "LinkWe — We People. We Business. We Marketplace.",
     description: "We People. We Business. We Marketplace. Discover local products, services, stores and events across Trinidad & Tobago.",
-    images: ["/linkwe-social-share.png"],
+    images: ["/branding/v2/social-1200x630.png"],
   },
 };
 
@@ -83,8 +85,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${sora.variable} h-full antialiased`}>
       <head>
-        <link rel="preload" as="image" href="/linkwe-startup-splash.jpg" media="(max-width: 639px)" fetchPriority="high" />
-        <link rel="preload" as="image" href="/linkwe-startup-splash-desktop.jpg" media="(min-width: 640px)" fetchPriority="high" />
+        <link rel="preload" as="image" href="/branding/v2/splash-portrait.jpg" media="(max-width: 639px)" fetchPriority="high" />
+        <link rel="preload" as="image" href="/branding/v2/splash-landscape.jpg" media="(min-width: 640px)" fetchPriority="high" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -99,7 +101,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         <AppStartupSplash />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "Organization", name: "LinkWe", url: "https://www.linkweonlinemall.com", logo: "https://www.linkweonlinemall.com/linkwe-logo-mark-on-light.png", slogan: "We People. We Business. We Marketplace.", description: "Trinidad & Tobago's marketplace for local products, services, stores and events." }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "Organization", name: "LinkWe", url: "https://www.linkweonlinemall.com", logo: "https://www.linkweonlinemall.com/branding/v2/mark-192.png", slogan: "We People. We Business. We Marketplace.", description: "Trinidad & Tobago's marketplace for local products, services, stores and events." }) }} />
         <ServiceWorkerRegistration />
         <OneSignalProvider />
         <RouteScrollManager />

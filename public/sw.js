@@ -1,4 +1,4 @@
-const CACHE_NAME = "linkwe-v9";
+const CACHE_NAME = "linkwe-v10-branding-v2";
 const OFFLINE_URL = "/offline";
 // Development chunks reuse URLs: caching them mixes old styles with new markup.
 const IS_LOCAL_PREVIEW = ["localhost", "127.0.0.1", "[::1]"].includes(self.location.hostname);
@@ -11,12 +11,15 @@ if (!IS_LOCAL_PREVIEW) {
 const STATIC_ASSETS = [
   "/offline",
   "/manifest.json",
-  "/linkwe-logo-mark-on-dark.png",
-  "/linkwe-startup-splash.jpg",
-  "/linkwe-startup-splash-desktop.jpg",
-  "/linkwe-pwa-192-v3.png",
-  "/linkwe-pwa-512-v3.png",
-  "/linkwe-notification-badge.png",
+  "/branding/v2/mark-192.png",
+  "/branding/v2/splash-portrait.jpg",
+  "/branding/v2/splash-landscape.jpg",
+  "/branding/v2/app-192.png",
+  "/branding/v2/app-512.png",
+  "/branding/v2/maskable-512.png",
+  "/branding/v2/mark-256.png",
+  "/branding/v2/apple-180.png",
+  "/branding/v2/badge-72.png",
 ];
 
 // Install — cache static assets
@@ -115,7 +118,8 @@ self.addEventListener("fetch", (event) => {
         // Cache successful responses for static assets
         if (
           response.ok &&
-          (event.request.url.includes("/icon-") ||
+          (url.pathname.startsWith("/branding/v2/") ||
+            event.request.url.includes("/icon-") ||
             event.request.url.includes("/manifest.json"))
         ) {
           const responseClone = response.clone();

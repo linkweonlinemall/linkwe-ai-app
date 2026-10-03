@@ -17,7 +17,7 @@ export default function VendorDashboardSidebar(props: VendorDashboardSidebarProp
   const pathname = usePathname() ?? "";
   const live = props.storeStatus === "ACTIVE" && props.idVerificationStatus === "APPROVED";
   return <aside className={s.sidebar}>
-    <Link href="/" className={s.brand} aria-label="LinkWe homepage"><NextImage src="/linkwe-logo-mark-on-dark.png" alt="" width={43} height={43} unoptimized/><span>Link<span>We</span><small>VENDOR WORKSPACE</small></span></Link>
+    <Link href="/" className={s.brand} aria-label="LinkWe homepage"><NextImage src="/branding/v2/mark-192.png" alt="" width={43} height={43} unoptimized/><span><small>VENDOR WORKSPACE</small></span></Link>
     <Link href="/dashboard/vendor/store/edit" className={s.sidebarStore} title={`Edit ${props.storeName}`}>
       <span className={s.storeAvatar}>{props.storeLogoUrl ? <NextImage src={props.storeLogoUrl} alt="" width={38} height={38} unoptimized/> : props.storeName.slice(0, 1)}</span>
       <span className={s.sidebarStoreText}><strong>{props.storeName}</strong><small><i data-live={live}/>{live ? "Live on LinkWe" : props.storeStatus === "PENDING_APPROVAL" ? "Awaiting store approval" : "Setup in progress"}</small></span>

@@ -1,0 +1,587 @@
+{
+  "source": "public/branding/approved-logo.png",
+  "sha256": "c08d5eda9996623d82efd78f7b8e460499c02e4bf3402852a7a3392b6390e571",
+  "metadata": {
+    "width": 1254,
+    "height": 1254,
+    "hasAlpha": true
+  },
+  "inventory": [
+    {
+      "file": "public/branding/v2/mark-64.png",
+      "width": 64,
+      "height": 64,
+      "artworkSize": 64,
+      "background": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "alpha": 0
+      }
+    },
+    {
+      "file": "public/branding/v2/mark-96.png",
+      "width": 96,
+      "height": 96,
+      "artworkSize": 96,
+      "background": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "alpha": 0
+      }
+    },
+    {
+      "file": "public/branding/v2/mark-128.png",
+      "width": 128,
+      "height": 128,
+      "artworkSize": 128,
+      "background": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "alpha": 0
+      }
+    },
+    {
+      "file": "public/branding/v2/mark-192.png",
+      "width": 192,
+      "height": 192,
+      "artworkSize": 192,
+      "background": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "alpha": 0
+      }
+    },
+    {
+      "file": "public/branding/v2/mark-256.png",
+      "width": 256,
+      "height": 256,
+      "artworkSize": 256,
+      "background": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "alpha": 0
+      }
+    },
+    {
+      "file": "public/branding/v2/mark-512.png",
+      "width": 512,
+      "height": 512,
+      "artworkSize": 512,
+      "background": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "alpha": 0
+      }
+    },
+    {
+      "file": "public/branding/v2/mark-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "artworkSize": 1024,
+      "background": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "alpha": 0
+      }
+    },
+    {
+      "file": "public/branding/v2/favicon-16.png",
+      "width": 16,
+      "height": 16,
+      "artworkSize": 16,
+      "background": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "alpha": 0
+      }
+    },
+    {
+      "file": "public/branding/v2/favicon-32.png",
+      "width": 32,
+      "height": 32,
+      "artworkSize": 32,
+      "background": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "alpha": 0
+      }
+    },
+    {
+      "file": "public/branding/v2/favicon-48.png",
+      "width": 48,
+      "height": 48,
+      "artworkSize": 48,
+      "background": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "alpha": 0
+      }
+    },
+    {
+      "file": "public/branding/v2/favicon-64.png",
+      "width": 64,
+      "height": 64,
+      "artworkSize": 64,
+      "background": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "alpha": 0
+      }
+    },
+    {
+      "file": "public/branding/v2/favicon-128.png",
+      "width": 128,
+      "height": 128,
+      "artworkSize": 128,
+      "background": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "alpha": 0
+      }
+    },
+    {
+      "file": "public/branding/v2/favicon-256.png",
+      "width": 256,
+      "height": 256,
+      "artworkSize": 256,
+      "background": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "alpha": 0
+      }
+    },
+    {
+      "file": "public/branding/v2/app-72.png",
+      "width": 72,
+      "height": 72,
+      "artworkSize": 66,
+      "background": "#ffffff"
+    },
+    {
+      "file": "public/branding/v2/app-96.png",
+      "width": 96,
+      "height": 96,
+      "artworkSize": 88,
+      "background": "#ffffff"
+    },
+    {
+      "file": "public/branding/v2/app-128.png",
+      "width": 128,
+      "height": 128,
+      "artworkSize": 118,
+      "background": "#ffffff"
+    },
+    {
+      "file": "public/branding/v2/app-144.png",
+      "width": 144,
+      "height": 144,
+      "artworkSize": 132,
+      "background": "#ffffff"
+    },
+    {
+      "file": "public/branding/v2/app-152.png",
+      "width": 152,
+      "height": 152,
+      "artworkSize": 140,
+      "background": "#ffffff"
+    },
+    {
+      "file": "public/branding/v2/app-192.png",
+      "width": 192,
+      "height": 192,
+      "artworkSize": 177,
+      "background": "#ffffff"
+    },
+    {
+      "file": "public/branding/v2/app-384.png",
+      "width": 384,
+      "height": 384,
+      "artworkSize": 353,
+      "background": "#ffffff"
+    },
+    {
+      "file": "public/branding/v2/app-512.png",
+      "width": 512,
+      "height": 512,
+      "artworkSize": 471,
+      "background": "#ffffff"
+    },
+    {
+      "file": "public/branding/v2/maskable-192.png",
+      "width": 192,
+      "height": 192,
+      "artworkSize": 138,
+      "background": "#ffffff"
+    },
+    {
+      "file": "public/branding/v2/maskable-512.png",
+      "width": 512,
+      "height": 512,
+      "artworkSize": 369,
+      "background": "#ffffff"
+    },
+    {
+      "file": "public/branding/v2/apple-152.png",
+      "width": 152,
+      "height": 152,
+      "artworkSize": 137,
+      "background": "#ffffff"
+    },
+    {
+      "file": "public/branding/v2/apple-167.png",
+      "width": 167,
+      "height": 167,
+      "artworkSize": 150,
+      "background": "#ffffff"
+    },
+    {
+      "file": "public/branding/v2/apple-180.png",
+      "width": 180,
+      "height": 180,
+      "artworkSize": 162,
+      "background": "#ffffff"
+    },
+    {
+      "file": "public/branding/v2/badge-72.png",
+      "width": 72,
+      "height": 72,
+      "treatment": "White approved silhouette; original alpha preserved."
+    },
+    {
+      "file": "public/branding/v2/badge-96.png",
+      "width": 96,
+      "height": 96,
+      "treatment": "White approved silhouette; original alpha preserved."
+    },
+    {
+      "file": "public/branding/v2/social-1200x630.png",
+      "width": 1200,
+      "height": 630,
+      "artworkSize": 530,
+      "background": "#f3f7fa"
+    },
+    {
+      "file": "public/branding/v2/splash-portrait.jpg",
+      "width": 1080,
+      "height": 1920,
+      "artworkSize": 600,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/splash-landscape.jpg",
+      "width": 1920,
+      "height": 1080,
+      "artworkSize": 640,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-640x1136.png",
+      "width": 640,
+      "height": 1136,
+      "artworkSize": 294,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-1136x640.png",
+      "width": 1136,
+      "height": 640,
+      "artworkSize": 294,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-750x1334.png",
+      "width": 750,
+      "height": 1334,
+      "artworkSize": 345,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-1334x750.png",
+      "width": 1334,
+      "height": 750,
+      "artworkSize": 345,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-1242x2208.png",
+      "width": 1242,
+      "height": 2208,
+      "artworkSize": 571,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-2208x1242.png",
+      "width": 2208,
+      "height": 1242,
+      "artworkSize": 571,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-1125x2436.png",
+      "width": 1125,
+      "height": 2436,
+      "artworkSize": 518,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-2436x1125.png",
+      "width": 2436,
+      "height": 1125,
+      "artworkSize": 518,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-828x1792.png",
+      "width": 828,
+      "height": 1792,
+      "artworkSize": 381,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-1792x828.png",
+      "width": 1792,
+      "height": 828,
+      "artworkSize": 381,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-1242x2688.png",
+      "width": 1242,
+      "height": 2688,
+      "artworkSize": 571,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-2688x1242.png",
+      "width": 2688,
+      "height": 1242,
+      "artworkSize": 571,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-1170x2532.png",
+      "width": 1170,
+      "height": 2532,
+      "artworkSize": 538,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-2532x1170.png",
+      "width": 2532,
+      "height": 1170,
+      "artworkSize": 538,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-1179x2556.png",
+      "width": 1179,
+      "height": 2556,
+      "artworkSize": 542,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-2556x1179.png",
+      "width": 2556,
+      "height": 1179,
+      "artworkSize": 542,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-1206x2622.png",
+      "width": 1206,
+      "height": 2622,
+      "artworkSize": 555,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-2622x1206.png",
+      "width": 2622,
+      "height": 1206,
+      "artworkSize": 555,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-1284x2778.png",
+      "width": 1284,
+      "height": 2778,
+      "artworkSize": 591,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-2778x1284.png",
+      "width": 2778,
+      "height": 1284,
+      "artworkSize": 591,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-1290x2796.png",
+      "width": 1290,
+      "height": 2796,
+      "artworkSize": 593,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-2796x1290.png",
+      "width": 2796,
+      "height": 1290,
+      "artworkSize": 593,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-1320x2868.png",
+      "width": 1320,
+      "height": 2868,
+      "artworkSize": 607,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-2868x1320.png",
+      "width": 2868,
+      "height": 1320,
+      "artworkSize": 607,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-1536x2048.png",
+      "width": 1536,
+      "height": 2048,
+      "artworkSize": 707,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-2048x1536.png",
+      "width": 2048,
+      "height": 1536,
+      "artworkSize": 707,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-1620x2160.png",
+      "width": 1620,
+      "height": 2160,
+      "artworkSize": 745,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-2160x1620.png",
+      "width": 2160,
+      "height": 1620,
+      "artworkSize": 745,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-1640x2360.png",
+      "width": 1640,
+      "height": 2360,
+      "artworkSize": 754,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-2360x1640.png",
+      "width": 2360,
+      "height": 1640,
+      "artworkSize": 754,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-1668x2224.png",
+      "width": 1668,
+      "height": 2224,
+      "artworkSize": 767,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-2224x1668.png",
+      "width": 2224,
+      "height": 1668,
+      "artworkSize": 767,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-1668x2388.png",
+      "width": 1668,
+      "height": 2388,
+      "artworkSize": 767,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-2388x1668.png",
+      "width": 2388,
+      "height": 1668,
+      "artworkSize": 767,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-2048x2732.png",
+      "width": 2048,
+      "height": 2732,
+      "artworkSize": 942,
+      "background": "#020b22"
+    },
+    {
+      "file": "public/branding/v2/startup-2732x2048.png",
+      "width": 2732,
+      "height": 2048,
+      "artworkSize": 942,
+      "background": "#020b22"
+    }
+  ],
+  "aliases": {
+    "icon-128x128.png": "app-128.png",
+    "icon-144x144.png": "app-144.png",
+    "icon-152x152.png": "app-152.png",
+    "icon-192x192.png": "app-192.png",
+    "icon-384x384.png": "app-384.png",
+    "icon-512x512.png": "app-512.png",
+    "icon-72x72.png": "app-72.png",
+    "icon-96x96.png": "app-96.png",
+    "linkwe-favicon-circle-master.png": "mark-512.png",
+    "linkwe-logo-mark-on-dark.png": "mark-512.png",
+    "linkwe-logo-mark-on-light.png": "mark-512.png",
+    "linkwe-logo-mobile-on-dark.png": "mark-512.png",
+    "linkwe-logo-mobile-on-light.png": "mark-512.png",
+    "linkwe-logo-on-dark.png": "mark-512.png",
+    "linkwe-logo-on-light.png": "mark-512.png",
+    "linkwe-new-log-dark.png": "mark-512.png",
+    "linkwe-new-logo-light-2.png": "mark-512.png",
+    "linkwe-pwa-128-v2.png": "app-128.png",
+    "linkwe-pwa-128-v3.png": "app-128.png",
+    "linkwe-pwa-144-v2.png": "app-144.png",
+    "linkwe-pwa-144-v3.png": "app-144.png",
+    "linkwe-pwa-152-v2.png": "app-152.png",
+    "linkwe-pwa-152-v3.png": "app-152.png",
+    "linkwe-pwa-192-v2.png": "app-192.png",
+    "linkwe-pwa-192-v3.png": "app-192.png",
+    "linkwe-pwa-384-v2.png": "app-384.png",
+    "linkwe-pwa-384-v3.png": "app-384.png",
+    "linkwe-pwa-512-v2.png": "app-512.png",
+    "linkwe-pwa-512-v3.png": "app-512.png",
+    "linkwe-pwa-72-v2.png": "app-72.png",
+    "linkwe-pwa-72-v3.png": "app-72.png",
+    "linkwe-pwa-96-v2.png": "app-96.png",
+    "linkwe-pwa-96-v3.png": "app-96.png",
+    "linkwe-loader-mark-v1.png": "mark-256.png",
+    "linkwe-app-icon.png": "app-512.png",
+    "linkwe-notification-badge.png": "badge-72.png",
+    "linkwe-social-share.png": "social-1200x630.png",
+    "linkwe-startup-splash.jpg": "splash-portrait.jpg",
+    "linkwe-startup-splash-desktop.jpg": "splash-landscape.jpg",
+    "apple-touch-icon.png": "apple-180.png",
+    "favicon-32x32.png": "favicon-32.png",
+    "favicon-48x48.png": "favicon-48.png"
+  }
+}

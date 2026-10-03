@@ -117,7 +117,7 @@ export default async function Home() {
     <div className={styles.home}>
       <a className={styles.skipLink} href="#home-content">Skip to content</a>
       <div className={styles.announcement}><div className={styles.container}><span><span className={styles.flag} aria-hidden /> THE ISLANDS. CONNECTED.</span><p>We people. We business. <strong>We marketplace.</strong></p><Link href="/get-app">Take LinkWe with you <ArrowUpRight size={12} aria-hidden /></Link></div></div>
-      <PublicNav appearance="home" logoVariant="wordmark" user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null} dashboardHref={continueHref ?? undefined} unreadCount={unreadCount} />
+      <PublicNav appearance="home" user={user ? { name: user.fullName ?? "Account", href: continueHref! } : null} dashboardHref={continueHref ?? undefined} unreadCount={unreadCount} />
       <PublicBrowseBar home />
 
       <main id="home-content" tabIndex={-1}>

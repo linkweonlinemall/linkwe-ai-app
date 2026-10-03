@@ -29,11 +29,11 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#F5F5F5] px-4 text-center">
       <Image
-        src="/linkwe-logo-on-dark.png"
+        src="/branding/v2/mark-192.png"
         alt="LinkWe"
-        width={120}
-        height={40}
-        style={{ width: "auto", height: "40px" }}
+        width={64}
+        height={64}
+        style={{ width: "auto", height: "64px" }}
         className="mb-8"
       />
       <p className="mb-4 text-sm font-black uppercase tracking-[0.2em] text-[#D4450A]">

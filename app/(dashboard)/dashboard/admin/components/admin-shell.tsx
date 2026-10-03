@@ -147,17 +147,14 @@ export default function AdminShell({
         >
           <Menu size={20} />
         </button>
-        <Link className="admin-brand" href="/dashboard/admin">
+        <Link className="admin-brand" href="/dashboard/admin" aria-label="LinkWe management suite">
           <Image
-            src="/linkwe-logo-mark-on-light.png"
+            src="/branding/v2/mark-192.png"
             alt=""
             width={45}
             height={45}
           />
           <div>
-            <strong>
-              LinkWe<span style={{ color: "#d44913" }}>.</span>
-            </strong>
             <small>MANAGEMENT SUITE</small>
           </div>
         </Link>

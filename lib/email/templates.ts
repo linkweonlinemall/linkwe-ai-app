@@ -18,7 +18,7 @@ function wrap(content: string, preheader = ""): string {
           <!-- Header -->
           <tr>
             <td style="background:linear-gradient(135deg,#1C1C1A,#302a27);border-radius:18px 18px 0 0;padding:24px 32px;text-align:center;">
-              <img src="${BASE_URL}/linkwe-logo-on-dark.png" width="150" height="48" alt="LinkWe" style="display:block;margin:0 auto;max-width:150px;max-height:48px;object-fit:contain;" />
+              <img src="${BASE_URL}/branding/v2/mark-192.png" width="64" height="64" alt="LinkWe" style="display:block;margin:0 auto;width:64px;height:64px;object-fit:contain;" />
               <p style="margin:9px 0 0;color:#d6d3d1;font-size:10px;letter-spacing:1px;text-transform:uppercase;">We People. We Business. We Marketplace.</p>
             </td>
           </tr>

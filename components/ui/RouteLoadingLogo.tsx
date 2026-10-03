@@ -5,7 +5,7 @@ export default function RouteLoadingLogo({ label = "Loading" }: { label?: string
         <span className="absolute inset-1 rounded-full bg-gradient-to-br from-cyan-300/25 via-amber-300/20 to-rose-400/25 blur-2xl" aria-hidden />
         {/* Transparent logo mark: route changes stay light instead of replaying the startup artwork. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/linkwe-loader-mark-v1.png" alt="" className="lw-loader-mark relative z-10 size-28 object-contain drop-shadow-[0_16px_26px_rgba(0,42,80,0.22)] sm:size-32" />
+        <img src="/branding/v2/mark-256.png" alt="" className="lw-loader-mark relative z-10 size-28 object-contain drop-shadow-[0_16px_26px_rgba(0,42,80,0.22)] sm:size-32" />
         <span className="lw-route-loader-ring absolute inset-0 rounded-full border border-[#D4450A]/15" aria-hidden />
       </div>
       <p className="mt-5 text-sm font-bold tracking-wide text-[#1C1C1A]">{label.endsWith("…") ? label : `${label}…`}</p>
