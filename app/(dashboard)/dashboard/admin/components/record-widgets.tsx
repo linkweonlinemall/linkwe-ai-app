@@ -1,4 +1,5 @@
 "use client";
+import StructuredFields from "@/components/admin/StructuredFields";
 /* Staff image previews accept vendor-hosted URLs before saving; do not proxy them through the public image optimizer. */
 /* eslint-disable @next/next/no-img-element */
 import { useId, useState } from "react";
@@ -556,90 +557,8 @@ export function QuestionsEditor({
     </div>
   );
 }
-export function PropertiesEditor({
-  value,
-  onChange,
-}: {
-  value: unknown;
-  onChange: (v: unknown) => void;
-}) {
-  const pairs =
-    value && typeof value === "object" && !Array.isArray(value)
-      ? Object.entries(value)
-      : [];
-  const [key, setKey] = useState("");
-  return (
-    <div className="space-y-2">
-      {pairs.map(([key, val]) => (
-        <div className="admin-inline-fields" key={key}>
-          <span className="min-w-20 text-xs">{humanLabel(key)}</span>
-          {typeof val === "boolean" ? (
-            <input
-              type="checkbox"
-              checked={val}
-              aria-label={key}
-              onChange={(e) =>
-                onChange({ ...(value as object), [key]: e.target.checked })
-              }
-            />
-          ) : typeof val === "object" && val !== null ? (
-            <span className="admin-muted flex-1">
-              Structured information retained
-            </span>
-          ) : (
-            <input
-              className="admin-input"
-              aria-label={key}
-              type={typeof val === "number" ? "number" : "text"}
-              value={String(val ?? "")}
-              onChange={(e) =>
-                onChange({
-                  ...(value as object),
-                  [key]:
-                    typeof val === "number"
-                      ? Number(e.target.value)
-                      : e.target.value,
-                })
-              }
-            />
-          )}
-          <button
-            type="button"
-            className="admin-icon-button"
-            aria-label={`Remove ${key}`}
-            onClick={() =>
-              onChange(Object.fromEntries(pairs.filter(([k]) => k !== key)))
-            }
-          >
-            <X size={14} />
-          </button>
-        </div>
-      ))}
-      <div className="admin-inline-fields">
-        <input
-          className="admin-input"
-          placeholder="Property name, e.g. colour"
-          aria-label="New property name"
-          value={key}
-          onChange={(e) => setKey(e.target.value)}
-        />
-        <button
-          type="button"
-          className="admin-button"
-          disabled={!key.trim() || pairs.some(([k]) => k === key.trim())}
-          onClick={() => {
-            if (["__proto__", "constructor", "prototype"].includes(key.trim()))
-              return;
-            onChange({ ...(value as object), [key.trim()]: "" });
-            setKey("");
-          }}
-        >
-          <Plus size={15} />
-          Add property
-        </button>
-      </div>
-    </div>
-  );
+export function PropertiesEditor({ value, onChange }: { value: unknown; onChange: (value: unknown) => void }) {
+  return <StructuredFields value={value} onChange={onChange}/>;
 }
 export function BankEditor({
   value,

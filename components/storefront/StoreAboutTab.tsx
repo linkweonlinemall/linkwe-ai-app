@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { richTextHtml } from "@/lib/content/rich-text";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -485,12 +486,8 @@ export default function StoreAboutTab({
               About this store
             </p>
             {store.description?.trim() ? (
-              <p
-                className="whitespace-pre-wrap text-[13px] leading-[1.7]"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                {store.description}
-              </p>
+              <div className="tiptap-content text-[13px] leading-[1.7]" style={{ color: "var(--text-secondary)" }} dangerouslySetInnerHTML={{ __html: richTextHtml(store.description) }}/>
+
             ) : (
               <p className="text-[13px] italic text-[var(--text-muted)]">No description added yet</p>
             )}

@@ -1,5 +1,6 @@
 "use client";
 
+import { richTextHtml } from "@/lib/content/rich-text";
 import { useState } from "react";
 
 type Props = {
@@ -18,7 +19,7 @@ export default function ExpandableDescription({ title, description }: Props) {
         className={`tiptap-content overflow-hidden font-sans text-[15px] leading-normal text-gray-700 transition-all ${
           !expanded && isLong ? "max-h-48" : "max-h-none"
         }`}
-        dangerouslySetInnerHTML={{ __html: description }}
+        dangerouslySetInnerHTML={{ __html: richTextHtml(description) }}
       />
       {isLong ? (
         <button

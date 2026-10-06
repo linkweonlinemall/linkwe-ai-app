@@ -41,6 +41,9 @@ import {
 import { TT_REGIONS } from "@/lib/regions/tt-regions";
 import { SUBSCRIPTION_INTERVAL_KEYS } from "@/lib/finance/subscription-interval";
 import RichTextEditor from "@/components/ui/RichTextEditor";
+import SearchableSelect from "@/components/admin/SearchableSelect";
+import { useStudioRex } from "@/components/admin/rex/StudioRexProvider";
+import { objectParameters, validateStudioPatch, studioReviewValue, redactStudioSecrets } from "@/lib/admin/studio-rex";
 import {
   MediaEditor,
   StringListEditor,
@@ -246,7 +249,7 @@ export default function RecordEditor({
           () => document.getElementById("admin-save-errors")?.focus(),
           30,
         );
-        return;
+        return result;
       }
       setBaseline({ ...values });
       setSaved(true);
@@ -254,14 +257,61 @@ export default function RecordEditor({
       if (isNew && result.id)
         router.replace(`/dashboard/admin/records/${kind}/${result.id}`);
       else router.refresh();
+      return result;
     } catch {
       setError(
         "The save did not complete. Your changes are still here. Please try again.",
       );
+      return { error: "The save did not complete. Your changes are still here." };
     } finally {
       setBusy(false);
     }
   }
+  const rexWorking = useStudioRex({
+    key: `record:${kind}:${id}`, title: `${isNew ? "Create" : "Edit"} ${kind}`,
+    state: { kind, id, values: redactStudioSecrets(values), changed, errors, error, fields: workspace.fields.map(field => ({ name: field.name, type: field.type, required: field.required, list: field.list, readonly: field.readonly, options: field.options, label: humanLabel(field.name), help: FIELD_HELP[field.name] })), detailFields: workspace.detailFields, users: workspace.users, stores: workspace.stores, sections: sections.map(section => ({ id: section.id, title: section.title })), publicHref: workspace.publicHref },
+    busy: busy || uploads > 0,
+    canLeave: () => !dirty,
+    actions: [
+      { name: "record_edit", description: "Set any editable fields in the current form, including descriptions, photos, variations, hours, nested details and publication controls. Changes are staged, not saved. Use complete arrays retaining existing IDs. Dates use the form's local time and priceMinor is displayed in TTD. Passwords must be entered privately in the form.", parameters: objectParameters({ patch: { type: "object" } }, ["patch"]) },
+      { name: "record_save", description: "Review and save/create the current record using the form's own validation. Staged edits must already be applied. Shows an exact review before saving.", parameters: objectParameters() },
+      { name: "record_reset", description: "Review and discard unsaved form edits, restoring the last saved values.", parameters: objectParameters() },
+      { name: "record_focus", description: "Open a form section or focus a particular field, including a private credential field the user needs to enter.", parameters: objectParameters({ field: { type: "string" }, section: { type: "string" } }) },
+      { name: "record_choose_photos", description: "Open a photo field's device file picker so the user can select files. Images must come from their selection. Stop and wait afterward.", parameters: objectParameters({ field: { type: "string", enum: ["images", "logoUrl", "coverPhotoUrl", "imageUrl", "storeGallery", "variants"] }, index: { type: "integer", minimum: 0, description: "For variations, the zero-based variation photo picker index." } }, ["field"]) },
+      { name: "record_preview", description: "Open the saved record on the marketplace when a public preview link is available.", parameters: objectParameters() },
+    ],
+    review: ({ action }) => {
+      if (!["record_save", "record_reset"].includes(action)) return null;
+      const keys = isNew && action === "record_save" ? Object.keys(values).filter(key => values[key] !== "" && values[key] != null) : changed;
+      return { title: action === "record_reset" ? "Discard these unsaved edits?" : isNew ? `Create this ${kind}?` : `Save changes to ${workspace.title}?`, description: action === "record_reset" ? "The fields below will return to their last saved values." : "Review the current form details. Publication and access settings shown here will take effect when saved.", fields: keys.map(key => ({ label: humanLabel(key), value: /password|bankDetails|accountNumber/i.test(key) ? "Private value entered in the form" : studioReviewValue(action === "record_reset" ? baseline[key] : values[key]) })) };
+    },
+    run: async ({ action, args }) => {
+      if (action === "record_edit") {
+        const patch = validateStudioPatch(args.patch, workspace.fields.filter(field => !field.readonly && field.type !== "Password").map(field => field.name));
+        Object.entries(patch).forEach(([key, value]) => update(key, value));
+        return { message: `Updated ${Object.keys(patch).map(humanLabel).join(", ")} in the form. Changes are not saved yet.` };
+      }
+      if (action === "record_save") {
+        if (!isNew && !dirty) return { message: "This record is already up to date." };
+        const result = await save();
+        if (!result || result.error) throw new Error(result?.error || "Wait for the current save or upload to finish.");
+        return { message: isNew ? `${humanLabel(kind)} created successfully.` : "Your changes were saved.", ...(isNew && result.id ? { waitFor: `record:${kind}:${result.id}` } : {}) };
+      }
+      if (action === "record_reset") { setValues({ ...baseline }); setErrors({}); setError(""); setResetKey(key => key + 1); return { message: "Restored the last saved form values." }; }
+      if (action === "record_preview") {
+        if (!workspace.publicHref) throw new Error("Save this record before opening its marketplace page.");
+        window.open(workspace.publicHref, "_blank", "noopener,noreferrer"); return { message: "Opened the saved marketplace page.", stop: true };
+      }
+      if (action === "record_choose_photos") {
+        const pickers = document.getElementById(`field-wrap-${args.field}`)?.querySelectorAll<HTMLInputElement>('input[type="file"]');
+        const input = pickers?.[Number(args.index) || 0];
+        if (!input) throw new Error("That photo field is not available in this editor."); input.closest(".admin-field")?.scrollIntoView({ behavior: "smooth", block: "center" }); input.click(); return { message: "The photo upload area is ready. Choose your photos there; they will appear in the form after uploading.", stop: true };
+      }
+      const target = args.field ? document.getElementById(`field-wrap-${args.field}`) : document.getElementById(`section-${args.section}`);
+      if (!target) throw new Error("Choose a visible field or section."); target.scrollIntoView({ behavior: "smooth", block: "center" }); target.querySelector<HTMLElement>('input,textarea,select,[contenteditable="true"]')?.focus();
+      return { message: `Opened ${humanLabel(String(args.field || args.section))}.`, stop: true };
+    },
+  });
   function fieldControl(field: RecordField, nested = false) {
     const key = field.name,
       val = values[key];
@@ -411,22 +461,7 @@ export default function RecordEditor({
     if (key === "ownerId" || key === "storeId")
       return (
         <>
-          <select {...common}>
-            <option value="">
-              Choose {key === "ownerId" ? "an owner" : "a store"}
-            </option>
-            {key === "ownerId"
-              ? workspace.users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.fullName} · {u.email}
-                  </option>
-                ))
-              : workspace.stores.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-          </select>
+          <SearchableSelect label={humanLabel(key)} value={String(val || "")} disabled={busy || !!field.readonly || rexWorking} onChange={value => update(key, value)} options={key === "ownerId" ? workspace.users.map(user => ({ value: user.id, label: user.fullName, detail: user.email })) : workspace.stores.map(store => ({ value: store.id, label: store.name }))} placeholder={key === "ownerId" ? "Find an owner…" : "Find a store…"}/>
           {key === "ownerId" && (
             <p className="admin-field-help">
               Only active people without a store are listed.{" "}
@@ -512,7 +547,10 @@ export default function RecordEditor({
         <RichTextEditor
           key={`${key}-${resetKey}`}
           name={key}
-          defaultValue={String(val || "")}
+          id={`field-${key}`}
+          label={humanLabel(key)}
+          value={String(val || "")}
+          disabled={busy || uploads > 0 || rexWorking}
           maxLength={30000}
           onChange={(html) => update(key, html)}
           placeholder={`Tell customers about this ${kind}…`}
@@ -625,10 +663,10 @@ export default function RecordEditor({
         noValidate
         onSubmit={(e) => {
           e.preventDefault();
-          void save();
+          if (!rexWorking) void save();
         }}
       >
-        <fieldset disabled={busy || uploads > 0} className="min-w-0">
+        <fieldset disabled={busy || uploads > 0 || rexWorking} className="min-w-0">
           {error && (
             <div
               id="admin-save-errors"
@@ -865,7 +903,7 @@ export default function RecordEditor({
           <div className="admin-savebar-actions">
             <button
               type="button"
-              disabled={!dirty || busy || !!uploads}
+              disabled={!dirty || busy || !!uploads || rexWorking}
               className="admin-button"
               onClick={() => {
                 if (
@@ -883,7 +921,7 @@ export default function RecordEditor({
             </button>
             <button
               type="submit"
-              disabled={busy || !!uploads || (!isNew && !dirty)}
+              disabled={busy || !!uploads || rexWorking || (!isNew && !dirty)}
               className="admin-button admin-button-primary"
             >
               <Save size={16} />

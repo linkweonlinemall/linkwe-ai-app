@@ -28,6 +28,7 @@ import {
   type AdminSearchResult,
 } from "@/app/actions/admin-search";
 import AdminDialog from "./admin-dialog";
+import StudioRexProvider from "@/components/admin/rex/StudioRexProvider";
 import "./admin-workspace.css";
 
 type Counts = Record<"verification" | "payouts" | "orders", number>;
@@ -227,7 +228,7 @@ export default function AdminShell({
         </Link>
       </aside>
       <main id="admin-main" className="admin-main" tabIndex={-1}>
-        <div className="admin-content">{children}</div>
+        <div className="admin-content"><StudioRexProvider>{children}</StudioRexProvider></div>
       </main>
       <nav className="admin-mobilebar" aria-label="Quick navigation">
         <Link

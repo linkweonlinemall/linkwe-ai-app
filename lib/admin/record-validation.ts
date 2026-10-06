@@ -1,3 +1,4 @@
+import { cleanRichText } from "@/lib/content/rich-text";
 import { mapSubscriptionInterval } from "@/lib/finance/subscription-interval";
 import { validateSubscriptionConfiguration } from "@/lib/services/configuration-validation";
 import { humanLabel, type RecordField } from "./record-design";
@@ -59,6 +60,7 @@ export function validateRecordValues(
       else value = date.toISOString();
     } else if (f.type !== "Json" && typeof value !== "string")
       errors[key] = `Enter ${label.toLowerCase()} as text.`;
+    if (key === "description" && typeof value === "string") value = cleanRichText(value);
     if (typeof value === "string" && value.length > 30000)
       errors[key] = "This value is too long.";
     if (value != null && f.options && !f.options.includes(String(value)))

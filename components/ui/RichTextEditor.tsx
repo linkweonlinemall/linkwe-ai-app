@@ -6,10 +6,14 @@ import TextAlign from "@tiptap/extension-text-align";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Props = {
   name: string;
+  id?: string;
+  label?: string;
+  value?: string;
+  disabled?: boolean;
   defaultValue?: string;
   placeholder?: string;
   maxLength?: number;
@@ -35,7 +39,10 @@ function ToolbarButton({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className={`flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold transition-colors ${
+      aria-label={title}
+      aria-pressed={active}
+      onMouseDown={event => event.preventDefault()}
+      className={`flex h-9 w-9 items-center justify-center rounded-lg text-xs font-bold transition-colors ${
         active
           ? "bg-[#D4450A] text-white"
           : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
@@ -48,12 +55,19 @@ function ToolbarButton({
 
 export default function RichTextEditor({
   name,
+  id,
+  label = "Description",
+  value,
+  disabled = false,
   defaultValue = "",
   placeholder = "Write a description...",
   maxLength = 2000,
   onChange,
 }: Props) {
-  const [html, setHtml] = useState(defaultValue);
+  const initial = value ?? defaultValue;
+  const [html, setHtml] = useState(initial);
+  const change = useRef(onChange); change.current = onChange;
+  const asHtml = (text: string) => /<\/?(?:p|br|strong|b|em|i|u|s|ul|ol|li|h[1-6]|blockquote|a)(?:\s[^>]*|\s*\/?)>/i.test(text) ? text : text.split(/\n\s*\n/).map(paragraph => `<p>${paragraph.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("\n", "<br>")}</p>`).join("");
 
   const editor = useEditor({
     extensions: [
@@ -73,10 +87,16 @@ export default function RichTextEditor({
       Placeholder.configure({ placeholder }),
       CharacterCount.configure({ limit: maxLength }),
     ],
-    content: defaultValue,
+    content: asHtml(initial),
+    editable: !disabled,
+    shouldRerenderOnTransaction: true,
     immediatelyRender: false,
     editorProps: {
       attributes: {
+        id: id || `field-${name}`,
+        role: "textbox",
+        "aria-label": label,
+        "aria-multiline": "true",
         class:
           "tiptap tiptap-content min-h-[180px] max-w-none px-4 py-3 text-sm text-zinc-700 focus:outline-none",
       },
@@ -87,15 +107,21 @@ export default function RichTextEditor({
     onUpdate: ({ editor }) => {
       const newHtml = editor.getHTML();
       setHtml(newHtml);
-      onChange?.(newHtml);
+      change.current?.(editor.isEmpty ? "" : newHtml);
     },
   });
 
   useEffect(() => {
-    if (editor && defaultValue && editor.getHTML() !== defaultValue) {
-      editor.commands.setContent(defaultValue, { emitUpdate: false });
+    if (!editor) return;
+    const next = value ?? defaultValue;
+    if (editor.getHTML() !== next && next !== html) {
+      editor.commands.setContent(asHtml(next), { emitUpdate: false });
+      setHtml(next);
     }
-  }, [defaultValue, editor]);
+    // Editor content is controlled by the caller when value/defaultValue changes, not by typing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, defaultValue, editor]);
+  useEffect(() => { editor?.setEditable(!disabled); }, [editor, disabled]);
 
   const charCount = editor?.storage.characterCount?.characters() ?? 0;
 
@@ -103,7 +129,7 @@ export default function RichTextEditor({
     <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 transition-colors focus-within:border-[#D4450A] focus-within:bg-white">
       <input type="hidden" name={name} value={html} />
 
-      <div className="flex flex-wrap items-center gap-0.5 border-b border-zinc-200 bg-white px-2 py-1.5">
+      <fieldset disabled={disabled} aria-label={`${label} formatting`} className="flex min-w-0 flex-wrap items-center gap-0.5 border-b border-zinc-200 bg-white px-2 py-1.5">
         <div className="flex items-center gap-0.5">
           <ToolbarButton
             onClick={() => editor?.chain().focus().toggleBold().run()}
@@ -239,13 +265,13 @@ export default function RichTextEditor({
             <circle cx="11" cy="11" r="2" />
           </svg>
         </ToolbarButton>
-      </div>
+      </fieldset>
 
       <EditorContent editor={editor} />
 
-      <div className="flex items-center justify-between border-t border-zinc-100 px-3 py-1.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-zinc-100 px-3 py-1.5">
         <p className="text-[10px] text-zinc-400">
-          Tip: Use headings and bullet points to make your description easier to read
+          Write naturally. Select text to format it, or use lists to highlight details.
         </p>
         <p
           className={`text-[10px] font-medium ${

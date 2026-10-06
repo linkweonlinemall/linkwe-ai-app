@@ -29,7 +29,7 @@ export default function AdminDialog({
       ref={ref}
       className={`admin-dialog ${drawer ? "admin-drawer" : ""}`}
       aria-label={title}
-      onCancel={onClose}
+      onCancel={event => { event.preventDefault(); onClose(); }}
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}

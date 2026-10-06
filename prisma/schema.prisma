@@ -8,6 +8,73 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// Durable import workspaces. Source rows and photos survive interrupted uploads.
+model ImportBatch {
+  id        String @id @default(cuid())
+  actorId   String
+  kind      String
+  filename  String
+  sheet     String
+  headers   Json
+  mapping   Json
+  storeId   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  rows      ImportRow[]
+  assets    ImportAsset[]
+  changes   ImportChange[]
+  @@index([actorId, createdAt])
+}
+
+model ImportRow {
+  id             String @id @default(cuid())
+  batchId        String
+  batch          ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  number         Int
+  raw            Json
+  values         Json
+  errors         Json
+  state          String @default("ready")
+  recordId       String?
+  createdRecord  Boolean @default(false)
+  createdUserId  String?
+  recordVersion  String?
+  version        Int @default(0)
+  note           String?
+  invitationSentAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  changes        ImportChange[]
+  @@unique([batchId, number])
+  @@index([batchId, state])
+}
+
+model ImportAsset {
+  id        String @id @default(cuid())
+  batchId   String
+  batch     ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  name      String
+  url       String
+  createdAt DateTime @default(now())
+  @@index([batchId])
+}
+
+model ImportChange {
+  id        String @id @default(cuid())
+  batchId   String
+  batch     ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  rowId     String?
+  row       ImportRow? @relation(fields: [rowId], references: [id], onDelete: SetNull)
+  actorId   String
+  action    String
+  summary   String
+  before    Json?
+  after     Json?
+  undone    Boolean @default(false)
+  createdAt DateTime @default(now())
+  @@index([batchId, createdAt])
+}
+
 model User {
   id                     String               @id @default(cuid())
   email                  String               @unique

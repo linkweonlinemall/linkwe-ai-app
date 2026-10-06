@@ -2,6 +2,9 @@
 import Link from "next/link";
 import { useState } from "react";
 import Papa from "papaparse";
+import RichTextEditor from "@/components/ui/RichTextEditor";
+import { useStudioRex } from "@/components/admin/rex/StudioRexProvider";
+import { objectParameters, validateStudioPatch, redactStudioSecrets, studioReviewValue } from "@/lib/admin/studio-rex";
 import {
   ArrowLeft,
   ArrowRight,
@@ -74,10 +77,12 @@ export default function OnboardingStudio({
       setResult(response);
       if (response.ok) toast.success("Vendor setup completed");
       else toast.error("Some rows need attention. Review the results below.");
+      return response;
     } catch {
       setError(
         "The request could not complete. Check the records before retrying.",
       );
+      throw new Error("The setup could not complete. Check the records before retrying.");
     } finally {
       setBusy(false);
     }
@@ -117,6 +122,26 @@ export default function OnboardingStudio({
     setError("");
     setStep((s) => s + 1);
   }
+  const rexWorking = useStudioRex({
+    key: "vendor_setup", title: "Guided vendor setup", busy,
+    state: { step: steps[step].name, values: redactStudioSecrets(values), result: result ? { createdUsers: result.createdUsers, createdStores: result.createdStores, createdItems: result.createdItems, errors: result.errors, accounts: result.accounts, hasPrivateCredentials: result.credentials.length > 0 } : null, fields: ["fullName", "email", "phone", "storeName", "storeSlug", "categoryId", "region", "storeDescription", "itemType", "itemName", "itemDescription", "price", "stock"], categories: STORE_CATEGORIES, regions: TT_REGIONS },
+    actions: [
+      { name: "vendor_setup_edit", description: "Fill any guided vendor setup details. Store and offering are always drafts. Optional first offering is product or quote-based service. A temporary password can be entered privately or generated securely by the form.", parameters: objectParameters({ patch: { type: "object" } }, ["patch"]) },
+      { name: "vendor_setup_step", description: "Show Owner, Store, First offering or Review in vendor setup.", parameters: objectParameters({ step: { type: "integer", minimum: 0, maximum: 3 } }, ["step"]) },
+      { name: "vendor_setup_create", description: "Review and create the owner, draft store and optional draft offering using the guided setup. Reuses existing vendors. Sends no emails.", parameters: objectParameters() },
+      { name: "vendor_setup_restart", description: "Clear the setup and begin a new business after reviewing any entered details.", parameters: objectParameters() },
+      { name: "vendor_setup_credentials", description: "Show or hide temporary credentials privately in the completed setup. Never returns their values to chat.", parameters: objectParameters({ show: { type: "boolean" } }, ["show"]) },
+    ],
+    review: ({ action }) => ["vendor_setup_create", "vendor_setup_restart"].includes(action) ? { title: action === "vendor_setup_create" ? "Create this vendor and store?" : "Start another setup?", description: action === "vendor_setup_create" ? "Creates drafts using the details below. Existing vendor accounts are reused and no messages are sent." : "The current setup details will be cleared.", fields: Object.entries(values).filter(([key]) => key !== "password").map(([key, value]) => ({ label: key.replace(/([a-z])([A-Z])/g, "$1 $2"), value: studioReviewValue(value) })) } : null,
+    run: async ({ action, args }) => {
+      if (action === "vendor_setup_edit") { if (result) throw new Error("Start another setup before entering another business."); const patch = validateStudioPatch(args.patch, HEADERS.filter(key => !["password", "storeStatus", "publish"].includes(key))); setValues(previous => ({ ...previous, ...Object.fromEntries(Object.entries(patch).map(([key, value]) => [key, value == null ? "" : String(value)])) })); return { message: "Updated the vendor setup details. Nothing has been created yet." }; }
+      if (action === "vendor_setup_step") { const nextStep = Number(args.step); if (!Number.isInteger(nextStep) || nextStep < 0 || nextStep > 3) throw new Error("Choose a setup step."); setStep(nextStep); return { message: `Opened ${steps[nextStep].name}.` }; }
+      if (action === "vendor_setup_create") { if (result) throw new Error("This setup has already run. Review its results before starting another."); const response = await run([{ ...values, storeStatus: "DRAFT", publish: "false" }]); if (!response.ok) throw new Error(response.errors.map(item => item.message).join(" ")); return { message: `Created ${response.createdUsers} vendor accounts, ${response.createdStores} draft stores and ${response.createdItems} draft offerings. No emails sent.`, stop: true }; }
+      if (action === "vendor_setup_credentials") { if (!result?.credentials.length) throw new Error("There are no temporary credentials in this setup. Existing account passwords stay private."); setShowCredentials(args.show === true); return { message: args.show ? "Temporary credentials are visible privately in the setup results." : "Temporary credentials are hidden.", stop: true }; }
+      if (action === "vendor_setup_restart") { setResult(null); setStep(0); setRows([]); setFileName(""); setValues({ categoryId: "other", storeStatus: "DRAFT", itemType: "product", publish: "false" }); return { message: "A fresh vendor setup is ready." }; }
+      throw new Error("That setup action is unavailable.");
+    },
+  });
   const field = (
     key: string,
     label: string,
@@ -179,10 +204,10 @@ export default function OnboardingStudio({
             onSubmit={(e) => {
               e.preventDefault();
               if (step < 3) next();
-              else void run([values]);
+              else void run([values]).catch(() => {});
             }}
           >
-            <fieldset disabled={busy}>
+            <fieldset disabled={busy || rexWorking}>
               {step === 0 && (
                 <div className="admin-form-grid">
                   {field("fullName", "Owner's full name", "text", true)}
@@ -229,17 +254,12 @@ export default function OnboardingStudio({
                       ))}
                     </select>
                   </label>
-                  <label className="admin-field admin-full">
+                  <div className="admin-field admin-full">
                     <span className="admin-field-label">
                       About the business
                     </span>
-                    <textarea
-                      className="admin-input"
-                      rows={4}
-                      value={values.storeDescription || ""}
-                      onChange={(e) => set("storeDescription", e.target.value)}
-                    />
-                  </label>
+                    <RichTextEditor name="storeDescription" label="About the business" value={values.storeDescription || ""} maxLength={4000} disabled={busy || rexWorking} onChange={html => set("storeDescription", html)} placeholder="Tell customers what makes this special…"/>
+                  </div>
                   <p className="admin-field-help admin-full">
                     New storefronts start as drafts. Review branding, contact
                     details and opening hours before publishing.
@@ -267,15 +287,10 @@ export default function OnboardingStudio({
                   {field("price", "Price (TTD)", "number")}
                   {values.itemType === "product" &&
                     field("stock", "Available stock", "number")}
-                  <label className="admin-field admin-full">
+                  <div className="admin-field admin-full">
                     <span className="admin-field-label">Description</span>
-                    <textarea
-                      className="admin-input"
-                      rows={4}
-                      value={values.itemDescription || ""}
-                      onChange={(e) => set("itemDescription", e.target.value)}
-                    />
-                  </label>
+                    <RichTextEditor name="itemDescription" label="Offering description" value={values.itemDescription || ""} maxLength={4000} disabled={busy || rexWorking} onChange={html => set("itemDescription", html)} placeholder="Tell customers what makes this special…"/>
+                  </div>
                   <p className="admin-field-help admin-full">
                     The offering starts as a draft. For services, you can choose
                     another service model in the full editor after setup.
@@ -486,7 +501,7 @@ export default function OnboardingStudio({
               <button
                 className="admin-button admin-button-primary"
                 disabled={busy}
-                onClick={() => void run(rows)}
+                onClick={() => void run(rows).catch(() => {})}
               >
                 <Check size={16} />
                 {busy

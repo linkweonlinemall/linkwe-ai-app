@@ -1,5 +1,6 @@
 "use server";
 
+import { cleanRichText } from "@/lib/content/rich-text";
 import { randomBytes, randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { StoreStatus, UserRole } from "@prisma/client";
@@ -195,7 +196,7 @@ export async function importAdminOnboardingRows(
                 slug,
                 categoryId: clean(base.categoryId, 100) || "other",
                 region: clean(base.region, 100) || "Trinidad and Tobago",
-                description: clean(base.storeDescription, 4000) || null,
+                description: cleanRichText(clean(base.storeDescription, 12000)) || null,
                 status: validStatus(base.storeStatus),
                 onboardingStep: 4,
               },
@@ -229,7 +230,7 @@ export async function importAdminOnboardingRows(
                 storeId,
                 name,
                 slug: `${slugify(name)}-${randomUUID().slice(0, 8)}`,
-                description: clean(row.itemDescription, 4000) || null,
+                description: cleanRichText(clean(row.itemDescription, 12000)) || null,
                 price: Number.isFinite(price) && price >= 0 ? price : 0,
                 stock,
                 tags: [],

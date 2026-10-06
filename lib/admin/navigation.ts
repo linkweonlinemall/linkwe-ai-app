@@ -17,6 +17,7 @@ import {
   Layers,
   PlusCircle,
   HeartHandshake,
+  FileUp,
 } from "lucide-react";
 
 export const ADMIN_NAV = [
@@ -33,6 +34,11 @@ export const ADMIN_NAV = [
         label: "Creation Studio",
         href: "/dashboard/admin/onboarding",
         icon: PlusCircle,
+      },
+      {
+        label: "Bulk import",
+        href: "/dashboard/admin/imports",
+        icon: FileUp,
       },
     ],
   },

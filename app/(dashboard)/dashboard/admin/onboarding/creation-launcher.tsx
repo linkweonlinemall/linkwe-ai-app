@@ -19,6 +19,8 @@ import {
   type AdminSearchResult,
 } from "@/app/actions/admin-search";
 import OnboardingStudio from "./onboarding-studio";
+import { useStudioRex } from "@/components/admin/rex/StudioRexProvider";
+import { objectParameters } from "@/lib/admin/studio-rex";
 import BulkUserActions from "./bulk-user-actions";
 import AdminPageHeader from "../components/admin-page-header";
 import type { RecordKind } from "@/lib/admin/record-fields";
@@ -98,6 +100,25 @@ export default function CreationLauncher({
       clearTimeout(timer);
     };
   }, [query, kind, tab]);
+  useStudioRex({
+    key: "launcher", title: "Creation Studio", state: { tab, query, kind, results }, busy,
+    actions: [
+      { name: "studio_tab", description: "Switch Creation Studio to create, find, vendor setup or bulk import links. Vendor setup has its own controls after opening.", parameters: objectParameters({ tab: { type: "string", enum: ["create", "find", "vendor", "import"] } }, ["tab"]) },
+      { name: "studio_search", description: "Find and display existing records to edit, including drafts. Search by name, email, store or URL name.", parameters: objectParameters({ query: { type: "string" }, kind: { type: "string", enum: ["store", "product", "service", "user", "listing"] } }, ["query"]) },
+    ],
+    run: async ({ action, args }) => {
+      if (action === "studio_tab") {
+        if (!["create", "find", "vendor", "import"].includes(String(args.tab))) throw new Error("Choose a studio tab.");
+        setTab(String(args.tab)); return { message: `Opened ${args.tab === "vendor" ? "vendor setup" : args.tab === "find" ? "Find & edit" : args.tab === "import" ? "bulk import choices" : "creation choices"}.`, ...(args.tab === "vendor" ? { waitFor: "vendor_setup" } : {}) };
+      }
+      const search = String(args.query || "").trim();
+      if (search.length < 2) throw new Error("Use at least two letters to search.");
+      const nextKind = ["store", "product", "service", "user", "listing"].includes(String(args.kind)) ? args.kind as RecordKind : "";
+      setTab("find"); setQuery(search); setKind(nextKind);
+      const found = await searchAdminRecords(search, nextKind || undefined); setResults(found);
+      return { message: `Found ${found.length} matching records in Find & edit.` };
+    },
+  });
   return (
     <div className="admin-page">
       <AdminPageHeader
@@ -110,7 +131,7 @@ export default function CreationLauncher({
           { id: "create", label: "Create something", icon: Plus },
           { id: "find", label: "Find & edit", icon: Search },
           { id: "vendor", label: "Set up a vendor", icon: UserRoundPlus },
-          { id: "import", label: "Import vendors", icon: FileUp },
+          { id: "import", label: "Bulk import", icon: FileUp },
         ].map((item) => (
           <button
             type="button"
@@ -256,7 +277,18 @@ export default function CreationLauncher({
         </section>
       )}
       {tab === "vendor" && <OnboardingStudio mode="single" />}
-      {tab === "import" && <OnboardingStudio mode="csv" />}
+      {tab === "import" && (
+        <section className="admin-panel">
+          <h2 className="admin-panel-title">Bulk upload, then make it yours</h2>
+          <p className="admin-muted mt-2 mb-5">Bring a CSV or Excel spreadsheet. Save drafts, quick-edit every field, add photographs and work with Rex in one saved batch.</p>
+          <div className="flex flex-wrap gap-3">
+            <Link className="admin-button" href="/dashboard/admin/imports?kind=vendor"><FileUp size={16}/> Import vendors & stores</Link>
+            <Link className="admin-button" href="/dashboard/admin/imports?kind=product"><Package size={16}/> Import products</Link>
+            <Link className="admin-button" href="/dashboard/admin/imports?kind=service"><Sparkles size={16}/> Import services</Link>
+            <Link className="admin-button" href="/dashboard/admin/imports?kind=event"><Layers size={16}/> Import events</Link>
+          </div>
+        </section>
+      )}
       <details className="mt-8">
         <summary className="flex min-h-12 cursor-pointer items-center gap-2 text-xs text-[#74878c]">
           <SlidersHorizontal size={15} />
