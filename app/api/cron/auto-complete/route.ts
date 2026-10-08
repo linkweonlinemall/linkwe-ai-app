@@ -15,6 +15,7 @@ import { resumePausedServiceSubscription } from "@/lib/finance/resume-service-su
 import { expireCheckoutHolds } from "@/lib/payments/checkout-expiry";
 import { settleVerifiedWiPaySuccess } from "@/lib/payments/settle-wipay-success";
 import { prisma } from "@/lib/prisma";
+import { pruneAnalytics } from "@/lib/analytics/collection";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,6 +35,7 @@ export async function GET(request: Request) {
   }
 
   const now = new Date();
+  await pruneAnalytics(now).catch(() => console.error("[cron] Analytics retention cleanup failed"));
   const checkoutExpiry = await expireCheckoutHolds(now);
   const stalePaymentClaims = await prisma.paymentAttempt.findMany({
     where: {

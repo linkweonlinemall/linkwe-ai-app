@@ -8,10 +8,10 @@ import s from "./rex.module.css";
 export type RexMessage = { role: "user" | "assistant"; content: string; outcome?: "success" | "error" | "review" };
 export type RexPhase = "idle" | "thinking" | "working" | "review" | "done" | "error";
 
-export default function RexConversation({ title, subtitle, messages, question, onQuestion, onSubmit, phase, activity, disabled, suggestions, footnote }: {
+export default function RexConversation({ title, subtitle, messages, question, onQuestion, onSubmit, phase, activity, disabled, suggestions, footnote, welcome = "Tell me what you want to create or change." }: {
   title: string; subtitle: string; messages: RexMessage[]; question: string;
   onQuestion: (value: string) => void; onSubmit: (event: React.FormEvent) => void;
-  phase: RexPhase; activity?: string; disabled?: boolean; suggestions: string[]; footnote: string;
+  phase: RexPhase; activity?: string; disabled?: boolean; suggestions: string[]; footnote: string; welcome?: string;
 }) {
   const transcript = useRef<HTMLDivElement>(null);
   const follow = useRef(true);
@@ -34,7 +34,7 @@ export default function RexConversation({ title, subtitle, messages, question, o
     <p className={s.intro}>{subtitle}</p>
     {!messages.length && <div className={s.suggestions}>{suggestions.map(text => <button type="button" disabled={disabled} key={text} onClick={() => onQuestion(text)}>{text}<ArrowUp size={14}/></button>)}</div>}
     <div className={s.transcript} ref={transcript} role="log" aria-label="Conversation with Rex" aria-live="polite" aria-relevant="additions text" onScroll={() => { const el = transcript.current!; follow.current = el.scrollHeight - el.scrollTop - el.clientHeight < 70; setUnread(!follow.current); }}>
-      {!messages.length && <div className={s.empty}><Sparkles size={20}/><p>Tell me what you want to create or change.<br/>We can work through it together.</p></div>}
+      {!messages.length && <div className={s.empty}><Sparkles size={20}/><p>{welcome}<br/>We can work through it together.</p></div>}
       {messages.map((message, index) => <article key={index} className={message.role === "user" ? s.userMessage : s.rexMessage} data-outcome={message.outcome}><div className={s.messageLabel}>{message.role === "user" ? <UserRound size={12}/> : message.outcome === "success" ? <Check size={13}/> : message.outcome === "error" ? <CircleAlert size={13}/> : <Sparkles size={13}/>}<span>{message.role === "user" ? "You" : message.outcome === "success" ? "Rex · completed" : message.outcome === "review" ? "Rex · ready for review" : "Rex"}</span></div><ReactMarkdown>{message.content}</ReactMarkdown></article>)}
       {active && <div className={s.activity} role="status"><div><LoaderCircle size={15} className={s.spin}/><strong>{status}<span className={s.dots}><i/><i/><i/></span></strong><small>{elapsed > 0 ? `${elapsed}s` : ""}</small></div><p>{activity || (phase === "thinking" ? "Reading your request and checking the current details…" : "Applying your requested changes…")}</p></div>}
       {phase === "review" && <p className={s.reviewStatus}>Your review is ready. Changes in that review haven’t been applied yet.</p>}

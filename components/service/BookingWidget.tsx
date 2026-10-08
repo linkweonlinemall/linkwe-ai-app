@@ -1,4 +1,5 @@
 "use client";
+import { AnalyticsSignal, trackGoogleAnalyticsEvent } from "@/components/analytics/GoogleAnalytics";
 import CouponInput, { type AppliedCoupon } from "@/components/checkout/CouponInput";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
@@ -304,6 +305,7 @@ export default function BookingWidget({
     }
 
     startMessageTransition(async () => {
+      trackGoogleAnalyticsEvent("contact_click", { label: "message", entity_id: storeId });
       const result = await getOrCreateConversation(storeId);
       if (!result.ok) {
         toastFormError(result.error);
@@ -513,7 +515,7 @@ export default function BookingWidget({
           {availableDates.length === 0 ? (
             <div className="rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center">
               <span className="mb-3 block text-3xl">📅</span>
-              <p className="text-sm font-semibold text-zinc-700">No available dates</p>
+              <AnalyticsSignal name="booking_unavailable" label="no_dates" entityId={serviceId}/><p className="text-sm font-semibold text-zinc-700">No available dates</p>
               <p className="mt-1 text-xs leading-relaxed text-zinc-400">
                 This provider has not set their availability yet. Contact them directly to arrange a session.
               </p>
@@ -562,7 +564,7 @@ export default function BookingWidget({
             </div>
           ) : slots.length === 0 ? (
             <div className="rounded-xl border border-dashed border-zinc-200 py-6 text-center">
-              <p className="text-sm text-zinc-500">No available slots</p>
+              <AnalyticsSignal name="booking_unavailable" label="no_slots" entityId={serviceId}/><p className="text-sm text-zinc-500">No available slots</p>
               <button
                 type="button"
                 onClick={() => setStep("date")}

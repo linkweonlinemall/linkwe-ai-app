@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef, useState, useTransition, type ReactNode } from "react";
+import { AnalyticsSignal } from "@/components/analytics/GoogleAnalytics";
 import Link from "next/link";
 import { FilterSelect, FilterChoices, ColourSwatches } from "@/components/filters/FilterControls";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -49,6 +50,7 @@ export default function ShopBrowser({ query, options, total, children }: Props) 
     </form>;
   }
   return <div className={styles.browseLayout} aria-busy={pending}>
+    {query.q && <AnalyticsSignal name="search" label={query.q} value={total}/>}
     <aside className={styles.sidebar} aria-label="Product filters"><div className={styles.filterHeading}><SlidersHorizontal size={18} aria-hidden /><div><h3>Make it your find.</h3><p>A few details. A better match.</p></div></div>{fields(`${id}-desktop`)}<div className={styles.sidebarNote}><span>WE PEOPLE. WE BUSINESS.</span><strong>Every find has<br />someone behind it.</strong><Link href="/stores">Meet our local stores ↗</Link></div></aside>
     <div className={styles.resultsColumn}>
       <div className={styles.toolbar}><button type="button" className={styles.filterTrigger} onClick={() => dialog.current?.showModal()} aria-haspopup="dialog"><SlidersHorizontal size={17} aria-hidden />Filters{activeCount > 0 && <span>{activeCount}</span>}</button><p className={styles.resultCount} role="status">{pending ? "Finding your matches…" : `${total} ${total === 1 ? "find" : "finds"} to explore`}</p><label className={styles.sortLabel} htmlFor={`${id}-sort`}><ArrowDownWideNarrow size={17} aria-hidden /><span>Sort by</span><select aria-label="Sort by" id={`${id}-sort`} value={query.sort} disabled={pending} onChange={e => navigate({ sort:e.target.value === "featured" ? "" : e.target.value })}>{SHOP_SORTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}</select><ChevronDown size={13} aria-hidden /></label></div>

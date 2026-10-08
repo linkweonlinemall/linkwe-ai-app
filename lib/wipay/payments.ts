@@ -1,4 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
+import { prisma } from "@/lib/prisma";
+import { captureCheckoutAttribution } from "@/lib/analytics/collection";
 
 import { getWiPayConfig, type WiPayEnvironment } from "@/lib/wipay/config";
 
@@ -27,6 +29,8 @@ export async function createWiPayHostedPayment(
   environmentOverride?: WiPayEnvironment,
 ): Promise<CreateHostedPaymentResponse> {
   const config = getWiPayConfig(environmentOverride);
+  await prisma.paymentAttempt.updateMany({ where: { merchantOrderId: input.merchantOrderId }, data: { environment: config.environment } });
+  if (config.environment === "live") await captureCheckoutAttribution(input.merchantOrderId);
   const body = new URLSearchParams({
     account_number: config.accountNumber,
     country_code: "TT",

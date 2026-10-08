@@ -18,6 +18,7 @@ import {
   PlusCircle,
   HeartHandshake,
   FileUp,
+  ChartNoAxesCombined,
 } from "lucide-react";
 
 export const ADMIN_NAV = [
@@ -30,6 +31,7 @@ export const ADMIN_NAV = [
         tab: "overview",
         icon: LayoutDashboard,
       },
+      { label: "Analytics", href: "/dashboard/admin/analytics", icon: ChartNoAxesCombined },
       {
         label: "Creation Studio",
         href: "/dashboard/admin/onboarding",

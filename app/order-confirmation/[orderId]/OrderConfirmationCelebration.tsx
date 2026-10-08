@@ -4,9 +4,10 @@ import confetti from "canvas-confetti";
 import { useEffect, useRef } from "react";
 
 import { toastOrderPlaced } from "@/lib/feedback/toasts";
-import { trackGoogleAnalyticsEvent } from "@/components/analytics/GoogleAnalytics";
+import { analyticsEnabled, trackGoogleAnalyticsEvent } from "@/components/analytics/GoogleAnalytics";
 
 type Props = {
+  trackPurchase?: boolean;
   orderId: string;
   orderReference?: string | null;
   totalMinor: number;
@@ -17,40 +18,12 @@ type Props = {
 /**
  * Celebration + toast on successful checkout (mounted from order confirmation page).
  */
-export default function OrderConfirmationCelebration({ orderId, orderReference, totalMinor, shippingMinor, items }: Props) {
+export default function OrderConfirmationCelebration({ trackPurchase = false, orderId, orderReference, totalMinor, shippingMinor, items }: Props) {
   const ran = useRef(false);
 
   useEffect(() => {
     if (ran.current) return;
     ran.current = true;
-
-    const purchaseKey = `linkwe-ga-purchase:${orderId}`;
-    let alreadyTracked = false;
-    try {
-      alreadyTracked = window.sessionStorage.getItem(purchaseKey) === "1";
-    } catch {
-      // Analytics must not interfere with a successful order confirmation.
-    }
-
-    if (!alreadyTracked) {
-      trackGoogleAnalyticsEvent("purchase", {
-        transaction_id: orderReference ?? orderId,
-        currency: "TTD",
-        value: totalMinor / 100,
-        shipping: shippingMinor / 100,
-        items: items.map((item) => ({
-          item_id: item.id,
-          item_name: item.name,
-          price: item.priceMinor / 100,
-          quantity: item.quantity,
-        })),
-      });
-      try {
-        window.sessionStorage.setItem(purchaseKey, "1");
-      } catch {
-        // Some privacy modes block session storage; the purchase can still be reported.
-      }
-    }
 
     toastOrderPlaced();
     const t = window.setTimeout(() => {
@@ -65,5 +38,19 @@ export default function OrderConfirmationCelebration({ orderId, orderReference, 
     return () => window.clearTimeout(t);
   }, [items, orderId, orderReference, shippingMinor, totalMinor]);
 
+  useEffect(() => {
+    if (!trackPurchase) return;
+    const key = `linkwe-ga-purchase:${orderId}`;
+    let sent = false;
+    const send = () => {
+      if (sent || !analyticsEnabled()) return;
+      try { if (sessionStorage.getItem(key) === "1") return; } catch {}
+      trackGoogleAnalyticsEvent("purchase", { transaction_id: orderReference ?? orderId, currency: "TTD", value: totalMinor / 100, shipping: shippingMinor / 100, items: items.map(item => ({ item_id: item.id, price: item.priceMinor / 100, quantity: item.quantity })) });
+      sent = true;
+      try { sessionStorage.setItem(key, "1"); } catch {}
+    };
+    send(); window.addEventListener("linkwe:analytics-ready", send);
+    return () => window.removeEventListener("linkwe:analytics-ready", send);
+  }, [trackPurchase, orderId, orderReference, totalMinor, shippingMinor, items]);
   return null;
 }

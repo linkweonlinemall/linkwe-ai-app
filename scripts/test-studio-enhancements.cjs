@@ -6,6 +6,7 @@ const Module = require('node:module');
 const ts = require('typescript');
 let session = null;
 let calls = [], replies = [], delivered = 0, failEmail = false, updated = [];
+const analyticsReads = [];
 const people = [{ id: 'vendor-1', fullName: 'Test Vendor', email: 'vendor@example.test', role: 'VENDOR', storesOwned: [] }, { id: 'admin-1', fullName: 'Test Admin', email: 'admin@example.test', role: 'ADMIN', storesOwned: [] }];
 const original = Module._load;
 Module._load = function(request, parent, main) {
@@ -15,6 +16,7 @@ Module._load = function(request, parent, main) {
   if (request === '@/lib/prisma') return { prisma: { user: { findMany: async ({where}) => people.filter(person => where.id.in.includes(person.id)), update: async () => ({}), updateMany: async input => { updated = input.where.id.in; return { count: updated.length }; } } } };
   if (request === '@/lib/email/resend') return { BASE_URL: 'https://example.test', FROM_EMAIL: 'test@example.test', resend: { emails: { send: async () => { if (failEmail) return { error: { message: 'provider unavailable' } }; delivered++; return { data: { id: 'test-only' } }; } } } };
   if (request === './admin-search' && parent?.filename.endsWith('studio-assistant.ts')) return { searchAdminRecords: async () => [{ id: 'store-1', label: 'Sample Store', kind: 'store' }] };
+  if (request === './admin-analytics' && parent?.filename.endsWith('studio-assistant.ts')) return { getAdminAnalytics: async filters => { analyticsReads.push(filters); return { periodLabel: '7 Oct 2026 · Trinidad & Tobago time', metrics: [{ key: 'collected', value: 1200 }], health: { firstEvent: null } }; } };
   if (request === './admin-records' && parent?.filename.endsWith('studio-assistant.ts')) return { getAdminRecordWorkspace: async () => ({ title: 'Sample', fields: [{name:'bankDetails',value:{accountNumber:'private-number'}}], stores:[], users:[],detailFields:{} }) };
   if (request === '@anthropic-ai/sdk') return class { messages = { create: async input => { calls.push(input); if (!replies.length) throw new Error('Unexpected model call'); return replies.shift(); } }; };
   if (request.startsWith('@/')) request = path.join(process.cwd(), request.slice(2));
@@ -48,6 +50,9 @@ async function run() {
   await check('lookup tools can inspect records without returning private values to the model', async()=>{calls=[];replies=[response(tool('inspect_studio_record',{kind:'store',id:'store-1'})),response({type:'text',text:'I found the store.'})];const result=await askCreationStudioRex(input);assert.equal(result.steps.length,0);assert.doesNotMatch(JSON.stringify(calls),/private-number/); });
   await check('unknown model tool names do not become executable steps', async()=>{replies=[response(tool('delete_everything',{})),response({type:'text',text:'That control is unavailable.'})];const result=await askCreationStudioRex(input);assert.equal(result.steps.length,0);});
   await check('follow-up model calls receive actual action receipts',async()=>{calls=[];replies=[response({type:'text',text:'Your edits are staged.'})];await askCreationStudioRex({...input,receipts:['Description staged. Not saved.']});assert.match(JSON.stringify(calls[0].messages),/Description staged/);});
+  const analyticsInput={question:'Explain this report',history:[],surfaces:[{key:'analytics',title:'Analytics',state:{filters:{days:7,device:'mobile',source:'all'},report:{forgedTotal:999999}},actions:[{name:'analytics_filter',description:'Change filters',parameters:{type:'object',properties:{days:{type:'number'}}}}]}]};
+  await check('analytics Rex replaces client totals with the authorized server report',async()=>{calls=[];replies=[response({type:'text',text:'The report is ready.'})];await askCreationStudioRex(analyticsInput);assert.deepEqual(analyticsReads.at(-1),analyticsInput.surfaces[0].state.filters);assert.doesNotMatch(calls[0].system,/forgedTotal|999999/);assert.match(calls[0].system,/1200/);assert.deepEqual(calls[0].tools.map(t=>t.name),['analytics_filter']);});
+  await check('analytics controls use the same receipt-based action queue',async()=>{calls=[];replies=[response(tool('analytics_filter',{days:30}))];const result=await askCreationStudioRex(analyticsInput);assert.deepEqual(result.steps,[{action:'analytics_filter',args:{days:30}}]);assert.equal(delivered,0);});
   await check('account actions validate names and recipient limits before running',async()=>{assert.match((await runBulkUserAction(['vendor-1'],'wrong')).error,/available/);assert.match((await runBulkUserAction(Array.from({length:251},(_,i)=>String(i)),'welcome')).error,/250/);assert.equal(delivered,0);});
   await check('account access changes report the actual affected count and protect administrators',async()=>{const result=await runBulkUserAction(['vendor-1','admin-1'],'suspend');assert.equal(result.count,1);assert.deepEqual(updated,['vendor-1']);});
   await check('email delivery failures are reported as failures to manual controls and Rex',async()=>{failEmail=true;const result=await runBulkUserAction(['vendor-1'],'welcome');assert.equal(result.count,0);assert.match(result.error,/not sent/);assert.equal(delivered,0);failEmail=false;});

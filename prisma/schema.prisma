@@ -8,6 +8,50 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+/// Consented, pseudonymous activity. No raw URLs, IP addresses or form contents.
+model AnalyticsEvent {
+  id        String   @id
+  name      String
+  visitorId String   @map("visitor_id")
+  sessionId String   @map("session_id")
+  path      String
+  entityId  String?  @map("entity_id")
+  label     String?
+  value     Float?
+  source    String
+  medium    String
+  campaign  String?
+  device    String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt, name])
+  @@index([sessionId, createdAt])
+  @@index([visitorId, createdAt])
+  @@index([source, device, createdAt])
+  @@map("analytics_events")
+}
+
+/// Joins a consented checkout to its provider-confirmed payment, never to a page view.
+model AnalyticsCheckout {
+  merchantOrderId String @id @map("merchant_order_id")
+  visitorId String @map("visitor_id")
+  sessionId String @map("session_id")
+  source String
+  medium String
+  campaign String?
+  device String
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([createdAt])
+  @@index([sessionId])
+  @@map("analytics_checkouts")
+}
+
+model AnalyticsCollection {
+  id String @id @default("main")
+  startedAt DateTime @default(now()) @map("started_at")
+  @@map("analytics_collection")
+}
+
 // Durable import workspaces. Source rows and photos survive interrupted uploads.
 model ImportBatch {
   id        String @id @default(cuid())
@@ -823,6 +867,7 @@ model WiPayCardEnrollment {
 /// Provider-neutral payment record. Provider callbacks are correlated through
 /// merchantOrderId; providerTransactionId is stored as soon as WiPay creates it.
 model PaymentAttempt {
+  environment           String?              @map("payment_environment")
   id                    String               @id @default(cuid())
   provider              PaymentProvider      @default(WIPAY)
   purpose               PaymentPurpose

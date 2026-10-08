@@ -144,7 +144,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
   const [deliveryCoordinates, setDeliveryCoordinates] = useState<{ latitude: number | null; longitude: number | null }>({ latitude: null, longitude: null });
 
   const regionLabel = getRegionOptionLabel(deliveryRegion);
-  useEffect(() => { if (error) noticeRef.current?.focus(); }, [error]);
+  useEffect(() => { if (error) { noticeRef.current?.focus(); trackGoogleAnalyticsEvent("checkout_error", { label: error.includes("region") ? "delivery_region" : error.includes("phone") ? "phone_validation" : error.includes("location") ? "delivery_address" : error.includes("payment") || error.includes("Payment") ? "payment_setup" : "checkout_validation" }); } }, [error]);
   useEffect(() => { if (step === "review") reviewRef.current?.focus(); }, [step]);
 
   useEffect(() => {
@@ -297,7 +297,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
     if (reviewOnly) { setReviewAddress(address); setStep("review"); setMobileSummaryOpen(false); return; }
     setLoading(true);
     try {
-    trackGoogleAnalyticsEvent("begin_checkout", { currency: "TTD", value: displayTotal, items: items.map((item) => ({ item_id: item.productId, item_name: item.product.name, price: item.product.price, quantity: item.quantity })) });
+    trackGoogleAnalyticsEvent("payment_attempt", { currency: "TTD", value: displayTotal, items: items.map((item) => ({ item_id: item.productId, item_name: item.product.name, price: item.product.price, quantity: item.quantity })) });
     const result = await createPaymentIntent(
       address,
       allDigital ? "" : deliveryRegion,
@@ -310,6 +310,7 @@ export default function CheckoutClient({ items, subtotal, initialPhone = "" }: C
       Math.round(displayTotal * 100),
     );
     if (result.ok) {
+      trackGoogleAnalyticsEvent("payment_redirect");
       window.location.assign(result.checkoutUrl);
       setMobileSummaryOpen(false);
     } else {

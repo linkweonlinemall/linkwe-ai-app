@@ -27,6 +27,8 @@ export default async function OrderConfirmationPage({ params }: Props) {
     where: { id: orderId, buyerId: session.userId },
     select: {
       id: true,
+      status: true,
+      paymentAttempts: { select: { status: true, environment: true } },
       referenceNumber: true,
       subtotalMinor: true,
       couponSnapshot: true,
@@ -48,12 +50,15 @@ export default async function OrderConfirmationPage({ params }: Props) {
     redirect("/");
   }
 
+  if (["DRAFT", "PENDING_PAYMENT", "CANCELLED", "REFUNDED"].includes(order.status)) redirect(`/orders/${order.id}`);
+
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
       <OrderConfirmationCelebration
+        trackPurchase={session.role !== "ADMIN" && (order.totalMinor === 0 || order.paymentAttempts.some(attempt => attempt.status === "SUCCEEDED" && attempt.environment === "live"))}
         orderId={order.id}
         orderReference={order.referenceNumber}
-        totalMinor={order.totalMinor}
+        totalMinor={Math.max(0, order.totalMinor - order.shippingMinor)}
         shippingMinor={order.shippingMinor}
         items={order.items.map((item) => ({
           id: item.productId ?? item.id,

@@ -1,3 +1,4 @@
+import { getWiPayEnvironment } from "@/lib/wipay/config";
 import { fulfillWiPayAttempt } from "@/lib/payments/fulfill-wipay-attempt";
 import type { PaymentPurpose, Prisma } from "@prisma/client";
 
@@ -65,6 +66,7 @@ export async function beginWiPayManualSubscription(input: SubscriptionContext): 
   if (!user?.email) throw new Error("A customer email is required for WiPay checkout");
   const attempt = await prisma.paymentAttempt.create({
     data: {
+      environment: getWiPayEnvironment(),
       purpose: input.purpose,
       merchantOrderId: `${input.purpose === "VENDOR_SUBSCRIPTION" ? "vsub" : "ssub"}-${crypto.randomUUID()}`,
       amountMinor: input.amountMinor,
@@ -110,6 +112,7 @@ export async function startSubscriptionCharge(
 ): Promise<string> {
   const attempt = await prisma.paymentAttempt.create({
     data: {
+      environment: getWiPayEnvironment(),
       purpose: input.purpose,
       merchantOrderId: `${input.purpose === "VENDOR_SUBSCRIPTION" ? "vsub" : "ssub"}-${crypto.randomUUID()}`,
       amountMinor: input.amountMinor,
