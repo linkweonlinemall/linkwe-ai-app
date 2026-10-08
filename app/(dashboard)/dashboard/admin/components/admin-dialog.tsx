@@ -7,11 +7,13 @@ export default function AdminDialog({
   onClose,
   children,
   drawer = false,
+  className = "",
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
   drawer?: boolean;
+  className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -27,7 +29,7 @@ export default function AdminDialog({
   return (
     <dialog
       ref={ref}
-      className={`admin-dialog ${drawer ? "admin-drawer" : ""}`}
+      className={`admin-dialog ${drawer ? "admin-drawer" : ""} ${className}`}
       aria-label={title}
       onCancel={event => { event.preventDefault(); onClose(); }}
       onClick={(event) => {

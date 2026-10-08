@@ -120,6 +120,7 @@ model ImportChange {
 }
 
 model User {
+  staffAccesses          StaffAccess[]
   id                     String               @id @default(cuid())
   email                  String               @unique
   phone                  String?              @unique
@@ -2806,6 +2807,7 @@ model Message {
 }
 
 model StaffMember {
+  access    StaffAccess?
   id        String   @id @default(cuid())
   storeId   String
   store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
@@ -2822,6 +2824,23 @@ model StaffMember {
   bookings     ProductBooking[]
 
   @@index([storeId])
+}
+
+model StaffAccess {
+  staffId          String      @id
+  staff            StaffMember @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  email            String
+  userId           String?
+  user             User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  inviteTokenHash   String?     @unique
+  inviteExpiresAt  DateTime?
+  canEditNotes     Boolean     @default(false)
+  canManageTimeOff Boolean     @default(false)
+  acceptedAt       DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([userId])
 }
 
 model StaffAvailability {

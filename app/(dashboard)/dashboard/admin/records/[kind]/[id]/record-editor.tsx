@@ -1,4 +1,5 @@
 "use client";
+import { SERVICE_OFFER_FIELD_NAMES, SERVICE_OFFER_MAX_LENGTH } from "@/lib/services/offer-fields";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -269,7 +270,7 @@ export default function RecordEditor({
   }
   const rexWorking = useStudioRex({
     key: `record:${kind}:${id}`, title: `${isNew ? "Create" : "Edit"} ${kind}`,
-    state: { kind, id, values: redactStudioSecrets(values), changed, errors, error, fields: workspace.fields.map(field => ({ name: field.name, type: field.type, required: field.required, list: field.list, readonly: field.readonly, options: field.options, label: humanLabel(field.name), help: FIELD_HELP[field.name] })), detailFields: workspace.detailFields, users: workspace.users, stores: workspace.stores, sections: sections.map(section => ({ id: section.id, title: section.title })), publicHref: workspace.publicHref },
+    state: { kind, id, values: redactStudioSecrets(values), changed, errors, error, fields: workspace.fields.map(field => ({ name: field.name, type: field.type, required: field.required, list: field.list, readonly: field.readonly, options: field.options, label: humanLabel(field.name), help: FIELD_HELP[field.name], maxLength: (SERVICE_OFFER_FIELD_NAMES as readonly string[]).includes(field.name) ? SERVICE_OFFER_MAX_LENGTH : undefined })), detailFields: workspace.detailFields, users: workspace.users, stores: workspace.stores, sections: sections.map(section => ({ id: section.id, title: section.title })), publicHref: workspace.publicHref },
     busy: busy || uploads > 0,
     canLeave: () => !dirty,
     actions: [
@@ -558,6 +559,8 @@ export default function RecordEditor({
       );
     if (field.type === "Json")
       return <PropertiesEditor value={val} onChange={(v) => update(key, v)} />;
+    if ((SERVICE_OFFER_FIELD_NAMES as readonly string[]).includes(key))
+      return <textarea {...common} rows={4} maxLength={SERVICE_OFFER_MAX_LENGTH} />;
     if (/description|policies|Policy|MeetingInfo/.test(key))
       return <textarea {...common} rows={4} />;
     return (
@@ -760,6 +763,7 @@ export default function RecordEditor({
                           f.list ||
                           f.type === "Json" ||
                           [
+                            ...SERVICE_OFFER_FIELD_NAMES,
                             "description",
                             "shortDescription",
                             "policies",

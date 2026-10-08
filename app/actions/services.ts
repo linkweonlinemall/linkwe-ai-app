@@ -1,4 +1,5 @@
 "use server";
+import { SERVICE_OFFER_FIELD_NAMES, SERVICE_OFFER_MAX_LENGTH } from "@/lib/services/offer-fields";
 import { normalizeSubscriptionInterval, validateSubscriptionConfiguration } from "@/lib/services/configuration-validation";
 
 import { revalidatePath } from "next/cache";
@@ -90,8 +91,8 @@ export async function createService(formData: FormData) {
 
   const name = formData.get("name") as string;
   const description = (formData.get("description") as string) || null;
-  const offerDetails = Object.fromEntries(["serviceInclusions", "serviceRequirements", "serviceDeliverables"].filter(key=>formData.has(key)).map(key=>[key,String(formData.get(key)??"").trim() || null]));
-  if(Object.values(offerDetails).some(value=>value && value.length>1500))return {error:"Keep each customer expectation field within 1,500 characters."};
+  const offerDetails = Object.fromEntries(SERVICE_OFFER_FIELD_NAMES.filter(key=>formData.has(key)).map(key=>[key,String(formData.get(key)??"").trim() || null]));
+  if(Object.values(offerDetails).some(value=>value && value.length>SERVICE_OFFER_MAX_LENGTH))return {error:"Keep each customer expectation field within 1,500 characters."};
   const categoryRaw = (formData.get("category") as string) || "";
   const category = categoryRaw.trim() || null;
   const serviceType = formData.get("serviceType") as string;
@@ -324,8 +325,8 @@ export async function updateService(id: string, formData: FormData) {
 
   const name = formData.get("name") as string;
   const description = (formData.get("description") as string) || null;
-  const offerDetails = Object.fromEntries(["serviceInclusions", "serviceRequirements", "serviceDeliverables"].filter(key=>formData.has(key)).map(key=>[key,String(formData.get(key)??"").trim() || null]));
-  if(Object.values(offerDetails).some(value=>value && value.length>1500))return {error:"Keep each customer expectation field within 1,500 characters."};
+  const offerDetails = Object.fromEntries(SERVICE_OFFER_FIELD_NAMES.filter(key=>formData.has(key)).map(key=>[key,String(formData.get(key)??"").trim() || null]));
+  if(Object.values(offerDetails).some(value=>value && value.length>SERVICE_OFFER_MAX_LENGTH))return {error:"Keep each customer expectation field within 1,500 characters."};
   const categoryRaw = (formData.get("category") as string) || "";
   const category = categoryRaw.trim() || null;
   const serviceType = formData.get("serviceType") as string;

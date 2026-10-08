@@ -21,7 +21,6 @@ export function importFields(kind: ImportKind): ImportField[] {
   else fields.unshift(text("storeId", "Store ID", true), text("storeSlug", "Store URL name", true), text("recordId", "Existing item ID", true));
   if (kind === "vendor") fields.push({ ...text("storeGallery", "Store photographs", false, "Photos"), list: true });
   if (kind === "product") fields.push({ ...text("variants", "Product variations", false), type: "Json", value: [] });
-  if (kind === "service") for (const name of ["serviceInclusions", "serviceRequirements", "serviceDeliverables"]) fields.push(text(name, humanLabel(name), false, "Details"));
   if (kind === "event") fields.push({ ...text("ticketTypes", "Ticket tiers", false), type: "Json", value: [] });
   return fields;
 }

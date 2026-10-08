@@ -475,7 +475,7 @@ export async function updateTicketType(
 
   const ticketType = await prisma.eventTicketType.findFirst({
     where: { id: ticketTypeId, event: { store: { ownerId: session.userId } } },
-    select: { id: true, eventId: true },
+    select: { id: true, eventId: true, event: { select: { slug: true } } },
   });
   if (!ticketType) return { error: "Ticket type not found." };
 
@@ -496,13 +496,13 @@ export async function updateTicketType(
     if (!Number.isFinite(quantity) || quantity < 1) return { error: "Enter a valid quantity." };
     updates.quantity = quantity;
   }
-  if (str(formData, "description") !== "") updates.description = str(formData, "description") || null;
-  if (str(formData, "perks") !== "") updates.perks = str(formData, "perks") || null;
+  if (formData.has("description")) updates.description = str(formData, "description") || null;
+  if (formData.has("perks")) updates.perks = str(formData, "perks") || null;
 
   const saleStartDate = optDate(formData, "saleStartDate");
-  if (saleStartDate !== null) updates.saleStartDate = saleStartDate;
+  if (formData.has("saleStartDate")) updates.saleStartDate = saleStartDate;
   const saleEnds = optDate(formData, "saleEnds");
-  if (saleEnds !== null) updates.saleEnds = saleEnds;
+  if (formData.has("saleEnds")) updates.saleEnds = saleEnds;
 
   if (formData.has("maxPerOrder")) {
     updates.maxPerOrder = optInt(formData, "maxPerOrder") ?? 10;
@@ -510,12 +510,13 @@ export async function updateTicketType(
   if (formData.has("isVisible")) {
     updates.isVisible = formData.get("isVisible") !== "false";
   }
-  if (str(formData, "color") !== "") updates.color = str(formData, "color") || null;
+  if (formData.has("color")) updates.color = str(formData, "color") || null;
 
   try {
     await prisma.eventTicketType.update({ where: { id: ticketTypeId }, data: updates });
     revalidatePath("/dashboard/vendor/creation", "layout");
     revalidatePath(`${EVENTS_PATH}/${ticketType.eventId}/tickets`);
+    revalidatePath(`/events/${ticketType.event.slug}`);
     return { success: true };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Failed to update ticket type." };

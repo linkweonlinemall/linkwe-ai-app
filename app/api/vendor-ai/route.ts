@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache"
 import Anthropic from "@anthropic-ai/sdk"
 import type { Prisma } from "@prisma/client"
 import {
+  getVendorListingFieldGuide,
   getVendorProductDetails,
   searchVendorProducts,
   updateProductFromAI,
@@ -15,10 +16,12 @@ import {
   setProductCoverImage,
 } from "@/app/actions/ai-vendor-image"
 import { isTrustedHostedImageUrl } from "@/lib/images/trusted-host"
+import { createServiceFromAI } from "@/app/actions/ai-vendor-service"
+import { TICKET_FIELD_PROPERTIES, ticketPatchFormData } from "@/lib/chat/vendor-ticket-fields"
+import { vendorListingFieldProperties, vendorListingUpdateProperties } from "@/lib/chat/vendor-listing-fields"
 import { createProductFromAIRaw } from "@/app/actions/ai-vendor"
 import { checkProductCap } from "@/lib/finance/product-cap"
 import { consumeAIUse, getAIUsageState, recordAITokens } from "@/lib/finance/ai-usage"
-import { getStorePlan } from "@/lib/finance/store-plan"
 import {
   getVendorInventoryAlerts,
   getVendorRecentOrders,
@@ -30,6 +33,7 @@ import {
   createEvent as createEventAction,
   updateEvent as updateEventAction,
   createTicketType as createTicketTypeAction,
+  updateTicketType as updateTicketTypeAction,
   publishEvent as publishEventAction,
   unpublishEvent as unpublishEventAction,
   getVendorEvents,
@@ -37,7 +41,6 @@ import {
 import { getSession } from "@/lib/auth/session"
 import { VENDOR_SYSTEM_PROMPT } from "@/lib/chat/vendorSystemPrompt"
 import { WORKSPACE_TOOLS, runWorkspaceTool } from "@/lib/chat/vendor-workspace-tools"
-import { SERVICE_CATEGORIES } from "@/lib/categories"
 import {
   canonicalRegionValue,
   TT_REGIONS,
@@ -113,7 +116,7 @@ const CREATE_PRODUCT_TOOL: Anthropic.Tool = {
 const SEARCH_PRODUCTS_TOOL: Anthropic.Tool = {
   name: "search_vendor_products",
   description:
-    "Search the vendor's own products by name. Use this when the vendor wants to edit, update, or find one of their existing products.",
+    "Search the vendor's own products and services by name. Returns isService and serviceType so you can select the right listing before editing.",
   input_schema: {
     type: "object",
     properties: {
@@ -129,7 +132,7 @@ const SEARCH_PRODUCTS_TOOL: Anthropic.Tool = {
 const GET_PRODUCT_TOOL: Anthropic.Tool = {
   name: "get_product_details",
   description:
-    "Get the full details of a specific product by ID. Use this after the vendor confirms which product they want to edit.",
+    "Read the current product or service values, updatedAt version, and exact editable field guide. Use this before editing an identified listing. Includes customer expectations, booking and subscription settings.",
   input_schema: {
     type: "object",
     properties: {
@@ -142,39 +145,24 @@ const GET_PRODUCT_TOOL: Anthropic.Tool = {
   },
 }
 
+const GET_LISTING_FIELDS_TOOL: Anthropic.Tool = {
+  name: "get_listing_edit_fields",
+  description: "Discover the current editable product, service or ticket fields, their labels, types, limits, and dedicated controls. Use this whenever a requested field seems unfamiliar; do not guess that a new form field is unsupported.",
+  input_schema: { type: "object", properties: { kind: { type: "string", enum: ["product", "service", "ticket"] } }, required: ["kind"], additionalProperties: false },
+}
+
 const UPDATE_PRODUCT_TOOL: Anthropic.Tool = {
   name: "update_product",
-  description:
-    "Update specific fields of an existing product. Only include fields that need to change.",
+  description: "Update an owned product or service using its current editable field guide. Read get_product_details first, use its updatedAt as expectedUpdatedAt, and send only requested changes. Supports customer expectations, booking, quote, subscription, travel, virtual, digital licence and checkout fields. Null clears optional fields. Other fields are preserved.",
   input_schema: {
     type: "object",
     properties: {
+      ...vendorListingUpdateProperties(),
       product_id: { type: "string" },
-      name: { type: "string" },
-      price: { type: "number" },
-      compareAtPrice: { type: "number" },
-      condition: { type: "string", enum: ["NEW", "USED", "REFURBISHED"] },
-      description: { type: "string" },
-      shortDescription: { type: "string" },
-      category: { type: "string" },
-      brand: { type: "string" },
-      sku: { type: "string" },
-      stock: { type: "number" },
-      tags: { type: "array", items: { type: "string" } },
-      allowDelivery: { type: "boolean" },
-      allowPickup: { type: "boolean" },
-      weight: { type: "number" },
-      weightUnit: { type: "string", enum: ["KG", "LB"] },
-      length: { type: "number" },
-      width: { type: "number" },
-      height: { type: "number" },
-      returnPolicy: { type: "string" },
-      isFeatured: { type: "boolean" },
-      metaTitle: { type: "string" },
-      metaDescription: { type: "string" },
-      isPublished: { type: "boolean" },
+      expectedUpdatedAt: { type: "string", description: "Exact updatedAt from the latest get_product_details result. Protects edits from overwriting newer work." },
     },
-    required: ["product_id"],
+    required: ["product_id", "expectedUpdatedAt"],
+    additionalProperties: false,
   },
 }
 
@@ -271,37 +259,12 @@ const REPLACE_IMAGE_TOOL: Anthropic.Tool = {
 
 const CREATE_SERVICE_TOOL: Anthropic.Tool = {
   name: "create_service",
-  description:
-    "Creates a service listing as a draft or published. Call this when you have collected enough information from the vendor about their service.",
+  description: "Create a service using the current service form fields, including What's included, Before we begin, and What the customer receives. Include the fields needed by the chosen service type. Defaults to draft; publish only when explicitly requested.",
   input_schema: {
     type: "object",
-    properties: {
-      name: { type: "string" },
-      description: { type: "string" },
-      shortDescription: { type: "string" },
-      category: {
-        type: "string",
-        enum: SERVICE_CATEGORIES.map(({ value }) => value),
-        description: "Canonical LinkWe service category value",
-      },
-      serviceType: {
-        type: "string",
-        enum: ["BOOKABLE", "QUOTE", "SUBSCRIPTION", "ON_DEMAND", "VIRTUAL"],
-      },
-      serviceLocation: {
-        type: "string",
-        enum: ["AT_VENDOR", "AT_CUSTOMER", "VIRTUAL", "FLEXIBLE"],
-      },
-      price: { type: "number" },
-      serviceDuration: { type: "number" },
-      requiresDeposit: { type: "boolean" },
-      depositAmount: { type: "number" },
-      tags: { type: "array", items: { type: "string" } },
-      isPublished: { type: "boolean" },
-      metaTitle: { type: "string" },
-      metaDescription: { type: "string" },
-    },
+    properties: vendorListingFieldProperties("service"),
     required: ["name", "price", "serviceType"],
+    additionalProperties: false,
   },
 }
 
@@ -530,23 +493,14 @@ const UPDATE_EVENT_TOOL: Anthropic.Tool = {
 
 const CREATE_TICKET_TYPE_TOOL: Anthropic.Tool = {
   name: "create_ticket_type",
-  description:
-    "Adds a ticket type to an event. Always call this after creating an event. Use for General Admission, VIP, Early Bird, Table tickets, etc.",
-  input_schema: {
-    type: "object",
-    properties: {
-      eventId: { type: "string", description: "The event ID" },
-      name: { type: "string", description: "Ticket tier name e.g. General Admission, VIP, Early Bird" },
-      price: { type: "number", description: "Price in TTD — use 0 for free events" },
-      quantity: { type: "number", description: "Total tickets available" },
-      description: { type: "string" },
-      perks: { type: "string", description: "What is included e.g. Open bar, VIP lounge access" },
-      maxPerOrder: { type: "number", description: "Max tickets per order — default 10" },
-      saleStartDate: { type: "string", description: "ISO date string" },
-      saleEnds: { type: "string", description: "ISO date string" },
-    },
-    required: ["eventId", "name", "price", "quantity"],
-  },
+  description: "Add a ticket tier to an owned event, including What's included / perks. Use an existing event ID. Do not create a new tier when asked to edit one.",
+  input_schema: { type: "object", properties: { ...TICKET_FIELD_PROPERTIES, eventId: { type: "string" } }, required: ["eventId", "name", "price", "quantity"], additionalProperties: false },
+}
+
+const UPDATE_TICKET_TYPE_TOOL: Anthropic.Tool = {
+  name: "update_ticket_type",
+  description: "Edit an existing ticket tier, including What's included / perks, description, price, quantity, sale dates, visibility and colour. Read get_event_details first and use the exact ticket type ID. Send only requested fields; unmentioned fields are kept. Null clears optional fields.",
+  input_schema: { type: "object", properties: { ...TICKET_FIELD_PROPERTIES, ticketTypeId: { type: "string" } }, required: ["ticketTypeId"], additionalProperties: false },
 }
 
 const UPLOAD_EVENT_COVER_TOOL: Anthropic.Tool = {
@@ -666,6 +620,7 @@ const VENDOR_TOOLS: Anthropic.Tool[] = [
   SEARCH_PRODUCTS_TOOL,
   GET_PRODUCT_TOOL,
   UPDATE_PRODUCT_TOOL,
+  GET_LISTING_FIELDS_TOOL,
   ATTACH_PRODUCT_IMAGES_TOOL,
   REORDER_GALLERY_TOOL,
   REMOVE_IMAGE_TOOL,
@@ -685,6 +640,7 @@ const VENDOR_TOOLS: Anthropic.Tool[] = [
   CREATE_EVENT_TOOL,
   UPDATE_EVENT_TOOL,
   CREATE_TICKET_TYPE_TOOL,
+  UPDATE_TICKET_TYPE_TOOL,
   PUBLISH_EVENT_TOOL,
   UNPUBLISH_EVENT_TOOL,
   DELETE_EVENT_TOOL,
@@ -1051,120 +1007,14 @@ export async function POST(req: NextRequest) {
         }
 
         if (toolBlock.name === "create_service") {
-          const raw = toolBlock.input as Record<string, unknown>
+          const result = await createServiceFromAI(toolBlock.input as Record<string, unknown>, uploadedImageUrlsPayload)
+          return { content: JSON.stringify(result), ...(result.ok ? { focusProductId: result.serviceId } : {}) }
+        }
 
-          const name = String(raw.name ?? "").trim()
-          if (!name) {
-            return {
-              content: JSON.stringify({ ok: false, error: "Service name is required." }),
-            }
-          }
-
-          const price = Number(raw.price ?? 0)
-          if (!Number.isFinite(price) || price < 0) {
-            return {
-              content: JSON.stringify({ ok: false, error: "Enter a valid price. Use 0 for a free service." }),
-            }
-          }
-          const { limits: serviceLimits } = getStorePlan(store)
-          if (
-            serviceLimits.serviceMaxPriceMinor !== null &&
-            Math.round(price * 100) > serviceLimits.serviceMaxPriceMinor
-          ) {
-            return { content: JSON.stringify({ ok: false, error: "Starter services are limited to TTD 100. Upgrade to create higher-priced services." }) }
-          }
-          if (serviceLimits.serviceCap !== null) {
-            const serviceCount = await prisma.product.count({
-              where: { storeId: store.id, isService: true, isArchived: false },
-            })
-            if (serviceCount >= serviceLimits.serviceCap) {
-              return { content: JSON.stringify({ ok: false, error: `Your plan includes up to ${serviceLimits.serviceCap} services. Archive a service or upgrade to create more.` }) }
-            }
-          }
-
-          const category = raw.category ? String(raw.category).trim() : null
-          const validServiceCategories = new Set<string>(
-            SERVICE_CATEGORIES.map(({ value }) => value),
-          )
-          if (category && !validServiceCategories.has(category)) {
-            return {
-              content: JSON.stringify({
-                ok: false,
-                error: `Invalid service category. Use one of: ${[...validServiceCategories].join(", ")}`,
-              }),
-            }
-          }
-          const serviceDuration = raw.serviceDuration
-            ? Number(raw.serviceDuration)
-            : null
-
-          // Generate slug
-          let slug = name
-            .toLowerCase()
-            .trim()
-            .replace(/[^a-z0-9\s-]/g, "")
-            .replace(/\s+/g, "-")
-            .replace(/-+/g, "-")
-
-          const existing = await prisma.product.findUnique({ where: { slug } })
-          if (existing) slug = `${slug}-${Date.now()}`
-
-          const tags = Array.isArray(raw.tags)
-            ? (raw.tags as unknown[]).map((t) => String(t))
-            : []
-
-          try {
-            const service = await prisma.$transaction(async tx => {
-              await tx.$queryRaw`SELECT id FROM stores WHERE id = ${store.id} FOR UPDATE`;
-              const currentStore = await tx.store.findUniqueOrThrow({ where: { id: store.id } });
-              const currentLimits = getStorePlan(currentStore).limits;
-              if (currentLimits.serviceMaxPriceMinor !== null && Math.round(price * 100) > currentLimits.serviceMaxPriceMinor) throw new Error("Your plan's service price limit has changed. Refresh and try again.");
-              if (currentLimits.serviceCap !== null && await tx.product.count({ where: { storeId: store.id, isService: true, isArchived: false } }) >= currentLimits.serviceCap) throw new Error("Your service listing limit has been reached.");
-              return tx.product.create({
-              data: {
-                storeId: store.id,
-                name,
-                slug,
-                description: raw.description ? String(raw.description) : null,
-                shortDescription: raw.shortDescription ? String(raw.shortDescription) : null,
-                category,
-                price,
-                tags,
-                isService: true,
-                serviceType: raw.serviceType
-                  ? (raw.serviceType as Prisma.ProductCreateInput["serviceType"])
-                  : "BOOKABLE",
-                serviceLocation: raw.serviceLocation
-                  ? (raw.serviceLocation as Prisma.ProductCreateInput["serviceLocation"])
-                  : null,
-                serviceDuration,
-                ...(serviceDuration ? { durationMinutes: serviceDuration } : {}),
-                isBookable:
-                  raw.serviceType === "BOOKABLE" || raw.serviceType === "VIRTUAL",
-                requiresDeposit: raw.requiresDeposit === true,
-                depositAmount: raw.depositAmount ? Number(raw.depositAmount) : null,
-                isPublished: raw.isPublished === true,
-                metaTitle: raw.metaTitle ? String(raw.metaTitle) : null,
-                metaDescription: raw.metaDescription ? String(raw.metaDescription) : null,
-                images: uploadedImageUrlsPayload,
-              },
-            })
-
-            })
-            return {
-              content: JSON.stringify({
-                ok: true,
-                serviceId: service.id,
-                slug: service.slug,
-                message: `Service "${name}" created successfully.`,
-              }),
-            }
-          } catch (err) {
-            console.error("create_service error:", err)
-            return {
-              content: JSON.stringify({ ok: false, error: "Failed to create service." }),
-            }
-          }
+        if (toolBlock.name === "get_listing_edit_fields") {
+          const raw = toolBlock.input as { kind: "product" | "service" | "ticket" }
+          if (raw.kind === "ticket") return { content: JSON.stringify({ kind: "ticket", fields: TICKET_FIELD_PROPERTIES, instructions: "Read get_event_details, then update_ticket_type using the existing tier ID and only changed fields." }) }
+          return { content: JSON.stringify(await getVendorListingFieldGuide(raw.kind)) }
         }
 
         if (toolBlock.name === "search_vendor_products") {
@@ -1187,63 +1037,9 @@ export async function POST(req: NextRequest) {
         }
 
         if (toolBlock.name === "update_product") {
-          const raw = toolBlock.input as Record<string, unknown>
+          const { product_id, expectedUpdatedAt, ...patch } = toolBlock.input as Record<string, unknown>
           const result = await updateProductFromAI(
-            {
-              productId: String(raw.product_id ?? ""),
-              name: raw.name != null ? String(raw.name) : undefined,
-              price: raw.price != null ? Number(raw.price) : undefined,
-              compareAtPrice:
-                raw.compareAtPrice != null ? Number(raw.compareAtPrice) : undefined,
-              condition: raw.condition as
-                | "NEW"
-                | "USED"
-                | "REFURBISHED"
-                | undefined,
-              description:
-                raw.description != null ? String(raw.description) : undefined,
-              shortDescription:
-                raw.shortDescription != null
-                  ? String(raw.shortDescription)
-                  : undefined,
-              category:
-                raw.category != null ? String(raw.category) : undefined,
-              brand: raw.brand != null ? String(raw.brand) : undefined,
-              sku: raw.sku != null ? String(raw.sku) : undefined,
-              stock: raw.stock != null ? Number(raw.stock) : undefined,
-              tags: Array.isArray(raw.tags) ? raw.tags.map(String) : undefined,
-              allowDelivery:
-                raw.allowDelivery != null
-                  ? Boolean(raw.allowDelivery)
-                  : undefined,
-              allowPickup:
-                raw.allowPickup != null
-                  ? Boolean(raw.allowPickup)
-                  : undefined,
-              weight: raw.weight != null ? Number(raw.weight) : undefined,
-              weightUnit: raw.weightUnit as "KG" | "LB" | undefined,
-              length: raw.length != null ? Number(raw.length) : undefined,
-              width: raw.width != null ? Number(raw.width) : undefined,
-              height: raw.height != null ? Number(raw.height) : undefined,
-              returnPolicy:
-                raw.returnPolicy != null
-                  ? String(raw.returnPolicy)
-                  : undefined,
-              isFeatured:
-                raw.isFeatured != null
-                  ? Boolean(raw.isFeatured)
-                  : undefined,
-              metaTitle:
-                raw.metaTitle != null ? String(raw.metaTitle) : undefined,
-              metaDescription:
-                raw.metaDescription != null
-                  ? String(raw.metaDescription)
-                  : undefined,
-              isPublished:
-                raw.isPublished != null
-                  ? Boolean(raw.isPublished)
-                  : undefined,
-            },
+            { ...patch, productId: String(product_id ?? ""), expectedUpdatedAt: typeof expectedUpdatedAt === "string" ? expectedUpdatedAt : "" },
             session.userId,
             store.id
           )
@@ -1792,20 +1588,16 @@ export async function POST(req: NextRequest) {
           return { content: JSON.stringify({ success: true }) }
         }
 
-        if (toolBlock.name === "create_ticket_type") {
-          const input = toolBlock.input as Record<string, unknown>
-          const { eventId, ...fields } = input as { eventId: string } & Record<string, unknown>
-          const fd = new FormData()
-          for (const [k, v] of Object.entries(fields)) {
-            if (v !== undefined && v !== null) fd.set(k, String(v))
-          }
-          const result = await createTicketTypeAction(eventId, fd)
-          if ("error" in result) return { content: JSON.stringify({ error: result.error }) }
-          return {
-            content: JSON.stringify({
-              success: true,
-              ticketTypeId: result.ticketTypeId,
-            }),
+        if (toolBlock.name === "create_ticket_type" || toolBlock.name === "update_ticket_type") {
+          const { eventId, ticketTypeId, ...patch } = toolBlock.input as Record<string, unknown>
+          try {
+            const fd = ticketPatchFormData(patch)
+            const result = toolBlock.name === "create_ticket_type"
+              ? await createTicketTypeAction(String(eventId ?? ""), fd)
+              : await updateTicketTypeAction(String(ticketTypeId ?? ""), fd)
+            return { content: JSON.stringify(result) }
+          } catch (error) {
+            return { content: JSON.stringify({ error: error instanceof Error ? error.message : "Could not update the ticket." }) }
           }
         }
 

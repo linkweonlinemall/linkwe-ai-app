@@ -11,6 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { releaseBays } from "@/lib/fulfillment/bays";
 import { escapeCsvCell } from "@/lib/csv/escape-cell";
 import { fulfillProductOrder } from "@/lib/payments/fulfill-product-order";
+import { adminOrderWhere, orderQueueWhere, ORDER_QUEUES, type OrderFilters, type OrderQueue } from "@/lib/admin/order-workspace";
 import { createNotification } from "@/lib/notifications/create";
 
 export async function completeOrders(orderIds: string[]): Promise<void> {
@@ -252,12 +253,7 @@ export async function exportOrdersCSV(orderIds: string[]): Promise<string> {
   return `${header}\n${rows}`;
 }
 
-export async function getAdminOrders(filters?: {
-  status?: MainOrderStatus;
-  search?: string;
-  limit?: number;
-  offset?: number;
-}) {
+export async function getAdminOrders(filters?: OrderFilters) {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/");
 
@@ -265,21 +261,7 @@ export async function getAdminOrders(filters?: {
   const offset = Math.max(0,Math.floor(filters?.offset ?? 0));
 
   return prisma.mainOrder.findMany({
-    where: {
-      ...(filters?.status
-        ? { status: filters.status }
-        : { status: { not: "DRAFT" } }),
-      ...(filters?.search
-        ? {
-            OR: [
-              { id: filters.search },
-              { referenceNumber: { contains: filters.search.slice(0,100), mode: "insensitive" } },
-              { buyer: { fullName: { contains: filters.search, mode: "insensitive" } } },
-              { buyer: { email: { contains: filters.search, mode: "insensitive" } } },
-            ],
-          }
-        : {}),
-    },
+    where: adminOrderWhere(filters),
     select: {
       id: true,
       referenceNumber: true,
@@ -289,6 +271,7 @@ export async function getAdminOrders(filters?: {
       shippingMinor: true,
       region: true,
       createdAt: true,
+      updatedAt: true,
       shippingAddressId: true,
       paymentAttempts: {
         orderBy: { createdAt: "desc" },
@@ -321,7 +304,7 @@ export async function getAdminOrders(filters?: {
         },
       },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: filters?.sort === "value" ? [{ totalMinor: "desc" }, { id: "desc" }] : [{ createdAt: filters?.sort === "oldest" ? "asc" : "desc" }, { id: "desc" }],
     take: limit,
     skip: offset,
   });
@@ -349,4 +332,25 @@ export async function getAdminOrderStats() {
   const counts = await Promise.all(statuses.map((status) => prisma.mainOrder.count({ where: { status } })));
 
   return Object.fromEntries(statuses.map((status, i) => [status, counts[i]])) as Record<MainOrderStatus, number>;
+}
+
+export async function getAdminOrderWorkspace(filters: OrderFilters = {}) {
+  if ((await getSession())?.role !== "ADMIN") redirect("/");
+  const where = adminOrderWhere(filters);
+  const [orders, total, counts] = await Promise.all([
+    getAdminOrders(filters),
+    prisma.mainOrder.count({ where }),
+    Promise.all(ORDER_QUEUES.map(queue => prisma.mainOrder.count({ where: orderQueueWhere(queue) }))),
+  ]);
+  return { orders, total, counts: Object.fromEntries(ORDER_QUEUES.map((queue, i) => [queue, counts[i]])) as Record<OrderQueue, number> };
+}
+
+export async function getAdminOrderActivity(orderId: string) {
+  if ((await getSession())?.role !== "ADMIN") redirect("/");
+  const rows = await prisma.orderDocument.findMany({ where: { mainOrderId: orderId, documentType: "OTHER" }, orderBy: { generatedAt: "desc" }, take: 30, select: { id: true, generatedAt: true, metadata: true } });
+  return rows.flatMap(row => {
+    const meta = row.metadata as { action?: string; note?: string; actorName?: string; kind?: string } | null;
+    if (!meta || !["warehouse_audit", "admin_payment_confirmation"].includes(meta.kind ?? "")) return [];
+    return [{ id: row.id, at: row.generatedAt.toISOString(), action: meta.action ?? "Payment confirmation", note: meta.note ?? "", actor: meta.actorName ?? "Administrator" }];
+  });
 }

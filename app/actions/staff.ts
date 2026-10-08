@@ -29,6 +29,7 @@ export async function getVendorStaff() {
       bio: true,
       photoUrl: true,
       isActive: true,
+      access: { select: { email: true, userId: true, inviteExpiresAt: true, acceptedAt: true, canEditNotes: true, canManageTimeOff: true } },
       services: {
         select: {
           serviceId: true,
@@ -280,4 +281,20 @@ export async function assignBookingStaff(bookingId:string,staffId:string|null){
   if("ok"in result){revalidatePath("/dashboard/vendor/staff");revalidatePath("/dashboard/vendor/service-desk");revalidatePath("/bookings");}
   return result;
  }catch(error){if(typeof error==="object"&&error&&"code"in error&&error.code==="P2034")return {error:"The schedule changed while saving. Please try again."};return {error:"Could not save the assignment."};}
+}
+
+export async function getStaffAssignmentOptions(bookingId: string) {
+ const store = await getVendorStore(); if (!store) throw Error("A vendor account is required.");
+ const booking = await prisma.productBooking.findFirst({where:{id:bookingId,product:{storeId:store.id}},select:{id:true,productId:true,bookingDate:true,startTime:true,endTime:true,status:true}});
+ if (!booking) throw Error("Appointment not found.");
+ const date=booking.bookingDate.toISOString().slice(0,10);
+ const members=await prisma.staffMember.findMany({where:{storeId:store.id,isActive:true},include:{services:true,availability:true,overrides:true}});
+ const others=await prisma.productBooking.findMany({where:{id:{not:bookingId},staffMember:{storeId:store.id},bookingDate:{gte:new Date(`${date}T00:00:00Z`),lt:new Date(new Date(`${date}T00:00:00Z`).getTime()+86400000)},status:{in:["PENDING","CONFIRMED","DEPOSIT_PAID"]}},select:{staffMemberId:true,startTime:true,endTime:true}});
+ return members.map(member=>{
+  const day=member.availability.find(d=>d.isActive&&d.dayOfWeek===dayOfWeekTrinidad(date)),override=member.overrides.find(o=>o.date.toISOString().slice(0,10)===date);
+  const start=override?.customStartTime??day?.startTime,end=override?.customEndTime??day?.endTime;
+  const appointments=others.filter(b=>b.staffMemberId===member.id);
+  const reason=!["PENDING","CONFIRMED","DEPOSIT_PAID"].includes(booking.status)||isSlotInPastTrinidad(date,booking.startTime)?"Appointment already started or closed":!member.services.some(s=>s.serviceId===booking.productId)?"Does not provide this service":override?.isBlocked?"Time off":!start||!end||booking.startTime<start||booking.endTime>end?"Outside working hours":staffAssignmentConflict(booking.startTime,booking.endTime,day?.slotBufferMins??0,appointments)?"Appointment or buffer conflict":null;
+  return {id:member.id,name:member.name,reason,appointments:appointments.length};
+ }).sort((a,b)=>Number(!!a.reason)-Number(!!b.reason)||a.appointments-b.appointments||a.name.localeCompare(b.name));
 }

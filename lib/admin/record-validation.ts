@@ -1,3 +1,4 @@
+import { SERVICE_OFFER_FIELD_NAMES, SERVICE_OFFER_MAX_LENGTH } from "@/lib/services/offer-fields";
 import { cleanRichText } from "@/lib/content/rich-text";
 import { mapSubscriptionInterval } from "@/lib/finance/subscription-interval";
 import { validateSubscriptionConfiguration } from "@/lib/services/configuration-validation";
@@ -61,6 +62,8 @@ export function validateRecordValues(
     } else if (f.type !== "Json" && typeof value !== "string")
       errors[key] = `Enter ${label.toLowerCase()} as text.`;
     if (key === "description" && typeof value === "string") value = cleanRichText(value);
+    if ((SERVICE_OFFER_FIELD_NAMES as readonly string[]).includes(key) && typeof value === "string" && value.length > SERVICE_OFFER_MAX_LENGTH)
+      errors[key] = "Keep each customer expectation field within 1,500 characters.";
     if (typeof value === "string" && value.length > 30000)
       errors[key] = "This value is too long.";
     if (value != null && f.options && !f.options.includes(String(value)))

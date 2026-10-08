@@ -1,3 +1,4 @@
+import { SERVICE_OFFER_FIELDS, SERVICE_OFFER_FIELD_NAMES } from "@/lib/services/offer-fields";
 import type { RecordKind } from "./record-fields";
 export type RecordField = {
   name: string;
@@ -90,7 +91,7 @@ export const RECORD_SECTIONS: Record<RecordKind, RecordSection[]> = {
       "delivery",
       "Delivery & collection",
       "Choose how this item gets to your customer.",
-      "allowDelivery allowPickup deliveryFee deliveryRegions weight weightUnit length width height returnPolicy",
+      "allowDelivery allowPickup deliveryFee deliveryRegions address latitude longitude weight weightUnit length width height returnPolicy",
     ),
     section(
       "digital",
@@ -118,6 +119,7 @@ export const RECORD_SECTIONS: Record<RecordKind, RecordSection[]> = {
       "Choose the service model first. Relevant settings appear below.",
       "storeId name slug serviceType category shortDescription description tags",
     ),
+    section("expectations", "Customer expectations", "Make the scope, preparation and finished result clear.", SERVICE_OFFER_FIELD_NAMES.join(" ")),
     section(
       "media",
       "Service images",
@@ -273,6 +275,7 @@ export const FIELD_LABELS: Record<string, string> = {
   shippingMode: "Delivery provider",
   isAvailableNow: "Available now",
   onboardingStep: "Setup progress",
+  ...Object.fromEntries(SERVICE_OFFER_FIELDS.map(field => [field.name, field.label])),
   serviceType: "How customers request this service",
   serviceLocation: "Service location",
   serviceDuration: "Display duration (minutes)",
@@ -314,6 +317,7 @@ export const FIELD_LABELS: Record<string, string> = {
   region: "Town / region",
 };
 export const FIELD_HELP: Record<string, string> = {
+  ...Object.fromEntries(SERVICE_OFFER_FIELDS.map(field => [field.name, field.placeholder])),
   bookingPaymentMode:
     "Pay on arrival requires an active Growth or Pro store. Virtual services and other plans use online payment automatically.",
   slug: "Lowercase letters, numbers and hyphens. Changing an existing URL can break shared links.",

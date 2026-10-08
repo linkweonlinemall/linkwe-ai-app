@@ -9,7 +9,7 @@ import s from "@/components/vendor/business-workspace.module.css";
 import type {ComponentProps} from "react";
 export type AssignmentBooking={id:string;productId:string;bookingDate:string;startTime:string;endTime:string;staffMemberId:string|null;product:{name:string}};
 export default function StaffWorkspace({availability,staff,bookings,store}:{availability:ComponentProps<typeof AvailabilityClient>;staff:Awaited<ReturnType<typeof getVendorStaff>>;bookings:AssignmentBooking[];store:{name:string;slug:string;visible:boolean;status:string;verification:string;isAvailableNow:boolean;services:{id:string;name:string;isPublished:boolean;isAvailable:boolean}[]}}){
- const [tab,setTab]=useState("availability");
+ const [tab,setTab]=useState("team");
  return <div className={s.stack}><nav className={s.tabs} aria-label="Staff workspace"><button data-tour="staff-availability-tab" aria-pressed={tab==="availability"} onClick={()=>setTab("availability")}>Service availability</button><button data-tour="staff-team-tab" aria-pressed={tab==="team"} onClick={()=>setTab("team")}>Team & assignments</button><button data-tour="staff-visibility-tab" aria-pressed={tab==="visibility"} onClick={()=>setTab("visibility")}>Store visibility</button></nav>
  <div hidden={tab!=="availability"}><AvailabilityClient {...availability}/></div>
  <div hidden={tab!=="team"}><TeamWorkspace initialStaff={staff} services={availability.services.map(v=>({id:v.id,name:v.name}))} bookings={bookings}/></div>
