@@ -18,4 +18,4 @@ The implementation was also checked in the local browser: order queues/search, d
 
 ## Publication
 
-The user explicitly requested publication. The release evidence records the published commit, deployment status and live checks. Authenticated production workflows require an authorized signed-in session; no development accounts are used on production.
+The user explicitly requested publication. Live verification identified a browser error during the unauthenticated team page's streamed redirect. The team workspace now uses the existing Proxy sign-in gate before rendering; invitation pages remain publicly accessible. The release evidence records the published commits, deployment status and live checks. Authenticated production workflows require an authorized signed-in session; no development accounts are used on production.
