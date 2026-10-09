@@ -1,4 +1,5 @@
 "use client";
+import { ListingTypeHelp } from "@/components/vendor/guided-creation/GuideCompanion";
 import ServiceJourney from "@/components/vendor/services/ServiceJourney";
 import ServiceDetailsFields from "@/components/vendor/services/ServiceDetailsFields";
 
@@ -123,6 +124,7 @@ export default function ServiceCreateForm() {
           name="subscriptionCanPause"
           value={subscriptionCanPause ? "true" : "false"}
         />
+        <ListingTypeHelp kind="service" selected={serviceType}/>
         {/* Service Type */}
         <div data-creation-section="Service type" className="rounded-2xl border border-zinc-200 bg-white p-5">
           <p className="mb-3 text-sm font-bold text-zinc-900">

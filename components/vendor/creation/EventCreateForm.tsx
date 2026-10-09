@@ -1,8 +1,9 @@
 "use client";
+import { ListingTypeHelp } from "@/components/vendor/guided-creation/GuideCompanion";
 
 import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   createEvent,
   uploadEventCoverImage,
@@ -139,6 +140,7 @@ function Toggle({
 
 export default function EventCreateForm() {
   const router = useRouter();
+  const guideId = useSearchParams().get("guide");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -221,7 +223,7 @@ export default function EventCreateForm() {
         setError(result.error);
       } else {
         if (redirectTo === "tickets") {
-          router.push(`/dashboard/vendor/creation/event/${result.eventId}?panel=tickets&new=1`);
+          router.push(`/dashboard/vendor/creation/event/${result.eventId}?panel=tickets&new=1${guideId ? `&guide=${encodeURIComponent(guideId)}` : ""}`);
         } else {
           router.push("/dashboard/vendor/creation?type=event&saved=1");
         }
@@ -245,6 +247,7 @@ export default function EventCreateForm() {
       <form id="event-form" onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-6">
 
         {/* ── Section 1: Basic Details ── */}
+        <ListingTypeHelp kind="event"/>
         <div data-creation-section="Basic details" className="rounded-2xl border border-zinc-200 bg-white p-5">
           <p className="mb-4 text-sm font-bold text-zinc-900">Basic details</p>
           <div className="flex flex-col gap-4">

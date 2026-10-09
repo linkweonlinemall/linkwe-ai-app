@@ -270,6 +270,7 @@ model CourierLocation {
 }
 
 model Store {
+  creationGuides GuidedCreationPlan[]
   coupons StoreCoupon[]
   id                           String                        @id @default(cuid())
   ownerId                      String                        @unique @map("owner_id")
@@ -341,6 +342,22 @@ model Store {
 
   @@index([slug])
   @@map("stores")
+}
+
+/// Manual listing setup guidance. Does not create listings or consume AI credits.
+model GuidedCreationPlan {
+  id           String   @id @default(cuid())
+  storeId      String
+  title        String
+  answers      Json
+  checked      String[] @default([])
+  version      Int      @default(1)
+  guideVersion Int      @default(1)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  store        Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, createdAt, id])
 }
 
 /// Vendor-authored business updates shown to customers who follow (save) the store.

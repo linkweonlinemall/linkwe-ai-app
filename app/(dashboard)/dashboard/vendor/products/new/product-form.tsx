@@ -12,6 +12,7 @@ import Input from "@/components/ui/Input";
 import RichTextEditor from "@/components/ui/RichTextEditor";
 import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
+import { ListingTypeHelp } from "@/components/vendor/guided-creation/GuideCompanion";
 import CheckoutFieldsBuilder from "@/components/vendor/CheckoutFieldsBuilder";
 
 const PRODUCT_CATEGORY_OPTIONS = [
@@ -54,7 +55,7 @@ function sanitizeSlugClient(s: string): string {
   return t;
 }
 
-export function ProductForm() {
+export function ProductForm({ initialProductType = "simple" }: { initialProductType?: "simple" | "variable" | "digital" }) {
   const [state, formAction, pending] = useActionState(
     async (_prev: unknown, formData: FormData) => createProduct(_prev, formData),
     null as { ok: false; errors: ProductFieldErrors } | null,
@@ -67,7 +68,7 @@ export function ProductForm() {
   const [slugManual, setSlugManual] = useState(false);
   const [allowDelivery, setAllowDelivery] = useState(false);
   const [previews, setPreviews] = useState<{ url: string; name: string }[]>([]);
-  const [productType, setProductType] = useState<"simple" | "variable" | "digital">("simple");
+  const [productType, setProductType] = useState<"simple" | "variable" | "digital">(initialProductType);
   const [variants, setVariants] = useState<VariantRow[]>([]);
   const [priceInput, setPriceInput] = useState("");
   const [digitalFileUrl, setDigitalFileUrl] = useState("");
@@ -169,6 +170,7 @@ export function ProductForm() {
         <input type="hidden" name="isDigital" value={productType === "digital" ? "true" : "false"} />
         <input type="hidden" name="hasVariants" value={productType === "variable" ? "true" : "false"} />
 
+        <ListingTypeHelp kind="product" selected={productType}/>
         <div data-creation-section="Product Type"
           data-tour="product-type"
           className="rounded-xl bg-white p-5 sm:p-6"
