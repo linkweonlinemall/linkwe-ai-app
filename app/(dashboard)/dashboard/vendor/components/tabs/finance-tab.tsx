@@ -11,6 +11,7 @@ import AITopupCheckout from "@/components/vendor/ai-topup-checkout";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import { getCommissionRate } from "@/lib/finance/commission";
+import { LIVE_STOCK_COPY } from "@/lib/vendor/stock/copy";
 import { PLAN_PRICE_MINOR } from "@/lib/finance/plan-limits";
 import { getStorePlan } from "@/lib/finance/store-plan";
 import {
@@ -414,6 +415,12 @@ export default function FinanceTab({
           <p className="text-sm text-zinc-600 mb-3">Product commission: {productCommissionPct}%</p>
           <div className="rounded-xl bg-[#174766] p-4 mb-3"><RexUsageMeter allowance={aiAllowance} remaining={aiRemaining} topupRemaining={topupRemaining} lifetime={plan === "STARTER" || plan === "SERVICES"}/></div>
           <AITopupCheckout topupRemaining={topupRemaining} />
+          <div className="my-4 rounded-xl border border-sky-100 bg-white p-3">
+            <h3 className="text-sm font-bold text-sky-950">{LIVE_STOCK_COPY.benefit}</h3>
+            <p className="mt-1 text-xs leading-relaxed text-zinc-600">{LIVE_STOCK_COPY.summary}</p>
+            <p className="mt-2 text-xs text-zinc-500">Ordinary product management, stock editing and QR Studio labels remain available on every plan.</p>
+            <Link href={LIVE_STOCK_COPY.href} className="mt-2 inline-block text-xs font-semibold text-sky-900 underline">Explore Live Stock Update</Link>
+          </div>
           {plan === "STARTER" && <div className="my-4 rounded-2xl border border-sky-200 bg-sky-50 p-4"><h3 className="font-bold text-sky-950">Services · TT$100/month</h3><p className="mt-1 text-sm text-sky-900">Everything in Starter, with 20 services, no service-price cap and pay on arrival for eligible services. Starter commissions apply to online sales.</p><div className="mt-3 flex flex-wrap gap-3"><button disabled={subscribing} onClick={() => void handleSubscribeByCard("SERVICES")} className="rounded-xl bg-[#174766] px-4 py-3 text-sm font-bold text-white">Choose Services</button><button disabled={payingSubscription || subscribing} onClick={() => void handlePaySubscription("SERVICES")} className="text-sm font-bold text-sky-900 underline">Pay from balance</button></div></div>}
           {plan === "STARTER" ? (
             <>
@@ -572,7 +579,7 @@ export default function FinanceTab({
               {(plan === "SERVICES" || plan === "GROWTH") && <div className="mt-4 grid gap-3 border-t border-zinc-200 pt-4 sm:grid-cols-2">
                 {(plan === "SERVICES" ? ["GROWTH", "PRO"] as const : ["PRO"] as const).map(target => <div key={target} className="rounded-xl border border-sky-100 bg-white p-3">
                   <h3 className="text-sm font-bold text-sky-950">{target === "GROWTH" ? "Growth · TT$300/month" : "Pro · TT$500/month"}</h3>
-                  <p className="mt-1 text-xs leading-relaxed text-zinc-600">{target === "GROWTH" ? "More listings, expanded Rex capacity and no service commission." : "Unlimited listings, maximum Rex capacity and no product or service commission."}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-zinc-600">{target === "GROWTH" ? "More listings, expanded Rex capacity and no service commission." : "Unlimited listings, maximum Rex capacity and no product or service commission. Live Stock Update and QR stock scanning while Pro is active."}</p>
                   <p className="mt-2 text-xs text-zinc-500">Starts a new paid month at the full plan price.</p>
                   <div className="mt-3 flex flex-wrap gap-3 text-xs"><button type="button" disabled={subscribing || payingSubscription} onClick={() => void handleSubscribeByCard(target)} className="rounded-lg bg-[#0e4362] px-3 py-2 font-semibold text-white disabled:opacity-50">Upgrade with WiPay</button><button type="button" disabled={subscribing || payingSubscription} onClick={() => void handlePaySubscription(target)} className="font-semibold text-sky-900 underline disabled:opacity-50">Pay from balance</button></div>
                 </div>)}

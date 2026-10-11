@@ -16,6 +16,7 @@ export const PUBLIC_PLANS = (["STARTER", "SERVICES", "GROWTH", "PRO"] as const).
     ticketCommission: `${TICKET_COMMISSION_RATE * 100}%`,
     rex: id === "PRO" ? "Rex maximum monthly capacity" : id === "GROWTH" ? "Rex expanded monthly capacity" : "Rex welcome access · one-time gift",
     timeline: id === "GROWTH" || id === "PRO",
+    liveStock: id === "PRO",
   };
 });
 export function planDestination(target: CommissionPlan, current: CommissionPlan | null) {

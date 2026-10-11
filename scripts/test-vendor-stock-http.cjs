@@ -33,6 +33,16 @@ const db = new PrismaClient();
   };
   const anonymous = await fetch(route, { redirect: 'manual' });
   assert.equal(anonymous.status, 307); assert.ok(anonymous.headers.get('location').includes('/login'));
+  for (const path of ['/pricing', '/features', '/faq']) {
+    const publicPage = await fetch(`${origin}${path}`); const publicHtml = await publicPage.text();
+    assert.equal(publicPage.status, 200); assert.ok(publicHtml.includes('Live Stock Update'));
+    assert.ok(publicHtml.includes('active Pro')); assert.ok(publicHtml.includes('inventory only'));
+    if (path === '/pricing') {
+      assert.ok(publicHtml.includes('<td>Pro required</td><td>Pro required</td><td>Pro required</td><td>Included with active Pro</td>'));
+      assert.ok(publicHtml.includes('<td>Free</td><td>TT$100</td><td>TT$300</td><td>TT$500</td>'));
+    } else assert.ok(publicHtml.includes('href="/dashboard/vendor/catalog"'));
+  }
+  console.log('PASS HTTP: public pricing, feature directory and FAQ describe active-Pro stock updates; comparison prices and eligibility are correct.');
   const page = await fetch(route, { headers: { Cookie: vendorCookie } }); const html = await page.text();
   assert.equal(page.status, 200);
   for (const text of ['Live stock update', 'Vendor workspace', 'Search catalog', 'Scan product QR', 'QR Studio labels', 'Add to update', 'Select &amp; add quantities', 'Everyday linen shirt', 'Colour: Red', 'Size: M', 'Recent stock updates']) assert.ok(html.includes(text), `Page missing ${text}`);
@@ -67,7 +77,7 @@ const db = new PrismaClient();
     const freeCookie = await cookie(freeVendor);
     const freePage = await fetch(route, { headers: { Cookie: freeCookie } }); const freeHtml = await freePage.text();
     assert.equal(freePage.status, 200); assert.ok(freeHtml.includes('An active Pro plan is required.'));
-    assert.ok(freeHtml.includes('/dashboard/vendor/finance')); assert.ok(freeHtml.includes('Manage products'));
+    assert.ok(freeHtml.includes('/dashboard/vendor/finance?tab=plan')); assert.ok(freeHtml.includes('Manage products'));
     assert.ok(!freeHtml.includes('aria-label="Search catalog"')); assert.ok(!freeHtml.includes(freeProduct.name));
     const freeInput = { storeId: freeStore.id, requestId: randomUUID(), subscriptionPlan: 'PRO', lines: [{ productId: freeProduct.id, variantId: null, quantity: 1 }] };
     const freeSubmit = await post(freeInput, freeCookie); assert.ok(freeSubmit.body.includes('"upgradeRequired":true'));
@@ -76,6 +86,15 @@ const db = new PrismaClient();
     assert.equal(await db.stockAdjustment.count({ where: { storeId: freeStore.id } }), 0);
     const creationPage = await fetch(`${origin}/dashboard/vendor/creation?type=product`, { headers: { Cookie: freeCookie } });
     const creationHtml = await creationPage.text(); assert.equal(creationPage.status, 200); assert.ok(creationHtml.includes(freeProduct.name)); assert.ok(creationHtml.includes('upgrade to Pro'));
+    for (const sessionCookie of [vendorCookie, freeCookie]) {
+      const qrPage = await fetch(`${origin}/dashboard/vendor/qr-studio`, { headers: { Cookie: sessionCookie } }); const qrHtml = await qrPage.text();
+      assert.equal(qrPage.status, 200); assert.ok(qrHtml.includes('Your product labels work with Live Stock Update'));
+      assert.ok(qrHtml.includes('href="/dashboard/vendor/catalog"')); assert.ok(qrHtml.includes('every plan'));
+      const financePage = await fetch(`${origin}/dashboard/vendor/finance?tab=plan`, { headers: { Cookie: sessionCookie } }); const financeHtml = await financePage.text();
+      assert.equal(financePage.status, 200); assert.ok(financeHtml.includes('Explore Live Stock Update'));
+      assert.ok(financeHtml.includes('active Pro')); assert.ok(financeHtml.includes('href="/dashboard/vendor/catalog"'));
+    }
+    console.log('PASS HTTP: Free and Pro QR Studio and Finance plan tab display the feature with a working stock-workspace link.');
     console.log('PASS HTTP: Free route shows upgrade without stock data, direct action/QR bypass is denied, and ordinary product management stays accessible.');
     const responses = await Promise.all([post(input, vendorCookie), post(input, vendorCookie)]);
     for (const response of responses) { assert.equal(response.status, 200); assert.ok(response.body.includes('"ok":true'), 'Server action must return success'); }

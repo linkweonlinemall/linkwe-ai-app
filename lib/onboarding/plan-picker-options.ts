@@ -2,6 +2,7 @@ import type { CommissionPlan } from "@/lib/finance/commission";
 import { getCommissionRate } from "@/lib/finance/commission";
 import { PLAN_LIMITS, PLAN_PRICE_MINOR } from "@/lib/finance/plan-limits";
 import type { IntendedPlan } from "@/lib/onboarding/intended-plan";
+import { LIVE_STOCK_COPY } from "@/lib/vendor/stock/copy";
 
 export type PlanPickerOption = {
   planId: IntendedPlan;
@@ -12,6 +13,7 @@ export type PlanPickerOption = {
   commission: string;
   productCapLabel: string;
   aiLabel: string;
+  stockBenefit?: string;
   featured?: boolean;
 };
 
@@ -70,5 +72,6 @@ export const PLAN_PICKER_OPTIONS: PlanPickerOption[] = (
     commission: formatCommission(base.planId),
     productCapLabel: formatProductCap(base.planId),
     aiLabel: formatAiAllowance(base.planId),
+    stockBenefit: base.planId === "PRO" ? LIVE_STOCK_COPY.benefit : undefined,
   };
 });

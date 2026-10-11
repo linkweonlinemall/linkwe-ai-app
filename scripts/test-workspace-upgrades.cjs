@@ -29,3 +29,22 @@ console.log('PASS Trinidad midnight/day boundaries, deposit-paid bookings, activ
 
 const {bookingDateLabel}=require('../lib/services/upcoming-bookings.ts');assert.equal(bookingDateLabel('2026-09-25T00:00:00Z'),bookingDateLabel('2026-09-25T16:00:00Z'));
 console.log('PASS Legacy and current booking date anchors show the same calendar day.');
+
+const {PUBLIC_PLANS,planDestination}=require('../lib/pricing/catalog.ts');
+const {PLAN_PICKER_OPTIONS}=require('../lib/onboarding/plan-picker-options.ts');
+const {PLAN_PRICE_MINOR}=require('../lib/finance/plan-limits.ts');
+const {LIVE_STOCK_COPY}=require('../lib/vendor/stock/copy.ts');
+const {STOCK_UPGRADE_HREF,canUseLiveStock}=require('../lib/vendor/stock/access.ts');
+const {featureGroups}=require('../app/features/catalog.ts');
+for(const plan of PUBLIC_PLANS){
+  const picker=PLAN_PICKER_OPTIONS.find(option=>option.planId===plan.id);
+  assert.equal(plan.price,PLAN_PRICE_MINOR[plan.id]/100);
+  assert.equal(plan.liveStock,canUseLiveStock({subscriptionPlan:plan.id,subscriptionStatus:'ACTIVE',planRenewsAt:null}));
+  assert.equal(picker.stockBenefit,plan.liveStock?LIVE_STOCK_COPY.benefit:undefined);
+}
+assert.equal(STOCK_UPGRADE_HREF,planDestination('PRO','PRO').href);
+assert.equal(new URL(STOCK_UPGRADE_HREF,'https://www.linkweonlinemall.com').searchParams.get('tab'),'plan');
+const stockFeature=featureGroups.flatMap(group=>group.features).filter(feature=>feature.href===LIVE_STOCK_COPY.href);
+assert.equal(stockFeature.length,1);assert.match(stockFeature[0].text,/active Pro/);assert.match(stockFeature[0].text,/inventory only/);
+assert.equal(require('../lib/vendor/tutorial-catalog.ts').tutorialCatalog.liveStock.steps[0].route,LIVE_STOCK_COPY.href);
+console.log('PASS Public pricing and onboarding agree with actual Pro eligibility, current prices, plan-tab upgrade links and stock feature/tutorial destinations.');

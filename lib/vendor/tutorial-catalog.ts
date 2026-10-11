@@ -91,6 +91,16 @@ export const tutorialCatalog = {
       { title: "Review, then use", body: "Compare with the original and confirm that the product is accurate. Download the finished photo, or add it to your listing when opening the studio from a product form. Save the product to keep that change." },
     ],
   },
+  liveStock: {
+    label: "Live Stock Update & QR scanning · Pro", description: "Review quantities sold in person or live, then reduce stock together. Active Pro required.", category: "Business operations", duration: "3 min",
+    steps: [
+      routeStep("/dashboard/vendor/catalog", "Open Live Stock Update", "An active Pro plan is required. This tool reduces physical-product inventory only; it does not create orders, invoices or payments. Ordinary stock editing remains in Creation Zone on every plan."),
+      { title: "Search or scan a product", body: "Search by product, SKU, size or colour, or filter your catalog. You can also scan your existing QR Studio product labels. Internet is required; camera scanning needs a supported browser on HTTPS and your permission. Search remains available without a camera." },
+      { title: "Choose the exact option", body: "For variants, choose the size and colour that were sold. Enter a positive whole-number quantity for that option, then tap Add to update. Repeat for each item; a scan alone does not deduct stock." },
+      { title: "Review and confirm", body: "Open Review update and check every item and quantity before confirming Reduce stock. The entire batch is checked against current availability; if one item has insufficient stock, nothing in the batch changes." },
+      { title: "Check recent updates", body: "After confirmation, check the update reference and the last 10 stock adjustments shown below the catalog. If a request needs confirmation, use Retry saved update so the same request is not deducted twice." },
+    ],
+  },
   qrStudio: {
     label: "Share your business with a QR code", description: "Make a code for your store or a published item, ready for print.", category: "Create & sell", duration: "2 min",
     steps: [

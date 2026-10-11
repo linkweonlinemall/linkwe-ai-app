@@ -1,7 +1,7 @@
 import { getStorePlan, type StorePlanInput } from "@/lib/finance/store-plan";
 import { StockAdjustmentAccessError } from "./model";
 
-export const STOCK_UPGRADE_HREF = "/dashboard/vendor/finance";
+export const STOCK_UPGRADE_HREF = "/dashboard/vendor/finance?tab=plan";
 export const STOCK_PRO_MESSAGE = "Live stock updates and QR stock scanning require an active Pro plan. Upgrade or renew in Finance; your ordinary product management remains available.";
 export const stockPlanSelect = { subscriptionPlan: true, subscriptionStatus: true, planRenewsAt: true } as const;
 export type StockPlanInput = StorePlanInput & { planRenewsAt: Date | null };

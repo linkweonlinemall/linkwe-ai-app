@@ -57,7 +57,7 @@ function camera(overrides = {}) {
   });
   await check('Upgrade page exposes Finance and ordinary product management without stock or scanner controls', () => {
     const html = renderToStaticMarkup(React.createElement(StockUpgrade));
-    for (const text of ['An active Pro plan is required.', '/dashboard/vendor/finance', '/dashboard/vendor/creation?type=product', 'Manage products', 'ordinary stock editing']) assert.ok(html.includes(text), text);
+    for (const text of ['An active Pro plan is required.', '/dashboard/vendor/finance?tab=plan', '/dashboard/vendor/creation?type=product', 'Manage products', 'ordinary stock editing', 'Internet is required', 'supported browser', 'last 10 stock adjustments']) assert.ok(html.includes(text), text);
     assert.ok(!html.includes('Start camera')); assert.ok(!html.includes('Search catalog')); assert.ok(!html.includes('Reduce stock by'));
   });
   await check('Existing QR Studio product URLs remain valid, including canonical host normalization and trailing slash', () => {

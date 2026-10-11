@@ -1,3 +1,5 @@
+import { LIVE_STOCK_COPY } from "@/lib/vendor/stock/copy";
+
 export const featureGroups = [
   { id: "shop", label: "Shop & discover", intro: "Find something good. Keep it all together.", features: [
     { title: "Local marketplace", text: "Browse physical and digital products, variants, categories and stores across Trinidad & Tobago.", href: "/shop" },
@@ -14,6 +16,7 @@ export const featureGroups = [
     { title: "Guided onboarding", text: "Choose a plan and build a draft store at your pace. Skip ID upload for now and return before launch.", href: "/register/business" },
     { title: "Creation Zone", text: "Create and edit products, services, events, ticket types and coupons from a connected workspace.", href: "/dashboard/vendor/creation" },
     { title: "Products & digital goods", text: "Manage stock, options, variants, images and digital downloads. Ask for order-specific details at checkout.", href: "/dashboard/vendor/products" },
+    { title: "Live Stock Update · Pro", text: `${LIVE_STOCK_COPY.summary} ${LIVE_STOCK_COPY.scope}`, href: LIVE_STOCK_COPY.href },
     { title: "Orders & shipping workspace", text: "Prepare vendor portions, track fulfilment and see physical orders needing delivery, pickup or attention.", href: "/dashboard/vendor/shipping" },
     { title: "Service Desk", text: "Keep appointments, quotes, requests and recurring service activity organised with clear next actions.", href: "/dashboard/vendor/service-desk" },
     { title: "Staff & availability", text: "Manage team profiles, service assignments, working hours and time off. Assign appointments to eligible staff.", href: "/dashboard/vendor/staff" },
@@ -28,7 +31,7 @@ export const featureGroups = [
     { title: "Rex, your business assistant", text: "Draft listings, explore store activity and use supported tools for services, coupons, reviews and operations. Review AI work before relying on it.", href: "/dashboard/vendor/ai-assistant" },
     { title: "A clearer Rex allowance", text: "See the percentage of your included allowance remaining, with purchased top-ups shown separately.", href: "/pricing" },
     { title: "Photo Studio", text: "Prepare product imagery with background removal, adjustments and available AI tools. Image allowances and provider limits apply.", href: "/dashboard/vendor/photo-studio" },
-    { title: "QR Studio", text: "Create branded QR codes for published LinkWe pages, preview them, choose colours and export PNG, SVG or printable cards.", href: "/dashboard/vendor/qr-studio" },
+    { title: "QR Studio", text: "Create branded QR codes for published LinkWe pages, preview them, choose colours and export PNG, SVG or printable cards. Product labels also work with Pro Live Stock Update.", href: "/dashboard/vendor/qr-studio" },
     { title: "Business collaborations", text: "Request to feature another business’s published listings, review incoming requests and end approved placements. The original seller keeps checkout.", href: "/dashboard/vendor/partners" },
     { title: "Coupons & promotions", text: "Create offers with the available discount, eligibility and redemption controls, and show eligible savings at checkout.", href: "/dashboard/vendor/creation/coupons" },
     { title: "Shoppable Timeline publishing", text: "Connect updates to products, services or events and reach followers. Publishing requires an active Growth or Pro plan.", href: "/pricing" },
