@@ -1,11 +1,12 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { getStorePlan } from "@/lib/finance/store-plan";
+import { canUseLiveStock } from "@/lib/vendor/stock/access";
 import { getPaidTicketSoldCountsForEvents } from "@/lib/tickets/sold-counts";
 import { creationEditHref, ticketDisplayStatus, type CreationItem, type CreationLibraryData } from "./model";
 
 export async function getCreationLibrary(userId: string): Promise<CreationLibraryData | null> {
-  const store = await prisma.store.findUnique({where:{ownerId:userId},select:{id:true,name:true,status:true,subscriptionPlan:true,subscriptionStatus:true,owner:{select:{idVerificationStatus:true}}}});
+  const store = await prisma.store.findUnique({where:{ownerId:userId},select:{id:true,name:true,status:true,subscriptionPlan:true,subscriptionStatus:true,planRenewsAt:true,owner:{select:{idVerificationStatus:true}}}});
   if (!store) return null;
   const [products, events] = await Promise.all([
     prisma.product.findMany({where:{storeId:store.id},orderBy:{updatedAt:"desc"},select:{id:true,name:true,slug:true,shortDescription:true,category:true,price:true,stock:true,images:true,isService:true,serviceType:true,isDigital:true,hasVariants:true,isPublished:true,isArchived:true,isFeatured:true,updatedAt:true}}),
@@ -29,5 +30,5 @@ export async function getCreationLibrary(userId: string): Promise<CreationLibrar
     }
   }
   const {plan,limits}=getStorePlan(store);
-  return {storeName:store.name,storeLive:store.status==="ACTIVE"&&store.owner.idVerificationStatus==="APPROVED",items,plan,productLimit:limits.productCap,serviceLimit:limits.serviceCap};
+  return {storeName:store.name,storeLive:store.status==="ACTIVE"&&store.owner.idVerificationStatus==="APPROVED",items,plan,productLimit:limits.productCap,serviceLimit:limits.serviceCap,liveStockAccess:canUseLiveStock(store)};
 }

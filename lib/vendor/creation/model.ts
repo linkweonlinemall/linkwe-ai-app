@@ -11,7 +11,7 @@ export type CreationItem = {
 };
 export type CreationLibraryData = {
   storeName: string; storeLive: boolean; items: CreationItem[];
-  plan: string; productLimit: number | null; serviceLimit: number | null;
+  plan: string; productLimit: number | null; serviceLimit: number | null; liveStockAccess: boolean;
 };
 export function isCreationKind(value: unknown): value is CreationKind { return typeof value === "string" && CREATION_TYPES.includes(value as CreationKind); }
 export function creationKey(item: Pick<CreationItem, "kind" | "id">) { return `${item.kind}:${item.id}`; }

@@ -270,6 +270,7 @@ model CourierLocation {
 }
 
 model Store {
+  stockAdjustments StockAdjustment[]
   creationGuides GuidedCreationPlan[]
   coupons StoreCoupon[]
   id                           String                        @id @default(cuid())
@@ -2948,4 +2949,22 @@ model VendorSupportMessage {
   createdAt   DateTime @default(now())
   ticket      VendorSupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   @@index([ticketId, createdAt])
+}
+
+/// Inventory-only audit. JSON snapshots survive later product/variant edits or deletion.
+model StockAdjustment {
+  id            String   @id @default(cuid())
+  storeId       String   @map("store_id")
+  store         Store    @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  actorId       String   @map("actor_id")
+  requestId     String   @db.Uuid @map("request_id")
+  requestHash   String   @map("request_hash")
+  reason        String   @default("OFFLINE_LIVE")
+  totalQuantity Int      @map("total_quantity")
+  lines         Json
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@unique([storeId, requestId])
+  @@index([storeId, createdAt])
+  @@map("stock_adjustments")
 }

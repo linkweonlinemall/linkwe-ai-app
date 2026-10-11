@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, Layers3, Compass, ShoppingBag, ConciergeBell, MessageCircle,
+  LayoutDashboard, PackageMinus, Layers3, Compass, ShoppingBag, ConciergeBell, MessageCircle,
   Store, Image, QrCode, Newspaper, Bot, Users,
   Truck, Handshake, Wallet, ChartNoAxesCombined, Star, Settings,
   type LucideIcon,
@@ -22,6 +22,7 @@ export const workspaceGroups: { label: string; items: WorkspaceLink[] }[] = [
   { label: "Create & sell", items: [
     { label: "Services", path: "/services", description: "Set up services, offers and customer journeys", icon: ConciergeBell },
     { label: "Guided Creation", path: "/guided-creation", description: "Free questions and a manual setup checklist for every listing type", icon: Compass },
+    { label: "Live stock · Pro", path: "/catalog", description: "Pro only: catalog stock updates and QR scanning for products sold offline or during a live session", icon: PackageMinus },
     { label: "Creation Zone", path: "/creation", description: "Create and manage products, services, events, tickets and coupons", icon: Layers3 },
   ] },
   { label: "Your brand", items: [
