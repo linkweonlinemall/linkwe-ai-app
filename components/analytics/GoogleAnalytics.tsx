@@ -15,6 +15,11 @@ let googleStarted = false;
 let queue: CleanEvent[] = [];
 let timer: ReturnType<typeof setTimeout> | undefined;
 const post = (body: unknown) => fetch("/api/analytics", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), keepalive: true }).then(response => { if (!response.ok) throw new Error("Analytics unavailable"); return response.json(); });
+function queueGoogleCommand() {
+  // gtag.js interprets arrays as method calls; commands require Arguments objects.
+  // eslint-disable-next-line prefer-rest-params
+  window.dataLayer?.push(arguments);
+}
 function flush() {
   if (timer) clearTimeout(timer);
   timer = undefined;
@@ -35,7 +40,7 @@ export function trackGoogleAnalyticsEvent(name: string, parameters: Record<strin
   }
   if (measurementId) {
     window.dataLayer = window.dataLayer ?? [];
-    window.gtag = window.gtag ?? ((...args: unknown[]) => window.dataLayer?.push(args));
+    window.gtag = window.gtag ?? queueGoogleCommand;
     // Forward only deliberately selected, non-personal fields. Raw URLs, titles,
     // errors, search strings and arbitrary caller properties never reach GA.
     const safe: Record<string, unknown> = { page_location: `${window.location.origin}${path}`, page_path: path, page_title: path === "/" ? "LinkWe" : path.split("/")[1] };
@@ -89,7 +94,7 @@ export default function GoogleAnalytics() {
       if (measurementId && !googleStarted) {
         googleStarted = true;
         window.dataLayer = window.dataLayer ?? [];
-        window.gtag = window.gtag ?? ((...args: unknown[]) => window.dataLayer?.push(args));
+        window.gtag = window.gtag ?? queueGoogleCommand;
         window.gtag("consent", "default", { analytics_storage: "granted", ad_storage: "denied", ad_user_data: "denied", ad_personalization: "denied" });
         window.gtag("js", new Date());
         window.gtag("config", measurementId, { send_page_view: false, allow_google_signals: false, allow_ad_personalization_signals: false, page_location: window.location.origin + safePath(pathname), page_referrer: "", page_title: "LinkWe" });
