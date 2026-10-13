@@ -2,12 +2,15 @@ import "server-only";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { analyticsPeriod, parseFilters, ANALYTICS_TIMEZONE, RETENTION_DAYS } from "./model";
+import type { ExternalSnapshot } from "./external-model";
 
 export type Metric = { key: string; label: string; value: number | null; previous: number | null; unit: "count" | "money" | "percent"; definition: string };
 export type Row = { label: string; count: number; detail?: string; value?: number };
 export type AnalyticsReport = {
+  external?: ExternalSnapshot;
   filters: ReturnType<typeof parseFilters>; generatedAt: string; start: string; end: string; previousStart: string; timezone: string; periodLabel: string;
   metrics: Metric[]; daily: Row[]; sources: Row[]; campaigns: Row[]; popular: Row[]; searches: Row[]; contacts: Row[]; errors: Row[]; performance: Row[];
+  registrations: Row[]; registrationDaily: Row[];
   funnel: Row[]; vendors: Row[]; operations: Row[]; paymentTypes: Row[];
   insights: { title: string; detail: string; section: string }[];
   health: { trafficAvailable: boolean; firstEvent: string | null; lastEvent: string | null; partialPeriod: boolean; legacyPayments: number; gaConfigured: boolean; rexConfigured: boolean; retentionDays: number; notes: string[] };
@@ -30,7 +33,7 @@ export async function buildAnalyticsReport(input: unknown): Promise<AnalyticsRep
   const endSql = Prisma.sql`(${end}::timestamptz AT TIME ZONE 'UTC')`;
   const previousStartSql = Prisma.sql`(${previousStart}::timestamptz AT TIME ZONE 'UTC')`;
   const eventFilters = Prisma.sql`e.created_at >= ${previousStartSql} AND e.created_at < ${endSql} AND (${filters.device} = 'all' OR e.device = ${filters.device}) AND (${filters.source} = 'all' OR e.source = ${filters.source})`;
-  const [payments, ledger, repeat, vendorRows, ops, legacy, paymentTypes, daily] = await Promise.all([
+  const [payments, ledger, repeat, vendorRows, ops, legacy, paymentTypes, daily, registrations, registrationDaily] = await Promise.all([
     prisma.$queryRaw<Array<{ period: string; collected: unknown; payments: unknown; refunded: unknown; failed: unknown; attempts: unknown; platform: unknown }>>(Prisma.sql`
       SELECT CASE WHEN p.paid_at >= ${startSql} THEN 'current' ELSE 'previous' END AS period,
         COALESCE(SUM(p.amount_minor),0) AS collected, COUNT(*) AS payments,
@@ -84,6 +87,22 @@ export async function buildAnalyticsReport(input: unknown): Promise<AnalyticsRep
     prisma.$queryRaw<Array<{ count: unknown }>>(Prisma.sql`SELECT COUNT(*) AS count FROM payment_attempts p JOIN users u ON u.id=p.user_id WHERE p.payment_environment IS NULL AND p.provider_data->>'environment' IS NULL AND u.role NOT IN ('ADMIN','COURIER') AND p.created_at>=${startSql} AND p.created_at<${endSql}`),
     prisma.$queryRaw<Array<{ label: string; count: unknown; value: unknown }>>(Prisma.sql`SELECT p.purpose::text AS label, COUNT(*) AS count,SUM(p.amount_minor) AS value FROM payment_attempts p JOIN users u ON u.id=p.user_id WHERE ${live} AND ${paid} AND p.paid_at>=${startSql} AND p.paid_at<${endSql} GROUP BY p.purpose ORDER BY value DESC`),
     prisma.$queryRaw<Array<{ label: string; count: unknown; value: unknown }>>(Prisma.sql`SELECT to_char(p.paid_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Port_of_Spain','YYYY-MM-DD') AS label,COUNT(*) AS count,SUM(p.amount_minor) AS value FROM payment_attempts p JOIN users u ON u.id=p.user_id WHERE ${live} AND ${paid} AND p.paid_at>=${startSql} AND p.paid_at<${endSql} GROUP BY 1 ORDER BY 1`),
+    prisma.$queryRaw<Array<{ label: string; current: unknown; previous: unknown; detail: string }>>(Prisma.sql`
+      SELECT 'Customer accounts created' AS label, COUNT(*) FILTER (WHERE created_at>=${startSql}) AS current, COUNT(*) FILTER (WHERE created_at<${startSql}) AS previous,
+        'Customer-role accounts by creation date, including imported or administrator-created accounts. Not attributed to an advertising source.' AS detail
+        FROM users WHERE role='CUSTOMER' AND created_at>=${previousStartSql} AND created_at<${endSql}
+      UNION ALL SELECT 'Vendor accounts created',COUNT(*) FILTER (WHERE created_at>=${startSql}),COUNT(*) FILTER (WHERE created_at<${startSql}),
+        'Vendor-role accounts by creation date, including imported accounts. Staff and courier accounts are excluded.' FROM users WHERE role='VENDOR' AND created_at>=${previousStartSql} AND created_at<${endSql}
+      UNION ALL SELECT 'Stores created',COUNT(*) FILTER (WHERE s.created_at>=${startSql}),COUNT(*) FILTER (WHERE s.created_at<${startSql}),
+        'Store records created in this period and currently owned by vendor accounts.' FROM stores s JOIN users u ON u.id=s.owner_id WHERE u.role='VENDOR' AND s.created_at>=${previousStartSql} AND s.created_at<${endSql}
+      UNION ALL SELECT 'Store setup saved',COUNT(*),0,
+        'Stores created in this period whose current onboarding step is 3 or later. This is a current cohort state, not completions during the period; it does not mean approved or live.' FROM stores s JOIN users u ON u.id=s.owner_id WHERE u.role='VENDOR' AND s.created_at>=${startSql} AND s.created_at<${endSql} AND s.onboarding_step>=3
+      UNION ALL SELECT 'Store setup not yet saved',COUNT(*),0,
+        'Stores created in this period whose current onboarding step is below 3. Vendors without a store record are not counted here.' FROM stores s JOIN users u ON u.id=s.owner_id WHERE u.role='VENDOR' AND s.created_at>=${startSql} AND s.created_at<${endSql} AND s.onboarding_step<3`),
+    prisma.$queryRaw<Array<{ label: string; count: unknown; detail: string }>>(Prisma.sql`
+      SELECT to_char(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Port_of_Spain','YYYY-MM-DD') AS label,COUNT(*) AS count,
+        CONCAT(COUNT(*) FILTER (WHERE role='CUSTOMER'),' customer accounts · ',COUNT(*) FILTER (WHERE role='VENDOR'),' vendor accounts') AS detail
+      FROM users WHERE role IN ('CUSTOMER','VENDOR') AND created_at>=${startSql} AND created_at<${endSql} GROUP BY 1 ORDER BY 1`),
   ]);
   const metrics: Metric[] = [];
   function metric(key: string, label: string, value: number | null, previous: number | null, unit: Metric['unit'], definition: string) { metrics.push({ key, label, value, previous, unit, definition }); }
@@ -99,6 +118,10 @@ export async function buildAnalyticsReport(input: unknown): Promise<AnalyticsRep
   metric('failed','Failed payment attempts',payment('current-attempts','failed'),payment('previous-attempts','failed'),'count','Live attempts created in this period currently marked failed or error. Retries count separately; expiry is not labelled a payment failure.');
   metric('repeat','Returning buyers',number(repeat[0]?.current),number(repeat[0]?.previous),'count','People paying in this period who also had a confirmed live purchase before the period. Excludes vendor plans and AI top-ups. Does not identify anonymous visitors across devices.');
   metric('buyers','Paying customers',number(repeat[0]?.customers),null,'count','Distinct customer accounts with confirmed live purchases in the selected period. Refunded purchases remain counted.');
+  const registration = (label: string, period: 'current' | 'previous' = 'current') => number(registrations.find(row => row.label === label)?.[period]);
+  metric('signups','Accounts created',registration('Customer accounts created') + registration('Vendor accounts created'),registration('Customer accounts created','previous') + registration('Vendor accounts created','previous'),'count','Customer and vendor accounts by creation date; includes imported and administrator-created accounts. Not self-service registrations only, and not attributed to a channel.');
+  metric('storesCreated','Stores created',registration('Stores created'),registration('Stores created','previous'),'count','Store records created in the period and currently owned by vendors. Different from account creation.');
+  metric('setupSaved','Store setup saved',registration('Store setup saved'),null,'count','Current onboarding step 3 or later among stores created in the selected period. A cohort snapshot, not the date setup was completed; approval and live status are separate.');
   let trafficAvailable = true, firstEvent: string | null = null, lastEvent: string | null = null;
   let sources: Row[] = [], campaigns: Row[] = [], popular: Row[] = [], searches: Row[] = [], contacts: Row[] = [], errors: Row[] = [], performance: Row[] = [], funnel: Row[] = [];
   try {
@@ -109,7 +132,7 @@ export async function buildAnalyticsReport(input: unknown): Promise<AnalyticsRep
         WITH ranked AS (SELECT e.name AS kind,CASE WHEN e.name IN ('page_view','view_item','view_store') THEN e.path ELSE COALESCE(e.label,'Unspecified') END AS label,
         COUNT(*) AS count, '' AS detail, AVG(e.value) AS value FROM analytics_events e WHERE ${eventFilters} AND e.created_at>=${startSql} AND e.name IN ('page_view','search','contact_click','checkout_error','web_vital','booking_unavailable')
         GROUP BY 1,2
-        UNION ALL SELECT 'unmet',COALESCE(e.label,'Private search'),COUNT(*),'No results',0 FROM analytics_events e WHERE ${eventFilters} AND e.created_at>=${startSql} AND e.name='search' AND e.value=0 GROUP BY e.label
+        UNION ALL SELECT 'unmet','Searches with no results',COUNT(*),'Search text is withheld for privacy.',0 FROM analytics_events e WHERE ${eventFilters} AND e.created_at>=${startSql} AND e.name='search' AND e.value=0 HAVING COUNT(*)>0
          ) SELECT kind,label,count,detail,value FROM (SELECT *,ROW_NUMBER() OVER(PARTITION BY kind ORDER BY count DESC,label) AS rank FROM ranked) r WHERE rank<=12 ORDER BY count DESC`),
       prisma.$queryRaw<Array<{ label: string; count: unknown }>>(Prisma.sql`
         WITH events AS (SELECT * FROM analytics_events e WHERE ${eventFilters} AND e.created_at>=${startSql}),
@@ -160,15 +183,17 @@ export async function buildAnalyticsReport(input: unknown): Promise<AnalyticsRep
   const insights: AnalyticsReport['insights']=[];
   if(!firstEvent||partialPeriod) insights.push({title:'Visitor history is still building',detail:'Use the business records now. Visitor comparisons need a complete current and previous period before trends are dependable.',section:'health'});
   if(payment('current-attempts','failed')>0) insights.push({title:`${payment('current-attempts','failed')} payment attempts need a look`,detail:'Check provider failures and checkout errors before assuming shoppers lost interest. A failed attempt can later be retried successfully.',section:'journey'});
-  if(searches.length) insights.push({title:'People are looking for things they cannot find',detail:`The most frequent measured search with no results is “${searches[0].label}”. Review availability and naming before deciding to recruit more vendors.`,section:'audience'});
+  if(searches.length) insights.push({title:'People are looking for things they cannot find',detail:"Some measured searches or booking checks found no available result. Review catalog coverage and availability. Free-text searches are withheld for privacy.",section:'audience'});
   const unfinished=normalize(vendorRows).find(r=>r.label==='Stores still in setup')?.count??0;
   if(unfinished) insights.push({title:`${unfinished} new stores are still in setup`,detail:'Review their missing setup steps. Imported stores may be waiting for their owners to take over.',section:'vendors'});
   if(!insights.length) insights.push({title:'Start with the customer journey',detail:'Compare the same period, inspect the largest drop between steps, and check the sample size before making changes.',section:'journey'});
-  return {filters,periodLabel,generatedAt:now.toISOString(),start:start.toISOString(),end:end.toISOString(),previousStart:previousStart.toISOString(),timezone:ANALYTICS_TIMEZONE,metrics,daily:normalize(daily),sources,campaigns,popular,searches,contacts,errors,performance,funnel,vendors:normalize(vendorRows),operations:normalize(ops),paymentTypes:normalize(paymentTypes),insights,health:{trafficAvailable,firstEvent,lastEvent,partialPeriod,legacyPayments:number(legacy[0]?.count),gaConfigured:!!process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID,rexConfigured:!!process.env.ANTHROPIC_API_KEY,retentionDays:RETENTION_DAYS,notes:[
+  return {filters,periodLabel,generatedAt:now.toISOString(),start:start.toISOString(),end:end.toISOString(),previousStart:previousStart.toISOString(),timezone:ANALYTICS_TIMEZONE,metrics,registrations:registrations.map(row=>({label:row.label,count:number(row.current),detail:row.detail})),registrationDaily:normalize(registrationDaily),daily:normalize(daily),sources,campaigns,popular,searches,contacts,errors,performance,funnel,vendors:normalize(vendorRows),operations:normalize(ops),paymentTypes:normalize(paymentTypes),insights,health:{trafficAvailable,firstEvent,lastEvent,partialPeriod,legacyPayments:number(legacy[0]?.count),gaConfigured:!!process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID,rexConfigured:!!process.env.ANTHROPIC_API_KEY,retentionDays:RETENTION_DAYS,notes:[
     'Date range applies to every report. Device and source filters apply only to visitor activity, the shopping journey and campaign attribution; business totals always include every eligible account.',
     'Business figures come from payment and operational records. Visitor figures include only people who allowed analytics; blockers, missing consent and multiple devices limit coverage.',
     'Campaign attribution uses the landing source of the checkout session. Unlinked purchases remain in business totals. Advertising spend is not connected, so return on advertising spend is unavailable.',
     'Discovery lists show the top 12 entries per measure; source and campaign lists show the top 20. Source totals are aggregated before ranking.',
+    'Account counts include imported and administrator-created accounts. Store setup is the current state of stores created in the period; no setup-completion timestamp or account acquisition attribution is available. Free-text searches are withheld from this report.',
+    'Google Analytics, GBPmonthly and Meta source values are not synced into this dashboard. External importer schedules do not establish freshness here. Open the private report for those sources.',
     'Historical Google Analytics reports are not imported. The existing Google tag is optional; its account settings and delivery have not been verified here.',
     'Known administrator, courier and sandbox activity is excluded from payment totals. Unclassified legacy payments are shown separately. Older operational and ledger records may lack test markers.',
     'Vendor counts refer to accounts; store counts refer to separate stores created in the period. Published stores may be draft or active. These overlapping counts are not sequential steps and cannot establish which setup details are missing.',

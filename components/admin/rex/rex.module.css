@@ -6,3 +6,7 @@
 .mobileToggle,.mobileClose{display:none}
 @media(max-width:1250px){.studioAside{display:none;position:fixed;top:auto;bottom:135px;right:24px;width:350px;z-index:45;padding:0;filter:drop-shadow(0 10px 30px #1d3c3322)}.studioAside[data-open=true]{display:block}.studioAside .panel{max-height:calc(100dvh - 235px)}.mobileToggle{position:fixed;right:24px;bottom:90px;z-index:46;display:flex;align-items:center;gap:8px;background:#41664c;color:white;border-radius:30px;padding:12px 17px;font-size:12px;box-shadow:0 5px 20px #264c4030}.mobileClose{display:flex;position:absolute;right:10px;top:10px;background:#f5f8f2;border:1px solid #d9e4d3;padding:4px;border-radius:7px;z-index:2}.studioAside .badge{display:none}.studioAside .header{padding-right:38px}.studioAside .intro{margin:10px 15px}.studioAside .transcript{min-height:80px}.studioAside .footnote{margin-bottom:10px}}
 @media(max-width:640px){.studioAside{left:12px;right:12px;bottom:137px;width:auto}.mobileToggle{right:14px}.studioAside .panel{max-height:calc(100dvh - 225px)}}
+
+.analyticsRexBar{display:none}
+@media(max-width:1250px){.analyticsRexBar{display:flex;justify-content:flex-end;padding:12px 28px 0}.analyticsRexBar button{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:8px 14px;border:1px solid #cbdcd0;border-radius:10px;background:#f0f5ec;color:#315d4a;font-size:12px}.analyticsRexBar button:focus-visible{outline:3px solid #7fab98;outline-offset:3px}}
+@media(max-width:640px){.analyticsRexBar{padding:8px 14px 0}}

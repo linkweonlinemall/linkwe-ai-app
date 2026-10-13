@@ -1,3 +1,4 @@
+import type { AnalyticsReport } from "@/lib/analytics/report";
 export type StudioValues = Record<string, unknown>;
 export type StudioAction = { name: string; description: string; parameters: Record<string, unknown> };
 export type StudioStep = { action: string; args: StudioValues };
@@ -6,6 +7,7 @@ export type StudioReview = { title: string; description: string; fields: { label
 export type StudioActionResult = { message: string; waitFor?: string; stop?: boolean };
 export type StudioSurface = StudioSnapshot & {
   busy?: boolean;
+  receiveAnalyticsReport?: (report: AnalyticsReport) => void;
   run: (step: StudioStep) => Promise<StudioActionResult> | StudioActionResult;
   review?: (step: StudioStep) => StudioReview | null;
   canLeave?: () => boolean;
