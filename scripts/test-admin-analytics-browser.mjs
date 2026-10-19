@@ -86,10 +86,27 @@ try{
   await click('button[aria-label="Close Rex conversation"]');await until(()=>evaluate("document.querySelector('aside[data-open]').dataset.open==='false'"),'Rex panel closed');
   assert.equal(await evaluate("getComputedStyle(document.querySelector('[class*=analyticsRexBar] button')).position"),'static');
  });
+ await check('Export downloads the loaded report with definitions, coverage and unavailable values',async()=>{
+  for(const name of await fs.readdir(output))if(/^linkwe-analytics-.*\.csv$/.test(name))await fs.unlink(path.join(output,name));
+  await call('Browser.setDownloadBehavior',{behavior:'allow',downloadPath:output},null);
+  await clickText('Export');await waitText('Your report download is ready.');
+  let filename;await until(async()=>{filename=(await fs.readdir(output)).find(name=>/^linkwe-analytics-.*\.csv$/.test(name));return !!filename},'CSV download');
+  const csv=await fs.readFile(path.join(output,filename),'utf8');for(const value of ['LinkWe analytics','Accounts created','Timezone','Coverage','Definition','Unavailable'])assert.ok(csv.includes(value),value);
+ });
  await check('Clearing the local test session prevents cached navigation and direct page access',async()=>{
   await call('Network.deleteCookies',{name:'lw_session',url:origin});await call('Network.clearBrowserCache');
   await navigate('/dashboard/admin/analytics?section=connections');await until(()=>evaluate("location.pathname==='/login'&&!!document.querySelector('#login-email')&&document.readyState==='complete'"),'signed-out redirect');
   assert.ok(!(await text()).includes('WebsiteDaily'));await shot('signed-out-protection');
+ });
+ await check('Real external report component displays partial values, missing dates and exact ad identity at desktop/mobile widths',async()=>{
+  const fixture=await fs.readFile(path.join(output,'external-quality.html'),'utf8');
+  await call('Page.navigate',{url:'about:blank'});await until(()=>evaluate("location.href==='about:blank'"),'isolated fixture document');
+  const {frameTree}=await call('Page.getFrameTree');await call('Page.setDocumentContent',{frameId:frameTree.frame.id,html:fixture});
+  for(const width of [1440,390,320]){
+   await viewport(width,1000,width<640);await evaluate("document.querySelectorAll('details').forEach(e=>e.open=true)");await noOverflow();
+   const page=await text();for(const value of ['Partial subtotal','1 blank','2026-10-06','45678901234567890123','Latest reported importer run: success','Unavailable'])assert.ok(page.includes(value),value);
+   await shot('quality-'+width);
+  }
  });
  assert.deepEqual(errors,[],'Unexpected browser runtime exceptions');
  await fs.writeFile(path.join(output,'results.json'),JSON.stringify({checkedAt:new Date().toISOString(),passed:results.length,results,screenshots:shots,interactiveBrowserUsed:false,isolatedProfile:true,externalPagesOpened:false,authentication:'signed disposable ADMIN fixture; this does not test the login form',runtimeErrors:errors},null,2));

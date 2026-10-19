@@ -44,7 +44,8 @@ let passed=0;async function test(name,fn){await fn();passed++;console.log('PASS 
  });
  await test('missing day and null inputs remain incomplete; numeric zero remains observed zero',()=>{
    let r=normalizeSheetData(data({website:[website('2026-10-05',{sessions:0,engagedSessions:0})]}),period,readAt);assert.equal(metric(r,'website','sessions'),0);assert.equal(metric(r,'website','engagementRate'),null);assert.equal(source(r,'website').groups[0].coversRequestedDays,false);
-   r=normalizeSheetData(data({website:[website('2026-10-05'),website('2026-10-06',{sessions:null})]}),period,readAt);assert.equal(metric(r,'website','sessions'),null);assert.equal(metric(r,'website','engagementRate'),null);
+   r=normalizeSheetData(data({website:[website('2026-10-05'),website('2026-10-06',{sessions:null})]}),period,readAt);assert.equal(metric(r,'website','sessions'),100);assert.equal(metric(r,'website','engagementRate'),null);
+   const sessions=source(r,'website').groups[0].metrics.find(m=>m.key==='sessions');assert.equal(sessions.quality,'partial');assert.deepEqual(sessions.coverage,{observedRows:1,missingRows:1,totalRows:2});
  });
  await test('conflicting natural keys, numeric-looking strings and unsafe identifier cells fail closed',()=>{
    for(const rows of [[website('2026-10-05'),website('2026-10-05',{sessions:101})],[website('2026-10-05',{sessions:'1,000'})],[website('2026-10-05',{property:123456})]])assert.equal(source(normalizeSheetData(data({website:rows}),period,readAt),'website').status,'unavailable');
@@ -103,7 +104,7 @@ let passed=0;async function test(name,fn){await fn();passed++;console.log('PASS 
  });
  await test('UI report, CSV and Rex use the same source snapshot and preserve currency/coverage',()=>{
    const external=normalizeSheetData(data({ads:[ad('2026-10-05')]}),period,readAt);const report={...period,generatedAt:readAt,filters:{days:7,device:'all',source:'all'},external,metrics:[],registrations:[],registrationDaily:[],daily:[],sources:[],campaigns:[],funnel:[],popular:[],searches:[],contacts:[],errors:[],performance:[],vendors:[],operations:[],paymentTypes:[],health:{notes:[],trafficAvailable:true}};
-   const rex=analyticsRexSurface({},report,[]);assert.deepEqual(rex.state.externalSources,external.sources);assert.deepEqual(rex.state.report.external,external);const csv=analyticsCsv(report);assert.ok(csv.includes('USD'));assert.ok(csv.includes('observed-rows-only'));assert.ok(csv.includes('Daily unique reach is not additive'));assert.ok(!csv.includes('45678901234567890123'));
+   const rex=analyticsRexSurface({},report,[]);assert.deepEqual(rex.state.externalSources,external.sources);assert.deepEqual(rex.state.report.external,external);const csv=analyticsCsv(report);assert.ok(csv.includes('USD'));assert.ok(csv.includes('observed-rows-only'));assert.ok(csv.includes('Daily unique reach is not additive'));assert.ok(csv.includes('45678901234567890123'));assert.ok(csv.includes('partial'));assert.ok(csv.includes('2026-10-06'));assert.ok(csv.includes('Rows with values'));
  });
  await test('partial source days are excluded and different source timezones stay separate',()=>{
    const rows=['2026-10-05','2026-10-06','2026-10-07'].map(day=>website(day));
@@ -118,9 +119,34 @@ let passed=0;async function test(name,fn){await fn();passed++;console.log('PASS 
    requestToken='synthetic-fresh-request-token';const t=transport({website:[website('2026-10-05')]});let attempts=0;const fetcher=async(url,init)=>{if(url.includes('sheets.googleapis.com')&&attempts++===0)return new Response('temporary',{status:429});return t.fetcher(url,init)};
    const reader=createSheetReader({authorize:async()=>true,fetcher,now:()=>Date.parse(readAt),configuration:()=>config});const r=await reader(period);assert.equal(JSON.parse(t.calls[0].init.body).subjectToken,requestToken);assert.equal(metric(r,'website','sessions'),100);assert.equal(attempts,3);requestToken=null;
  });
- await test('source panels render verified major-unit currency, stale state and missing coverage without raw IDs',()=>{
+ await test('source panels render major-unit currency, stale state, gaps and the requested exact ad identity',()=>{
    const snapshot=normalizeSheetData(data({ads:[ad('2026-10-05')]}),period,readAt);snapshot.status='stale';source(snapshot,'ads').status='stale';
-   const html=renderToStaticMarkup(React.createElement(ExternalAnalytics,{snapshot,sources:['ads']}));for(const value of ['USD 100','Stale','Requested reporting dates are missing','Oldest extraction','unverified','Unavailable'])assert.ok(html.includes(value),value);assert.ok(!html.includes('45678901234567890123'));
+   const html=renderToStaticMarkup(React.createElement(ExternalAnalytics,{snapshot,sources:['ads']}));for(const value of ['USD 100','Stale','Requested reporting dates are missing','Oldest extraction','unverified','Unavailable','45678901234567890123','Partial subtotal','1 missing reporting date','7-day click / 1-day view'])assert.ok(html.includes(value),value);
  });
+ await test('all blank values stay unavailable, observed zeros stay partial, and metric coverage is independent',()=>{
+   const r=normalizeSheetData(data({website:[website('2026-10-05',{sessions:null,purchases:0}),website('2026-10-06',{sessions:null,purchases:null})]}),period,readAt),g=source(r,'website').groups[0];
+   assert.equal(metric(r,'website','sessions'),null);assert.equal(g.metrics.find(m=>m.key==='sessions').quality,'unavailable');assert.equal(metric(r,'website','purchases'),0);assert.equal(g.metrics.find(m=>m.key==='purchases').quality,'partial');assert.equal(metric(r,'website','pageViews'),300);assert.equal(g.metrics.find(m=>m.key==='pageViews').quality,'observed');
+   const html=renderToStaticMarkup(React.createElement(ExternalAnalytics,{snapshot:r,sources:['website']}));for(const text of ['Partial observations','Partial subtotal','1 blank','Not a complete period total.'])assert.ok(html.includes(text),text);
+ });
+ await test('partial sums still reject malformed counts and overflow instead of silently dropping bad values',()=>{
+   for(const value of [-1,1.5,'100',Infinity,Number.MAX_SAFE_INTEGER]){const rows=[website('2026-10-05',{sessions:null}),website('2026-10-06',{sessions:value}),website('2026-10-06',{channel:'Direct',sessions:10})];assert.equal(source(normalizeSheetData(data({website:rows}),period,readAt),'website').status,'unavailable');}
+ });
+ await test('different ads cannot fill each other’s missing dates or manufacture complete derived rates',()=>{
+   const r=normalizeSheetData(data({ads:[ad('2026-10-05'),ad('2026-10-06',{ad:'99999999999999999 | Other'})]}),period,readAt),groups=source(r,'ads').groups;
+   assert.equal(groups.length,2);assert.ok(groups.every(g=>g.missingDates.length===1&&g.metrics.find(m=>m.key==='ctr').value===null));assert.equal(new Set(groups.map(g=>g.adIdentity.adId)).size,2);
+ });
+ await test('combined Meta log destinations match exact tabs, skip malformed rows and preserve partial run status',()=>{
+   const refresh=[{destinationTab:'Organic Posts; Organic Accounts; Paid Ads',completedAt:'2026-10-07T10:00:00.000Z',status:'SUCCESS'},{destinationTab:'Paid Ads',completedAt:'broken',status:'SUCCESS'},{destinationTab:'Unrelated Paid Ads backup',completedAt:'2026-10-07T11:59:00.000Z',status:'FAILED'},{destinationTab:'Organic Posts;  Paid Ads ',completedAt:'2026-10-07T11:00:00.000Z',status:'PARTIAL'},{destinationTab:'Paid Ads',completedAt:'2026-10-08T11:00:00.000Z',status:'SUCCESS'}];
+   const r=normalizeSheetData(data({refresh}),period,readAt);assert.equal(source(r,'ads').lastRefreshStatus,'partial');assert.equal(source(r,'posts').lastRefreshStatus,'partial');assert.equal(source(r,'accounts').lastRefreshStatus,'success');assert.equal(source(r,'website').lastRefreshStatus,'unknown');assert.equal(source(r,'ads').lastSuccessfulRefresh,'2026-10-07T10:00:00.000Z');
+ });
+ await test('conflicting run statuses at the same instant cannot manufacture successful freshness',()=>{
+   const refresh=['SUCCESS','FAILED'].map(status=>({destinationTab:'Paid Ads',completedAt:extractedAt,status})),r=normalizeSheetData(data({refresh}),period,readAt);assert.equal(source(r,'ads').lastRefreshStatus,'failed');assert.equal(source(r,'ads').lastSuccessfulRefresh,null);
+ });
+ if(process.env.ANALYTICS_QUALITY_PREVIEW_DIR){
+   const output=path.resolve(process.env.ANALYTICS_QUALITY_PREVIEW_DIR);if(!output.startsWith(path.resolve(process.cwd(),'..')+path.sep))throw Error('Preview artifacts must stay in the task workspace.');fs.mkdirSync(output,{recursive:true});
+   const snapshot=normalizeSheetData(data({website:[website('2026-10-05'),website('2026-10-06',{sessions:null,purchases:null})],ads:[ad('2026-10-05')],refresh:[{destinationTab:'Organic Posts; Organic Accounts; Paid Ads',completedAt:extractedAt,status:'SUCCESS'}]}),period,readAt);
+   const body=renderToStaticMarkup(React.createElement(ExternalAnalytics,{snapshot,sources:['website','ads']}));const css=fs.readFileSync('app/(dashboard)/dashboard/admin/analytics/analytics.module.css','utf8');
+   fs.writeFileSync(path.join(output,'external-quality.html'),'<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box}body{margin:0;padding:16px;font-family:Arial,sans-serif;background:#f5f7f2}main{max-width:1100px;margin:auto}'+css+'</style></head><body><main id="admin-main"><h1>Synthetic analytics quality review</h1><p>Local fixture only. No live business figures.</p>'+body+'</main></body></html>');
+ }
  console.log(`${passed} Sheet adapter reconciliation/security checks passed (synthetic fixtures, no live reads)`);
 })().catch(error=>{console.error(error);process.exitCode=1});

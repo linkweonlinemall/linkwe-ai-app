@@ -1,4 +1,5 @@
 "use server";
+import { captureVendorMilestone } from "@/lib/analytics/vendor-milestones";
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -141,6 +142,8 @@ export async function registerAction(
   }
 
   await createSessionFromUser(user);
+
+  if (signupKind === "BUSINESS") await captureVendorMilestone("vendor_signup_confirmed", user.id);
 
   await clearIntendedPlanCookie();
   if (signupKind === "BUSINESS") {

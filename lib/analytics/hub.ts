@@ -1,5 +1,6 @@
 import { DEFAULT_FILTERS, parseFilters, type AnalyticsFilters } from "./model";
 import type { AnalyticsReport } from "./report";
+import { hasPartialObservations } from "./external-model";
 
 export const ANALYTICS_SECTIONS = [
   { id: "overview", label: "At a glance" }, { id: "registrations", label: "Signups & setup" },
@@ -44,10 +45,10 @@ export function analyticsConnections(report: AnalyticsReport | null): AnalyticsC
       detail: "The separate social importer does not yet supply this dashboard. Social reach, engagement, ad spend and return on ad spend are unavailable here." },
   ];
   if (report?.external && report.external.status !== "not-connected") return [...connections.slice(0,2), ...report.external.sources.map(source => ({
-    id: source.id, name: source.name, status: source.status === "available" ? "Verified observations" : source.status === "stale" ? "Stale snapshot · refresh failed" : source.status === "empty" ? "No matching observations" : "Unavailable",
+    id: source.id, name: source.name, status: source.status === "available" ? (hasPartialObservations(source)?"Partial observations":"Verified observations") : source.status === "stale" ? "Stale snapshot · refresh failed" : source.status === "empty" ? "No matching observations" : "Unavailable",
     connected: ["available","empty","stale"].includes(source.status), updatedAt: source.extractedAt,
     detail: `${source.grain}. ${source.caveat} Refresh automation: unverified. Latest reported run: ${source.lastRefreshStatus}.`,
-  }))];
+  })), {id:"facebook-page",name:"Facebook Page insights",status:"Unavailable",connected:false,updatedAt:null,detail:"No verified Page insights are supplied by the current source contract. Instagram observations do not establish Facebook Page reach or engagement."}, {id:"pinterest",name:"Pinterest analytics",status:"Not connected",connected:false,updatedAt:null,detail:"No verified Pinterest reporting source is connected. Missing data is not zero activity."}];
   return connections;
 }
 export function snapshotIsOld(report: AnalyticsReport, now: number) { return now - Date.parse(report.generatedAt) > 15 * 60_000; }

@@ -33,7 +33,8 @@ function timezone(value: unknown, unknownAllowed = false): string | null {
 function dateAt(value: string, zone: string) { return new Intl.DateTimeFormat("en-CA", { timeZone: zone, year:"numeric",month:"2-digit",day:"2-digit" }).format(new Date(value)); }
 function currency(value: unknown) { const text = string(value); return /^[A-Z]{3}$/.test(text) ? text : fail(); }
 function identity(value: unknown) {
-  // Raw identifiers/labels remain server-side. Numeric cells are rejected to avoid precision loss.
+  // Numeric identifier cells are rejected to avoid precision loss. Only explicitly
+  // selected ad identity fields are exposed in the administrator report.
   return string(value);
 }
 function metaId(value: unknown) {
@@ -51,7 +52,18 @@ function sum(rows: SheetRecord[], field: string, money = false): number | null {
 }
 function ratio(a: number | null, b: number | null, multiplier = 1) { return a !== null && b !== null && b > 0 ? a / b * multiplier : null; }
 function metric(key: string, label: string, value: number | null, definition: string, unit: ExternalMetric["unit"] = "count", iso?: string): ExternalMetric {
-  return { key,label,value,definition,unit,...(iso?{currency:iso}:{}) };
+  return { key,label,value,definition,unit,quality:value===null?"unavailable":"observed",...(iso?{currency:iso}:{}) };
+}
+function observedMetric(rows: SheetRecord[], field: string, label: string, definition: string, group: ExternalGroup, unit: ExternalMetric["unit"] = "count"): ExternalMetric {
+  const values = rows.map(row => unit === "money" ? number(row[field]) : count(row[field]));
+  const observed = values.filter((value): value is number => value !== null);
+  const total = observed.reduce((a, b) => a + b, 0);
+  if (!Number.isFinite(total) || total > Number.MAX_SAFE_INTEGER) return fail();
+  return {
+    ...metric(field, label, observed.length ? total : null, definition, unit, unit === "money" ? group.currency! : undefined),
+    quality: !observed.length ? "unavailable" : observed.length < rows.length || group.missingDates.length ? "partial" : "observed",
+    coverage: { observedRows: observed.length, missingRows: rows.length - observed.length, totalRows: rows.length },
+  };
 }
 function deduplicate(rows: SheetRecord[], key: (row: SheetRecord)=>unknown, latest = false) {
   const found = new Map<string,SheetRecord>();
@@ -79,7 +91,7 @@ function daysInWindow(period: ExternalPeriod, zone: string): string[] {
 function baseGroup(key: unknown, label: string, rows: SheetRecord[], basis: ExternalGroup["basis"], zone: string | null, iso: string | null, start: string, end: string, dates: string[], wanted: string[]): ExternalGroup {
   const extracted=rows.map(r=>String(r.extractedAt)).sort();
   return {key:hash(key),label,timezone:zone,currency:iso,basis,coveredPeriod:{start,end},observedRows:rows.length,observedDates:new Set(dates).size,
-    coversRequestedDays:basis==="daily"&&wanted.length>0&&wanted.every(day=>dates.includes(day)),extractedAt:extracted[0],newestExtraction:extracted.at(-1)!,metrics:[],
+    coversRequestedDays:basis==="daily"&&wanted.length>0&&wanted.every(day=>dates.includes(day)),missingDates:wanted.filter(day=>!dates.includes(day)),extractedAt:extracted[0],newestExtraction:extracted.at(-1)!,metrics:[],
     notes:["Totals cover observed rows only. Missing dates, accounts or channels are not zero."]};
 }
 function groupRows(rows: SheetRecord[], key: (r:SheetRecord)=>unknown) {
@@ -109,7 +121,7 @@ function normalizeSource(id: ExternalSourceId, input: SheetRecord[], period: Ext
     const first=dateAt(period.start,period.timezone),last=dateAt(period.end,period.timezone);
     rows=rows.filter(r=>String(r.periodStart)>=first&&String(r.periodEnd)<last);
   }
-  const key=(r:SheetRecord)=>id==="website"?[r.property,r.reportingTimezone,r.currency]:id==="ads"?[r.platform,r.adAccount,r.reportingTimezone,r.currency,r.attributionWindow]:id==="posts"||id==="accounts"?[r.platform,r.account]:[r.accountOrProfile,r.reportingTimezone,r.metric,r.unit];
+  const key=(r:SheetRecord)=>id==="website"?[r.property,r.reportingTimezone,r.currency]:id==="ads"?[r.platform,r.adAccount,r.ad,r.reportingTimezone,r.currency,r.attributionWindow]:id==="posts"||id==="accounts"?[r.platform,r.account]:[r.accountOrProfile,r.reportingTimezone,r.metric,r.unit];
   const output:ExternalGroup[]=[];
   for(const [groupKey,all] of groupRows(rows,key)) {
     const zone=id==="posts"||id==="accounts"?"UTC":all[0].reportingTimezone as string|null,iso=id==="ads"||id==="website"?String(all[0].currency):null;
@@ -123,11 +135,14 @@ function normalizeSource(id: ExternalSourceId, input: SheetRecord[], period: Ext
     const group=baseGroup(groupKey,label,selected,basis,zone,iso,dates[0],end,dates,wanted);
     if(id==="website") {
       const sessions=sum(selected,"sessions"),engaged=sum(selected,"engagedSessions");
-      group.metrics=[metric("users","Unique users",null,"Range users cannot be summed across daily/channel rows."),metric("sessions","Sessions",sessions,"Observed deduplicated daily/channel sessions."),metric("engagedSessions","Engaged sessions",engaged,"Observed engaged sessions."),metric("pageViews","Page views",sum(selected,"pageViews"),"Observed page views, not unique people."),metric("engagementRate","Engagement rate",group.coversRequestedDays?ratio(engaged,sessions,100):null,"Ratio of compatible sums; unavailable when requested days or inputs are missing.","percent"),metric("purchases","GA purchase events",sum(selected,"purchases"),"GA ecommerce events, not verified LinkWe settlements."),metric("purchaseRevenue","GA event revenue",sum(selected,"purchaseRevenue",true),"Observed GA event revenue in major currency units; not settlement.","money",iso!)];
+      group.metrics=[metric("users","Unique users",null,"Range users cannot be summed across daily/channel rows."),observedMetric(selected,"sessions","Sessions","Observed deduplicated daily/channel sessions.",group),observedMetric(selected,"engagedSessions","Engaged sessions","Observed engaged sessions.",group),observedMetric(selected,"pageViews","Page views","Observed page views, not unique people.",group),metric("engagementRate","Engagement rate",group.coversRequestedDays?ratio(engaged,sessions,100):null,"Ratio of compatible sums; unavailable when requested days or inputs are missing.","percent"),observedMetric(selected,"purchases","GA purchase events","GA ecommerce events, not verified LinkWe settlements.",group),observedMetric(selected,"purchaseRevenue","GA event revenue","Observed GA event revenue in major currency units; not settlement.",group,"money")];
+      group.notes.push("Partial subtotals include only numeric observations. Blank metric cells and missing dates contribute no value; even an observed zero does not establish a complete total.");
     } else if(id==="ads") {
+      group.adIdentity={platform:String(selected[0].platform),accountId:String(selected[0].adAccount),adId:String(selected[0].ad),attributionWindow:String(selected[0].attributionWindow)};
       const spend=sum(selected,"spend",true),impressions=sum(selected,"impressions"),clicks=sum(selected,"linkClicks"),views=sum(selected,"landingPageViews"),complete=group.coversRequestedDays;
       group.metrics=[metric("spend","Ad spend",spend,"Observed ad/day spend in major currency units.","money",iso!),metric("impressions","Impressions",impressions,"Deduplicated ad/day impressions."),metric("reach","Unique reach",null,"Daily unique reach is not additive; a separate range aggregate is required."),metric("linkClicks","Link clicks",clicks,"inline_link_clicks only."),metric("landingPageViews","Landing-page views",views,"landing_page_view only; equivalent omni events are not added."),metric("ctr","Link CTR",complete?ratio(clicks,impressions,100):null,"Ratio of sums with complete requested days and inputs.","percent"),metric("cpc","Cost per link click",complete?ratio(spend,clicks):null,"Spend / link clicks, complete compatible inputs only.","money",iso!),metric("cpm","Cost per 1,000 impressions",complete?ratio(spend,impressions,1000):null,"1,000 × spend / impressions, complete compatible inputs only.","money",iso!),metric("costPerLandingPageView","Cost per landing-page view",complete?ratio(spend,views):null,"Spend / landing_page_view, complete compatible inputs only.","money",iso!),metric("conversions","Conversions",null,"No verified conversion event definition."),metric("roas","ROAS",null,"No verified compatible attributed revenue.")];
-      group.notes.push("Attribution settings are kept separate. Reported daily reach is never summed.");
+      for(const item of group.metrics) if(["spend","impressions","linkClicks","landingPageViews"].includes(item.key)) Object.assign(item,observedMetric(selected,item.key,item.label,item.definition,group,item.unit));
+      group.notes.push("Each ad and attribution setting stays separate. Reported daily reach is never summed. Video, audience, placement and full-period reach/frequency need separate verified reports; they are not available from these daily rows.");
     } else if(id==="posts") {
       const reels=selected.filter(r=>/reel/i.test(String(r.format)));
       group.metrics=[metric("posts","Posts in publication cohort",selected.length,"Distinct posts published within the selected period."),...(["likes","comments","shares","saves"] as const).map(field=>metric(field,`Lifetime ${field}`,sum(selected,field),"Latest lifetime observation for each distinct post; not engagement during the selected dates.")),metric("reelPlays","Lifetime reel plays",sum(reels,"videoViews"),"Reel plays only; neither unique viewers nor three-second views."),metric("reach","Reach",null,"Unavailable in this contract."),metric("impressions","Impressions",null,"Unavailable; freeform notes are never parsed into metrics.")];
@@ -160,12 +175,19 @@ export function normalizeSheetData(data: SheetData, period: ExternalPeriod, read
       source.completeness=source.groups.length?"observed-rows-only":"unavailable";
       if(source.groups.length){source.coveredPeriod={start:source.groups.map(g=>g.coveredPeriod.start).sort()[0],end:source.groups.map(g=>g.coveredPeriod.end).sort().at(-1)!};source.extractedAt=source.groups.map(g=>g.extractedAt).sort()[0];source.newestExtraction=source.groups.map(g=>g.newestExtraction).sort().at(-1)!;}
     } catch { source.status="unavailable";source.issue="schema-invalid";source.groups=[]; }
-    try {
-      const title=SHEET_SCHEMA.find(t=>t.id===source.id)!.title;
-      const logs=data.refresh?.valid?data.refresh.rows.filter(r=>r.destinationTab===title).map(r=>({at:instant(r.completedAt),status:r.status})).filter(r=>r.at<=readAt).sort((a,b)=>b.at.localeCompare(a.at)):[];
-      source.lastSuccessfulRefresh=logs.find(r=>r.status==="SUCCESS")?.at??null;
-      source.lastRefreshStatus=logs[0]?.status==="SUCCESS"?"success":logs[0]&&["FAILED","ERROR","PARTIAL"].includes(String(logs[0].status))?"failed":"unknown";
-    } catch { /* Bad log rows never manufacture refresh evidence or hide valid metric data. */ }
+    const title=SHEET_SCHEMA.find(t=>t.id===source.id)!.title;
+    const logs=(data.refresh?.valid?data.refresh.rows:[]).flatMap(row=>{
+      try {
+        // Combined Meta runs name multiple exact tab titles. Never substring-match.
+        if(!string(row.destinationTab).split(";").map(tab=>tab.trim()).includes(title))return [];
+        const at=instant(row.completedAt),status=string(row.status).toUpperCase();
+        return at<=readAt?[{at,status}]:[];
+      } catch { return []; } // One malformed row cannot suppress valid run evidence.
+    }).sort((a,b)=>b.at.localeCompare(a.at));
+    const latest=logs.filter(log=>log.at===logs[0]?.at).map(log=>log.status);
+    // Conflicting entries at the same completion time cannot establish success.
+    source.lastSuccessfulRefresh=logs.find(log=>log.status==="SUCCESS"&&logs.filter(other=>other.at===log.at).every(other=>other.status==="SUCCESS"))?.at??null;
+    source.lastRefreshStatus=latest.some(status=>status==="FAILED"||status==="ERROR")?"failed":latest.includes("PARTIAL")?"partial":latest.length&&latest.every(status=>status==="SUCCESS")?"success":"unknown";
   }
   if(result.sources.every(source=>source.status==="unavailable"))result.status="unavailable";
   return result;

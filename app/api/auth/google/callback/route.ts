@@ -7,6 +7,7 @@ import { safeInternalPath } from "@/lib/auth/redirects";
 import { createSessionFromUser } from "@/lib/auth/session";
 import { roleForSignup } from "@/lib/auth/signup-kinds";
 import { setIntendedPlanCookie } from "@/lib/onboarding/intended-plan";
+import { captureVendorMilestone } from "@/lib/analytics/vendor-milestones";
 import { prisma } from "@/lib/prisma";
 
 const googleKeys = createRemoteJWKSet(new URL("https://www.googleapis.com/oauth2/v3/certs"));
@@ -84,6 +85,7 @@ export async function GET(request: NextRequest) {
     }
 
     await createSessionFromUser(user);
+    if (createdAccount && flow.signupKind === "BUSINESS") await captureVendorMilestone("vendor_signup_confirmed", user.id);
     if (flow.signupKind === "BUSINESS" && flow.intendedPlan) await setIntendedPlanCookie(flow.intendedPlan);
     const landing = await resolveAuthLandingPath(user);
     const destination = new URL(safeInternalPath(flow.callbackUrl, landing), request.url);

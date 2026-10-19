@@ -1,4 +1,5 @@
 "use server";
+import { captureVendorMilestone } from "@/lib/analytics/vendor-milestones";
 
 import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
@@ -269,6 +270,7 @@ export async function saveBusinessOnboardingStep3(
     return { error: "We couldn’t save your storefront. Your details are still here—please try again." };
   }
 
+  await captureVendorMilestone("vendor_setup_confirmed", user!.id);
   const intendedPlan = await getIntendedPlanCookie();
   await clearIntendedPlanCookie();
 

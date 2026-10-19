@@ -1,4 +1,4 @@
-import type { ExternalMetric, ExternalSnapshot, ExternalSourceId } from "@/lib/analytics/external-model";
+import { hasPartialObservations, type ExternalMetric, type ExternalSnapshot, type ExternalSourceId } from "@/lib/analytics/external-model";
 import s from "./analytics.module.css";
 
 function value(metric: ExternalMetric) {
@@ -10,7 +10,7 @@ function stamp(text:string|null){return text?new Date(text).toLocaleString("en-T
 export default function ExternalAnalytics({ snapshot, sources }: {snapshot:ExternalSnapshot|undefined;sources:ExternalSourceId[]}) {
   if(!snapshot||snapshot.status==="not-connected")return null;
   return <div className={s.externalReports}>{snapshot.sources.filter(source=>sources.includes(source.id)).map(source=><section key={source.id} className={s.panel}>
-    <div className={s.panelHead}><div><h2>{source.name}</h2><p>{source.grain}. Source data uses its own reporting timezone; visitor device/source filters do not apply.</p></div><span className={s.connectionStatus} data-connected={source.status==="available"}>{source.status==="available"?"Verified observations":source.status==="stale"?"Stale · refresh failed":source.status==="empty"?"No matching observations":"Unavailable"}</span></div>
+    <div className={s.panelHead}><div><h2>{source.name}</h2><p>{source.grain}. Source data uses its own reporting timezone; visitor device/source filters do not apply.</p></div><span className={s.connectionStatus} data-connected={source.status==="available"}>{source.status==="available"?(hasPartialObservations(source)?"Partial observations":"Verified observations"):source.status==="stale"?"Stale · refresh failed":source.status==="empty"?"No matching observations":"Unavailable"}</span></div>
     <p className={s.externalCoverage}>Authorized read: {stamp(snapshot.readAt)} · Trinidad time. Cache expires: {stamp(snapshot.cacheExpiresAt)}. Refresh automation: {source.refreshMode}.</p>
     <p className={s.externalCoverage}>Requested interval: {stamp(source.requestedPeriod.start)} – {stamp(source.requestedPeriod.end)} (end excluded).</p>
     <p className={s.externalCoverage}>Latest reported importer run: {source.lastRefreshStatus}. Last reported success: {stamp(source.lastSuccessfulRefresh)}. A run does not establish complete coverage.</p>
@@ -18,9 +18,11 @@ export default function ExternalAnalytics({ snapshot, sources }: {snapshot:Exter
     {source.groups.map(group=><details className={s.externalGroup} key={group.key} open={source.groups.length===1}>
       <summary>{group.label}<span>{group.basis} · {group.timezone??"Timezone unknown"} · {group.observedRows} observed rows</span></summary>
       <p className={s.externalCoverage}>Observed coverage: {group.coveredPeriod.start} – {group.coveredPeriod.end}. Oldest extraction: {stamp(group.extractedAt)}; newest: {stamp(group.newestExtraction)} (Trinidad display time).</p>
+      {group.adIdentity&&<p className={s.externalCoverage}>{group.adIdentity.platform} · Account ID {group.adIdentity.accountId} · Ad ID {group.adIdentity.adId}. Reported attribution: {group.adIdentity.attributionWindow}.</p>}
       {group.basis==="daily"&&<p className={s.externalCoverage}>{group.observedDates} observed reporting dates. {group.coversRequestedDays?"Every complete requested source date has an observation; account/channel completeness is unverified.":"Requested reporting dates are missing; derived rates are unavailable."}</p>}
+      {group.missingDates.length>0&&<details className={s.sourceDefinition}><summary>{group.missingDates.length} missing reporting {group.missingDates.length===1?"date":"dates"}</summary><p>{group.missingDates.join(", ")}</p></details>}
       {group.notes.map(note=><p key={note} className={s.externalCoverage}>{note}</p>)}
-      <div className={s.externalMetrics}>{group.metrics.map(metric=><article key={metric.key}><span>{metric.label}</span><strong>{value(metric)}</strong><details><summary>Definition</summary><p>{metric.definition}</p></details></article>)}</div>
+      <div className={s.externalMetrics}>{group.metrics.map(metric=><article key={metric.key}><span>{metric.label}</span><strong>{value(metric)}</strong>{metric.quality==="partial"&&<span>Partial subtotal</span>}{metric.coverage&&<p className={s.externalCoverage}>{metric.coverage.observedRows} of {metric.coverage.totalRows} rows have values{metric.coverage.missingRows?`; ${metric.coverage.missingRows} blank`:""}. {metric.quality==="partial"?"Not a complete period total.":"Observed rows only."}</p>}<details><summary>Definition</summary><p>{metric.definition}</p></details></article>)}</div>
     </details>)}
     <details className={s.sourceDefinition}><summary>Measurement limits</summary><p>{source.definition}</p><p>{source.caveat}</p></details>
   </section>)}</div>;
