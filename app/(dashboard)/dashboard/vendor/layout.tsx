@@ -55,6 +55,7 @@ export default async function VendorDashboardLayout({
 
   return (
     <VendorDashboardShell
+      storeId={fullStore.id}
       storeName={fullStore.name}
       storeSlug={fullStore.slug}
       storeLogoUrl={fullStore.logoUrl}

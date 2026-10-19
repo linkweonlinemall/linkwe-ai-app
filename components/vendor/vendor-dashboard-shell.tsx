@@ -14,6 +14,7 @@ import VendorGuidedTours from "@/components/vendor/VendorGuidedTours";
 
 export type VendorDashboardShellProps = {
   children: React.ReactNode;
+  storeId: string;
   storeName: string;
   storeSlug: string;
   storeLogoUrl: string | null;
@@ -29,6 +30,7 @@ export type VendorDashboardShellProps = {
 
 export default function VendorDashboardShell({
   children,
+  storeId,
   storeName,
   storeSlug,
   storeLogoUrl,
@@ -53,11 +55,11 @@ export default function VendorDashboardShell({
 
   return <>
     {isAIAssistant ? (
-      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#F7F5F2]">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#F7F5F2]" data-vendor-shell>
         <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
       </div>
     ) : (
-    <div className={s.shell}>
+    <div className={s.shell} data-vendor-shell>
       <a href="#vendor-workspace-content" className={s.skipLink}>Skip to workspace</a>
       <Suspense fallback={null}>
         <VendorDashboardSidebar
@@ -90,6 +92,6 @@ export default function VendorDashboardShell({
       </div>
     </div>
     )}
-    <VendorGuidedTours />
+    <VendorGuidedTours storeId={storeId} />
   </>;
 }

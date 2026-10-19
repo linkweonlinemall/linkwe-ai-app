@@ -137,7 +137,7 @@ export default async function VendorStoreEditPage({ searchParams }: Props) {
           </h2>
           <div className="flex flex-col gap-6">
             <StoreIdentityFields initialName={store.name} initialSlug={store.slug} initialTagline={store.tagline ?? ""} />
-            <div className="flex items-start gap-4">
+            <div data-tour="store-logo" className="flex items-start gap-4">
               <div className="min-w-0 flex-1">
                 <StoreEditFileInput
                   uploadKey="logo"

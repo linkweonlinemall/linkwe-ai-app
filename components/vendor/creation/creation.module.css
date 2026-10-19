@@ -17,3 +17,16 @@
 @media(max-width:1100px){.guidedEditor .editorLayout{grid-template-columns:minmax(0,1fr) 290px;gap:18px}}
 @media(max-width:800px){.guidedEditor{padding-bottom:115px}.guidedEditor .editorAside{height:0;position:static}.guidedEditor .editorLayout{gap:0}.guidedEditor .editorContent [data-creation-section]{scroll-margin-top:16px}}
 @media(max-width:560px){.guidedEditor .editorHeader>div:nth-child(2){flex-basis:calc(100% - 65px)}.guidedEditor .editorHeader>.secondaryButton{margin-left:65px}}
+/* Keep the real form readable when the Academy uses part of a desktop viewport. */
+@media(min-width:1200px) and (max-width:1500px){
+  :global(html[data-vendor-lesson="expanded"]) .editorLayout{display:flex;flex-direction:column}
+  :global(html[data-vendor-lesson="expanded"]) .editorAside{position:static;width:100%}
+  :global(html[data-vendor-lesson="expanded"]) .editorContent{width:100%}
+  :global(html[data-vendor-lesson="expanded"]) .sectionNav{padding:10px}
+  :global(html[data-vendor-lesson="expanded"]) .sectionNav>p,
+  :global(html[data-vendor-lesson="expanded"]) .editorTip,
+  :global(html[data-vendor-lesson="expanded"]) .saveReminder{display:none}
+  :global(html[data-vendor-lesson="expanded"]) .sectionNav nav{flex-direction:row;overflow:auto}
+  :global(html[data-vendor-lesson="expanded"]) .sectionNav a{flex:none;white-space:nowrap;padding:8px}
+  :global(html[data-vendor-lesson="expanded"]) .sectionNav a svg{display:none}
+}

@@ -167,7 +167,7 @@ export default function PhotoStudio({ preview = false, previewConnected = false,
       <div><strong>{status.paid ? `Included with ${status.plan === "PRO" ? "Pro" : "Growth"}` : status.allowed ? `${status.trialRemaining} free ${status.trialRemaining === 1 ? "image" : "images"} left` : "Your free image has been used"}</strong><p>{status.paid ? "Create your marketplace photos, then fine-tune as much as you like." : status.allowed ? "Try Photo Studio on one image. Zoom, crop and finishing adjustments do not use extra edits." : "Continue with an active Growth or Pro plan. Your original photos can still be uploaded as usual."}</p></div>
       {!status.paid && <Link href="/dashboard/vendor/finance">{status.allowed ? "Explore plans" : "Upgrade to keep editing"}<ArrowRight size={16} /></Link>}
     </div>}
-    <div className={s.workspace}>
+    <div data-tour="photo-upload" className={s.workspace}>
       <div className={`${s.stage} ${result ? s.editingStage : ""}`}>
         <div className={s.stageBar}><span>{result ? "Your photo, polished" : "Start with the real thing"}</span><span className={s.badge}>PRODUCT PHOTOGRAPHY</span></div>
         {file ? <>
@@ -184,7 +184,7 @@ export default function PhotoStudio({ preview = false, previewConnected = false,
             {busy && <div className={s.processing} role="status"><LoaderCircle className={s.spin} /><strong>Finding your product’s best light…</strong><span>This can take about a minute.</span></div>}
             {!busy && view === "result" && sandbox && <span className={s.testBadge}>TEST RESULT</span>}
           </div>
-          {result && <div className={s.fineTune}>
+          {result && <div data-tour="photo-tuning" className={s.fineTune}>
             <div className={s.tuneHeading}><div><SlidersHorizontal size={17} /><strong>The finishing touches</strong></div><button type="button" onClick={() => { tune({ light: 0, warmth: 0, angle: 0 }); setGuides(false); }}>Reset</button></div>
             <p>Fine-tune your result. No extra processing credits.</p>
             <div className={s.toolTabs} role="group" aria-label="Finishing tools">{[{ key: "light", label: "Lighting" }, { key: "warmth", label: "Colour" }, { key: "angle", label: "Straighten" }, { key: "crop", label: "Crop" }].map(item => <button type="button" key={item.key} aria-pressed={tool === item.key} onClick={() => { setTool(item.key as typeof tool); setGuides(item.key === "angle" || item.key === "crop"); setView("result"); }}>{item.label}</button>)}</div>
@@ -215,7 +215,7 @@ export default function PhotoStudio({ preview = false, previewConnected = false,
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={item.file} alt="" /><span>{item.name}</span></button>)}</div></div>}
       </div>
-      <aside className={s.settings}>
+      <aside data-tour="photo-actions" className={s.settings}>
         <p className={s.eyebrow}>THE MARKETPLACE LOOK</p><h2>Small touches.<br /> A big difference.</h2>
         <div className={s.feature}><span className={s.swatch} /><div><strong>Fresh white background</strong><p>Let your product take the spotlight.</p></div><Check size={18} /></div>
         <div className={s.feature}><ImagePlus size={22} /><div><strong>Clean, square framing</strong><p>Centred, with room to breathe.</p></div><Check size={18} /></div>

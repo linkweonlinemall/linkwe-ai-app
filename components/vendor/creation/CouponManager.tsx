@@ -84,7 +84,7 @@ export default function CouponManager({ initialCoupons, creations }: { initialCo
     <div className={s.setupNote}><span>Coupons cover eligible purchases from your store. Delivery stays separate. Service subscription coupons apply to the first checkout payment; renewals keep their regular price.</span></div>
     {notice && <p className={s.success} role="status"><Check size={16} />{notice}</p>}
     {error && !isOpen && <p className={s.error} role="alert">{error}</p>}
-    <section className={s.library}>
+    <section data-tour="coupon-library" className={s.library}>
       <div className={s.libraryHeading}><div><p className={s.eyebrow}>YOUR OFFERS, ALL TOGETHER</p><h2>Store coupons <span>{coupons.length}</span></h2></div></div>
       <div className={s.items}>{coupons.map(row => {
         const expired = !!row.expiresAt && new Date(row.expiresAt) <= new Date();
@@ -112,7 +112,7 @@ export default function CouponManager({ initialCoupons, creations }: { initialCo
           <label className={s.dialogInput}>Discount type<select value={type} onChange={event => setType(event.target.value)}><option value="PERCENT">Percentage</option><option value="FIXED">Amount in TTD</option></select></label>
           <label className={s.dialogInput}>{type === "PERCENT" ? "Percentage off" : "Amount off (TTD)"}<input key={`${editing?.id}-${type}`} name="value" type="number" required min={type === "PERCENT" ? 1 : .01} max={type === "PERCENT" ? 100 : 1000000} step={type === "PERCENT" ? 1 : .01} defaultValue={editing && editing.discountType === type ? (type === "PERCENT" ? editing.discountValue : editing.discountValue / 100) : undefined} /></label>
         </div>
-        <fieldset className={s.coverageModes}><legend>Where can customers use it?</legend>
+        <fieldset data-tour="coupon-coverage" className={s.coverageModes}><legend>Where can customers use it?</legend>
           <label data-selected={targetMode === "all"}><input type="radio" name="coverage" checked={targetMode === "all"} onChange={() => setTargetMode("all")} /><span><b>All eligible creations</b><small>Choose types. New creations are included too.</small></span></label>
           <label data-selected={targetMode === "selected"}><input type="radio" name="coverage" checked={targetMode === "selected"} onChange={() => setTargetMode("selected")} /><span><b>Specific creations</b><small>Choose one product, service, ticket tier or a selection.</small></span></label>
         </fieldset>

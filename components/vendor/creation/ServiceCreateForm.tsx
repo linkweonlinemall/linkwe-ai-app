@@ -386,7 +386,7 @@ export default function ServiceCreateForm() {
             <p className="mb-3 text-sm font-bold text-zinc-900">Payment preference</p>
             {!canPayOnArrival ? (
               <p className="mb-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-800">
-                Starter services are paid online through LinkWe. Upgrade to Growth or Pro to offer pay on arrival.
+                Pay on arrival requires an active Services, Growth or Pro plan. Check your plan in Finance.
               </p>
             ) : null}
             <div className="flex flex-col gap-2">

@@ -1,0 +1,14 @@
+/* Reserve workspace space only while the non-modal lesson companion is open. */
+@media (prefers-reduced-motion: no-preference) and (min-width: 1200px) {
+  [data-vendor-shell] { transition: padding-right 260ms cubic-bezier(.22, 1, .36, 1); }
+}
+html[data-vendor-lesson] .vendor-main-scroll { scroll-padding-top: 24px; }
+@media (min-width: 1200px) {
+  html[data-vendor-lesson="expanded"] [data-vendor-shell] { padding-right: 384px; }
+}
+@media (max-width: 1199px) {
+  html[data-vendor-lesson] .vendor-main-scroll {
+    padding-bottom: calc(var(--vendor-lesson-height, 120px) + 110px);
+    scroll-padding-bottom: calc(var(--vendor-lesson-height, 120px) + 110px);
+  }
+}

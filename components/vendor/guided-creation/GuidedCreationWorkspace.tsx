@@ -33,7 +33,7 @@ export default function GuidedCreationWorkspace({ library, initialPlan, initialE
   function run(work: () => Promise<void>) { setError(""); setMessage(""); start(async () => { try { await work(); } catch (e) { setError(e instanceof Error ? e.message : "Could not save. Try again."); } }); }
   const formHref = result && plan ? guideFormHref(result, plan.id) : null;
 
-  return <div className={s.workspace}>
+  return <div data-tour="creation-guide-workspace" className={s.workspace}>
     <Link href="/dashboard/vendor/creation" className={s.back}><ArrowLeft size={15}/> Creation Zone</Link>
     <header className={s.hero}>
       <div><p className={s.eyebrow}><Compass size={15}/> GUIDED CREATION</p><h1>A clear start.<br/><em>A listing that fits.</em></h1><p>A few simple questions. The right setup.<br/>Follow your checklist and build it yourself.</p><span className={s.free}><Check size={14}/> Free for every vendor · No AI credits</span></div>
