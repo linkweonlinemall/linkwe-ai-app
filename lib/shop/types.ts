@@ -1,5 +1,6 @@
 export type ShopProduct = {
   id: string; name: string; slug: string; price: number; compareAtPrice: number | null;
+  displayPrice?: number; displayPriceFrom?: boolean;
   images: string[]; category: string | null; brand: string | null; stock: number | null;
   condition: string | null; isFeatured: boolean; hasVariants: boolean; isDigital: boolean;
   allowPickup: boolean; allowDelivery: boolean; preview?: boolean;

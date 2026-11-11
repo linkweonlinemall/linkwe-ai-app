@@ -23,9 +23,26 @@ function pass(name){checks++;console.log('PASS '+name);}
   result=await getShopCatalog(parseShopQuery({category:marker,page:'999'}));assert.equal(result.page,2);pass('Out-of-range page resolves to the last page');
   result=await getShopCatalog(parseShopQuery({category:marker,inStock:'true'}));assert.equal(result.total,26);assert.ok(result.products.some(p=>p.stock===null));pass('Unlimited stock remains available; zero stock is excluded');
   result=await getShopCatalog(parseShopQuery({q:marker,region:'san fernando',minPrice:'3',maxPrice:'5'}));assert.equal(result.total,3);pass('Search, location and price combine correctly');
-  const variantProduct=await tx.product.create({data:{...base,name:`${marker} variants`,slug:`${marker}-variants`,hasVariants:true,stock:0,variants:{create:[{name:'Red S',stock:0,images:[],attributes:[{name:'Colour',value:'red'},{name:'Size',value:'S'}]},{name:'Blue M',stock:4,images:[],attributes:[{name:'Colour',value:'blue'},{name:'Size',value:'M'}]}]}}});
+  const variantProduct=await tx.product.create({data:{...base,name:`${marker} variants`,slug:`${marker}-variants`,hasVariants:true,stock:null,variants:{create:[{name:'Red S',stock:0,images:[],attributes:[{name:'Colour',value:'red'},{name:'Size',value:'S'}]},{name:'Blue M',stock:4,images:[],attributes:[{name:'Colour',value:'blue'},{name:'Size',value:'M'}]}]}}});
   result=await getShopCatalog(parseShopQuery({category:marker,colour:'red',size:'M'}));assert.equal(result.total,0);pass('Colour and size must belong to the same variant');
   result=await getShopCatalog(parseShopQuery({category:marker,colour:'red',inStock:'true'}));assert.equal(result.total,0);result=await getShopCatalog(parseShopQuery({category:marker,colour:'blue',size:'M',inStock:'true'}));assert.equal(result.total,1);assert.equal(result.products[0].id,variantProduct.id);pass('In-stock filter checks the selected variant, not another variant');
+  const pricingName = `${marker} price-options`;
+  const pricingProduct = await tx.product.create({data:{...base,name:pricingName,slug:`${marker}-pricing`,price:100,compareAtPrice:120,hasVariants:true,variants:{create:[
+    {name:'Red S',price:50,stock:0,images:[],attributes:[{name:'Colour',value:'red'},{name:'Size',value:'S'}]},
+    {name:'Blue M',price:150,stock:4,images:[],attributes:[{name:'Colour',value:'blue'},{name:'Size',value:'M'}]},
+    {name:'Green M',price:null,stock:null,images:[],attributes:[{name:'Colour',value:'green'},{name:'Size',value:'M'}]},
+  ]}}});
+  result=await getShopCatalog(parseShopQuery({q:pricingName,colour:'blue',minPrice:'150',maxPrice:'150'}));assert.equal(result.total,1);assert.equal(result.products[0].displayPrice,150);pass('Variant override satisfies inclusive price boundaries and displayed price');
+  result=await getShopCatalog(parseShopQuery({q:pricingName,colour:'green',minPrice:'100',maxPrice:'100',inStock:'true'}));assert.equal(result.total,1);assert.equal(result.products[0].displayPrice,100);pass('Null variant price inherits base price and unlimited stock qualifies');
+  result=await getShopCatalog(parseShopQuery({q:pricingName,colour:'blue',onSale:'true'}));assert.equal(result.total,0);
+  result=await getShopCatalog(parseShopQuery({q:pricingName,colour:'red',onSale:'true',inStock:'true'}));assert.equal(result.total,0);
+  result=await getShopCatalog(parseShopQuery({q:pricingName,colour:'green',onSale:'true',inStock:'true'}));assert.equal(result.total,1);pass('Sale, price, colour and stock must match the same option');
+  await tx.product.update({where:{id:pricingProduct.id},data:{stock:0}});result=await getShopCatalog(parseShopQuery({q:pricingName,inStock:'true'}));assert.equal(result.total,0);await tx.product.update({where:{id:pricingProduct.id},data:{stock:null}});pass('Shared parent stock cap prevents unavailable variants appearing in stock');
+  await tx.product.createMany({data:[{...base,name:`${pricingName} lower`,slug:`${marker}-lower`,price:75,compareAtPrice:75},{...base,name:`${pricingName} upper`,slug:`${marker}-upper`,price:175,compareAtPrice:null}]});
+  result=await getShopCatalog(parseShopQuery({q:pricingName,sort:'price_asc'}));assert.equal(result.products[0].id,pricingProduct.id);assert.deepEqual(result.products.map(p=>p.displayPrice),[50,75,175]);
+  result=await getShopCatalog(parseShopQuery({q:pricingName,sort:'price_desc'}));assert.deepEqual(result.products.map(p=>p.displayPrice),[175,75,50]);pass('Price sorts use lowest matching variant price, not parent price');
+  result=await getShopCatalog(parseShopQuery({q:pricingName,onSale:'true'}));assert.equal(result.total,1);assert.equal(result.products[0].id,pricingProduct.id);pass('Equal and null compare prices are not discounts');
+  result=await getShopCatalog(parseShopQuery({category:`${marker}-empty`}));assert.equal(result.total,0);assert.ok(result.options.categories.some(c=>c.value===`${marker}-empty`&&c.count===0));assert.ok(result.options.categories.every(c=>c.count>0||c.value===`${marker}-empty`));pass('Empty categories are hidden except the selected category');
   await tx.store.update({where:{id:store.id},data:{status:'DRAFT'}});result=await getShopCatalog(parseShopQuery({q:marker}));assert.equal(result.total,0);pass('Non-sellable stores never appear in results');
   throw rollback;
  },{timeout:30000});}catch(error){if(error!==rollback)throw error;}

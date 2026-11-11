@@ -26,6 +26,7 @@ export const workspaceGroups: { label: string; items: WorkspaceLink[] }[] = [
     { label: "Creation Zone", path: "/creation", description: "Create and manage products, services, events, tickets and coupons", icon: Layers3 },
   ] },
   { label: "Your brand", items: [
+    { label: "Store catalogue", path: "/catalogue", description: "Choose featured products and services and share your public catalogue", icon: Star },
     { label: "Storefront", path: "/store/edit", description: "Logo, cover, location and store information", icon: Store },
     { label: "Photo Studio", path: "/photo-studio", description: "Polish your product photos and lighting", icon: Image },
     { label: "Timeline", path: "/timeline", description: "Share updates with your community", icon: Newspaper },

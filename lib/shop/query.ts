@@ -19,7 +19,7 @@ export function parseShopQuery(params: ShopParams) {
   return {
     category: text("category") === "all" ? "" : text("category"), region: text("region"), q: text("q"),
     sort: SHOP_SORTS.some(option => option.value === text("sort")) ? text("sort") : "featured",
-    minPrice, maxPrice, inStock: text("inStock") === "true",
+    minPrice, maxPrice, onSale: text("onSale") === "true", inStock: text("inStock") === "true",
     condition: (["NEW", "USED", "REFURBISHED"].includes(text("condition")) ? text("condition") : "") as "NEW" | "USED" | "REFURBISHED" | "",
     fulfilment: ["delivery","pickup","digital"].includes(text("fulfilment")) ? text("fulfilment") : "",
     brand: text("brand"), colour: text("colour"), size: text("size"),
@@ -36,7 +36,7 @@ export function shopHref(params: ShopParams, overrides: Record<string, string | 
 export function shopStockWhere(): Prisma.ProductWhereInput {
   return { OR: [
     { hasVariants: false, OR: [{ stock: null }, { stock: { gt: 0 } }] },
-    { hasVariants: true, variants: { some: { OR: [{ stock: null }, { stock: { gt: 0 } }] } } },
+    { hasVariants: true, AND: [{ OR: [{ stock: null }, { stock: { gt: 0 } }] }], variants: { some: { OR: [{ stock: null }, { stock: { gt: 0 } }] } } },
   ] };
 }
 export function shopOrderBy(sort: string): Prisma.ProductOrderByWithRelationInput[] {

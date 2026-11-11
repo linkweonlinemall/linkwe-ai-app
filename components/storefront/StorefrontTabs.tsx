@@ -1,28 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import {matchesProductOptions} from "@/lib/catalog/variant-filters";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { IconAdjustments } from "@tabler/icons-react";
+import { useEffect, useRef } from "react";
 
 import StoreAboutTab from "@/components/storefront/StoreAboutTab";
-import StoreMobileFilterSheet from "@/components/storefront/StoreMobileFilterSheet";
-import StoreProductFiltersPanel from "@/components/storefront/StoreProductFiltersPanel";
-import StoreServiceFiltersPanel from "@/components/storefront/StoreServiceFiltersPanel";
 import StoreWriteReviewSection from "@/components/storefront/StoreWriteReviewSection";
 import ReviewsList from "@/components/ui/ReviewsList";
 import { type StorefrontProductRow } from "@/components/storefront/StorefrontMapAndProducts";
 import type { PartnerContentItem } from "@/lib/cross-store/types";
 import { getRegionLabel } from "@/lib/regions/tt-regions";
-import { COLOUR_OPTIONS, swatchPaint } from "@/lib/variant-options";
 import RelatedContentCards from "@/components/storefront/RelatedContentCards";
-import { CalendarDays, Compass, Heart, Images, MessageCircle, Newspaper, Search, ShoppingBag, Sparkles, Star, Store, UsersRound, Wrench, type LucideIcon } from "lucide-react";
+import { CalendarDays, Compass, Heart, Images, MessageCircle, Newspaper, ShoppingBag, Sparkles, Star, Store, UsersRound, Wrench, type LucideIcon } from "lucide-react";
 
-import StorefrontListingCard from "./StorefrontListingCard";
 import StorefrontImage from "./StorefrontImage";
 import StorefrontEvents, { type StorefrontEvent } from "./StorefrontEvents";
 import StorefrontOverview from "./StorefrontOverview";
+import StoreCatalogue from "./StoreCatalogue";
 import styles from "./storefront.module.css";
 
 type StoreTabProduct = StorefrontProductRow & {
@@ -30,10 +24,12 @@ type StoreTabProduct = StorefrontProductRow & {
   compareAtPrice?: number | null;
   hasVariants: boolean;
   isFeatured?: boolean;
-  variants: { attributes: unknown; stock?: number | null }[];
+  createdAt?: Date | string;
+  variants: { attributes: unknown; stock?: number | null; price?: number | null }[];
 };
 
 type StoreTabServiceRow = {
+  createdAt?: Date | string; compareAtPrice?: number | null;
   quotePriceType?: string | null; subscriptionInterval?: string | null; isAvailable?: boolean;
   id: string;
   name: string;
@@ -43,6 +39,7 @@ type StoreTabServiceRow = {
   category: string | null;
   serviceType: string | null;
   serviceDuration: number | null;
+  durationMinutes?: number | null;
   serviceLocation: string | null;
   isFeatured: boolean;
 };
@@ -83,11 +80,12 @@ export type StorefrontTabsStore = {
 
 type StoreTimelinePost = { id: string; caption: string; images: string[]; attachments: unknown; createdAt: string; _count: { likes: number; comments: number } };
 
-const TAB_IDS = ["discover", "about", "timeline", "store", "services", "partners", "reviews", "events"] as const;
+const TAB_IDS = ["discover", "catalogue", "about", "timeline", "store", "services", "partners", "reviews", "events"] as const;
 type TabId = (typeof TAB_IDS)[number];
 
 const TAB_ICONS: Record<TabId, LucideIcon> = {
   discover: Compass,
+  catalogue: ShoppingBag,
   store: ShoppingBag,
   services: Wrench,
   events: CalendarDays,
@@ -181,120 +179,9 @@ export default function StorefrontTabs({
     document.getElementById("store-content")?.scrollIntoView({ block: "start", behavior: "instant" });
   }
 
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("All");
-  const [priceMin, setPriceMin] = useState("");
-  const [priceMax, setPriceMax] = useState("");
-  const [sortBy, setSortBy] = useState("default");
-  const [inStockOnly, setInStockOnly] = useState(false);
-  const [productColour, setProductColour] = useState("");
-  const [productSize, setProductSize] = useState("");
-  const [storeFilterOpen, setStoreFilterOpen] = useState(false);
-  const [serviceSearch, setServiceSearch] = useState("");
-  const [serviceType, setServiceType] = useState("All");
-  const [serviceSort, setServiceSort] = useState("default");
-  const [servicePriceMin, setServicePriceMin] = useState("");
-  const [servicePriceMax, setServicePriceMax] = useState("");
-  const [serviceLocation, setServiceLocation] = useState("All");
-  const [serviceCategory, setServiceCategory] = useState("All");
-  const [servicesFilterOpen, setServicesFilterOpen] = useState(false);
-
-  function resetStoreFilters() {
-    setCategory("All");
-    setSearch("");
-    setPriceMin("");
-    setPriceMax("");
-    setSortBy("default");
-    setInStockOnly(false);
-    setProductColour("");
-    setProductSize("");
-  }
-
-  function resetServiceFilters() {
-    setServiceSearch("");
-    setServiceType("All");
-    setServiceSort("default");
-    setServicePriceMin("");
-    setServicePriceMax("");
-    setServiceLocation("All");
-    setServiceCategory("All");
-  }
-
-  const categories = useMemo(() => {
-    const unique = new Set<string>();
-    for (const p of products) {
-      const c = p.category?.trim();
-      if (c) unique.add(c);
-    }
-    return ["All", ...Array.from(unique).sort((a, b) => a.localeCompare(b))];
-  }, [products]);
-
-  const filteredProducts = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    let result = products.filter((p) => {
-      const nameOk =
-        !q ||
-        p.name.toLowerCase().includes(q) ||
-        (p.category?.toLowerCase() ?? "").includes(q);
-      const catOk = category === "All" || (p.category?.trim() ?? "") === category;
-      const minOk = !priceMin || p.price >= parseFloat(priceMin);
-      const maxOk = !priceMax || p.price <= parseFloat(priceMax);
-      return nameOk && catOk && minOk && maxOk && matchesProductOptions(p, productColour, productSize, inStockOnly);
-    });
-    if (sortBy === "price_asc") result = [...result].sort((a, b) => a.price - b.price);
-    if (sortBy === "price_desc") result = [...result].sort((a, b) => b.price - a.price);
-    if (sortBy === "name") result = [...result].sort((a, b) => a.name.localeCompare(b.name));
-    if (sortBy === "name_desc") result = [...result].sort((a, b) => b.name.localeCompare(a.name));
-    if (sortBy === "newest") result = [...result].reverse();
-    if (sortBy === "stock") result = [...result].sort((a, b) => (b.stock ?? 0) - (a.stock ?? 0));
-    return result;
-  }, [products, search, category, priceMin, priceMax, sortBy, inStockOnly, productColour, productSize]);
-
-  const storeVariantFilters = useMemo(() => {
-    const colours = new Set<string>(); const sizes = new Set<string>();
-    for (const product of products) for (const variant of product.variants) {
-      if (!Array.isArray(variant.attributes)) continue;
-      for (const raw of variant.attributes) {
-        if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
-        const attr = raw as { name?: unknown; value?: unknown };
-        if (typeof attr.name !== "string" || typeof attr.value !== "string") continue;
-        if (attr.name.toLowerCase() === "colour") colours.add(attr.value.toLowerCase());
-        if (attr.name.toLowerCase() === "size") sizes.add(attr.value);
-      }
-    }
-    const hex = new Map(COLOUR_OPTIONS.map((option) => [option.value, option.hex]));
-    return { colours: Array.from(colours).sort().map((value) => ({ value, hex: swatchPaint(value) })), sizes: Array.from(sizes).sort() };
-  }, [products]);
-
-  const filteredServices = (services ?? [])
-    .filter((s) => {
-      if (serviceSearch && !s.name.toLowerCase().includes(serviceSearch.toLowerCase())) return false;
-      if (serviceType !== "All" && s.serviceType !== serviceType) return false;
-      if (serviceLocation !== "All" && (s.serviceType === "VIRTUAL" ? "VIRTUAL" : s.serviceLocation) !== serviceLocation) return false;
-      if (serviceCategory !== "All" && s.category !== serviceCategory) return false;
-      const min = servicePriceMin ? parseFloat(servicePriceMin) : null;
-      const max = servicePriceMax ? parseFloat(servicePriceMax) : null;
-      if ((min !== null || max !== null) && s.serviceType === "QUOTE" && (s.quotePriceType === "FREE_QUOTE" || (!s.quotePriceType && s.price === 0))) return false;
-      if (min !== null && !Number.isNaN(min) && s.price < min) return false;
-      if (max !== null && !Number.isNaN(max) && s.price > max) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      if (serviceSort === "price_asc") return a.price - b.price;
-      if (serviceSort === "price_desc") return b.price - a.price;
-      if (serviceSort === "name") return a.name.localeCompare(b.name);
-      if (serviceSort === "name_desc") return b.name.localeCompare(a.name);
-      if (serviceSort === "duration") return (a.serviceDuration ?? Number.MAX_SAFE_INTEGER) - (b.serviceDuration ?? Number.MAX_SAFE_INTEGER);
-      return (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
-    });
-
-  const serviceCategories = useMemo(
-    () => Array.from(new Set((services ?? []).map((service) => service.category).filter(Boolean) as string[])).sort(),
-    [services],
-  );
-
   const tabItems: { id: TabId; label: string; count?: number }[] = [
     { id: "discover", label: "Discover" },
+    { id: "catalogue", label: "Catalogue", count: products.filter(p => p.isFeatured).length + (services ?? []).filter(s => s.isFeatured).length },
     ...(products.length > 0 || !services?.length ? [{ id: "store" as const, label: "The collection", count: products.length }] : []),
     ...(services?.length ? [{ id: "services" as const, label: "Services", count: services.length }] : []),
     ...(events.length ? [{ id: "events" as const, label: "Events", count: events.length }] : []),
@@ -347,132 +234,7 @@ export default function StorefrontTabs({
         </div>
       ) : null}
 
-      {activeTab === "store" ? (
-        <div className={TAB_CONTENT_CLASS}>
-        <div className={styles.catalogueHeader}><div><p className={styles.eyebrow}>THE FULL COLLECTION</p><h2>A little more to love.</h2><p aria-live="polite">{filteredProducts.length} {filteredProducts.length === 1 ? "find" : "finds"} from {store.name}</p></div><label className={styles.catalogueSearch}><Search size={17} aria-hidden /><input aria-label="Search this store" type="search" placeholder="Find your something…" value={search} onChange={event => setSearch(event.target.value)} /></label></div>
-        <div className="flex flex-col gap-4">
-          <div className="flex gap-2 overflow-x-auto lg:hidden">
-            <button
-              type="button"
-              onClick={() => setStoreFilterOpen(true)}
-              className="flex min-h-[36px] shrink-0 items-center gap-1 rounded-full border border-[0.5px] border-[var(--color-border-tertiary)] bg-white px-3 text-xs font-semibold"
-            >
-              <IconAdjustments className="size-3.5" aria-hidden /> Filters
-            </button>
-            {category !== "All" ? (
-              <button
-                type="button"
-                onClick={() => setCategory("All")}
-                className="flex min-h-[36px] shrink-0 items-center rounded-full bg-[#D4450A] px-3 text-xs font-semibold text-white"
-              >
-                {category.replace(/_/g, " ")} ×
-              </button>
-            ) : null}
-            {inStockOnly ? (
-              <button
-                type="button"
-                onClick={() => setInStockOnly(false)}
-                className="flex min-h-[36px] shrink-0 items-center rounded-full bg-[#D4450A] px-3 text-xs font-semibold text-white"
-              >
-                In stock ×
-              </button>
-            ) : null}
-            {sortBy !== "default" ? (
-              <button
-                type="button"
-                onClick={() => setSortBy("default")}
-                className="flex min-h-[36px] shrink-0 items-center rounded-full bg-[#D4450A] px-3 text-xs font-semibold text-white"
-              >
-                Sorted ×
-              </button>
-            ) : null}
-            {(priceMin || priceMax) ? (
-              <button
-                type="button"
-                onClick={() => { setPriceMin(""); setPriceMax(""); }}
-                className="flex min-h-[36px] shrink-0 items-center rounded-full bg-[#D4450A] px-3 text-xs font-semibold text-white"
-              >
-                Price ×
-              </button>
-            ) : null}
-          </div>
-
-          <div className="flex flex-col gap-6 lg:flex-row">
-            <aside className={`${styles.filterAside} hidden lg:block`}>
-              <StoreProductFiltersPanel
-                search={search}
-                setSearch={setSearch}
-                sortBy={sortBy}
-                setSortBy={setSortBy}
-                category={category}
-                setCategory={setCategory}
-                categories={categories}
-                priceMin={priceMin}
-                setPriceMin={setPriceMin}
-                priceMax={priceMax}
-                setPriceMax={setPriceMax}
-                inStockOnly={inStockOnly}
-                setInStockOnly={setInStockOnly}
-                onClear={resetStoreFilters}
-                colour={productColour}
-                setColour={setProductColour}
-                size={productSize}
-                setSize={setProductSize}
-                availableColours={storeVariantFilters.colours}
-                availableSizes={storeVariantFilters.sizes}
-              />
-            </aside>
-
-            <div className={styles.catalogueResults}>
-              {products.length === 0 ? (
-                <div className="rounded-xl border border-[0.5px] border-[var(--color-border-tertiary)] bg-white p-6 text-center">
-                  <p className="text-sm text-[var(--text-muted)]">No products available yet.</p>
-                </div>
-              ) : filteredProducts.length === 0 ? (
-                <p className="py-12 text-center text-sm text-[var(--text-muted)]">No products found</p>
-              ) : (
-                <ul className={styles.catalogueGrid}>
-                  {filteredProducts.map((product) => (
-                    <li key={product.id}><StorefrontListingCard item={product} preview={preview} wishlisted={wishlistProductIds.includes(product.id)} /></li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-
-          <StoreMobileFilterSheet
-            open={storeFilterOpen}
-            onClose={() => setStoreFilterOpen(false)}
-            onReset={resetStoreFilters}
-            resultCount={filteredProducts.length}
-            resultLabel={filteredProducts.length === 1 ? "product" : "products"}
-          >
-            <StoreProductFiltersPanel
-              search={search}
-              setSearch={setSearch}
-              sortBy={sortBy}
-              setSortBy={setSortBy}
-              category={category}
-              setCategory={setCategory}
-              categories={categories}
-              priceMin={priceMin}
-              setPriceMin={setPriceMin}
-              priceMax={priceMax}
-              setPriceMax={setPriceMax}
-              inStockOnly={inStockOnly}
-              setInStockOnly={setInStockOnly}
-              onClear={resetStoreFilters}
-              colour={productColour}
-              setColour={setProductColour}
-              size={productSize}
-              setSize={setProductSize}
-              availableColours={storeVariantFilters.colours}
-              availableSizes={storeVariantFilters.sizes}
-            />
-          </StoreMobileFilterSheet>
-        </div>
-        </div>
-      ) : null}
+      {(activeTab === "catalogue" || activeTab === "store" || activeTab === "services") && <div className={TAB_CONTENT_CLASS}><StoreCatalogue key={activeTab} mode={activeTab} products={products} services={services ?? []} storeName={store.name} availableNow={store.isAvailableNow} preview={preview} wishlistProductIds={wishlistProductIds} /></div>}
 
       {activeTab === "timeline" && <div className={TAB_CONTENT_CLASS}>
         <div className={styles.catalogueHeader}><div><p className={styles.eyebrow}>STRAIGHT FROM {store.name}</p><h2>The story keeps going.</h2><p>New arrivals, offers, events, and everyday moments from the business.</p></div></div>
@@ -486,125 +248,6 @@ export default function StorefrontTabs({
         <div className={styles.catalogueHeader}><div><p className={styles.eyebrow}>GOOD COMPANY</p><h2>Meet the local circle.</h2><p>Products and services this store recommends from approved LinkWe partners.</p></div></div>
         {partnerItems.length ? <RelatedContentCards items={partnerItems.map(item => ({ id: item.id, name: item.name, image: item.image, price: item.price, href: item.href }))} /> : <div className={styles.emptyState}><Heart size={38} strokeWidth={1} aria-hidden /><h3>Connections worth coming back for.</h3><p>This store has not featured any partner items yet.</p></div>}
       </div>}
-
-      {activeTab === "services" ? (
-        <div className={TAB_CONTENT_CLASS}>
-        <div className={styles.catalogueHeader}><div><p className={styles.eyebrow}>GOOD PEOPLE. GREAT AT WHAT THEY DO.</p><h2>Let’s make it happen.</h2><p aria-live="polite">{filteredServices.length} {filteredServices.length === 1 ? "service" : "services"} from {store.name}</p></div><label className={styles.catalogueSearch}><Search size={17} aria-hidden /><input aria-label="Search this store’s services" type="search" placeholder="What can we help with?" value={serviceSearch} onChange={event => setServiceSearch(event.target.value)} /></label></div>
-        {!services || services.length === 0 ? (
-          <div className="mt-6 rounded-2xl border border-dashed border-zinc-200 bg-white py-16 text-center">
-            <span className="mb-3 block text-4xl">🛎️</span>
-            <p className="text-sm font-semibold text-zinc-700">No services yet</p>
-            <p className="mt-1 text-xs text-zinc-400">This store has not added any services.</p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4">
-            <div className="flex gap-2 overflow-x-auto lg:hidden">
-              <button
-                type="button"
-                onClick={() => setServicesFilterOpen(true)}
-                className="flex min-h-[36px] shrink-0 items-center gap-1 rounded-full border border-[0.5px] border-[var(--color-border-tertiary)] bg-white px-3 text-xs font-semibold"
-              >
-                <IconAdjustments className="size-3.5" aria-hidden /> Filters
-              </button>
-              {serviceType !== "All" ? (
-                <button
-                  type="button"
-                  onClick={() => setServiceType("All")}
-                  className="flex min-h-[36px] shrink-0 items-center rounded-full bg-[#D4450A] px-3 text-xs font-semibold text-white"
-                >
-                  {serviceType.replace(/_/g, " ")} ×
-                </button>
-              ) : null}
-              {serviceSort !== "default" ? (
-                <button
-                  type="button"
-                  onClick={() => setServiceSort("default")}
-                  className="flex min-h-[36px] shrink-0 items-center rounded-full bg-[#D4450A] px-3 text-xs font-semibold text-white"
-                >
-                  Sorted ×
-                </button>
-              ) : null}
-              {(servicePriceMin || servicePriceMax) ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setServicePriceMin("");
-                    setServicePriceMax("");
-                  }}
-                  className="flex min-h-[36px] shrink-0 items-center rounded-full bg-[#D4450A] px-3 text-xs font-semibold text-white"
-                >
-                  Price ×
-                </button>
-              ) : null}
-            </div>
-
-            <div className="flex flex-col gap-6 lg:flex-row">
-              <aside className={`${styles.filterAside} hidden lg:block`}>
-                <StoreServiceFiltersPanel
-                  serviceSearch={serviceSearch}
-                  setServiceSearch={setServiceSearch}
-                  serviceSort={serviceSort}
-                  setServiceSort={setServiceSort}
-                  serviceType={serviceType}
-                  setServiceType={setServiceType}
-                  servicePriceMin={servicePriceMin}
-                  setServicePriceMin={setServicePriceMin}
-                  servicePriceMax={servicePriceMax}
-                  setServicePriceMax={setServicePriceMax}
-                  serviceLocation={serviceLocation}
-                  setServiceLocation={setServiceLocation}
-                  serviceCategory={serviceCategory}
-                  setServiceCategory={setServiceCategory}
-                  categories={serviceCategories}
-                  onClear={resetServiceFilters}
-                />
-              </aside>
-
-              <div className={styles.catalogueResults}>
-              {filteredServices.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-zinc-200 bg-white py-16 text-center">
-                  <span className="mb-3 block text-4xl">🛎️</span>
-                  <p className="text-sm font-semibold text-zinc-700">No services found</p>
-                  <p className="mt-1 text-xs text-zinc-400">Try adjusting your filters.</p>
-                </div>
-              ) : (
-                <div className={styles.catalogueGrid}>
-                  {filteredServices.map(service => <StorefrontListingCard key={service.id} item={service} service availableNow={store.isAvailableNow} preview={preview} wishlisted={wishlistProductIds.includes(service.id)} />)}
-                </div>
-              )}
-            </div>
-            </div>
-
-            <StoreMobileFilterSheet
-              open={servicesFilterOpen}
-              onClose={() => setServicesFilterOpen(false)}
-              onReset={resetServiceFilters}
-              resultCount={filteredServices.length}
-              resultLabel={filteredServices.length === 1 ? "service" : "services"}
-            >
-              <StoreServiceFiltersPanel
-                serviceSearch={serviceSearch}
-                setServiceSearch={setServiceSearch}
-                serviceSort={serviceSort}
-                setServiceSort={setServiceSort}
-                serviceType={serviceType}
-                setServiceType={setServiceType}
-                servicePriceMin={servicePriceMin}
-                setServicePriceMin={setServicePriceMin}
-                servicePriceMax={servicePriceMax}
-                setServicePriceMax={setServicePriceMax}
-                serviceLocation={serviceLocation}
-                setServiceLocation={setServiceLocation}
-                serviceCategory={serviceCategory}
-                setServiceCategory={setServiceCategory}
-                categories={serviceCategories}
-                onClear={resetServiceFilters}
-              />
-            </StoreMobileFilterSheet>
-          </div>
-        )}
-        </div>
-      ) : null}
 
       {activeTab === "reviews" ? (
         <div className={`flex flex-col gap-4 ${TAB_CONTENT_CLASS}`}>

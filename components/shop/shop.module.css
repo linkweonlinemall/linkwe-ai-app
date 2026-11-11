@@ -44,3 +44,16 @@
 @media(prefers-reduced-motion:reduce){.page *,.page *::before,.page *::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}.heroFind:hover,.card:hover{transform:none}}
 /* A shared filter treatment across products, services, stores and events. */
 .filterHeading{border-top:3px solid #e77632;background:linear-gradient(120deg,#f0f7fb,#fff8f1)}.filterHeading>svg{color:#ce541b}.filterActions>button:first-child{background:#cd4d15;color:white}.filterActions>button:first-child:hover{background:#ae3e0d}.stockToggle input{accent-color:#d1551c}.priceField>div>input{min-width:0;width:100%;border:1px solid #d4e2eb;background:#f8fbfd;padding:10px;border-radius:10px;font-size:13px}.categoryStrip a[aria-current=page]{border-color:#e19c73;background:#fff1e7;color:#b54a16}.filterDialog{max-height:85dvh;overflow-y:auto;overscroll-behavior:contain}.filterDialog:focus-visible{outline:3px solid #eb8c4e}.activeFilters>a:not(.clearFilters){background:#fff4ec;border-color:#f1c9ae;color:#9a471e}
+
+/* Shareable, accessible catalogue refinements. */
+.pricePresets { display:flex; flex-wrap:wrap; gap:6px; margin-top:-8px; }
+.pricePresets button { min-height:36px; padding:6px 9px; border:1px solid #ddd6cd; border-radius:999px; background:#fff; color:#51473e; font-size:12px; cursor:pointer; }
+.pricePresets button[aria-pressed="true"] { border-color:#a23b19; background:#fff1e9; color:#923210; }
+.filterHint { display:block; margin-top:4px; font-size:11px; font-weight:400; color:#6c625a; }
+.shareRow { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:0 0 18px; }
+.shareRow > p { font-size:12px; color:#6c625a; margin:6px 0; }
+.copyLink { display:flex; align-items:flex-start; flex-direction:column; gap:6px; max-width:100%; }
+.copyLink button { display:inline-flex; align-items:center; gap:7px; min-height:40px; padding:8px 12px; border:1px solid #ddd6cd; border-radius:8px; background:#fff; color:#51473e; font-size:12px; font-weight:600; cursor:pointer; }
+.copyLink span, .copyLink label { font-size:12px; color:#51473e; }
+.copyLink input { display:block; width:min(360px,100%); padding:8px; border:1px solid #bbb; border-radius:6px; }
+.copyLink button:focus-visible, .pricePresets button:focus-visible { outline:2px solid #a23b19; outline-offset:3px; }

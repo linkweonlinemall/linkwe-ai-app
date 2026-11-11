@@ -163,6 +163,7 @@ export default async function PublicStorePage({ params }: Props) {
     where: {
       storeId: store.id,
       isPublished: true,
+      isArchived: false,
       isService: false,
     },
     orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
@@ -176,8 +177,9 @@ export default async function PublicStorePage({ params }: Props) {
       category: true,
       stock: true,
       hasVariants: true,
-      variants: { select: { attributes: true, stock: true } },
+      variants: { select: { attributes: true, stock: true, price: true } },
       isFeatured: true,
+      createdAt: true,
     },
   });
 
@@ -185,6 +187,7 @@ export default async function PublicStorePage({ params }: Props) {
     where: {
       storeId: store.id,
       isPublished: true,
+      isArchived: false,
       isService: true,
     },
     select: {
@@ -192,15 +195,18 @@ export default async function PublicStorePage({ params }: Props) {
       name: true,
       slug: true,
       price: true,
+      compareAtPrice: true,
       images: true,
       category: true,
       serviceType: true,
       serviceDuration: true,
+      durationMinutes: true,
       serviceLocation: true,
       quotePriceType: true,
       subscriptionInterval: true,
       isAvailable: true,
       isFeatured: true,
+      createdAt: true,
     },
     orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
   });
