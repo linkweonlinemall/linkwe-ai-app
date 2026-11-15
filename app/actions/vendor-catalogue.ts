@@ -23,3 +23,17 @@ export async function saveVendorCatalogue(value: unknown) {
     return { ok: false as const, error: error instanceof CatalogueError ? error.message : "We could not confirm your save. Reload the catalogue to check the saved selections before trying again." };
   }
 }
+
+export async function saveVendorCollections(value: unknown) {
+  const session = await getSession();
+  if (!session || session.role !== 'VENDOR') return { ok: false as const, error: 'Sign in to your vendor account to save collections.' };
+  try {
+    const { saveCollections } = await import('@/lib/vendor/catalogue/save-collections');
+    const result = await saveCollections(prisma, session.userId, value);
+    revalidatePath('/dashboard/vendor/catalogue');
+    revalidatePath(`/store/${result.slug}`);
+    return { ok: true as const, revision: result.revision };
+  } catch (error) {
+    return { ok: false as const, error: error instanceof CatalogueError ? error.message : 'We could not confirm your save. Reload to check saved collections before trying again.' };
+  }
+}

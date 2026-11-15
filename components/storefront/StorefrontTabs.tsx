@@ -60,6 +60,7 @@ type DaySchedule = { closed: boolean; allDay: boolean; slots: TimeSlot[] };
 type WeekSchedule = Record<string, DaySchedule>;
 
 export type StorefrontTabsStore = {
+  catalogueCollections?: import("@/lib/storefront/catalogue-collections").PublicCatalogueCollection[];
   isAvailableNow?: boolean;
   name: string;
   slug: string;
@@ -100,6 +101,7 @@ const TAB_CONTENT_CLASS = `${styles.container} ${styles.catalogueBody}`;
 
 type Props = {
   preview?: boolean;
+  catalogueReviewOnly?: boolean;
   store: StorefrontTabsStore;
   storeId: string;
   initialSaved: boolean;
@@ -131,6 +133,7 @@ type Props = {
 
 export default function StorefrontTabs({
   preview = false,
+  catalogueReviewOnly = false,
   store,
   storeId,
   initialSaved,
@@ -153,9 +156,10 @@ export default function StorefrontTabs({
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const tabParam = searchParams.get("tab");
-  const activeTab: TabId = TAB_IDS.includes(tabParam as TabId)
+  const allowedTabs: readonly string[] = catalogueReviewOnly ? ["catalogue", "store", "services"] : TAB_IDS;
+  const activeTab: TabId = allowedTabs.includes(tabParam ?? "")
     ? (tabParam as TabId)
-    : "discover";
+    : catalogueReviewOnly ? "catalogue" : "discover";
   const tabNav = useRef<HTMLElement>(null);
   const selectedTab = useRef<HTMLButtonElement>(null);
 
@@ -191,6 +195,8 @@ export default function StorefrontTabs({
     { id: "partners", label: "Our circle", count: partnerItems.length },
   ];
 
+  const visibleTabItems = catalogueReviewOnly ? tabItems.filter(item => allowedTabs.includes(item.id)) : tabItems;
+
   void canEditStore;
   void hasSocialLinks;
 
@@ -199,7 +205,7 @@ export default function StorefrontTabs({
       <div className={styles.tabAnchor} id="store-content" />
       <div className={styles.tabBar}>
         <nav ref={tabNav} className={`${styles.container} ${styles.tabInner}`} aria-label="Explore this store">
-          {tabItems.map(({ id, label, count }) => {
+          {visibleTabItems.map(({ id, label, count }) => {
             const Icon = TAB_ICONS[id];
             return <button key={id} ref={activeTab === id ? selectedTab : undefined} type="button" onClick={() => setActiveTab(id)} aria-pressed={activeTab === id}>
               <Icon size={18} strokeWidth={1.9} aria-hidden />
@@ -234,7 +240,7 @@ export default function StorefrontTabs({
         </div>
       ) : null}
 
-      {(activeTab === "catalogue" || activeTab === "store" || activeTab === "services") && <div className={TAB_CONTENT_CLASS}><StoreCatalogue key={activeTab} mode={activeTab} products={products} services={services ?? []} storeName={store.name} availableNow={store.isAvailableNow} preview={preview} wishlistProductIds={wishlistProductIds} /></div>}
+      {(activeTab === "catalogue" || activeTab === "store" || activeTab === "services") && <div className={TAB_CONTENT_CLASS}><StoreCatalogue key={activeTab} mode={activeTab} collections={store.catalogueCollections} products={products} services={services ?? []} storeName={store.name} availableNow={store.isAvailableNow} preview={preview} wishlistProductIds={wishlistProductIds} /></div>}
 
       {activeTab === "timeline" && <div className={TAB_CONTENT_CLASS}>
         <div className={styles.catalogueHeader}><div><p className={styles.eyebrow}>STRAIGHT FROM {store.name}</p><h2>The story keeps going.</h2><p>New arrivals, offers, events, and everyday moments from the business.</p></div></div>
