@@ -1,4 +1,6 @@
 "use server";
+
+import { normalizeVariantAttributes } from "@/lib/product/variant-attributes";
 import { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -364,18 +366,14 @@ function parseVariants(raw: unknown): VariantInput[] {
       !Array.isArray(row.images) ||
       row.images.some(
         (url: unknown) => typeof url !== "string" || !safeUrl(url),
-      ) ||
-      !row.attributes ||
-      typeof row.attributes !== "object" ||
-      Array.isArray(row.attributes)
+      )
     )
       throw new RecordValidationError({
         variants: "Check variation images and attributes.",
       });
-    if (Object.values(row.attributes).some((v) => typeof v !== "string"))
-      throw new RecordValidationError({
-        variants: "Variation attributes must be text.",
-      });
+    let attributes;
+    try { attributes = normalizeVariantAttributes(row.attributes ?? {}); }
+    catch (cause) { throw new RecordValidationError({ variants: cause instanceof Error ? cause.message : "Check variation options." }); }
     return {
       ...(row.id ? { id: String(row.id) } : {}),
       name: row.name.trim().slice(0, 150),
@@ -383,7 +381,7 @@ function parseVariants(raw: unknown): VariantInput[] {
       price,
       stock,
       images: row.images as string[],
-      attributes: row.attributes as Prisma.InputJsonValue,
+      attributes: attributes as Prisma.InputJsonValue,
     };
   });
   const ids = parsed.flatMap((row) => (row.id ? [row.id] : []));

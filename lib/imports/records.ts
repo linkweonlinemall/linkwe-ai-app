@@ -1,3 +1,4 @@
+import { normalizeVariantAttributes } from "@/lib/product/variant-attributes";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { cleanRichText } from "@/lib/content/rich-text";
@@ -86,6 +87,7 @@ export async function findImportDuplicate(tx: Tx, kind: ImportKind, values: Valu
 async function saveVariants(tx: Tx, productId: string, raw: unknown) {
   if (!Array.isArray(raw) || raw.length > 100) error("variants", "Use up to 100 product variations.");
   const rows = raw as Values[];
+  if (rows.some(v => !v || typeof v !== "object" || Array.isArray(v))) error("variants", "Every variation needs valid details.");
   const existing = await tx.productVariant.findMany({ where: { productId } });
   const ids = rows.map(v => v.id).filter(Boolean);
   if (new Set(ids).size !== ids.length || ids.some(id => !existing.some(v => v.id === id))) error("variants", "A variation ID is duplicated or belongs to another product.");
@@ -94,8 +96,11 @@ async function saveVariants(tx: Tx, productId: string, raw: unknown) {
     if (!v || typeof v.name !== "string" || !v.name.trim()) error("variants", "Every variation needs a name.");
     const price = v.price === "" || v.price == null ? null : Number(v.price), stock = v.stock === "" || v.stock == null ? null : Number(v.stock);
     if ((price != null && (!Number.isFinite(price) || price < 0)) || (stock != null && (!Number.isSafeInteger(stock) || stock < 0))) error("variants", "Variation prices and whole-number stock must be zero or greater.");
-    const images = v.images ?? [], attributes = v.attributes ?? {};
-    if (!Array.isArray(images) || images.length > 20 || images.some(u => typeof u !== "string" || !safeUrl(u)) || !attributes || typeof attributes !== "object" || Array.isArray(attributes) || Object.values(attributes).some(a => typeof a !== "string")) error("variants", "Check variation photos and options.");
+    const images = v.images ?? [];
+    let attributes;
+    try { attributes = normalizeVariantAttributes(v.attributes ?? {}); }
+    catch (cause) { error("variants", cause instanceof Error ? cause.message : "Check variation options."); }
+    if (!Array.isArray(images) || images.length > 20 || images.some(u => typeof u !== "string" || !safeUrl(u))) error("variants", "Check variation photos and options.");
     const data = { name: String(v.name).trim(), sku: v.sku ? String(v.sku) : null, price, stock, images: images as string[], attributes: json(attributes) };
     if (v.id) await tx.productVariant.update({ where: { id: String(v.id) }, data });
     else await tx.productVariant.create({ data: { ...data, productId } });

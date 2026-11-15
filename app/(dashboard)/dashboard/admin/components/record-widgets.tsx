@@ -1,4 +1,5 @@
 "use client";
+import { normalizeVariantAttributes, type VariantAttribute } from "@/lib/product/variant-attributes";
 import StructuredFields from "@/components/admin/StructuredFields";
 /* Staff image previews accept vendor-hosted URLs before saving; do not proxy them through the public image optimizer. */
 /* eslint-disable @next/next/no-img-element */
@@ -603,8 +604,31 @@ export type EditorVariant = {
   price?: number | string | null;
   stock?: number | string | null;
   images: string[];
-  attributes: Record<string, string>;
+  attributes: VariantAttribute[] | Record<string, string>;
 };
+export function VariantOptionsEditor({ value, onChange }: { value: unknown; onChange: (value: VariantAttribute[]) => void }) {
+  let options: VariantAttribute[];
+  try {
+    if (Array.isArray(value) && value.some(option => !option || typeof option !== "object" || Array.isArray(option) || typeof option.name !== "string" || typeof option.value !== "string" || (option.hex !== undefined && typeof option.hex !== "string"))) throw new Error("Invalid options");
+    options = Array.isArray(value) ? value as VariantAttribute[] : normalizeVariantAttributes(value ?? {});
+  }
+  catch { return <p role="alert">Invalid variation options. Correct the source data before saving.</p>; }
+  return <div>
+    {options.map((option, index) => <div className="admin-form-grid" key={index}>
+      {(["name", "value", "hex"] as const).map(key => <label className="admin-field" key={key}>
+        <span className="admin-field-label">{key === "hex" ? "Colour hex (optional)" : humanLabel(key)}</span>
+        <input className="admin-input" value={option[key] ?? ""} onChange={e => onChange(options.map((item, i) => {
+          if (i !== index) return item;
+          const next = { ...item, [key]: e.target.value };
+          if (key === "hex" && !e.target.value) delete next.hex;
+          return next;
+        }))}/>
+      </label>)}
+      <button type="button" className="admin-button" aria-label={`Remove option ${index + 1}`} onClick={() => onChange(options.filter((_, i) => i !== index))}>Remove option</button>
+    </div>)}
+    <button type="button" className="admin-button" onClick={() => onChange([...options, { name: "", value: "" }])}>Add option</button>
+  </div>;
+}
 export function VariantsEditor({
   value,
   onChange,
@@ -656,10 +680,10 @@ export function VariantsEditor({
               <span className="admin-field-label">
                 Options · for example size or colour
               </span>
-              <PropertiesEditor
+              <VariantOptionsEditor
                 value={row.attributes}
                 onChange={(v) =>
-                  update(index, { attributes: v as Record<string, string> })
+                  update(index, { attributes: v })
                 }
               />
             </div>
@@ -690,7 +714,7 @@ export function VariantsEditor({
               price: "",
               stock: "",
               images: [],
-              attributes: {},
+              attributes: [],
             },
           ])
         }

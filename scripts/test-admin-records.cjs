@@ -28,6 +28,9 @@ Module._load = function (request, parent, isMain) {
       },
     };
   if (request === "server-only") return {};
+  if (request === "resend") return { Resend: class { emails = { send: async () => { throw new Error("Unexpected email in admin integration test"); } }; } };
+  if (request === "@/lib/email/resend") return { FROM_EMAIL: "test@example.test", BASE_URL: "http://localhost:3000", resend: { emails: { send: async () => { throw new Error("Unexpected email in admin integration test"); } } } };
+  if (request === "@/lib/uploads/upload") return { uploadFile: async () => { throw new Error("Unexpected upload in admin integration test"); } };
   if (request.startsWith("@/")) request = path.join(root, request.slice(2));
   return originalLoad.call(this, request, parent, isMain);
 };
@@ -209,7 +212,7 @@ async function run() {
       include: { variants: true },
     });
     assert.equal(row.variants[0].stock, 3);
-    assert.equal(row.variants[0].attributes.colour, "Teal");
+    assert.equal(row.variants[0].attributes.find(a => a.name === "Colour").value, "Teal");
   });
   await test("variation identity cannot be deleted or borrowed from another product", async () => {
     const w = await records.getAdminRecordWorkspace("product", product);
