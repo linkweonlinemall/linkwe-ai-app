@@ -19,6 +19,8 @@ import { getStoreTimeline } from "@/app/actions/business-timeline";
 import styles from "@/components/storefront/storefront.module.css";
 import { isStoreSellable } from "@/lib/store/sellable-store";
 
+import { publicCollections } from "@/lib/vendor/catalogue/collections";
+
 type WeekSchedule = Record<
   string,
   { closed: boolean; allDay: boolean; slots: { from: string; to: string }[] }
@@ -97,6 +99,7 @@ export default async function PublicStorePage({ params }: Props) {
       coverPhotoUrl: true,
       status: true,
       isAvailableNow: true,
+      catalogueCollections: true,
       images: {
         select: { id: true, url: true, position: true },
         orderBy: { position: "asc" },
@@ -304,7 +307,7 @@ export default async function PublicStorePage({ params }: Props) {
 
       <Suspense fallback={<div className="min-h-[40vh] bg-[#F7F5F2]" />}>
         <StorefrontTabs
-          store={store}
+          store={{ ...store, catalogueCollections: publicCollections(store.catalogueCollections, new Set([...products, ...services].map(item => item.id))) }}
           storeId={store.id}
           initialSaved={isSaved}
           followerCount={store._count.savedBy}

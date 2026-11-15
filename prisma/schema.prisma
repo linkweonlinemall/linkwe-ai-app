@@ -270,6 +270,9 @@ model CourierLocation {
 }
 
 model Store {
+  /// Named catalogues contain listing IDs only; editing them never changes listing flags.
+  catalogueCollections Json @default("[]") @map("catalogue_collections")
+  catalogueRevision Int @default(0) @map("catalogue_revision")
   stockAdjustments StockAdjustment[]
   creationGuides GuidedCreationPlan[]
   coupons StoreCoupon[]

@@ -1,17 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Suspense } from "react";
 import { Sora } from "next/font/google";
 
-import CartProvider from "@/components/cart/CartProvider";
-import FooterWrapper from "@/components/layout/FooterWrapper";
-import SiteFooter from "@/components/layout/SiteFooter";
-import InstallPrompt from "@/components/pwa/InstallPrompt";
-import LinkWeToaster from "@/components/providers/LinkWeToaster";
-import ServiceWorkerRegistration from "@/components/pwa/ServiceWorkerRegistration";
-import RouteScrollManager from "@/components/layout/RouteScrollManager";
-import AppStartupSplash from "@/components/layout/AppStartupSplash";
-import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
-import OneSignalProvider from "@/components/notifications/OneSignalProvider";
+import ApplicationRuntime from "@/components/providers/ApplicationRuntime";
 import startupImages from "@/lib/branding-startup-images.json";
 
 import "./globals.css";
@@ -100,20 +90,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col">
-        <AppStartupSplash />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "Organization", name: "LinkWe", url: "https://www.linkweonlinemall.com", logo: "https://www.linkweonlinemall.com/branding/v2/mark-192.png", slogan: "We People. We Business. We Marketplace.", description: "Trinidad & Tobago's marketplace for local products, services, stores and events." }) }} />
-        <ServiceWorkerRegistration />
-        <OneSignalProvider />
-        <RouteScrollManager />
-        <Suspense fallback={null}><GoogleAnalytics /></Suspense>
-        <InstallPrompt />
-        <CartProvider>
-          <LinkWeToaster />
-          {children}
-        </CartProvider>
-        <FooterWrapper>
-          <SiteFooter />
-        </FooterWrapper>
+        <ApplicationRuntime>{children}</ApplicationRuntime>
       </body>
     </html>
   );

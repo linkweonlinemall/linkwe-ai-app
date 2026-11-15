@@ -2,11 +2,14 @@
 
 import { useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Check, Copy, Search, SlidersHorizontal, X, ShoppingBag } from "lucide-react";
+import { Check, Copy, Search, SlidersHorizontal, X, ShoppingBag, ArrowUpRight } from "lucide-react";
 import { FilterSelect } from "@/components/filters/FilterControls";
 import { getProductCategoryLabel, getServiceCategoryLabel } from "@/lib/categories";
 import { filterCatalogue, filterDefaults, itemLocation, pricingKind, pricingLabels, readCatalogueFilters, salePrice, productChoices, sortLabels, type CatalogueItem, type FilterKey } from "@/lib/storefront/catalogue-filters";
 import { storefrontServiceLocation } from "@/lib/storefront/service-display";
+import { visibleCollectionItems, type PublicCatalogueCollection } from "@/lib/storefront/catalogue-collections";
+import StorefrontImage from "./StorefrontImage";
+import collectionStyles from "./catalogue-collections.module.css";
 import StorefrontListingCard from "./StorefrontListingCard";
 import StoreMobileFilterSheet from "./StoreMobileFilterSheet";
 import styles from "./storefront.module.css";
@@ -16,8 +19,9 @@ const fieldLabels: Record<FilterKey,string> = { q: 'Search', type: 'Show', categ
 const controlClass = "min-h-11 w-full min-w-0 rounded-xl border border-sky-100 bg-slate-50 px-3 text-sm text-[#173f58] focus:outline-2 focus:outline-[#168c89]";
 const actionClass = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-sky-100 bg-white px-4 text-sm font-semibold text-[#173f58] hover:bg-sky-50 focus-visible:outline-2 focus-visible:outline-[#168c89]";
 
-export default function StoreCatalogue({ mode, products, services, storeName, availableNow, preview = false, wishlistProductIds = [] }: {
+export default function StoreCatalogue({ mode, products, services, storeName, availableNow, preview = false, wishlistProductIds = [], collections = [] }: {
   mode: 'catalogue' | 'store' | 'services'; products: CatalogueItem[]; services: CatalogueItem[];
+  collections?: PublicCatalogueCollection[];
   storeName: string; availableNow?: boolean; preview?: boolean; wishlistProductIds?: string[];
 }) {
   const params = useSearchParams();
@@ -27,7 +31,19 @@ export default function StoreCatalogue({ mode, products, services, storeName, av
   const [open, setOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState('');
   const [manualLink, setManualLink] = useState('');
-  const items = [ ...(mode !== 'services' ? products.map(p => ({ ...p, isService: false })) : []), ...(mode !== 'store' ? services.map(s => ({ ...s, isService: true })) : []) ].filter(item => mode !== 'catalogue' || item.isFeatured);
+  const collectionId = mode === 'catalogue' ? params.get('c_collection') ?? '' : '';
+  const selectedCollection = collections.find(collection => collection.id === collectionId);
+  const unknownCollection = !!collectionId && !selectedCollection;
+  const allItems = [ ...(mode !== 'services' ? products.map(p => ({ ...p, isService: false })) : []), ...(mode !== 'store' ? services.map(s => ({ ...s, isService: true })) : []) ];
+  const items = mode !== 'catalogue' ? allItems : selectedCollection ? visibleCollectionItems(selectedCollection, allItems) : unknownCollection ? [] : allItems.filter(item => item.isFeatured);
+  function selectCollection(id: string) {
+    const next = new URLSearchParams(window.location.search);
+    if (id) next.set('c_collection', id); else next.delete('c_collection');
+    next.set('tab', 'catalogue');
+    // Keep refinements and other tab state; browser Back restores the previous selection.
+    window.history.pushState(null, '', `${pathname}?${next.toString()}#store-content`);
+    setCopyStatus(''); setManualLink('');
+  }
   const scope = items.filter(item => !filters.type || (filters.type === 'services') === item.isService);
   const showProducts = scope.some(i => !i.isService);
   const showServices = scope.some(i => i.isService);
@@ -82,6 +98,7 @@ export default function StoreCatalogue({ mode, products, services, storeName, av
   async function copyLink() {
     const url = new URL(pathname, window.location.origin);
     url.searchParams.set('tab', mode);
+    if (collectionId) url.searchParams.set('c_collection', collectionId);
     for (const key of activeKeys) url.searchParams.set(`${prefix}${key}`, filters[key]);
     url.hash = 'store-content';
     try { await navigator.clipboard.writeText(url.toString()); setCopyStatus('Link copied. Paste it anywhere you want to share these results.'); setManualLink(''); }
@@ -103,13 +120,16 @@ export default function StoreCatalogue({ mode, products, services, storeName, av
     </div>
   </section>;
   return <section aria-label={`${mode === 'catalogue' ? 'Selected catalogue' : mode === 'store' ? 'Product collection' : 'Services'} from ${storeName}`}>
-    <div className={styles.catalogueHeader}><div><p className={styles.eyebrow}>{mode === 'catalogue' ? 'CURATED BY THIS STORE' : mode === 'store' ? 'THE FULL COLLECTION' : 'LOCAL EXPERTISE'}</p><h2>{mode === 'catalogue' ? 'The catalogue.' : mode === 'store' ? 'A little more to love.' : 'Let’s make it happen.'}</h2><p aria-live="polite">{results.length} of {items.length} {mode === 'services' ? 'services' : mode === 'store' ? 'products' : 'selected finds'} from {storeName}</p></div><label className={styles.catalogueSearch}><Search size={17} aria-hidden /><input aria-label="Search catalogue" type="search" maxLength={120} placeholder="Search by name or category…" value={filters.q} onChange={e => update({ q: e.target.value }, true)} /></label></div>
+    {mode === 'catalogue' && collections.length > 0 && <section className={collectionStyles.collections} aria-label="Browse store collections"><div className={collectionStyles.heading}><div><h3>Find your collection.</h3><p>Thoughtfully grouped. Ready to explore.</p></div><button type="button" onClick={() => selectCollection('')} aria-pressed={!collectionId}>Store picks</button></div><ul className={collectionStyles.tiles}>{collections.map(collection => { const members = visibleCollectionItems(collection, allItems); const cover = members.find(item => item.images[0]); return <li key={collection.id}><button type="button" className={collectionStyles.tile} aria-pressed={collectionId === collection.id} onClick={() => selectCollection(collection.id)}><div className={collectionStyles.cover}>{cover ? <StorefrontImage src={cover.images[0]} alt="" /> : <div><ShoppingBag size={30} aria-hidden /></div>}</div><span className={collectionStyles.copy}><strong>{collection.name}</strong><span>{members.length} {members.length === 1 ? 'item' : 'items'}<ArrowUpRight size={16} aria-hidden /></span></span></button></li>; })}</ul></section>}
+    {unknownCollection && <p role="status" className={collectionStyles.notice}>This collection is no longer available. <button type="button" className="underline min-h-11 px-2" onClick={() => selectCollection('')}>Browse store picks</button></p>}
+    <div className={styles.catalogueHeader}><div><p className={styles.eyebrow}>{mode === 'catalogue' ? 'CURATED BY THIS STORE' : mode === 'store' ? 'THE FULL COLLECTION' : 'LOCAL EXPERTISE'}</p><h2>{mode === 'catalogue' ? selectedCollection?.name ?? (unknownCollection ? 'Collection unavailable' : 'The catalogue.') : mode === 'store' ? 'A little more to love.' : 'Let’s make it happen.'}</h2><p aria-live="polite">{results.length} of {items.length} {mode === 'services' ? 'services' : mode === 'store' ? 'products' : 'selected finds'} from {storeName}</p></div><label className={styles.catalogueSearch}><Search size={17} aria-hidden /><input aria-label="Search catalogue" type="search" maxLength={120} placeholder="Search by name or category…" value={filters.q} onChange={e => update({ q: e.target.value }, true)} /></label></div>
+    {mode === 'catalogue' && selectedCollection?.description && <p className={collectionStyles.description}>{selectedCollection.description}</p>}
     <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div className="flex flex-wrap gap-2"><button type="button" className={`${actionClass} lg:hidden`} onClick={() => setOpen(true)}><SlidersHorizontal size={17} />Filters{activeKeys.length ? ` (${activeKeys.length})` : ''}</button><button type="button" className={actionClass} onClick={copyLink}>{copyStatus.startsWith('Link copied') ? <Check size={17} /> : <Copy size={17} />}Copy filtered link</button></div><div className="w-full sm:w-60"><FilterSelect label="Sort by" value={filters.sort} options={Object.entries(sortLabels).filter(([value]) => value && (value !== 'stock' || showProducts && !showServices) && (value !== 'duration' || showServices && !showProducts)).map(([value,label]) => ({ value,label }))} placeholder="Recommended" onChange={v => change('sort', v)} /></div></div>
     {copyStatus && <p role="status" className="mb-3 text-sm text-[#147873]">{copyStatus}</p>}
     {manualLink && <input aria-label="Filtered store link" readOnly value={manualLink} onFocus={e => e.target.select()} className={`${controlClass} mb-4`} />}
     {activeKeys.length > 0 && <div className="mb-5 flex flex-wrap items-center gap-2" aria-label="Active filters">{activeKeys.map(key => <button type="button" key={key} onClick={() => change(key, '')} className="inline-flex min-h-9 items-center gap-2 rounded-full bg-[#e6f3f1] px-3 text-xs font-semibold text-[#176861]" aria-label={`Remove ${label(key)}`}>{label(key)}<X size={13} aria-hidden /></button>)}<button type="button" onClick={clear} className="min-h-9 px-2 text-sm font-semibold text-[#b94e21] underline">Clear all</button></div>}
     {(filters.sort === 'price_asc' || filters.sort === 'price_desc') && showServices && <p className="mb-4 text-xs text-slate-500">Price sorting compares {filters.pricing ? pricingLabels[filters.pricing].toLowerCase() : 'fixed prices'} first. Other pricing types follow. Recurring fees are per their listed billing interval.</p>}
-    <div className="flex flex-col gap-6 lg:flex-row"><aside className={`${styles.filterAside} hidden lg:block`}>{panel}</aside><div className={styles.catalogueResults}>{results.length ? <ul className={styles.catalogueGrid}>{results.map(item => <li key={item.id}><StorefrontListingCard item={item} service={item.isService} preview={preview} availableNow={availableNow} wishlisted={wishlistProductIds.includes(item.id)} /></li>)}</ul> : <div className={styles.emptyState}><ShoppingBag size={38} strokeWidth={1} aria-hidden /><h3>{items.length ? 'No matches just yet.' : mode === 'catalogue' ? 'A collection worth waiting for.' : 'Coming soon.'}</h3><p>{items.length ? 'Try a wider price range or remove a filter to see more.' : mode === 'catalogue' ? 'This store has not selected any published products or services for its catalogue yet.' : 'This store has not published any items here yet.'}</p>{activeKeys.length > 0 && <button type="button" onClick={clear} className={`${actionClass} mt-4`}>Clear all filters</button>}</div>}</div></div>
+    <div className="flex flex-col gap-6 lg:flex-row"><aside className={`${styles.filterAside} hidden lg:block`}>{panel}</aside><div className={styles.catalogueResults}>{results.length ? <ul className={`${styles.catalogueGrid} ${mode === 'catalogue' ? collectionStyles.editorial : ''}`}>{results.map(item => <li key={`${item.isService ? 'service' : 'product'}:${item.id}`}><StorefrontListingCard item={item} service={item.isService} preview={preview} availableNow={availableNow} wishlisted={wishlistProductIds.includes(item.id)} /></li>)}</ul> : <div className={styles.emptyState}><ShoppingBag size={38} strokeWidth={1} aria-hidden /><h3>{items.length ? 'No matches just yet.' : mode === 'catalogue' ? 'A collection worth waiting for.' : 'Coming soon.'}</h3><p>{items.length ? 'Try a wider price range or remove a filter to see more.' : mode === 'catalogue' ? selectedCollection ? 'There are no published items in this collection yet. Explore another collection or return to store picks.' : unknownCollection ? 'Choose an available collection above.' : 'This store has not selected any published products or services for its catalogue yet.' : 'This store has not published any items here yet.'}</p>{activeKeys.length > 0 && <button type="button" onClick={clear} className={`${actionClass} mt-4`}>Clear all filters</button>}</div>}</div></div>
     <StoreMobileFilterSheet open={open} onClose={() => setOpen(false)} onReset={clear} resultCount={results.length} resultLabel="results">{panel}</StoreMobileFilterSheet>
   </section>;
 }

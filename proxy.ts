@@ -1,9 +1,15 @@
+import { cataloguePreviewEnabled, isCatalogueFixturePath } from "@/lib/storefront/catalogue-preview";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { SESSION_COOKIE_NAME } from "@/lib/auth/constants";
 import { verifySessionToken } from "@/lib/auth/token";
 
 export async function proxy(request: NextRequest) {
+  // Fixture routes never read session cookies or enter application authentication.
+  if (isCatalogueFixturePath(request.nextUrl.pathname)) {
+    if (!cataloguePreviewEnabled(process.env)) return new NextResponse("Not found", { status: 404 });
+    return NextResponse.next();
+  }
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-pathname", request.nextUrl.pathname);
 
@@ -29,5 +35,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/onboarding/:path*", "/vendor/:path*", "/notifications/:path*", "/team"],
+  matcher: ["/dev/store-catalogue", "/dev/catalogue-preview", "/dashboard/:path*", "/onboarding/:path*", "/vendor/:path*", "/notifications/:path*", "/team"],
 };

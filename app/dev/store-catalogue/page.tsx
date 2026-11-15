@@ -1,3 +1,4 @@
+import { cataloguePreviewEnabled } from "@/lib/storefront/catalogue-preview";
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import StorefrontTabs from '@/components/storefront/StorefrontTabs';
@@ -7,7 +8,7 @@ export const metadata = { title: 'Store catalogue preview', robots: { index: fal
 export const dynamic = 'force-dynamic';
 
 export default function CataloguePreview() {
-  if (process.env.NODE_ENV !== 'development') notFound();
+  if (!cataloguePreviewEnabled(process.env)) notFound();
   const base = { images: [], category: 'CLOTHING', stock: 8, hasVariants: false, variants: [], isFeatured: true, createdAt: '2026-01-01' };
   const products = [
     { ...base, id: 'shirt', name: 'Island linen shirt', slug: 'fixture-shirt', price: 120, compareAtPrice: 180 },
@@ -27,5 +28,5 @@ export default function CataloguePreview() {
     { ...service, id: 'subscription', name: 'Monthly wardrobe care', slug: 'fixture-subscription', serviceType: 'SUBSCRIPTION', subscriptionInterval: 'MONTHLY', price: 150 },
     { ...service, id: 'unavailable', name: 'Express alterations', slug: 'fixture-alterations', serviceType: 'ON_DEMAND', price: 100, isAvailable: false },
   ];
-  return <div className={styles.page}><header className="bg-[#173f58] px-6 py-8 text-white"><p className="text-sm">Development preview · fictional items · shopping disabled</p><h1 className="mt-3 text-3xl font-bold">Island Finds</h1></header><Suspense fallback={<p>Loading catalogue…</p>}><StorefrontTabs preview store={{ name: 'Island Finds', slug: 'fixture-island-finds', logoUrl: null, tagline: 'Local finds, thoughtfully chosen.', categoryId: 'FASHION', region: 'PORT_OF_SPAIN', images: [], description: 'A fictional store for testing catalogue filters.', policies: null, latitude: null, longitude: null, address: null, tags: [], amenities: [], owner: { fullName: 'Preview vendor' }, isAvailableNow: false }} storeId="fixture-store" products={products} services={services} initialSaved={false} followerCount={0} openingHours={null} socialLinks={{}} hasSocialLinks={false} isLoggedIn={false} /></Suspense></div>;
+  return <div className={styles.page}><header className="bg-[#173f58] px-6 py-8 text-white"><p className="text-sm">Catalogue preview · fictional items · shopping disabled</p><h1 className="mt-3 text-3xl font-bold">Island Finds</h1></header><Suspense fallback={<p>Loading catalogue…</p>}><StorefrontTabs preview catalogueReviewOnly store={{ catalogueCollections: [{ id: 'new', name: 'New collection', description: 'Fresh finds for your next adventure.', productIds: ['shirt', 'unselected', 'variants', 'missing-private'] }, { id: 'occasion', name: 'For the occasion', productIds: ['styling', 'quote', 'shirt'] }, { id: 'soon', name: 'Coming soon', productIds: [] }], name: 'Island Finds', slug: 'fixture-island-finds', logoUrl: null, tagline: 'Local finds, thoughtfully chosen.', categoryId: 'FASHION', region: 'PORT_OF_SPAIN', images: [], description: 'A fictional store for testing catalogue filters.', policies: null, latitude: null, longitude: null, address: null, tags: [], amenities: [], owner: { fullName: 'Preview vendor' }, isAvailableNow: false }} storeId="fixture-store" products={products} services={services} initialSaved={false} followerCount={0} openingHours={null} socialLinks={{}} hasSocialLinks={false} isLoggedIn={false} /></Suspense></div>;
 }
